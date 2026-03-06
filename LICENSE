@@ -1,0 +1,62 @@
+Devlane Software License
+
+Copyright (c) 2026 Devlane
+
+----------------------------------------------------------------------
+1. MIT License Grant
+----------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, and distribute copies of the Software,
+and to permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+----------------------------------------------------------------------
+2. Additional Use Restriction (Non‑Commercial Resale / Hosting)
+----------------------------------------------------------------------
+
+Notwithstanding any other provision of this License, you may not "Sell" the
+Software or any service whose primary value is access to, or use of,
+the Software.
+
+"Sell" means:
+  (a) licensing, sublicensing, distributing, or otherwise making the Software,
+      or derivative works of the Software, available to third parties
+      for a fee, subscription charge, or other commercial consideration; or
+  (b) providing a hosted, managed, or software‑as‑a‑service offering where
+      the primary purpose of the service is to enable third parties to access
+      or use the Software (with or without modifications).
+
+For clarity, the following are permitted under this License:
+  - Using the Software internally for personal, educational, or commercial
+    purposes within your own individual or organizational environment.
+  - Using the Software as an internal tool to help you deliver your own
+    products or services, where customers are not being charged for access
+    to Devlane itself.
+  - Sharing the Software (with or without modifications) without charging
+    a fee specifically for the Software or for hosted access to Devlane.
+
+----------------------------------------------------------------------
+3. Disclaimer of Warranty
+----------------------------------------------------------------------
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+----------------------------------------------------------------------
+4. Open Source Status
+----------------------------------------------------------------------
+
+Because of the additional restriction in Section 2, this License does not
+meet the Open Source Initiative (OSI) definition of "open source" and the
+Software should not be described as OSI‑approved open source software.

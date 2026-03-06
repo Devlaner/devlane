@@ -1,0 +1,10 @@
+plane/
+planning/
+.cursor
+.vscode
+.idea
+.DS_Store
+.env
+.env.local
+docs/
+main.exe
