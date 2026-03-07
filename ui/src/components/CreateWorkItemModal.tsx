@@ -8,8 +8,7 @@ import { issueService } from '../services/issueService';
 import { cycleService } from '../services/cycleService';
 import { moduleService } from '../services/moduleService';
 import { workspaceService } from '../services/workspaceService';
-import type { StateApiResponse, LabelApiResponse, IssueApiResponse } from '../api/types';
-import type { Project } from '../types';
+import type { StateApiResponse, LabelApiResponse, IssueApiResponse, ProjectApiResponse } from '../api/types';
 import type { Priority } from '../types';
 
 const IconCog = () => (
@@ -94,7 +93,7 @@ export interface CreateWorkItemModalProps {
   open: boolean;
   onClose: () => void;
   workspaceSlug: string;
-  projects: Project[];
+  projects: ProjectApiResponse[];
   defaultProjectId?: string;
   createError?: string | null;
   onSave?: (data: {

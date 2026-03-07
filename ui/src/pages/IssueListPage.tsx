@@ -121,7 +121,10 @@ export function IssueListPage() {
   }, [workspaceSlug, projectId]);
 
   const getStateName = (stateId: string | null | undefined) => (stateId ? states.find((s) => s.id === stateId)?.name ?? stateId : '—');
-  const getLabelNames = (_labelIds: string[] = []) => [] as string[]; // API issue has no label_ids in response yet
+  const getLabelNames = (labelIds: string[] = []) =>
+    labelIds
+      .map((id) => labels.find((l) => l.id === id)?.name)
+      .filter((name): name is string => Boolean(name));
   const getUser = (userId: string | null) => {
     if (!userId) return null;
     const m = members.find((x) => x.member_id === userId);
@@ -226,8 +229,9 @@ export function IssueListPage() {
         ) : (
           <ul className="divide-y divide-[var(--border-subtle)]">
             {issues.map((issue) => {
-              const assignee = getUser(null); // API does not return assignee on issue yet
-              const labelNames = getLabelNames([]);
+              const primaryAssigneeId = issue.assignee_ids && issue.assignee_ids.length > 0 ? issue.assignee_ids[0] : null;
+              const assignee = getUser(primaryAssigneeId);
+              const labelNames = getLabelNames(issue.label_ids ?? []);
               const displayId = `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`;
               return (
                 <li key={issue.id}>

@@ -46,7 +46,26 @@ func (s *IssueService) List(ctx context.Context, workspaceSlug string, projectID
 	if err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
 		return nil, err
 	}
-	return s.is.ListByProjectID(ctx, projectID, limit, offset)
+	list, err := s.is.ListByProjectID(ctx, projectID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	for i := range list {
+		issueID := list[i].ID
+		if ids, err := s.is.ListAssigneesForIssue(ctx, issueID); err == nil {
+			list[i].AssigneeIDs = ids
+		}
+		if ids, err := s.is.ListLabelsForIssue(ctx, issueID); err == nil {
+			list[i].LabelIDs = ids
+		}
+		if ids, err := s.is.ListCycleIDsForIssue(ctx, issueID); err == nil {
+			list[i].CycleIDs = ids
+		}
+		if ids, err := s.is.ListModuleIDsForIssue(ctx, issueID); err == nil {
+			list[i].ModuleIDs = ids
+		}
+	}
+	return list, nil
 }
 
 func (s *IssueService) GetByID(ctx context.Context, workspaceSlug string, projectID, issueID uuid.UUID, userID uuid.UUID) (*model.Issue, error) {

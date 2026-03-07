@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Badge, Button, Card, CardContent, CardHeader, Input, Avatar } from '../components/ui';
-import { Dropdown, DatePickerTrigger } from '../components/work-item';
+import { Badge, Button, Card, CardContent, CardHeader, Avatar } from '../components/ui';
+import { Dropdown, DatePickerTrigger, CommentEditor } from '../components/work-item';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
 import { issueService } from '../services/issueService';
@@ -97,8 +97,11 @@ export function IssueDetailPage() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [subCreateOpen, setSubCreateOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [commentText, setCommentText] = useState('');
   const [postingComment, setPostingComment] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [updatingCommentId, setUpdatingCommentId] = useState<string | null>(null);
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!workspaceSlug || !projectId || !issueId) {
@@ -202,11 +205,12 @@ export function IssueDetailPage() {
 
   const updateIssue = async (patch: Record<string, unknown>) => {
     if (!workspaceSlug || !projectId || !issueId) return;
+    setErrorMessage(null);
     try {
       const updated = await issueService.update(workspaceSlug, projectId, issueId, patch as never);
       setIssue(updated);
-    } catch {
-      // ignore for now; UI stays optimistic-less
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to update work item.');
     }
   };
 
@@ -217,44 +221,114 @@ export function IssueDetailPage() {
 
   const handleSetCycle = async (cycleIdToSet: string | null) => {
     if (!workspaceSlug) return;
-    const removals = cycleIds.map((cid) => cycleService.removeIssue(workspaceSlug, project.id, cid, issue.id).catch(() => {}));
-    await Promise.all(removals);
-    if (cycleIdToSet) {
-      await cycleService.addIssue(workspaceSlug, project.id, cycleIdToSet, issue.id).catch(() => {});
+    setErrorMessage(null);
+    try {
+      const removals = cycleIds.map((cid) =>
+        cycleService.removeIssue(workspaceSlug, project.id, cid, issue.id).catch(() => {})
+      );
+      await Promise.all(removals);
+      if (cycleIdToSet) {
+        await cycleService.addIssue(workspaceSlug, project.id, cycleIdToSet, issue.id).catch(() => {});
+      }
+      const refreshed = await issueService.get(workspaceSlug, project.id, issue.id).catch(() => null);
+      if (refreshed) setIssue(refreshed);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to update cycle.');
     }
-    const refreshed = await issueService.get(workspaceSlug, project.id, issue.id).catch(() => null);
-    if (refreshed) setIssue(refreshed);
   };
 
   const handleSetModule = async (moduleIdToSet: string | null) => {
     if (!workspaceSlug) return;
-    const removals = moduleIds.map((mid) => moduleService.removeIssue(workspaceSlug, project.id, mid, issue.id).catch(() => {}));
-    await Promise.all(removals);
-    if (moduleIdToSet) {
-      await moduleService.addIssue(workspaceSlug, project.id, moduleIdToSet, issue.id).catch(() => {});
+    setErrorMessage(null);
+    try {
+      const removals = moduleIds.map((mid) =>
+        moduleService.removeIssue(workspaceSlug, project.id, mid, issue.id).catch(() => {})
+      );
+      await Promise.all(removals);
+      if (moduleIdToSet) {
+        await moduleService.addIssue(workspaceSlug, project.id, moduleIdToSet, issue.id).catch(() => {});
+      }
+      const refreshed = await issueService.get(workspaceSlug, project.id, issue.id).catch(() => null);
+      if (refreshed) setIssue(refreshed);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to update module.');
     }
-    const refreshed = await issueService.get(workspaceSlug, project.id, issue.id).catch(() => null);
-    if (refreshed) setIssue(refreshed);
   };
 
   const filteredParentOptions = allIssues.filter((i) => i.id !== issue.id);
 
   const parentIssue = issue.parent_id ? allIssues.find((i) => i.id === issue.parent_id) ?? null : null;
 
-  const postComment = async () => {
-    if (!workspaceSlug || !commentText.trim()) return;
+  const formatRelativeTime = (iso: string) => {
+    const date = new Date(iso);
+    const diffMs = Date.now() - date.getTime();
+    const minutes = Math.floor(diffMs / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    if (days > 0) return `${days} day${days === 1 ? '' : 's'} ago`;
+    if (hours > 0) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    if (minutes > 0) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+    return 'just now';
+  };
+
+  const postComment = async (contentHtml: string) => {
+    if (!workspaceSlug || !contentHtml.trim()) return;
+    setErrorMessage(null);
     setPostingComment(true);
     try {
-      const created = await commentService.create(workspaceSlug, project.id, issue.id, commentText.trim());
+      const created = await commentService.create(workspaceSlug, project.id, issue.id, contentHtml.trim());
       setComments((prev) => [...prev, created]);
-      setCommentText('');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to post comment.');
     } finally {
       setPostingComment(false);
     }
   };
 
+  const updateComment = async (commentId: string, contentHtml: string) => {
+    if (!workspaceSlug || !contentHtml.trim()) return;
+    setErrorMessage(null);
+    setUpdatingCommentId(commentId);
+    try {
+      const updated = await commentService.update(
+        workspaceSlug,
+        project.id,
+        issue.id,
+        commentId,
+        contentHtml.trim()
+      );
+      setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
+      setEditingCommentId(null);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to update comment.');
+    } finally {
+      setUpdatingCommentId(null);
+    }
+  };
+
+  const deleteComment = async (commentId: string) => {
+    if (!workspaceSlug) return;
+    const confirmed = window.confirm('Delete this comment?');
+    if (!confirmed) return;
+    setErrorMessage(null);
+    setDeletingCommentId(commentId);
+    try {
+      await commentService.delete(workspaceSlug, project.id, issue.id, commentId);
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to delete comment.');
+    } finally {
+      setDeletingCommentId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {errorMessage && (
+        <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-xs text-[var(--txt-danger-primary)]">
+          {errorMessage}
+        </div>
+      )}
       <div className="flex items-center gap-2 text-sm text-[var(--txt-tertiary)]">
         <Link to={baseUrl} className="text-[var(--txt-accent-primary)] hover:underline">
           {project.name}
@@ -309,16 +383,6 @@ export function IssueDetailPage() {
               <span className="text-xs text-[var(--txt-tertiary)]">Comments {comments.length}</span>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Input
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Write a comment…"
-                />
-                <Button size="sm" onClick={postComment} disabled={postingComment || !commentText.trim()}>
-                  Post
-                </Button>
-              </div>
               <div className="space-y-3">
                 <div className="flex items-start gap-2 text-sm">
                   <Avatar name={getMemberLabel(issue.created_by_id)} src={null} size="sm" className="mt-0.5 h-7 w-7 text-[10px]" />
@@ -334,20 +398,67 @@ export function IssueDetailPage() {
                 {comments.length === 0 ? (
                   <p className="text-sm text-[var(--txt-tertiary)]">No comments yet.</p>
                 ) : (
-                  comments.map((c) => (
-                    <div key={c.id} className="flex items-start gap-2 text-sm">
-                      <Avatar name={getMemberLabel(c.created_by_id)} src={null} size="sm" className="mt-0.5 h-7 w-7 text-[10px]" />
-                      <div className="min-w-0 flex-1 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-medium text-[var(--txt-secondary)]">{getMemberLabel(c.created_by_id)}</span>
-                          <span className="text-xs text-[var(--txt-tertiary)]">{new Date(c.created_at).toLocaleDateString()}</span>
+                  comments.map((c) => {
+                    const isEditing = editingCommentId === c.id;
+                    return (
+                      <div key={c.id} className="flex flex-col gap-2 text-sm">
+                        <div className="flex items-start gap-2">
+                          <Avatar
+                            name={getMemberLabel(c.created_by_id)}
+                            src={null}
+                            size="sm"
+                            className="mt-0.5 h-7 w-7 text-[10px]"
+                          />
+                          <div className="min-w-0 flex-1 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] p-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-medium text-[var(--txt-secondary)]">
+                                {getMemberLabel(c.created_by_id)}
+                              </span>
+                              <div className="flex items-center gap-2 text-[11px] text-[var(--txt-tertiary)]">
+                                <span>{formatRelativeTime(c.created_at)}</span>
+                                <button
+                                  type="button"
+                                  className="hover:text-[var(--txt-secondary)]"
+                                  onClick={() => setEditingCommentId(c.id)}
+                                  disabled={updatingCommentId === c.id || deletingCommentId === c.id}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  className="hover:text-[var(--txt-secondary)]"
+                                  onClick={() => void deleteComment(c.id)}
+                                  disabled={deletingCommentId === c.id || updatingCommentId === c.id}
+                                >
+                                  {deletingCommentId === c.id ? 'Deleting…' : 'Delete'}
+                                </button>
+                              </div>
+                            </div>
+                            {isEditing ? (
+                              <div className="mt-2">
+                                <CommentEditor
+                                  initialHtml={c.comment}
+                                  onSubmit={(html) => void updateComment(c.id, html)}
+                                  isSubmitting={updatingCommentId === c.id}
+                                  onCancel={() => setEditingCommentId(null)}
+                                  showShortcutHint
+                                  autoFocus
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                className="mt-1 prose prose-sm max-w-none text-[var(--txt-primary)]"
+                                dangerouslySetInnerHTML={{ __html: c.comment }}
+                              />
+                            )}
+                          </div>
                         </div>
-                        <p className="mt-1 whitespace-pre-wrap text-[var(--txt-primary)]">{c.comment}</p>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
+              <CommentEditor onSubmit={postComment} isSubmitting={postingComment} showShortcutHint />
             </CardContent>
           </Card>
 
