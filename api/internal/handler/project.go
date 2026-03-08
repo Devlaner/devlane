@@ -130,7 +130,10 @@ func (h *ProjectHandler) Update(c *gin.Context) {
 		IntakeView            *bool   `json:"intake_view"`
 		IsTimeTrackingEnabled *bool   `json:"is_time_tracking_enabled"`
 	}
-	_ = c.ShouldBindJSON(&body)
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "detail": err.Error()})
+		return
+	}
 	var name, identifier, description, timezone *string
 	if body.Name != "" {
 		name = &body.Name
@@ -148,7 +151,12 @@ func (h *ProjectHandler) Update(c *gin.Context) {
 	if body.ProjectLeadID != nil {
 		if *body.ProjectLeadID == "" {
 			projectLeadIDPtr = nil
-		} else if id, err := uuid.Parse(*body.ProjectLeadID); err == nil {
+		} else {
+			id, err := uuid.Parse(*body.ProjectLeadID)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project_lead_id", "detail": "must be a valid UUID"})
+				return
+			}
 			projectLeadIDPtr = &id
 		}
 	}
@@ -156,7 +164,12 @@ func (h *ProjectHandler) Update(c *gin.Context) {
 	if body.DefaultAssigneeID != nil {
 		if *body.DefaultAssigneeID == "" {
 			defaultAssigneeIDPtr = nil
-		} else if id, err := uuid.Parse(*body.DefaultAssigneeID); err == nil {
+		} else {
+			id, err := uuid.Parse(*body.DefaultAssigneeID)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid default_assignee_id", "detail": "must be a valid UUID"})
+				return
+			}
 			defaultAssigneeIDPtr = &id
 		}
 	}

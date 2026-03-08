@@ -53,8 +53,10 @@ export const projectService = {
       identifier?: string;
       description?: string;
       timezone?: string;
-      project_lead_id?: string | null;
-      default_assignee_id?: string | null;
+      /** When present, use empty string to clear; omit to leave unchanged. */
+      project_lead_id?: string;
+      /** When present, use empty string to clear; omit to leave unchanged. */
+      default_assignee_id?: string;
       guest_view_all_features?: boolean;
       module_view?: boolean;
       cycle_view?: boolean;
