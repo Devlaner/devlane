@@ -226,17 +226,17 @@ export function AnalyticsWorkItemsPage() {
         ];
 
   const projectRows = projects.map((p) => {
-    const projIssues = issues.filter((i) => i.project_id === p.id);
+    const projIssues = issues.filter((i) => i.projectId === p.id);
     return {
       project: p,
-      backlog: projIssues.filter((i) => getStateName(i.state_id) === "Backlog")
+      backlog: projIssues.filter((i) => getStateName(i.stateId) === "Backlog")
         .length,
       started: projIssues.filter(
-        (i) => getStateName(i.state_id) === "In Progress",
+        (i) => getStateName(i.stateId) === "In Progress",
       ).length,
-      unstarted: projIssues.filter((i) => getStateName(i.state_id) === "Todo")
+      unstarted: projIssues.filter((i) => getStateName(i.stateId) === "Todo")
         .length,
-      completed: projIssues.filter((i) => getStateName(i.state_id) === "Done")
+      completed: projIssues.filter((i) => getStateName(i.stateId) === "Done")
         .length,
       cancelled: 0,
     };

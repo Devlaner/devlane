@@ -982,10 +982,10 @@ export function IssueDetailPage() {
         projects={[
           {
             id: project.id,
-            workspace_id: project.workspace_id,
+            workspaceId: project.workspace_id,
             name: project.name,
             identifier: project.identifier ?? project.id.slice(0, 8),
-            description: project.description ?? undefined,
+            description: project.description ?? null,
           },
         ]}
         defaultProjectId={project.id}

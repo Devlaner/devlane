@@ -181,8 +181,6 @@ type UpdateMeRequest struct {
 	LastName     *string `json:"last_name"`
 	DisplayName  *string `json:"display_name"`
 	UserTimezone *string `json:"user_timezone"`
-	Avatar       *string `json:"avatar"`
-	CoverImage   *string `json:"cover_image"`
 }
 
 // UpdateMe updates the authenticated user's profile (email is not updatable).
@@ -209,12 +207,6 @@ func (h *AuthHandler) UpdateMe(c *gin.Context) {
 	}
 	if req.UserTimezone != nil {
 		user.UserTimezone = *req.UserTimezone
-	}
-	if req.Avatar != nil {
-		user.Avatar = *req.Avatar
-	}
-	if req.CoverImage != nil {
-		user.CoverImage = *req.CoverImage
 	}
 	if err := h.Auth.UpdateProfile(c.Request.Context(), user); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})
@@ -530,7 +522,6 @@ func userResponse(u *model.User) gin.H {
 		"last_name":     u.LastName,
 		"display_name":  u.DisplayName,
 		"avatar":        u.Avatar,
-		"cover_image":   u.CoverImage,
 		"is_active":     u.IsActive,
 		"is_onboarded":  u.IsOnboarded,
 		"date_joined":   u.DateJoined,

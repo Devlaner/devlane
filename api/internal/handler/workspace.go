@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/Devlaner/devlane/api/internal/middleware"
+	"github.com/Devlaner/devlane/api/internal/queue"
 	"github.com/Devlaner/devlane/api/internal/service"
 	"github.com/Devlaner/devlane/api/internal/store"
 	"github.com/gin-gonic/gin"
@@ -13,8 +15,10 @@ import (
 
 // WorkspaceHandler serves workspace and member/invite endpoints.
 type WorkspaceHandler struct {
-	Workspace *service.WorkspaceService
-	Settings  *store.InstanceSettingStore
+	Workspace  *service.WorkspaceService
+	Settings   *store.InstanceSettingStore
+	Queue      *queue.Publisher // optional: enqueue invite emails
+	AppBaseURL string           // optional: base URL for invite links (e.g. https://app.example.com)
 }
 
 // List returns the current user's workspaces.
@@ -113,9 +117,8 @@ func (h *WorkspaceHandler) Update(c *gin.Context) {
 	}
 	slug := c.Param("slug")
 	var body struct {
-		Name string  `json:"name"`
-		Slug string  `json:"slug"`
-		Logo *string `json:"logo"`
+		Name string `json:"name"`
+		Slug string `json:"slug"`
 	}
 	_ = c.ShouldBindJSON(&body)
 	var name, newSlug *string
@@ -125,7 +128,7 @@ func (h *WorkspaceHandler) Update(c *gin.Context) {
 	if body.Slug != "" {
 		newSlug = &body.Slug
 	}
-	w, err := h.Workspace.Update(c.Request.Context(), slug, user.ID, name, newSlug, body.Logo)
+	w, err := h.Workspace.Update(c.Request.Context(), slug, user.ID, name, newSlug)
 	if err != nil {
 		if err == service.ErrWorkspaceNotFound || err == service.ErrWorkspaceForbidden {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Workspace not found"})
@@ -373,6 +376,26 @@ func (h *WorkspaceHandler) CreateInvite(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create invite"})
 		return
 	}
+
+	// Enqueue invite email when queue and base URL are configured
+	if h.Queue != nil && h.AppBaseURL != "" {
+		w, _ := h.Workspace.GetBySlug(c.Request.Context(), slug, user.ID)
+		workspaceName := slug
+		if w != nil {
+			workspaceName = w.Name
+		}
+		inviteLink := strings.TrimSuffix(h.AppBaseURL, "/") + "/invite?token=" + inv.Token
+		subject := fmt.Sprintf("You're invited to join %s on Devlane", workspaceName)
+		bodyText := fmt.Sprintf("You have been invited to join the workspace \"%s\" on Devlane.\n\nAccept your invitation by visiting:\n%s\n\nIf you don't have an account yet, you can sign up at the same link.\n", workspaceName, inviteLink)
+		_ = h.Queue.PublishSendEmail(c.Request.Context(), queue.SendEmailPayload{
+			To:      inv.Email,
+			Subject: subject,
+			Body:    bodyText,
+			Kind:    "workspace_invite",
+			Extra:   map[string]string{"workspace_slug": slug, "invite_id": inv.ID.String()},
+		})
+	}
+
 	c.JSON(http.StatusCreated, inv)
 }
 

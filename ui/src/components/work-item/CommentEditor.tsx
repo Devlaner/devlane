@@ -28,7 +28,7 @@ export function CommentEditor({
       StarterKit.configure({
         bulletList: { keepMarks: true, keepAttributes: true },
         orderedList: { keepMarks: true, keepAttributes: true },
-        codeBlock: {},
+        codeBlock: true,
       }),
       Underline,
       Placeholder.configure({
