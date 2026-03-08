@@ -1194,8 +1194,10 @@ export function PageHeader() {
     workspaceSlug?: string;
     projectId?: string;
   }>();
-  const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
-  const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
+  const [_workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(
+    null,
+  );
+  const [_projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [projectIssueCount, setProjectIssueCount] = useState(0);
 

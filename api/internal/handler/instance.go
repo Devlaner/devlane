@@ -3,7 +3,10 @@ package handler
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
+	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/Devlaner/devlane/api/internal/auth"
@@ -291,4 +294,90 @@ func (h *InstanceSettingsHandler) UpdateSetting(c *gin.Context) {
 	// Return decrypted secrets so client sees the value they just set
 	responseValue := decryptSectionSecrets(key, value)
 	c.JSON(http.StatusOK, gin.H{"key": key, "value": responseValue})
+}
+
+// unsplashPhoto is a single photo from Unsplash API response.
+type unsplashPhoto struct {
+	ID   string `json:"id"`
+	URLs struct {
+		Full    string `json:"full"`
+		Regular string `json:"regular"`
+		Thumb   string `json:"thumb"`
+	} `json:"urls"`
+}
+
+// unsplashSearchResponse is the Unsplash search API response.
+type unsplashSearchResponse struct {
+	Results []unsplashPhoto `json:"results"`
+}
+
+// UnsplashSearchResult is a simplified photo returned by our proxy.
+type UnsplashSearchResult struct {
+	ID    string `json:"id"`
+	URL   string `json:"url"`
+	Thumb string `json:"thumb"`
+}
+
+// UnsplashSearch proxies search to Unsplash API using instance image settings key (auth required).
+// GET /api/instance/unsplash/search?q=...
+func (h *InstanceSettingsHandler) UnsplashSearch(c *gin.Context) {
+	if h.Settings == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Settings not available"})
+		return
+	}
+	row, err := h.Settings.Get(c.Request.Context(), "image")
+	if err != nil || row == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsplash is not configured"})
+		return
+	}
+	decrypted := decryptSectionSecrets("image", row.Value)
+	keyVal, _ := decrypted["unsplash_access_key"].(string)
+	keyVal = strings.TrimSpace(keyVal)
+	if keyVal == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsplash is not configured"})
+		return
+	}
+
+	q := strings.TrimSpace(c.Query("q"))
+	if q == "" {
+		c.JSON(http.StatusOK, gin.H{"results": []UnsplashSearchResult{}})
+		return
+	}
+
+	apiURL := "https://api.unsplash.com/search/photos?query=" + url.QueryEscape(q) + "&per_page=20"
+	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, apiURL, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search"})
+		return
+	}
+	req.Header.Set("Authorization", "Client-ID "+keyVal)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search"})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		c.JSON(http.StatusBadGateway, gin.H{"error": "Unsplash search failed"})
+		return
+	}
+
+	var payload unsplashSearchResponse
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid response"})
+		return
+	}
+
+	results := make([]UnsplashSearchResult, 0, len(payload.Results))
+	for _, p := range payload.Results {
+		u := p.URLs.Regular
+		if u == "" {
+			u = p.URLs.Full
+		}
+		results = append(results, UnsplashSearchResult{ID: p.ID, URL: u, Thumb: p.URLs.Thumb})
+	}
+	c.JSON(http.StatusOK, gin.H{"results": results})
 }

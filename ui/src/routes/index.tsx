@@ -133,11 +133,8 @@ const InstanceAdminCreateWorkspacePage = lazy(() =>
     }),
   ),
 );
-const InstanceAdminLoginPage = lazy(() =>
-  import("../pages/instance-admin").then((m) =>
-    page({ InstanceAdminLoginPage: m.InstanceAdminLoginPage }),
-  ),
-);
+// Reserved for future instance-admin login route:
+// const InstanceAdminLoginPage = lazy(() => import("../pages/instance-admin").then((m) => page({ InstanceAdminLoginPage: m.InstanceAdminLoginPage })));
 
 const InstanceSetupWelcomePage = lazy(() =>
   import("../pages/setup").then((m) =>
@@ -152,11 +149,6 @@ const InstanceSetupConfigurePage = lazy(() =>
 const InstanceSetupCompletePage = lazy(() =>
   import("../pages/setup").then((m) =>
     page({ InstanceSetupCompletePage: m.InstanceSetupCompletePage }),
-  ),
-);
-const InviteAcceptPage = lazy(() =>
-  import("../pages/InviteAcceptPage").then((m) =>
-    page({ InviteAcceptPage: m.InviteAcceptPage }),
   ),
 );
 
@@ -293,14 +285,6 @@ const router = createBrowserRouter([
         element: (
           <Suspense fallback={<PageFallback />}>
             <LoginPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "invite",
-        element: (
-          <Suspense fallback={<PageFallback />}>
-            <InviteAcceptPage />
           </Suspense>
         ),
       },

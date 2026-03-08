@@ -12,9 +12,18 @@ export default defineConfig({
           "react-vendor": ["react", "react-dom"],
           router: ["react-router-dom"],
           charts: ["recharts"],
+          tiptap: [
+            "@tiptap/react",
+            "@tiptap/starter-kit",
+            "@tiptap/extension-placeholder",
+            "@tiptap/extension-underline",
+            "@tiptap/extension-link",
+          ],
           "ui-vendor": ["@headlessui/react", "lucide-react"],
+          "core-vendor": ["axios", "clsx", "tailwind-merge"],
         },
       },
     },
+    chunkSizeWarningLimit: 600,
   },
 });

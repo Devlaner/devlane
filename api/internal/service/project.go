@@ -78,7 +78,7 @@ func (s *ProjectService) Create(ctx context.Context, workspaceSlug, name, identi
 	return p, nil
 }
 
-func (s *ProjectService) Update(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID, name, identifier, description, timezone *string, projectLeadIDSet bool, projectLeadID *uuid.UUID, defaultAssigneeIDSet bool, defaultAssigneeID *uuid.UUID, guestViewAllFeatures *bool, moduleView, cycleView, issueViewsView, pageView, intakeView, isTimeTrackingEnabled *bool) (*model.Project, error) {
+func (s *ProjectService) Update(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID, name, identifier, description, timezone, coverImage *string, emoji *string, iconProp *model.JSONMap, projectLeadIDSet bool, projectLeadID *uuid.UUID, defaultAssigneeIDSet bool, defaultAssigneeID *uuid.UUID, guestViewAllFeatures *bool, moduleView, cycleView, issueViewsView, pageView, intakeView, isTimeTrackingEnabled *bool) (*model.Project, error) {
 	p, err := s.GetByID(ctx, workspaceSlug, projectID, userID)
 	if err != nil {
 		return nil, err
@@ -94,6 +94,18 @@ func (s *ProjectService) Update(ctx context.Context, workspaceSlug string, proje
 	}
 	if timezone != nil {
 		p.Timezone = *timezone
+	}
+	if coverImage != nil {
+		p.CoverImage = *coverImage
+	}
+	if emoji != nil {
+		p.Emoji = *emoji
+	}
+	if iconProp != nil {
+		p.IconProp = *iconProp
+		if len(*iconProp) > 0 {
+			p.Emoji = "" // clear emoji when setting icon
+		}
 	}
 	if projectLeadIDSet {
 		p.ProjectLeadID = projectLeadID

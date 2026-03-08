@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink, useLocation, useParams } from "react-router-dom";
 import { workspaceService } from "../../services/workspaceService";
 import { projectService } from "../../services/projectService";
+import { favoriteService } from "../../services/favoriteService";
 import type { WorkspaceApiResponse, ProjectApiResponse } from "../../api/types";
-import type { Project } from "../../types";
 import { CreateWorkItemModal } from "../CreateWorkItemModal";
 import { Avatar, Button } from "../ui";
 import { useAuth } from "../../contexts/AuthContext";
-import { cn } from "../../lib/utils";
+import { useFavorites } from "../../contexts/FavoritesContext";
+import { cn, getImageUrl } from "../../lib/utils";
 
 const SIDEBAR_WIDTH = 256;
 const SIDEBAR_WIDTH_COLLAPSED = 0;
@@ -442,6 +443,7 @@ export function Sidebar() {
   const [createWorkItemOpen, setCreateWorkItemOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState<WorkspaceApiResponse[]>([]);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
+  const { favoriteProjectIds, setFavoriteProjectIds } = useFavorites();
   const workspaceTriggerRef = useRef<HTMLButtonElement>(null);
   const workspaceDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -465,17 +467,8 @@ export function Sidebar() {
     : workspace
       ? `/${workspace.slug}`
       : "";
-  const favoriteProjects = projects.slice(0, 1);
-  const projectsForModal: Project[] = useMemo(
-    () =>
-      projects.map((p) => ({
-        id: p.id,
-        workspaceId: p.workspace_id,
-        name: p.name,
-        identifier: p.identifier ?? p.id.slice(0, 2),
-        description: p.description ?? null,
-      })),
-    [projects],
+  const favoriteProjects = projects.filter((p) =>
+    favoriteProjectIds.includes(p.id),
   );
 
   useEffect(() => {
@@ -508,6 +501,21 @@ export function Sidebar() {
       cancelled = true;
     };
   }, [slugForProjects]);
+
+  useEffect(() => {
+    let cancelled = false;
+    favoriteService
+      .getFavoriteProjectIds()
+      .then((ids) => {
+        if (!cancelled) setFavoriteProjectIds(ids);
+      })
+      .catch(() => {
+        if (!cancelled) setFavoriteProjectIds([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!baseUrl) return;
@@ -596,8 +604,16 @@ export function Sidebar() {
               aria-haspopup="true"
               aria-label="Workspace menu"
             >
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-layer-1)] text-sm font-semibold text-[var(--txt-secondary)]">
-                {(workspace?.name ?? "—").slice(0, 2).toUpperCase()}
+              <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-layer-1)] text-sm font-semibold text-[var(--txt-secondary)]">
+                {workspace?.logo && getImageUrl(workspace.logo) ? (
+                  <img
+                    src={getImageUrl(workspace.logo)!}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  (workspace?.name ?? "—").slice(0, 2).toUpperCase()
+                )}
               </div>
               <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--txt-primary)]">
                 {workspace?.name ?? "Loading…"}
@@ -629,7 +645,7 @@ export function Sidebar() {
               </button>
               <Avatar
                 name={user?.name ?? "User"}
-                src={user?.avatarUrl}
+                src={getImageUrl(user?.avatarUrl)}
                 size="sm"
               />
             </div>
@@ -656,8 +672,16 @@ export function Sidebar() {
                   {user?.email}
                 </p>
                 <div className="mb-4 flex items-start gap-3">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-xs font-semibold uppercase tracking-wide text-[var(--txt-secondary)]">
-                    {(workspace?.name ?? "—").slice(0, 2)}
+                  <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-xs font-semibold uppercase tracking-wide text-[var(--txt-secondary)]">
+                    {workspace?.logo && getImageUrl(workspace.logo) ? (
+                      <img
+                        src={getImageUrl(workspace.logo)!}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      (workspace?.name ?? "—").slice(0, 2)
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-[var(--txt-primary)]">
@@ -1091,7 +1115,7 @@ export function Sidebar() {
         open={createWorkItemOpen}
         onClose={() => setCreateWorkItemOpen(false)}
         workspaceSlug={workspace?.slug ?? ""}
-        projects={projectsForModal}
+        projects={projects}
       />
     </>
   );

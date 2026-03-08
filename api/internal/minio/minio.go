@@ -3,6 +3,7 @@ package minio
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 
 	"github.com/Devlaner/devlane/api/internal/config"
@@ -52,4 +53,15 @@ func New(cfg *config.Config, log *slog.Logger) (*Client, error) {
 // Bucket returns the default bucket name.
 func (c *Client) Bucket() string {
 	return c.bucket
+}
+
+// PutObject uploads data to the default bucket.
+func (c *Client) PutObject(ctx context.Context, objectName string, reader io.Reader, size int64, contentType string) error {
+	_, err := c.Client.PutObject(ctx, c.bucket, objectName, reader, size, minio.PutObjectOptions{ContentType: contentType})
+	return err
+}
+
+// GetObject returns a reader for the object from the default bucket.
+func (c *Client) GetObject(ctx context.Context, objectName string) (*minio.Object, error) {
+	return c.Client.GetObject(ctx, c.bucket, objectName, minio.GetObjectOptions{})
 }

@@ -51,6 +51,7 @@ type Project struct {
 	IntakeView            bool           `gorm:"default:true" json:"intake_view"`
 	IsTimeTrackingEnabled bool           `gorm:"column:is_time_tracking_enabled;default:false" json:"is_time_tracking_enabled"`
 	GuestViewAllFeatures  bool           `gorm:"column:guest_view_all_features;default:false" json:"guest_view_all_features"`
+	CoverImage            string         `gorm:"column:cover_image;type:text" json:"cover_image,omitempty"`
 	Timezone              string         `gorm:"default:UTC" json:"timezone"`
 }
 

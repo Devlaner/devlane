@@ -54,7 +54,10 @@ export function InstanceAdminImagePage() {
       unsplash_access_key: accessKeyToSend ?? "",
     };
     instanceSettingsService
-      .updateSection("image", payload)
+      .updateSection(
+        "image",
+        payload as import("../../api/types").InstanceSettingSectionValue,
+      )
       .then((res) => {
         setAccessKeyLocal(undefined);
         if (res.value)

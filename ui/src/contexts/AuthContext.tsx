@@ -21,6 +21,7 @@ function mapApiUserToUser(api: UserApiResponse): User {
     email: api.email ?? "",
     name,
     avatarUrl: api.avatar ?? null,
+    coverImageUrl: api.cover_image ?? null,
   };
 }
 

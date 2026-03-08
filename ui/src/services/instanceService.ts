@@ -27,6 +27,13 @@ export const instanceService = {
   },
 };
 
+/** Unsplash search result item from proxy. */
+export interface UnsplashSearchResult {
+  id: string;
+  url: string;
+  thumb: string;
+}
+
 /** Instance admin settings (requires auth). */
 export const instanceSettingsService = {
   async getSettings(): Promise<InstanceSettingsResponse> {
@@ -44,6 +51,17 @@ export const instanceSettingsService = {
       key: string;
       value: InstanceSettingSectionValue;
     }>(`/api/instance/settings/${encodeURIComponent(key)}`, { value });
+    return data;
+  },
+
+  /** Search Unsplash (uses instance image API key). GET /api/instance/unsplash/search?q= */
+  async unsplashSearch(
+    q: string,
+  ): Promise<{ results: UnsplashSearchResult[] }> {
+    const { data } = await apiClient.get<{ results: UnsplashSearchResult[] }>(
+      "/api/instance/unsplash/search",
+      { params: { q: q.trim() } },
+    );
     return data;
   },
 };
