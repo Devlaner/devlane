@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 
+	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/middleware"
 	"github.com/Devlaner/devlane/api/internal/service"
 	"github.com/gin-gonic/gin"
@@ -116,19 +117,22 @@ func (h *ProjectHandler) Update(c *gin.Context) {
 		return
 	}
 	var body struct {
-		Name                  string  `json:"name"`
-		Identifier            string  `json:"identifier"`
-		Description           *string `json:"description"`
-		Timezone              *string `json:"timezone"`
-		ProjectLeadID         *string `json:"project_lead_id"`
-		DefaultAssigneeID     *string `json:"default_assignee_id"`
-		GuestViewAllFeatures  *bool   `json:"guest_view_all_features"`
-		ModuleView            *bool   `json:"module_view"`
-		CycleView             *bool   `json:"cycle_view"`
-		IssueViewsView        *bool   `json:"issue_views_view"`
-		PageView              *bool   `json:"page_view"`
-		IntakeView            *bool   `json:"intake_view"`
-		IsTimeTrackingEnabled *bool   `json:"is_time_tracking_enabled"`
+		Name                  string                 `json:"name"`
+		Identifier            string                 `json:"identifier"`
+		Description           *string                `json:"description"`
+		Timezone              *string                `json:"timezone"`
+		CoverImage            *string                `json:"cover_image"`
+		Emoji                 *string                `json:"emoji"`
+		IconProp              map[string]interface{} `json:"icon_prop"`
+		ProjectLeadID         *string                `json:"project_lead_id"`
+		DefaultAssigneeID     *string                `json:"default_assignee_id"`
+		GuestViewAllFeatures  *bool                  `json:"guest_view_all_features"`
+		ModuleView            *bool                  `json:"module_view"`
+		CycleView             *bool                  `json:"cycle_view"`
+		IssueViewsView        *bool                  `json:"issue_views_view"`
+		PageView              *bool                  `json:"page_view"`
+		IntakeView            *bool                  `json:"intake_view"`
+		IsTimeTrackingEnabled *bool                  `json:"is_time_tracking_enabled"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "detail": err.Error()})
@@ -146,6 +150,19 @@ func (h *ProjectHandler) Update(c *gin.Context) {
 	}
 	if body.Timezone != nil {
 		timezone = body.Timezone
+	}
+	var coverImage *string
+	if body.CoverImage != nil {
+		coverImage = body.CoverImage
+	}
+	var iconProp *model.JSONMap
+	if body.Emoji != nil && *body.Emoji != "" {
+		// When setting emoji, clear icon_prop
+		empty := model.JSONMap{}
+		iconProp = &empty
+	} else if len(body.IconProp) > 0 {
+		ip := model.JSONMap(body.IconProp)
+		iconProp = &ip
 	}
 	var projectLeadIDPtr *uuid.UUID
 	if body.ProjectLeadID != nil {
@@ -173,7 +190,7 @@ func (h *ProjectHandler) Update(c *gin.Context) {
 			defaultAssigneeIDPtr = &id
 		}
 	}
-	p, err := h.Project.Update(c.Request.Context(), slug, projectID, user.ID, name, identifier, description, timezone, body.ProjectLeadID != nil, projectLeadIDPtr, body.DefaultAssigneeID != nil, defaultAssigneeIDPtr, body.GuestViewAllFeatures, body.ModuleView, body.CycleView, body.IssueViewsView, body.PageView, body.IntakeView, body.IsTimeTrackingEnabled)
+	p, err := h.Project.Update(c.Request.Context(), slug, projectID, user.ID, name, identifier, description, timezone, coverImage, body.Emoji, iconProp, body.ProjectLeadID != nil, projectLeadIDPtr, body.DefaultAssigneeID != nil, defaultAssigneeIDPtr, body.GuestViewAllFeatures, body.ModuleView, body.CycleView, body.IssueViewsView, body.PageView, body.IntakeView, body.IsTimeTrackingEnabled)
 	if err != nil {
 		if err == service.ErrProjectNotFound || err == service.ErrProjectForbidden {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})

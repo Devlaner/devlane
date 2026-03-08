@@ -15,6 +15,7 @@ export interface WorkspaceApiResponse {
   name: string;
   slug: string;
   owner_id: string;
+  logo?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -50,6 +51,12 @@ export interface CreateProjectRequest {
   identifier?: string;
 }
 
+/** Project icon_prop from API (name + optional color) */
+export interface ProjectIconProp {
+  name?: string;
+  color?: string;
+}
+
 /** Project as returned by the API (list + get) */
 export interface ProjectApiResponse {
   id: string;
@@ -59,6 +66,9 @@ export interface ProjectApiResponse {
   identifier?: string;
   slug?: string;
   timezone?: string;
+  cover_image?: string;
+  emoji?: string;
+  icon_prop?: ProjectIconProp | null;
   project_lead_id?: string | null;
   default_assignee_id?: string | null;
   guest_view_all_features?: boolean;
@@ -188,6 +198,7 @@ export interface UserApiResponse {
   last_name: string;
   display_name: string;
   avatar?: string;
+  cover_image?: string;
   is_active: boolean;
   is_onboarded: boolean;
   date_joined: string;
@@ -202,6 +213,8 @@ export interface UpdateMeRequest {
   last_name?: string;
   display_name?: string;
   user_timezone?: string;
+  avatar?: string;
+  cover_image?: string;
 }
 
 /** POST /api/users/me/change-password/ */

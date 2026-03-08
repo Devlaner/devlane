@@ -113,8 +113,9 @@ func (h *WorkspaceHandler) Update(c *gin.Context) {
 	}
 	slug := c.Param("slug")
 	var body struct {
-		Name string `json:"name"`
-		Slug string `json:"slug"`
+		Name string  `json:"name"`
+		Slug string  `json:"slug"`
+		Logo *string `json:"logo"`
 	}
 	_ = c.ShouldBindJSON(&body)
 	var name, newSlug *string
@@ -124,7 +125,7 @@ func (h *WorkspaceHandler) Update(c *gin.Context) {
 	if body.Slug != "" {
 		newSlug = &body.Slug
 	}
-	w, err := h.Workspace.Update(c.Request.Context(), slug, user.ID, name, newSlug)
+	w, err := h.Workspace.Update(c.Request.Context(), slug, user.ID, name, newSlug, body.Logo)
 	if err != nil {
 		if err == service.ErrWorkspaceNotFound || err == service.ErrWorkspaceForbidden {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Workspace not found"})

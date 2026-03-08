@@ -9,6 +9,7 @@ export interface User {
   email: string;
   name: string;
   avatarUrl?: string | null;
+  coverImageUrl?: string | null;
 }
 
 export interface Workspace {

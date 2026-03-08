@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, Button, Avatar, Modal } from '../components/ui';
+import { CoverImageModal } from '../components/CoverImageModal';
+import { UploadImageModal } from '../components/UploadImageModal';
+import { ProjectIconModal, ProjectIconDisplay } from '../components/ProjectIconModal';
+import { getImageUrl } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { workspaceService } from '../services/workspaceService';
@@ -525,6 +529,11 @@ export function SettingsPage() {
   const [createdTokenValue, setCreatedTokenValue] = useState<string | null>(null);
   const [tokenForm, setTokenForm] = useState({ label: '', description: '', expiresIn: '' as string });
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [accountCoverModalOpen, setAccountCoverModalOpen] = useState(false);
+  const [accountAvatarModalOpen, setAccountAvatarModalOpen] = useState(false);
+  const [projectCoverModalOpen, setProjectCoverModalOpen] = useState(false);
+  const [projectIconModalOpen, setProjectIconModalOpen] = useState(false);
+  const [workspaceLogoModalOpen, setWorkspaceLogoModalOpen] = useState(false);
   const navigate = useNavigate();
 
   const timezoneOptions = useMemo(() => getTimezoneOptions(), []);
@@ -733,7 +742,7 @@ export function SettingsPage() {
           {isAccountTab ? (
             <>
               <div className="flex items-center gap-2">
-                <Avatar name={user?.name ?? ''} size="sm" className="rounded-md" />
+                <Avatar name={user?.name ?? ''} src={getImageUrl(user?.avatarUrl)} size="sm" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-[var(--txt-primary)]">{displayName || user?.name}</p>
                   <p className="truncate text-xs text-[var(--txt-tertiary)]">{user?.email}</p>
@@ -793,7 +802,6 @@ export function SettingsPage() {
                 </p>
                 {projects.map((proj) => {
                   const isSelected = selectedProjectId === proj.id;
-                  const projectIcon = proj.name.toLowerCase().includes('mobile') ? <IconTruck /> : <IconHome />;
                   return (
                     <div key={proj.id} className="space-y-0.5">
                       <button
@@ -803,7 +811,9 @@ export function SettingsPage() {
                           isSelected ? 'bg-[var(--brand-200)] text-[var(--txt-primary)]' : 'text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]'
                         }`}
                       >
-                        <span className="text-[var(--txt-icon-secondary)]">{projectIcon}</span>
+                        <span className="text-[var(--txt-icon-secondary)] flex shrink-0 items-center justify-center">
+                          <ProjectIconDisplay emoji={proj.emoji} icon_prop={proj.icon_prop} size={16} />
+                        </span>
                         <span className="min-w-0 truncate">{proj.name}</span>
                         <span className="ml-auto shrink-0 text-xs text-[var(--txt-tertiary)]">Admin</span>
                       </button>
@@ -886,11 +896,25 @@ export function SettingsPage() {
         <main className="min-w-0 flex-1">
           {isAccountTab && accountSection === 'profile' && (
             <div className="space-y-6">
-              <div className="relative h-32 overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-layer-2)]">
-                <div className="absolute inset-0 bg-gradient-to-br from-[var(--neutral-800)] to-[var(--neutral-1000)]" />
-                <Button variant="secondary" size="sm" className="absolute bottom-2 right-2 gap-1.5 text-[13px]">Change cover</Button>
-                <div className="absolute bottom-0 left-4 -mb-8">
-                  <Avatar name={user?.name ?? ''} size="lg" className="ring-2 ring-[var(--bg-canvas)]" />
+              <div className="relative h-48 rounded-[var(--radius-md)]">
+                {/* Cover background (clipped to rounded corners; no overflow on outer so avatar can overlap) */}
+                <div
+                  className="absolute inset-0 overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-layer-2)]"
+                  style={getImageUrl(user?.coverImageUrl) ? { backgroundImage: `url(${getImageUrl(user?.coverImageUrl)})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+                >
+                  {!getImageUrl(user?.coverImageUrl) && <div className="absolute inset-0 bg-gradient-to-br from-[var(--neutral-800)] to-[var(--neutral-1000)]" />}
+                </div>
+                <Button variant="secondary" size="sm" className="absolute bottom-2 right-2 z-10 gap-1.5 text-[13px]" onClick={() => setAccountCoverModalOpen(true)}>Change cover</Button>
+                <div className="absolute bottom-0 left-4 -mb-8 z-10">
+                  <button type="button" onClick={() => setAccountAvatarModalOpen(true)} className="block h-24 w-20 overflow-hidden rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--brand-default)]" aria-label="Change profile picture">
+                    {getImageUrl(user?.avatarUrl) ? (
+                      <img src={getImageUrl(user?.avatarUrl)!} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center bg-[var(--bg-accent-primary)] text-sm font-medium text-[var(--txt-on-color)]">
+                        {(user?.name ?? '').split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '?'}
+                      </span>
+                    )}
+                  </button>
                 </div>
               </div>
               <div className="pt-10">
@@ -951,6 +975,32 @@ export function SettingsPage() {
                   </CardContent>
                 )}
               </Card>
+              <CoverImageModal
+                open={accountCoverModalOpen}
+                onClose={() => setAccountCoverModalOpen(false)}
+                onSelect={async (url) => {
+                  try {
+                    const api = await userService.updateMe({ cover_image: url });
+                    setUserFromApi(api);
+                  } catch {
+                    // error could be shown in modal or toast
+                  }
+                }}
+                title="Select cover image"
+              />
+              <UploadImageModal
+                open={accountAvatarModalOpen}
+                onClose={() => setAccountAvatarModalOpen(false)}
+                onSave={async (url) => {
+                  try {
+                    const api = await userService.updateMe({ avatar: url });
+                    setUserFromApi(api);
+                  } catch {
+                    // error shown in modal
+                  }
+                }}
+                title="Upload profile picture"
+              />
             </div>
           )}
 
@@ -1335,16 +1385,30 @@ export function SettingsPage() {
 
           {isProjectsTab && selectedProject && projectSection === 'general' && (
             <div className="space-y-6">
-              <div className="relative h-32 overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-layer-2)]">
-                <div className="absolute inset-0 bg-gradient-to-br from-[var(--neutral-800)] to-[var(--neutral-1000)]" />
-                <Button variant="secondary" size="sm" className="absolute bottom-2 right-2 gap-1.5 text-[13px]">Change cover</Button>
-                <div className="absolute bottom-0 left-4 -mb-8 flex items-end gap-3 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 shadow-sm">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-[var(--bg-layer-2)] text-[var(--txt-icon-secondary)]">
-                    <IconHome />
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--txt-primary)]">{projectName || selectedProject.name}</p>
-                    <p className="text-xs text-[var(--txt-tertiary)]">{selectedProject.identifier} · Public</p>
+              <div className="relative h-48 rounded-[var(--radius-md)]">
+                <div
+                  className="absolute inset-0 overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-layer-2)]"
+                  style={getImageUrl(selectedProject?.cover_image) ? { backgroundImage: `url(${getImageUrl(selectedProject?.cover_image)})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+                >
+                  {!getImageUrl(selectedProject?.cover_image) && <div className="absolute inset-0 bg-gradient-to-br from-[var(--neutral-800)] to-[var(--neutral-1000)]" />}
+                </div>
+                <Button variant="secondary" size="sm" className="absolute bottom-2 right-2 z-10 gap-1.5 text-[13px]" onClick={() => setProjectCoverModalOpen(true)}>Change cover</Button>
+                <div className="absolute bottom-4 left-4 z-10 flex items-center gap-3 px-1 py-1">
+                  <button
+                    type="button"
+                    onClick={() => setProjectIconModalOpen(true)}
+                    className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/15 backdrop-blur-sm hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white/50"
+                    aria-label="Change project icon"
+                  >
+                    <ProjectIconDisplay
+                      emoji={selectedProject.emoji}
+                      icon_prop={selectedProject.icon_prop}
+                      size={28}
+                    />
+                  </button>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white drop-shadow-sm">{projectName || selectedProject.name}</p>
+                    <p className="text-xs text-white/90 drop-shadow-sm">{selectedProject.identifier} · Public</p>
                   </div>
                 </div>
               </div>
@@ -1449,6 +1513,41 @@ export function SettingsPage() {
                 <p className="text-sm text-[var(--txt-tertiary)]">
                   Created on {new Date(selectedProject.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </p>
+              )}
+              {workspaceSlug && selectedProjectId && (
+                <>
+                  <CoverImageModal
+                    open={projectCoverModalOpen}
+                    onClose={() => setProjectCoverModalOpen(false)}
+                    onSelect={async (url) => {
+                      try {
+                        const updated = await projectService.update(workspaceSlug, selectedProjectId, { cover_image: url });
+                        setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                      } catch {
+                        // error could be shown
+                      }
+                    }}
+                    title="Select project cover"
+                  />
+                  <ProjectIconModal
+                    open={projectIconModalOpen}
+                    onClose={() => setProjectIconModalOpen(false)}
+                    currentEmoji={selectedProject?.emoji}
+                    currentIconProp={selectedProject?.icon_prop}
+                    onSelect={async (selection) => {
+                      try {
+                        const payload = selection.emoji != null
+                          ? { emoji: selection.emoji, icon_prop: null }
+                          : { emoji: null, icon_prop: selection.icon_prop ?? null };
+                        const updated = await projectService.update(workspaceSlug, selectedProjectId, payload);
+                        setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                      } catch {
+                        // error could be shown
+                      }
+                    }}
+                    title="Project icon"
+                  />
+                </>
               )}
             </div>
           )}
@@ -1892,14 +1991,19 @@ export function SettingsPage() {
           {!isAccountTab && !isProjectsTab && section === 'general' && (
             <div className="space-y-8">
               <div className="flex items-start gap-4">
-                <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-[var(--bg-layer-2)] text-lg font-semibold text-[var(--txt-secondary)]">
-                  {workspace.name.charAt(0).toUpperCase()}
+                <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--bg-layer-2)] text-lg font-semibold text-[var(--txt-secondary)]">
+                  {workspace?.logo && getImageUrl(workspace.logo) ? (
+                    <img src={getImageUrl(workspace.logo)!} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    workspace?.name?.charAt(0).toUpperCase() ?? ''
+                  )}
                 </div>
                 <div>
                   <h2 className="text-base font-semibold text-[var(--txt-primary)]">{workspaceDisplayName}</h2>
                   <p className="text-sm text-[var(--txt-tertiary)]">{workspaceUrl}</p>
                   <button
                     type="button"
+                    onClick={() => setWorkspaceLogoModalOpen(true)}
                     className="mt-1 flex items-center gap-1 text-sm font-medium text-[var(--txt-accent-primary)] hover:underline"
                   >
                     <IconPencil />
@@ -1988,6 +2092,21 @@ export function SettingsPage() {
                   </CardContent>
                 )}
               </Card>
+              {workspaceSlug && (
+                <UploadImageModal
+                  open={workspaceLogoModalOpen}
+                  onClose={() => setWorkspaceLogoModalOpen(false)}
+                  onSave={async (url) => {
+                    try {
+                      const updated = await workspaceService.update(workspaceSlug!, { logo: url });
+                      setWorkspace(updated);
+                    } catch {
+                      // error shown in modal
+                    }
+                  }}
+                  title="Upload workspace logo"
+                />
+              )}
             </div>
           )}
 

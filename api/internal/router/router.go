@@ -6,6 +6,7 @@ import (
 	"github.com/Devlaner/devlane/api/internal/auth"
 	"github.com/Devlaner/devlane/api/internal/handler"
 	"github.com/Devlaner/devlane/api/internal/middleware"
+	"github.com/Devlaner/devlane/api/internal/minio"
 	"github.com/Devlaner/devlane/api/internal/queue"
 	"github.com/Devlaner/devlane/api/internal/redis"
 	"github.com/Devlaner/devlane/api/internal/service"
@@ -16,10 +17,11 @@ import (
 
 // Config holds dependencies for the router.
 type Config struct {
-	Log            *slog.Logger
-	DB             *gorm.DB
-	Redis          *redis.Client   // optional: cache, locks, magic-link
-	Queue          *queue.Publisher // optional: enqueue emails, webhooks
+	Log             *slog.Logger
+	DB              *gorm.DB
+	Redis           *redis.Client   // optional: cache, locks, magic-link
+	Queue           *queue.Publisher // optional: enqueue emails, webhooks
+	Minio           *minio.Client   // optional: file uploads (cover images, avatars, logos)
 	CORSAllowOrigin string          // optional: e.g. "http://localhost:5173" for UI dev
 }
 
@@ -64,6 +66,7 @@ func New(cfg Config) *gin.Engine {
 	userRecentVisitStore := store.NewUserRecentVisitStore(cfg.DB)
 	userNotifPrefStore := store.NewUserNotificationPreferenceStore(cfg.DB)
 	apiTokenStore := store.NewApiTokenStore(cfg.DB)
+	userFavoriteStore := store.NewUserFavoriteStore(cfg.DB)
 
 	// Auth
 	authSvc := auth.NewService(userStore, sessionStore)
@@ -94,6 +97,7 @@ func New(cfg Config) *gin.Engine {
 	// Handlers
 	workspaceHandler := &handler.WorkspaceHandler{Workspace: workspaceSvc, Settings: instanceSettingStore}
 	projectHandler := &handler.ProjectHandler{Project: projectSvc}
+	favoriteHandler := &handler.FavoriteHandler{Project: projectSvc, Favorites: userFavoriteStore}
 	stateHandler := &handler.StateHandler{State: stateSvc}
 	labelHandler := &handler.LabelHandler{Label: labelSvc}
 	issueHandler := &handler.IssueHandler{Issue: issueSvc}
@@ -121,8 +125,14 @@ func New(cfg Config) *gin.Engine {
 		api.GET("/users/me/tokens/", authHandler.ListTokens)
 		api.POST("/users/me/tokens/", authHandler.CreateToken)
 		api.DELETE("/users/me/tokens/:id/", authHandler.RevokeToken)
+		api.GET("/users/me/favorite-projects/", favoriteHandler.ListFavoriteProjects)
 		api.GET("/instance/settings/", instanceSettingsHandler.GetSettings)
 		api.PATCH("/instance/settings/:key", instanceSettingsHandler.UpdateSetting)
+		api.GET("/instance/unsplash/search", instanceSettingsHandler.UnsplashSearch)
+
+		uploadHandler := &handler.UploadHandler{Minio: cfg.Minio}
+		api.POST("/upload", uploadHandler.Upload)
+		api.GET("/files/*path", uploadHandler.ServeFile)
 		api.GET("/users/me/workspaces/", workspaceHandler.List)
 		api.GET("/users/me/workspaces/invitations/", workspaceHandler.ListUserInvitations)
 		api.GET("/workspace-slug-check/", workspaceHandler.SlugCheck)
@@ -149,6 +159,8 @@ func New(cfg Config) *gin.Engine {
 		api.GET("/workspaces/:slug/projects/:projectId/", projectHandler.Get)
 		api.PATCH("/workspaces/:slug/projects/:projectId/", projectHandler.Update)
 		api.DELETE("/workspaces/:slug/projects/:projectId/", projectHandler.Delete)
+		api.POST("/workspaces/:slug/projects/:projectId/favorite", favoriteHandler.AddFavoriteProject)
+		api.DELETE("/workspaces/:slug/projects/:projectId/favorite", favoriteHandler.RemoveFavoriteProject)
 		api.GET("/workspaces/:slug/projects/:projectId/members/", projectHandler.ListMembers)
 		api.POST("/workspaces/:slug/projects/:projectId/members/leave/", projectHandler.Leave)
 		api.GET("/workspaces/:slug/projects/:projectId/members/:pk/", projectHandler.GetMember)

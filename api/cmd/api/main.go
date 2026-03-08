@@ -69,12 +69,12 @@ func main() {
 		}
 	}
 
-	// MinIO
-	mc, err := minio.New(cfg, log)
-	if err != nil {
+	// MinIO (optional: file uploads for covers, avatars, logos)
+	var mc *minio.Client
+	if client, err := minio.New(cfg, log); err != nil {
 		log.Warn("minio", "error", err)
 	} else {
-		_ = mc
+		mc = client
 	}
 
 	r := router.New(router.Config{
@@ -82,6 +82,7 @@ func main() {
 		DB:               db,
 		Redis:            rdb,
 		Queue:            queuePublisher,
+		Minio:            mc,
 		CORSAllowOrigin:  cfg.CORSAllowOrigin,
 	})
 

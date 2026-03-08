@@ -67,7 +67,7 @@ export const workspaceService = {
    */
   async update(
     slug: string,
-    payload: { name?: string; slug?: string }
+    payload: { name?: string; slug?: string; logo?: string }
   ): Promise<WorkspaceApiResponse> {
     const { data } = await apiClient.patch<WorkspaceApiResponse>(
       `/api/workspaces/${encodeURIComponent(slug)}/`,
