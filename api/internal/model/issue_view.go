@@ -16,12 +16,12 @@ type IssueView struct {
 	Filters           JSONMap        `gorm:"type:jsonb;default:{};serializer:json" json:"filters,omitempty"`
 	DisplayFilters    JSONMap        `gorm:"type:jsonb;default:{};serializer:json" json:"display_filters,omitempty"`
 	DisplayProperties JSONMap        `gorm:"type:jsonb;default:{};serializer:json" json:"display_properties,omitempty"`
-	RichFilters      JSONMap         `gorm:"type:jsonb;default:{};serializer:json" json:"rich_filters,omitempty"`
+	RichFilters       JSONMap        `gorm:"type:jsonb;default:{};serializer:json" json:"rich_filters,omitempty"`
 	Access            int16          `gorm:"default:1" json:"access"` // 0 private, 1 public
 	SortOrder         float64        `gorm:"column:sort_order;default:65535" json:"sort_order"`
 	LogoProps         JSONMap        `gorm:"type:jsonb;default:{};serializer:json" json:"logo_props,omitempty"`
 	OwnedByID         uuid.UUID      `gorm:"type:uuid;not null" json:"owned_by_id"`
-	IsLocked          bool          `gorm:"column:is_locked;default:false" json:"is_locked"`
+	IsLocked          bool           `gorm:"column:is_locked;default:false" json:"is_locked"`
 	WorkspaceID       uuid.UUID      `gorm:"type:uuid;not null" json:"workspace_id"`
 	ProjectID         *uuid.UUID     `gorm:"type:uuid" json:"project_id,omitempty"`
 	CreatedAt         time.Time      `json:"created_at"`

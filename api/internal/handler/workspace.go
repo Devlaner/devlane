@@ -14,7 +14,7 @@ import (
 // WorkspaceHandler serves workspace and member/invite endpoints.
 type WorkspaceHandler struct {
 	Workspace *service.WorkspaceService
-	Settings *store.InstanceSettingStore
+	Settings  *store.InstanceSettingStore
 }
 
 // List returns the current user's workspaces.

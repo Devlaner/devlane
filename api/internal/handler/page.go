@@ -55,7 +55,7 @@ func (h *PageHandler) Create(c *gin.Context) {
 		Name            string     `json:"name" binding:"required"`
 		DescriptionHTML string     `json:"description_html"`
 		ProjectID       *uuid.UUID `json:"project_id"`
-		Access          int16     `json:"access"` // 0 public, 1 private
+		Access          int16      `json:"access"` // 0 public, 1 private
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})

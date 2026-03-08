@@ -7,6 +7,7 @@ import { getImageUrl } from '../lib/utils';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
 import { favoriteService } from '../services/favoriteService';
+import { useFavorites } from '../contexts/FavoritesContext';
 import type { WorkspaceApiResponse, ProjectApiResponse } from '../api/types';
 
 const MAX_AVATARS = 3;
@@ -38,7 +39,7 @@ export function ProjectsListPage() {
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [allProjects, setAllProjects] = useState<ProjectApiResponse[]>([]);
   const [membersByProject, setMembersByProject] = useState<Record<string, string[]>>({});
-  const [favoriteProjectIds, setFavoriteProjectIds] = useState<string[]>([]);
+  const { favoriteProjectIds, setFavoriteProjectIds } = useFavorites();
   const [loading, setLoading] = useState(true);
   const createProjectOpen = searchParams.get('createProject') === '1';
 

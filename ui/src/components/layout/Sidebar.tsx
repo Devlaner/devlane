@@ -9,6 +9,7 @@ import type { Project } from '../../types';
 import { CreateWorkItemModal } from '../CreateWorkItemModal';
 import { Avatar, Button } from '../ui';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFavorites } from '../../contexts/FavoritesContext';
 import { cn, getImageUrl } from '../../lib/utils';
 
 const SIDEBAR_WIDTH = 256;
@@ -108,7 +109,7 @@ export function Sidebar() {
   const [createWorkItemOpen, setCreateWorkItemOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState<WorkspaceApiResponse[]>([]);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
-  const [favoriteProjectIds, setFavoriteProjectIds] = useState<string[]>([]);
+  const { favoriteProjectIds, setFavoriteProjectIds } = useFavorites();
   const workspaceTriggerRef = useRef<HTMLButtonElement>(null);
   const workspaceDropdownRef = useRef<HTMLDivElement>(null);
 

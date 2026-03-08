@@ -11,7 +11,7 @@ import (
 
 // FavoriteHandler serves user favorite project endpoints.
 type FavoriteHandler struct {
-	Project *service.ProjectService
+	Project   *service.ProjectService
 	Favorites *store.UserFavoriteStore
 }
 

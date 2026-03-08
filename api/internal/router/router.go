@@ -19,10 +19,10 @@ import (
 type Config struct {
 	Log             *slog.Logger
 	DB              *gorm.DB
-	Redis           *redis.Client   // optional: cache, locks, magic-link
+	Redis           *redis.Client    // optional: cache, locks, magic-link
 	Queue           *queue.Publisher // optional: enqueue emails, webhooks
-	Minio           *minio.Client   // optional: file uploads (cover images, avatars, logos)
-	CORSAllowOrigin string          // optional: e.g. "http://localhost:5173" for UI dev
+	Minio           *minio.Client    // optional: file uploads (cover images, avatars, logos)
+	CORSAllowOrigin string           // optional: e.g. "http://localhost:5173" for UI dev
 }
 
 // New builds and returns the Gin engine with /api/ and /auth/ routes.

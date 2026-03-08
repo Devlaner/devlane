@@ -13,8 +13,8 @@ type TaskHandler func(ctx context.Context, queue string, body []byte) error
 
 // Consumer consumes from RabbitMQ queues and dispatches to handlers.
 type Consumer struct {
-	ch      *amqp.Channel
-	log     *slog.Logger
+	ch       *amqp.Channel
+	log      *slog.Logger
 	handlers map[string]TaskHandler
 }
 
@@ -99,8 +99,8 @@ func HandleSendEmail(sender func(ctx context.Context, to, subject, body string) 
 func HandleWebhook(deliverer func(ctx context.Context, url, secret, event string, payload map[string]interface{}) error) TaskHandler {
 	return func(ctx context.Context, queue string, body []byte) error {
 		var msg struct {
-			Type    string                 `json:"type"`
-			Payload WebhookPayload         `json:"payload"`
+			Type    string         `json:"type"`
+			Payload WebhookPayload `json:"payload"`
 		}
 		if err := json.Unmarshal(body, &msg); err != nil {
 			return err

@@ -27,8 +27,8 @@ func (s *SessionStore) Create(ctx context.Context, sessionKey string, userID uui
 	expire := time.Now().UTC().AddDate(0, 0, sessionExpireDays)
 	rec := &model.Session{
 		SessionKey:  sessionKey,
-		SessionData:  string(data),
-		ExpireDate:   expire,
+		SessionData: string(data),
+		ExpireDate:  expire,
 	}
 	return s.db.WithContext(ctx).Create(rec).Error
 }

@@ -102,10 +102,10 @@ func (h *InstanceHandler) InstanceSetup(c *gin.Context) {
 			instanceName = user.DisplayName
 		}
 		_ = h.Settings.Upsert(c.Request.Context(), "general", model.JSONMap{
-			"instance_id":                      instanceID,
-			"admin_email":                      req.Email,
-			"instance_name":                    instanceName,
-			"only_admin_can_create_workspace":  false,
+			"instance_id":                     instanceID,
+			"admin_email":                     req.Email,
+			"instance_name":                   instanceName,
+			"only_admin_can_create_workspace": false,
 		})
 	}
 
@@ -300,7 +300,7 @@ func (h *InstanceSettingsHandler) UpdateSetting(c *gin.Context) {
 type unsplashPhoto struct {
 	ID   string `json:"id"`
 	URLs struct {
-		Full   string `json:"full"`
+		Full    string `json:"full"`
 		Regular string `json:"regular"`
 		Thumb   string `json:"thumb"`
 	} `json:"urls"`

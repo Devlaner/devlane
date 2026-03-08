@@ -45,9 +45,9 @@ func (h *WorkspaceLinkHandler) Create(c *gin.Context) {
 	}
 	slug := c.Param("slug")
 	var body struct {
-		Title     string      `json:"title"`
-		URL       string      `json:"url" binding:"required"`
-		ProjectID *uuid.UUID  `json:"project_id"`
+		Title     string     `json:"title"`
+		URL       string     `json:"url" binding:"required"`
+		ProjectID *uuid.UUID `json:"project_id"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})

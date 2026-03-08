@@ -3,8 +3,8 @@ package handler
 import (
 	"net/http"
 
-	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/middleware"
+	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -53,9 +53,9 @@ func (h *IssueViewHandler) Create(c *gin.Context) {
 	}
 	slug := c.Param("slug")
 	var body struct {
-		Name              string       `json:"name" binding:"required"`
-		Description       string       `json:"description"`
-		ProjectID         *uuid.UUID   `json:"project_id"`
+		Name              string        `json:"name" binding:"required"`
+		Description       string        `json:"description"`
+		ProjectID         *uuid.UUID    `json:"project_id"`
 		Query             model.JSONMap `json:"query"`
 		Filters           model.JSONMap `json:"filters"`
 		DisplayFilters    model.JSONMap `json:"display_filters"`
@@ -118,8 +118,8 @@ func (h *IssueViewHandler) Update(c *gin.Context) {
 		return
 	}
 	var body struct {
-		Name              string         `json:"name"`
-		Description       string         `json:"description"`
+		Name              string        `json:"name"`
+		Description       string        `json:"description"`
 		Query             model.JSONMap `json:"query"`
 		Filters           model.JSONMap `json:"filters"`
 		DisplayFilters    model.JSONMap `json:"display_filters"`

@@ -93,7 +93,7 @@ func (s *IssueViewService) Create(ctx context.Context, workspaceSlug string, pro
 		Filters:           filters,
 		DisplayFilters:    displayFilters,
 		DisplayProperties: displayProperties,
-		RichFilters:      model.JSONMap{},
+		RichFilters:       model.JSONMap{},
 		Access:            1,
 		OwnedByID:         userID,
 		WorkspaceID:       workspaceID,

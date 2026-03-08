@@ -3,8 +3,8 @@ package handler
 import (
 	"net/http"
 
-	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/middleware"
+	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -84,8 +84,8 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 	}
 	slug := c.Param("slug")
 	var body struct {
-		Name        string `json:"name" binding:"required"`
-		Identifier  string `json:"identifier"`
+		Name       string `json:"name" binding:"required"`
+		Identifier string `json:"identifier"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
