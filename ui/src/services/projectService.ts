@@ -59,9 +59,6 @@ export const projectService = {
       identifier?: string;
       description?: string;
       timezone?: string;
-      cover_image?: string;
-      emoji?: string;
-      icon_prop?: { name?: string; color?: string } | null;
       /** When present, use empty string to clear; omit to leave unchanged. */
       project_lead_id?: string;
       /** When present, use empty string to clear; omit to leave unchanged. */

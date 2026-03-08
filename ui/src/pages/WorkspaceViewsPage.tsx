@@ -212,9 +212,7 @@ export function WorkspaceViewsPage() {
     projects.find((p) => p.id === projectId);
   const getStateName = (stateId: string | null | undefined) =>
     stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : "—";
-  const getUser = (
-    _userId: string | null,
-  ): { name: string; avatarUrl?: string | null } | null => null;
+  const getUser = (_userId: string | null) => null;
   const getLabelNames = (_labelIds: string[] = []) => [] as string[];
   const getCycleName = (_projectId: string, _cycleId: string | null) => null;
   const getModuleName = (_projectId: string, _moduleId: string | null) => null;

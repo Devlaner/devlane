@@ -310,7 +310,7 @@ export function WorkspaceHomePage() {
   const { user } = useAuth();
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
-  const [_projects, setProjects] = useState<ProjectApiResponse[]>([]);
+  const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [quicklinks, setQuicklinks] = useState<QuickLinkApiResponse[]>([]);
   const [stickies, setStickies] = useState<StickyApiResponse[]>([]);
   const [recents, setRecents] = useState<RecentVisitApiResponse[]>([]);
@@ -386,8 +386,14 @@ export function WorkspaceHomePage() {
         .catch(() => {});
     }
   };
-  // Reserved for future use (e.g. refresh recents list):
-  // const refetchRecents = () => { if (workspaceSlug) { recentsService.list(workspaceSlug).then(setRecents).catch(() => {}); } };
+  const refetchRecents = () => {
+    if (workspaceSlug) {
+      recentsService
+        .list(workspaceSlug)
+        .then(setRecents)
+        .catch(() => {});
+    }
+  };
 
   const handleCloseQuicklink = () => {
     setAddQuicklinkOpen(false);
@@ -408,8 +414,15 @@ export function WorkspaceHomePage() {
       setQuicklinkSubmitting(false);
     }
   };
-  // Reserved for future use (delete quicklink from UI):
-  // const handleDeleteQuicklink = async (id: string) => { if (!workspaceSlug) return; try { await quickLinksService.delete(workspaceSlug, id); refetchQuicklinks(); } catch {} };
+  const handleDeleteQuicklink = async (id: string) => {
+    if (!workspaceSlug) return;
+    try {
+      await quickLinksService.delete(workspaceSlug, id);
+      refetchQuicklinks();
+    } catch {
+      // already handled by interceptor
+    }
+  };
   const handleCloseSticky = () => {
     setAddStickyOpen(false);
     setStickyContent("");

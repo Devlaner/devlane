@@ -18,7 +18,6 @@ import type {
   WorkspaceMemberApiResponse,
 } from "../api/types";
 import type { Priority } from "../types";
-import { getImageUrl } from "../lib/utils";
 
 const priorityVariant: Record<
   Priority,
@@ -196,8 +195,7 @@ export function IssueListPage() {
     const display = m?.member_display_name?.trim();
     const emailUser = m?.member_email?.split("@")[0]?.trim();
     const name = display || emailUser || "Member";
-    const avatarUrl = m?.member_avatar ?? null;
-    return { id: userId, name, avatarUrl };
+    return { id: userId, name, avatarUrl: null as string | null };
   };
 
   const createParam = searchParams.get("create") === "1";
@@ -377,7 +375,7 @@ export function IssueListPage() {
                         {assignee ? (
                           <Avatar
                             name={assignee.name}
-                            src={getImageUrl(assignee.avatarUrl) ?? undefined}
+                            src={assignee.avatarUrl}
                             size="sm"
                             className="h-6 w-6 text-[10px]"
                           />

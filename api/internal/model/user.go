@@ -17,7 +17,6 @@ type User struct {
 	LastName     string         `gorm:"column:last_name;type:varchar(255);default:''" json:"last_name"`
 	DisplayName  string         `gorm:"column:display_name;type:varchar(255)" json:"display_name"`
 	Avatar       string         `gorm:"type:text" json:"avatar,omitempty"`
-	CoverImage   string         `gorm:"column:cover_image;type:text" json:"cover_image,omitempty"`
 	DateJoined   time.Time      `gorm:"column:date_joined;not null" json:"date_joined"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
