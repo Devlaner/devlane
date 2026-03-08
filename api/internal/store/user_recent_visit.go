@@ -52,12 +52,12 @@ func (s *UserRecentVisitStore) Upsert(ctx context.Context, workspaceID, userID u
 	}
 	if err == gorm.ErrRecordNotFound {
 		v := &model.UserRecentVisit{
-			WorkspaceID:       workspaceID,
-			UserID:            userID,
-			EntityName:        entityName,
-			EntityIdentifier:  entityIdentifier,
-			ProjectID:         projectID,
-			LastVisitedAt:     now,
+			WorkspaceID:      workspaceID,
+			UserID:           userID,
+			EntityName:       entityName,
+			EntityIdentifier: entityIdentifier,
+			ProjectID:        projectID,
+			LastVisitedAt:    now,
 		}
 		return s.db.WithContext(ctx).Create(v).Error
 	}

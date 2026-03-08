@@ -1,6 +1,6 @@
-import { Outlet } from 'react-router-dom';
-import { PageHeader } from './PageHeader';
-import { Sidebar } from './Sidebar';
+import { Outlet } from "react-router-dom";
+import { PageHeader } from "./PageHeader";
+import { Sidebar } from "./Sidebar";
 
 export function AppShell() {
   return (

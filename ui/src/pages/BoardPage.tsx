@@ -1,23 +1,34 @@
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { Card, CardContent, Badge, Avatar } from '../components/ui';
-import { workspaceService } from '../services/workspaceService';
-import { projectService } from '../services/projectService';
-import { issueService } from '../services/issueService';
-import { stateService } from '../services/stateService';
-import type { WorkspaceApiResponse, ProjectApiResponse, IssueApiResponse, StateApiResponse } from '../api/types';
-import type { Priority } from '../types';
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { Card, CardContent, Badge } from "../components/ui";
+import { workspaceService } from "../services/workspaceService";
+import { projectService } from "../services/projectService";
+import { issueService } from "../services/issueService";
+import { stateService } from "../services/stateService";
+import type {
+  WorkspaceApiResponse,
+  ProjectApiResponse,
+  IssueApiResponse,
+  StateApiResponse,
+} from "../api/types";
+import type { Priority } from "../types";
 
-const priorityVariant: Record<Priority, 'danger' | 'warning' | 'default' | 'neutral'> = {
-  urgent: 'danger',
-  high: 'danger',
-  medium: 'warning',
-  low: 'default',
-  none: 'neutral',
+const priorityVariant: Record<
+  Priority,
+  "danger" | "warning" | "default" | "neutral"
+> = {
+  urgent: "danger",
+  high: "danger",
+  medium: "warning",
+  low: "default",
+  none: "neutral",
 };
 
 export function BoardPage() {
-  const { workspaceSlug, projectId } = useParams<{ workspaceSlug: string; projectId: string }>();
+  const { workspaceSlug, projectId } = useParams<{
+    workspaceSlug: string;
+    projectId: string;
+  }>();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
@@ -56,7 +67,9 @@ export function BoardPage() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [workspaceSlug, projectId]);
 
   if (loading) {
@@ -68,9 +81,7 @@ export function BoardPage() {
   }
   if (!workspace || !project) {
     return (
-      <div className="text-[var(--txt-secondary)]">
-        Project not found.
-      </div>
+      <div className="text-[var(--txt-secondary)]">Project not found.</div>
     );
   }
 
@@ -94,15 +105,15 @@ export function BoardPage() {
             <div
               className="border-b border-[var(--border-subtle)] px-4 py-3"
               style={{
-                borderLeftWidth: '4px',
-                borderLeftColor: state.color ?? 'var(--border-subtle)',
+                borderLeftWidth: "4px",
+                borderLeftColor: state.color ?? "var(--border-subtle)",
               }}
             >
               <h2 className="font-medium text-[var(--txt-primary)]">
                 {state.name}
               </h2>
               <p className="text-xs text-[var(--txt-tertiary)]">
-                {stateIssues.length} issue{stateIssues.length !== 1 ? 's' : ''}
+                {stateIssues.length} issue{stateIssues.length !== 1 ? "s" : ""}
               </p>
             </div>
             <div className="flex-1 space-y-2 overflow-y-auto p-3">
@@ -121,8 +132,14 @@ export function BoardPage() {
                         {issue.name}
                       </p>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <Badge variant={priorityVariant[(issue.priority as Priority) ?? 'none']}>
-                          {issue.priority ?? '—'}
+                        <Badge
+                          variant={
+                            priorityVariant[
+                              (issue.priority as Priority) ?? "none"
+                            ]
+                          }
+                        >
+                          {issue.priority ?? "—"}
                         </Badge>
                       </div>
                     </CardContent>

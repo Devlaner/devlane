@@ -1,10 +1,10 @@
-import { apiClient } from '../api/client';
+import { apiClient } from "../api/client";
 import type {
   CreateWorkspaceRequest,
   WorkspaceApiResponse,
   WorkspaceInviteApiResponse,
   WorkspaceMemberApiResponse,
-} from '../api/types';
+} from "../api/types";
 
 /**
  * Workspace API service.
@@ -15,7 +15,9 @@ export const workspaceService = {
    * List workspaces for the current user.
    */
   async list(): Promise<WorkspaceApiResponse[]> {
-    const { data } = await apiClient.get<WorkspaceApiResponse[]>('/api/users/me/workspaces/');
+    const { data } = await apiClient.get<WorkspaceApiResponse[]>(
+      "/api/users/me/workspaces/",
+    );
     return data;
   },
 
@@ -23,7 +25,9 @@ export const workspaceService = {
    * Get a workspace by slug (current user must be a member).
    */
   async getBySlug(slug: string): Promise<WorkspaceApiResponse> {
-    const { data } = await apiClient.get<WorkspaceApiResponse>(`/api/workspaces/${encodeURIComponent(slug)}/`);
+    const { data } = await apiClient.get<WorkspaceApiResponse>(
+      `/api/workspaces/${encodeURIComponent(slug)}/`,
+    );
     return data;
   },
 
@@ -32,31 +36,38 @@ export const workspaceService = {
    * @throws Error with user-facing message on failure
    */
   async create(payload: CreateWorkspaceRequest): Promise<WorkspaceApiResponse> {
-    const { data } = await apiClient.post<WorkspaceApiResponse>('/api/workspaces/', payload);
-    return data;
-  },
-
-  async listMembers(workspaceSlug: string): Promise<WorkspaceMemberApiResponse[]> {
-    const { data } = await apiClient.get<WorkspaceMemberApiResponse[]>(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/members/`
+    const { data } = await apiClient.post<WorkspaceApiResponse>(
+      "/api/workspaces/",
+      payload,
     );
     return data;
   },
 
-  async listInvites(workspaceSlug: string): Promise<WorkspaceInviteApiResponse[]> {
+  async listMembers(
+    workspaceSlug: string,
+  ): Promise<WorkspaceMemberApiResponse[]> {
+    const { data } = await apiClient.get<WorkspaceMemberApiResponse[]>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/members/`,
+    );
+    return data;
+  },
+
+  async listInvites(
+    workspaceSlug: string,
+  ): Promise<WorkspaceInviteApiResponse[]> {
     const { data } = await apiClient.get<WorkspaceInviteApiResponse[]>(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/invitations/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/invitations/`,
     );
     return data;
   },
 
   async createInvite(
     workspaceSlug: string,
-    payload: { email: string; role?: number }
+    payload: { email: string; role?: number },
   ): Promise<WorkspaceInviteApiResponse> {
     const { data } = await apiClient.post<WorkspaceInviteApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/invitations/`,
-      payload
+      payload,
     );
     return data;
   },
@@ -67,11 +78,11 @@ export const workspaceService = {
    */
   async update(
     slug: string,
-    payload: { name?: string; slug?: string }
+    payload: { name?: string; slug?: string; logo?: string },
   ): Promise<WorkspaceApiResponse> {
     const { data } = await apiClient.patch<WorkspaceApiResponse>(
       `/api/workspaces/${encodeURIComponent(slug)}/`,
-      payload
+      payload,
     );
     return data;
   },
@@ -83,11 +94,11 @@ export const workspaceService = {
   async updateMember(
     workspaceSlug: string,
     memberPk: string,
-    role: number
+    role: number,
   ): Promise<WorkspaceMemberApiResponse> {
     const { data } = await apiClient.patch<WorkspaceMemberApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/members/${encodeURIComponent(memberPk)}/`,
-      { role }
+      { role },
     );
     return data;
   },
@@ -98,7 +109,7 @@ export const workspaceService = {
    */
   async deleteMember(workspaceSlug: string, memberPk: string): Promise<void> {
     await apiClient.delete(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/members/${encodeURIComponent(memberPk)}/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/members/${encodeURIComponent(memberPk)}/`,
     );
   },
 
@@ -108,7 +119,7 @@ export const workspaceService = {
    */
   async deleteInvite(workspaceSlug: string, invitePk: string): Promise<void> {
     await apiClient.delete(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/invitations/${encodeURIComponent(invitePk)}/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/invitations/${encodeURIComponent(invitePk)}/`,
     );
   },
 };

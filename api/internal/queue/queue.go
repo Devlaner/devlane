@@ -19,7 +19,7 @@ const (
 
 // Task types for routing or payload identification.
 const (
-	TaskSendEmail     = "send_email"
+	TaskSendEmail      = "send_email"
 	TaskWebhookDeliver = "webhook_deliver"
 )
 
@@ -42,8 +42,8 @@ type WebhookPayload struct {
 
 // Publisher publishes tasks to RabbitMQ.
 type Publisher struct {
-	ch    *amqp.Channel
-	log   *slog.Logger
+	ch     *amqp.Channel
+	log    *slog.Logger
 	queues map[string]bool
 }
 

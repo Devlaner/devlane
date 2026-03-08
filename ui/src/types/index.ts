@@ -2,13 +2,14 @@
 // Domain types (API-agnostic; used across UI and mock data)
 // ---------------------------------------------------------------------------
 
-export type Priority = 'urgent' | 'high' | 'medium' | 'low' | 'none';
+export type Priority = "urgent" | "high" | "medium" | "low" | "none";
 
 export interface User {
   id: string;
   email: string;
   name: string;
   avatarUrl?: string | null;
+  coverImageUrl?: string | null;
 }
 
 export interface Workspace {
@@ -64,14 +65,14 @@ export interface Cycle {
   name: string;
   startDate: string;
   endDate: string;
-  status: 'current' | 'upcoming' | 'completed';
+  status: "current" | "upcoming" | "completed";
 }
 
 export interface Module {
   id: string;
   projectId: string;
   name: string;
-  status: 'planned' | 'in-progress' | 'completed';
+  status: "planned" | "in-progress" | "completed";
 }
 
 export interface Sticky {

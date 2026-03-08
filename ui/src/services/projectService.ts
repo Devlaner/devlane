@@ -1,10 +1,10 @@
-import { apiClient } from '../api/client';
+import { apiClient } from "../api/client";
 import type {
   CreateProjectRequest,
   ProjectApiResponse,
   ProjectInviteApiResponse,
   ProjectMemberApiResponse,
-} from '../api/types';
+} from "../api/types";
 
 /**
  * Project API service (scoped by workspace slug).
@@ -15,7 +15,7 @@ export const projectService = {
    */
   async list(workspaceSlug: string): Promise<ProjectApiResponse[]> {
     const { data } = await apiClient.get<ProjectApiResponse[]>(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/`,
     );
     return data;
   },
@@ -23,9 +23,12 @@ export const projectService = {
   /**
    * Get a project by ID within a workspace.
    */
-  async get(workspaceSlug: string, projectId: string): Promise<ProjectApiResponse> {
+  async get(
+    workspaceSlug: string,
+    projectId: string,
+  ): Promise<ProjectApiResponse> {
     const { data } = await apiClient.get<ProjectApiResponse>(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/`,
     );
     return data;
   },
@@ -33,10 +36,13 @@ export const projectService = {
   /**
    * Create a project in a workspace.
    */
-  async create(workspaceSlug: string, payload: CreateProjectRequest): Promise<ProjectApiResponse> {
+  async create(
+    workspaceSlug: string,
+    payload: CreateProjectRequest,
+  ): Promise<ProjectApiResponse> {
     const { data } = await apiClient.post<ProjectApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/`,
-      payload
+      payload,
     );
     return data;
   },
@@ -53,6 +59,9 @@ export const projectService = {
       identifier?: string;
       description?: string;
       timezone?: string;
+      cover_image?: string;
+      emoji?: string;
+      icon_prop?: { name?: string; color?: string } | null;
       /** When present, use empty string to clear; omit to leave unchanged. */
       project_lead_id?: string;
       /** When present, use empty string to clear; omit to leave unchanged. */
@@ -64,25 +73,31 @@ export const projectService = {
       page_view?: boolean;
       intake_view?: boolean;
       is_time_tracking_enabled?: boolean;
-    }
+    },
   ): Promise<ProjectApiResponse> {
     const { data } = await apiClient.patch<ProjectApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/`,
-      payload
+      payload,
     );
     return data;
   },
 
-  async listMembers(workspaceSlug: string, projectId: string): Promise<ProjectMemberApiResponse[]> {
+  async listMembers(
+    workspaceSlug: string,
+    projectId: string,
+  ): Promise<ProjectMemberApiResponse[]> {
     const { data } = await apiClient.get<ProjectMemberApiResponse[]>(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/members/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/members/`,
     );
     return data;
   },
 
-  async listInvites(workspaceSlug: string, projectId: string): Promise<ProjectInviteApiResponse[]> {
+  async listInvites(
+    workspaceSlug: string,
+    projectId: string,
+  ): Promise<ProjectInviteApiResponse[]> {
     const { data } = await apiClient.get<ProjectInviteApiResponse[]>(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/invitations/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/invitations/`,
     );
     return data;
   },
@@ -90,11 +105,11 @@ export const projectService = {
   async createInvite(
     workspaceSlug: string,
     projectId: string,
-    payload: { email: string; role?: number }
+    payload: { email: string; role?: number },
   ): Promise<ProjectInviteApiResponse> {
     const { data } = await apiClient.post<ProjectInviteApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/invitations/`,
-      payload
+      payload,
     );
     return data;
   },
@@ -106,11 +121,11 @@ export const projectService = {
     workspaceSlug: string,
     projectId: string,
     memberPk: string,
-    role: number
+    role: number,
   ): Promise<ProjectMemberApiResponse> {
     const { data } = await apiClient.patch<ProjectMemberApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/members/${encodeURIComponent(memberPk)}/`,
-      { role }
+      { role },
     );
     return data;
   },
@@ -118,18 +133,26 @@ export const projectService = {
   /**
    * Remove a member from the project. pk is the project_members row id.
    */
-  async deleteMember(workspaceSlug: string, projectId: string, memberPk: string): Promise<void> {
+  async deleteMember(
+    workspaceSlug: string,
+    projectId: string,
+    memberPk: string,
+  ): Promise<void> {
     await apiClient.delete(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/members/${encodeURIComponent(memberPk)}/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/members/${encodeURIComponent(memberPk)}/`,
     );
   },
 
   /**
    * Delete a project invitation.
    */
-  async deleteInvite(workspaceSlug: string, projectId: string, invitePk: string): Promise<void> {
+  async deleteInvite(
+    workspaceSlug: string,
+    projectId: string,
+    invitePk: string,
+  ): Promise<void> {
     await apiClient.delete(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/invitations/${encodeURIComponent(invitePk)}/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/invitations/${encodeURIComponent(invitePk)}/`,
     );
   },
 };

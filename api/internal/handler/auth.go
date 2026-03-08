@@ -17,12 +17,12 @@ import (
 )
 
 type AuthHandler struct {
-	Auth        *auth.Service
-	Settings    *store.InstanceSettingStore
-	Winv        *store.WorkspaceInviteStore
+	Auth       *auth.Service
+	Settings   *store.InstanceSettingStore
+	Winv       *store.WorkspaceInviteStore
 	Ws         *store.WorkspaceStore
-	NotifPrefs  *store.UserNotificationPreferenceStore
-	ApiTokens   *store.ApiTokenStore
+	NotifPrefs *store.UserNotificationPreferenceStore
+	ApiTokens  *store.ApiTokenStore
 }
 
 type SignInRequest struct {
@@ -31,10 +31,10 @@ type SignInRequest struct {
 }
 
 type SignUpRequest struct {
-	Email      string `json:"email" binding:"required,email"`
-	Password   string `json:"password" binding:"required,min=8"`
-	FirstName  string `json:"first_name"`
-	LastName   string `json:"last_name"`
+	Email       string `json:"email" binding:"required,email"`
+	Password    string `json:"password" binding:"required,min=8"`
+	FirstName   string `json:"first_name"`
+	LastName    string `json:"last_name"`
 	InviteToken string `json:"invite_token"`
 }
 
@@ -181,6 +181,8 @@ type UpdateMeRequest struct {
 	LastName     *string `json:"last_name"`
 	DisplayName  *string `json:"display_name"`
 	UserTimezone *string `json:"user_timezone"`
+	Avatar       *string `json:"avatar"`
+	CoverImage   *string `json:"cover_image"`
 }
 
 // UpdateMe updates the authenticated user's profile (email is not updatable).
@@ -207,6 +209,12 @@ func (h *AuthHandler) UpdateMe(c *gin.Context) {
 	}
 	if req.UserTimezone != nil {
 		user.UserTimezone = *req.UserTimezone
+	}
+	if req.Avatar != nil {
+		user.Avatar = *req.Avatar
+	}
+	if req.CoverImage != nil {
+		user.CoverImage = *req.CoverImage
 	}
 	if err := h.Auth.UpdateProfile(c.Request.Context(), user); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})
@@ -255,11 +263,11 @@ func (h *AuthHandler) GetNotificationPreferences(c *gin.Context) {
 	}
 	if h.NotifPrefs == nil {
 		c.JSON(http.StatusOK, gin.H{
-			"property_change":  true,
-			"state_change":     true,
-			"comment":          true,
-			"mention":          true,
-			"issue_completed":  true,
+			"property_change": true,
+			"state_change":    true,
+			"comment":         true,
+			"mention":         true,
+			"issue_completed": true,
 		})
 		return
 	}
@@ -270,20 +278,20 @@ func (h *AuthHandler) GetNotificationPreferences(c *gin.Context) {
 	}
 	if p == nil {
 		c.JSON(http.StatusOK, gin.H{
-			"property_change":  true,
-			"state_change":     true,
-			"comment":          true,
-			"mention":          true,
-			"issue_completed":  true,
+			"property_change": true,
+			"state_change":    true,
+			"comment":         true,
+			"mention":         true,
+			"issue_completed": true,
 		})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"property_change":  p.PropertyChange,
-		"state_change":     p.StateChange,
-		"comment":          p.Comment,
-		"mention":          p.Mention,
-		"issue_completed":  p.IssueCompleted,
+		"property_change": p.PropertyChange,
+		"state_change":    p.StateChange,
+		"comment":         p.Comment,
+		"mention":         p.Mention,
+		"issue_completed": p.IssueCompleted,
 	})
 }
 
@@ -522,6 +530,7 @@ func userResponse(u *model.User) gin.H {
 		"last_name":     u.LastName,
 		"display_name":  u.DisplayName,
 		"avatar":        u.Avatar,
+		"cover_image":   u.CoverImage,
 		"is_active":     u.IsActive,
 		"is_onboarded":  u.IsOnboarded,
 		"date_joined":   u.DateJoined,
@@ -530,4 +539,3 @@ func userResponse(u *model.User) gin.H {
 		"user_timezone": u.UserTimezone,
 	}
 }
-

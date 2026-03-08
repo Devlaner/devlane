@@ -1,8 +1,8 @@
-import { useRef } from 'react';
+import { useRef } from "react";
 
 export function formatDateForDisplay(isoDate: string): string {
-  if (!isoDate) return '';
-  const [y, m, d] = isoDate.split('-');
+  if (!isoDate) return "";
+  const [y, m, d] = isoDate.split("-");
   if (!m || !d) return isoDate;
   const month = parseInt(m, 10);
   const day = parseInt(d, 10);
@@ -27,7 +27,7 @@ export function DatePickerTrigger({
   compact: _compact = true,
 }: DatePickerTriggerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const displayValue = value ? formatDateForDisplay(value) : '';
+  const displayValue = value ? formatDateForDisplay(value) : "";
 
   return (
     <div className="relative inline-flex min-w-0 shrink-0 items-center gap-1 rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-1.5 py-1 text-xs text-[var(--txt-secondary)] [&_svg]:size-3">

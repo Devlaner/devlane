@@ -1,10 +1,13 @@
-import { apiClient } from '../api/client';
-import type { LabelApiResponse } from '../api/types';
+import { apiClient } from "../api/client";
+import type { LabelApiResponse } from "../api/types";
 
 export const labelService = {
-  async list(workspaceSlug: string, projectId: string): Promise<LabelApiResponse[]> {
+  async list(
+    workspaceSlug: string,
+    projectId: string,
+  ): Promise<LabelApiResponse[]> {
     const { data } = await apiClient.get<LabelApiResponse[]>(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issue-labels/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issue-labels/`,
     );
     return data;
   },
@@ -12,11 +15,11 @@ export const labelService = {
   async create(
     workspaceSlug: string,
     projectId: string,
-    payload: { name: string; color?: string }
+    payload: { name: string; color?: string },
   ): Promise<LabelApiResponse> {
     const { data } = await apiClient.post<LabelApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issue-labels/`,
-      payload
+      payload,
     );
     return data;
   },
@@ -25,18 +28,22 @@ export const labelService = {
     workspaceSlug: string,
     projectId: string,
     labelId: string,
-    payload: { name?: string; color?: string }
+    payload: { name?: string; color?: string },
   ): Promise<LabelApiResponse> {
     const { data } = await apiClient.patch<LabelApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issue-labels/${encodeURIComponent(labelId)}/`,
-      payload
+      payload,
     );
     return data;
   },
 
-  async delete(workspaceSlug: string, projectId: string, labelId: string): Promise<void> {
+  async delete(
+    workspaceSlug: string,
+    projectId: string,
+    labelId: string,
+  ): Promise<void> {
     await apiClient.delete(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issue-labels/${encodeURIComponent(labelId)}/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issue-labels/${encodeURIComponent(labelId)}/`,
     );
   },
 };

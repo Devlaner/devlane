@@ -1,15 +1,25 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Button, Input } from '../../components/ui';
-import { CreateWorkspaceSetupHint } from '../../components/instance-admin/CreateWorkspaceSetupHint';
-import { useAuth } from '../../contexts/AuthContext';
-import { workspaceService } from '../../services/workspaceService';
-import { getApiErrorMessage } from '../../api/client';
-import { slugFromName, validateWorkspaceSlug } from '../../utils/workspace';
-import { ORGANIZATION_SIZE_OPTIONS } from '../../constants/workspace';
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Button, Input } from "../../components/ui";
+import { CreateWorkspaceSetupHint } from "../../components/instance-admin/CreateWorkspaceSetupHint";
+import { useAuth } from "../../contexts/AuthContext";
+import { workspaceService } from "../../services/workspaceService";
+import { getApiErrorMessage } from "../../api/client";
+import { slugFromName, validateWorkspaceSlug } from "../../utils/workspace";
+import { ORGANIZATION_SIZE_OPTIONS } from "../../constants/workspace";
 
 const IconChevronDown = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <path d="m6 9 6 6 6-6" />
   </svg>
 );
@@ -18,17 +28,19 @@ export function InstanceAdminCreateWorkspacePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated } = useAuth();
-  const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [organizationSize, setOrganizationSize] = useState('');
-  const [error, setError] = useState('');
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [organizationSize, setOrganizationSize] = useState("");
+  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSetupHint, setShowSetupHint] = useState(false);
 
-  const baseUrl = typeof window !== 'undefined' ? `${window.location.origin}/` : '';
+  const baseUrl =
+    typeof window !== "undefined" ? `${window.location.origin}/` : "";
 
   useEffect(() => {
-    const fromSetup = (location.state as { fromSetup?: boolean })?.fromSetup ?? false;
+    const fromSetup =
+      (location.state as { fromSetup?: boolean })?.fromSetup ?? false;
     setShowSetupHint(fromSetup);
   }, [location.state]);
 
@@ -42,20 +54,24 @@ export function InstanceAdminCreateWorkspacePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     const trimmedName = name.trim();
     const trimmedSlug = slug.trim().toLowerCase() || slugFromName(trimmedName);
 
     if (!trimmedName) {
-      setError('Please enter a workspace name.');
+      setError("Please enter a workspace name.");
       return;
     }
     if (!validateWorkspaceSlug(trimmedSlug)) {
-      setError('Workspace URL must be lowercase letters, numbers, and hyphens only.');
+      setError(
+        "Workspace URL must be lowercase letters, numbers, and hyphens only.",
+      );
       return;
     }
     if (!isAuthenticated || !user) {
-      setError('You need to be signed in to the app to create a workspace. Sign in from the main app, then return here.');
+      setError(
+        "You need to be signed in to the app to create a workspace. Sign in from the main app, then return here.",
+      );
       return;
     }
 
@@ -63,7 +79,7 @@ export function InstanceAdminCreateWorkspacePage() {
     try {
       await workspaceService.create({ name: trimmedName, slug: trimmedSlug });
       setShowSetupHint(false);
-      navigate('/instance-admin/workspace', { replace: true });
+      navigate("/instance-admin/workspace", { replace: true });
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
@@ -78,7 +94,8 @@ export function InstanceAdminCreateWorkspacePage() {
           Create a new workspace on this instance.
         </h1>
         <p className="mt-1 text-sm text-[var(--txt-secondary)]">
-          You will need to invite users from Workspace Settings after you create this workspace.
+          You will need to invite users from Workspace Settings after you create
+          this workspace.
         </p>
       </div>
 
@@ -92,7 +109,10 @@ export function InstanceAdminCreateWorkspacePage() {
         />
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="workspace-url" className="text-sm font-medium text-[var(--txt-secondary)]">
+          <label
+            htmlFor="workspace-url"
+            className="text-sm font-medium text-[var(--txt-secondary)]"
+          >
             Set your workspace&apos;s URL
           </label>
           <div className="flex flex-1 items-center gap-0 overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] text-sm">
@@ -103,7 +123,9 @@ export function InstanceAdminCreateWorkspacePage() {
               id="workspace-url"
               type="text"
               value={slug}
-              onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+              onChange={(e) =>
+                setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
+              }
               placeholder="workspace-name"
               className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
             />
@@ -111,7 +133,10 @@ export function InstanceAdminCreateWorkspacePage() {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="organization-size" className="text-sm font-medium text-[var(--txt-secondary)]">
+          <label
+            htmlFor="organization-size"
+            className="text-sm font-medium text-[var(--txt-secondary)]"
+          >
             How many people will use this workspace?
           </label>
           <div className="relative">
@@ -122,7 +147,7 @@ export function InstanceAdminCreateWorkspacePage() {
               className="h-9 w-full max-w-md appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] pl-3 pr-9 text-sm text-[var(--txt-primary)] focus:outline-none"
             >
               {ORGANIZATION_SIZE_OPTIONS.map((opt) => (
-                <option key={opt.value || 'empty'} value={opt.value}>
+                <option key={opt.value || "empty"} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
@@ -139,19 +164,21 @@ export function InstanceAdminCreateWorkspacePage() {
 
         <div className="flex flex-wrap gap-3">
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating…' : 'Create workspace'}
+            {isSubmitting ? "Creating…" : "Create workspace"}
           </Button>
           <Button
             type="button"
             variant="secondary"
-            onClick={() => navigate('/instance-admin/workspace')}
+            onClick={() => navigate("/instance-admin/workspace")}
           >
             Go back
           </Button>
         </div>
       </form>
 
-      {showSetupHint && <CreateWorkspaceSetupHint onDismiss={() => setShowSetupHint(false)} />}
+      {showSetupHint && (
+        <CreateWorkspaceSetupHint onDismiss={() => setShowSetupHint(false)} />
+      )}
     </div>
   );
 }

@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	ErrIssueNotFound  = errors.New("issue not found")
+	ErrIssueNotFound = errors.New("issue not found")
 )
 
 // IssueService handles issue business logic.

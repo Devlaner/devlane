@@ -1,8 +1,15 @@
-import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 const IconSearch = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
     <circle cx="11" cy="11" r="8" />
     <path d="m21 21-4.35-4.35" />
   </svg>
@@ -23,10 +30,10 @@ export function SelectParentModal({
   value: _value,
   onChange,
 }: SelectParentModalProps) {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
-    if (!open) setSearch('');
+    if (!open) setSearch("");
   }, [open]);
 
   const q = (s: string) => s.toLowerCase().trim();
@@ -51,7 +58,10 @@ export function SelectParentModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-[var(--border-subtle)] px-4 py-3">
-          <h2 id="select-parent-title" className="text-sm font-semibold text-[var(--txt-primary)]">
+          <h2
+            id="select-parent-title"
+            className="text-sm font-semibold text-[var(--txt-primary)]"
+          >
             Select parent
           </h2>
         </div>
@@ -90,7 +100,9 @@ export function SelectParentModal({
                 }}
                 className="flex w-full items-center gap-2 truncate px-3 py-2 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
               >
-                <span className="shrink-0 text-[var(--txt-icon-tertiary)]">•</span>
+                <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+                  •
+                </span>
                 <span className="truncate">{i.title}</span>
               </button>
             ))}
@@ -98,6 +110,6 @@ export function SelectParentModal({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

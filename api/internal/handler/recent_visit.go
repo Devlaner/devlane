@@ -52,9 +52,9 @@ func (h *RecentVisitHandler) Record(c *gin.Context) {
 	}
 	slug := c.Param("slug")
 	var body struct {
-		EntityName       string      `json:"entity_name" binding:"required"` // "issue", "project", "page"
-		EntityIdentifier *uuid.UUID  `json:"entity_identifier"`
-		ProjectID        *uuid.UUID  `json:"project_id"`
+		EntityName       string     `json:"entity_name" binding:"required"` // "issue", "project", "page"
+		EntityIdentifier *uuid.UUID `json:"entity_identifier"`
+		ProjectID        *uuid.UUID `json:"project_id"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})

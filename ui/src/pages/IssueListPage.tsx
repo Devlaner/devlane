@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { Badge, Avatar, Button } from '../components/ui';
-import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
-import { workspaceService } from '../services/workspaceService';
-import { projectService } from '../services/projectService';
-import { issueService } from '../services/issueService';
-import { stateService } from '../services/stateService';
-import { labelService } from '../services/labelService';
-import { cycleService } from '../services/cycleService';
-import { moduleService } from '../services/moduleService';
+import { useEffect, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Badge, Avatar, Button } from "../components/ui";
+import { CreateWorkItemModal } from "../components/CreateWorkItemModal";
+import { workspaceService } from "../services/workspaceService";
+import { projectService } from "../services/projectService";
+import { issueService } from "../services/issueService";
+import { stateService } from "../services/stateService";
+import { labelService } from "../services/labelService";
+import { cycleService } from "../services/cycleService";
+import { moduleService } from "../services/moduleService";
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
@@ -16,19 +16,31 @@ import type {
   StateApiResponse,
   LabelApiResponse,
   WorkspaceMemberApiResponse,
-} from '../api/types';
-import type { Priority } from '../types';
+} from "../api/types";
+import type { Priority } from "../types";
+import { getImageUrl } from "../lib/utils";
 
-const priorityVariant: Record<Priority, 'danger' | 'warning' | 'default' | 'neutral'> = {
-  urgent: 'danger',
-  high: 'danger',
-  medium: 'warning',
-  low: 'default',
-  none: 'neutral',
+const priorityVariant: Record<
+  Priority,
+  "danger" | "warning" | "default" | "neutral"
+> = {
+  urgent: "danger",
+  high: "danger",
+  medium: "warning",
+  low: "default",
+  none: "neutral",
 };
 
 const IconCalendar = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
     <line x1="16" y1="2" x2="16" y2="6" />
     <line x1="8" y1="2" x2="8" y2="6" />
@@ -36,38 +48,79 @@ const IconCalendar = () => (
   </svg>
 );
 const IconUser = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
     <circle cx="12" cy="7" r="4" />
   </svg>
 );
 const IconTag = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
   </svg>
 );
 const IconEye = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
     <circle cx="12" cy="12" r="3" />
   </svg>
 );
 const IconMoreVertical = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden
+  >
     <circle cx="12" cy="5" r="1.5" />
     <circle cx="12" cy="12" r="1.5" />
     <circle cx="12" cy="19" r="1.5" />
   </svg>
 );
 const IconPlus = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <path d="M5 12h14" />
     <path d="M12 5v14" />
   </svg>
 );
 
 export function IssueListPage() {
-  const { workspaceSlug, projectId } = useParams<{ workspaceSlug: string; projectId: string }>();
+  const { workspaceSlug, projectId } = useParams<{
+    workspaceSlug: string;
+    projectId: string;
+  }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [createOpen, setCreateOpen] = useState(false);
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
@@ -82,7 +135,10 @@ export function IssueListPage() {
 
   const refetchIssues = () => {
     if (!workspaceSlug || !projectId) return;
-    issueService.list(workspaceSlug, projectId, { limit: 100 }).then(setIssues).catch(() => {});
+    issueService
+      .list(workspaceSlug, projectId, { limit: 100 })
+      .then(setIssues)
+      .catch(() => {});
   };
 
   useEffect(() => {
@@ -112,15 +168,24 @@ export function IssueListPage() {
         setMembers(mem ?? []);
       })
       .catch(() => {
-        if (!cancelled) setWorkspace(null); setProject(null); setProjects([]); setIssues([]); setStates([]); setLabels([]); setMembers([]);
+        if (!cancelled) setWorkspace(null);
+        setProject(null);
+        setProjects([]);
+        setIssues([]);
+        setStates([]);
+        setLabels([]);
+        setMembers([]);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [workspaceSlug, projectId]);
 
-  const getStateName = (stateId: string | null | undefined) => (stateId ? states.find((s) => s.id === stateId)?.name ?? stateId : '—');
+  const getStateName = (stateId: string | null | undefined) =>
+    stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : "—";
   const getLabelNames = (labelIds: string[] = []) =>
     labelIds
       .map((id) => labels.find((l) => l.id === id)?.name)
@@ -129,12 +194,13 @@ export function IssueListPage() {
     if (!userId) return null;
     const m = members.find((x) => x.member_id === userId);
     const display = m?.member_display_name?.trim();
-    const emailUser = m?.member_email?.split('@')[0]?.trim();
-    const name = display || emailUser || 'Member';
-    return { id: userId, name, avatarUrl: null as string | null };
+    const emailUser = m?.member_email?.split("@")[0]?.trim();
+    const name = display || emailUser || "Member";
+    const avatarUrl = m?.member_avatar ?? null;
+    return { id: userId, name, avatarUrl };
   };
 
-  const createParam = searchParams.get('create') === '1';
+  const createParam = searchParams.get("create") === "1";
 
   useEffect(() => {
     if (createParam && projectId) setCreateOpen(true);
@@ -143,7 +209,7 @@ export function IssueListPage() {
   const handleCloseCreate = () => {
     setCreateOpen(false);
     setCreateError(null);
-    searchParams.delete('create');
+    searchParams.delete("create");
     setSearchParams(searchParams, { replace: true });
   };
 
@@ -152,7 +218,7 @@ export function IssueListPage() {
     description?: string;
     projectId: string;
     stateId?: string;
-    priority?: import('../types').Priority;
+    priority?: import("../types").Priority;
     assigneeIds?: string[];
     labelIds?: string[];
     startDate?: string;
@@ -177,24 +243,42 @@ export function IssueListPage() {
       });
       if (created?.id) {
         if (data.cycleId) {
-          await cycleService.addIssue(workspaceSlug, data.projectId, data.cycleId, created.id);
+          await cycleService.addIssue(
+            workspaceSlug,
+            data.projectId,
+            data.cycleId,
+            created.id,
+          );
         }
         if (data.moduleId) {
-          await moduleService.addIssue(workspaceSlug, data.projectId, data.moduleId, created.id);
+          await moduleService.addIssue(
+            workspaceSlug,
+            data.projectId,
+            data.moduleId,
+            created.id,
+          );
         }
       }
       refetchIssues();
       handleCloseCreate();
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'Failed to create work item');
+      setCreateError(
+        err instanceof Error ? err.message : "Failed to create work item",
+      );
     }
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">Loading…</div>;
+    return (
+      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+        Loading…
+      </div>
+    );
   }
   if (!workspace || !project) {
-    return <div className="text-[var(--txt-secondary)]">Project not found.</div>;
+    return (
+      <div className="text-[var(--txt-secondary)]">Project not found.</div>
+    );
   }
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
@@ -209,7 +293,7 @@ export function IssueListPage() {
             type="button"
             className="flex size-7 items-center justify-center rounded-md text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
             aria-label="Add work item"
-            onClick={() => setSearchParams({ create: '1' })}
+            onClick={() => setSearchParams({ create: "1" })}
           >
             <IconPlus />
           </button>
@@ -220,8 +304,14 @@ export function IssueListPage() {
       <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]">
         {issues.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 px-4 py-12">
-            <p className="text-sm text-[var(--txt-tertiary)]">No work items yet.</p>
-            <Button size="sm" className="gap-1.5" onClick={() => setSearchParams({ create: '1' })}>
+            <p className="text-sm text-[var(--txt-tertiary)]">
+              No work items yet.
+            </p>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setSearchParams({ create: "1" })}
+            >
               <IconPlus />
               New work item
             </Button>
@@ -229,7 +319,10 @@ export function IssueListPage() {
         ) : (
           <ul className="divide-y divide-[var(--border-subtle)]">
             {issues.map((issue) => {
-              const primaryAssigneeId = issue.assignee_ids && issue.assignee_ids.length > 0 ? issue.assignee_ids[0] : null;
+              const primaryAssigneeId =
+                issue.assignee_ids && issue.assignee_ids.length > 0
+                  ? issue.assignee_ids[0]
+                  : null;
               const assignee = getUser(primaryAssigneeId);
               const labelNames = getLabelNames(issue.label_ids ?? []);
               const displayId = `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`;
@@ -240,38 +333,76 @@ export function IssueListPage() {
                     className="flex min-h-12 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-[var(--bg-layer-1-hover)]"
                   >
                     <span className="min-w-0 flex-1 truncate text-sm">
-                      <span className="font-medium text-[var(--txt-accent-primary)]">{displayId}</span>
-                      <span className="ml-2 text-[var(--txt-primary)]">{issue.name}</span>
+                      <span className="font-medium text-[var(--txt-accent-primary)]">
+                        {displayId}
+                      </span>
+                      <span className="ml-2 text-[var(--txt-primary)]">
+                        {issue.name}
+                      </span>
                     </span>
                     <div className="flex shrink-0 items-center gap-2 text-[var(--txt-icon-tertiary)]">
                       <span title={getStateName(issue.state_id ?? undefined)}>
-                        <Badge variant="neutral" className="text-xs font-medium">
+                        <Badge
+                          variant="neutral"
+                          className="text-xs font-medium"
+                        >
                           {getStateName(issue.state_id ?? undefined)}
                         </Badge>
                       </span>
-                      <span title={issue.priority ?? ''} className="flex size-6 items-center justify-center">
-                        <Badge variant={priorityVariant[(issue.priority as Priority) ?? 'none']} className="!px-1.5 !py-0 text-[10px]">
-                          {issue.priority ?? '—'}
+                      <span
+                        title={issue.priority ?? ""}
+                        className="flex size-6 items-center justify-center"
+                      >
+                        <Badge
+                          variant={
+                            priorityVariant[
+                              (issue.priority as Priority) ?? "none"
+                            ]
+                          }
+                          className="!px-1.5 !py-0 text-[10px]"
+                        >
+                          {issue.priority ?? "—"}
                         </Badge>
                       </span>
-                      <span className="flex size-6 items-center justify-center" title="Due date">
+                      <span
+                        className="flex size-6 items-center justify-center"
+                        title="Due date"
+                      >
                         <IconCalendar />
                       </span>
-                      <span className="flex size-6 items-center justify-center" title={assignee?.name ?? 'Unassigned'}>
+                      <span
+                        className="flex size-6 items-center justify-center"
+                        title={assignee?.name ?? "Unassigned"}
+                      >
                         {assignee ? (
-                          <Avatar name={assignee.name} src={assignee.avatarUrl} size="sm" className="h-6 w-6 text-[10px]" />
+                          <Avatar
+                            name={assignee.name}
+                            src={getImageUrl(assignee.avatarUrl) ?? undefined}
+                            size="sm"
+                            className="h-6 w-6 text-[10px]"
+                          />
                         ) : (
                           <IconUser />
                         )}
                       </span>
-                      <span className="flex size-6 items-center justify-center" title={labelNames.length ? labelNames.join(', ') : 'Labels'}>
+                      <span
+                        className="flex size-6 items-center justify-center"
+                        title={
+                          labelNames.length ? labelNames.join(", ") : "Labels"
+                        }
+                      >
                         {labelNames.length > 0 ? (
                           <IconTag />
                         ) : (
-                          <span className="opacity-40"><IconTag /></span>
+                          <span className="opacity-40">
+                            <IconTag />
+                          </span>
                         )}
                       </span>
-                      <span className="flex size-6 items-center justify-center" title="Visibility">
+                      <span
+                        className="flex size-6 items-center justify-center"
+                        title="Visibility"
+                      >
                         <IconEye />
                       </span>
                       <button
@@ -298,7 +429,7 @@ export function IssueListPage() {
             <button
               type="button"
               className="flex items-center gap-1.5 rounded-md border border-dashed border-[var(--border-subtle)] bg-transparent px-3 py-2 text-sm font-medium text-[var(--txt-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-primary)]"
-              onClick={() => setSearchParams({ create: '1' })}
+              onClick={() => setSearchParams({ create: "1" })}
             >
               <IconPlus />
               New work item

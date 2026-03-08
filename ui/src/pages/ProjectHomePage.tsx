@@ -1,15 +1,23 @@
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { Card, CardContent, Badge, Button } from '../components/ui';
-import { workspaceService } from '../services/workspaceService';
-import { projectService } from '../services/projectService';
-import { issueService } from '../services/issueService';
-import { stateService } from '../services/stateService';
-import { recentsService } from '../services/recentsService';
-import type { WorkspaceApiResponse, ProjectApiResponse, IssueApiResponse, StateApiResponse } from '../api/types';
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { Card, CardContent, Badge, Button } from "../components/ui";
+import { workspaceService } from "../services/workspaceService";
+import { projectService } from "../services/projectService";
+import { issueService } from "../services/issueService";
+import { stateService } from "../services/stateService";
+import { recentsService } from "../services/recentsService";
+import type {
+  WorkspaceApiResponse,
+  ProjectApiResponse,
+  IssueApiResponse,
+  StateApiResponse,
+} from "../api/types";
 
 export function ProjectHomePage() {
-  const { workspaceSlug, projectId } = useParams<{ workspaceSlug: string; projectId: string }>();
+  const { workspaceSlug, projectId } = useParams<{
+    workspaceSlug: string;
+    projectId: string;
+  }>();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
@@ -38,7 +46,7 @@ export function ProjectHomePage() {
           if (workspaceSlug && projectId) {
             recentsService
               .record(workspaceSlug, {
-                entity_name: 'project',
+                entity_name: "project",
                 entity_identifier: projectId,
                 project_id: projectId,
               })
@@ -57,11 +65,13 @@ export function ProjectHomePage() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [workspaceSlug, projectId]);
 
   const getStateName = (stateId: string | null | undefined) =>
-    stateId ? states.find((s) => s.id === stateId)?.name ?? stateId : '—';
+    stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : "—";
 
   if (loading) {
     return (
@@ -72,9 +82,7 @@ export function ProjectHomePage() {
   }
   if (!workspace || !project) {
     return (
-      <div className="text-[var(--txt-secondary)]">
-        Project not found.
-      </div>
+      <div className="text-[var(--txt-secondary)]">Project not found.</div>
     );
   }
 
@@ -122,7 +130,9 @@ export function ProjectHomePage() {
                     <span className="font-medium text-[var(--txt-primary)]">
                       {issue.name}
                     </span>
-                    <Badge variant="neutral">{getStateName(issue.state_id ?? undefined)}</Badge>
+                    <Badge variant="neutral">
+                      {getStateName(issue.state_id ?? undefined)}
+                    </Badge>
                   </Link>
                 </li>
               ))}

@@ -69,7 +69,9 @@
     --priority-none: oklch(0.6376 0.0129 231.77);
 
     /* ---------- Light mode semantic (Devlane) ---------- */
-    --bg-screen: oklch(0.96 0.002 230); /* outer "screen" behind app container */
+    --bg-screen: oklch(
+      0.96 0.002 230
+    ); /* outer "screen" behind app container */
     --bg-surface-1: oklch(0.995 0.0002 230); /* sidebar + canvas: near-white */
     --bg-canvas: var(--bg-surface-1);
     --bg-surface-2: var(--neutral-100);
@@ -226,8 +228,14 @@
     --radius-sm: 0.2rem;
     --radius-md: 0.25rem;
     --radius-lg: 0.375rem;
-    --shadow-raised: 0 1px 6px -1px oklch(0.2 0.01 250 / 0.08), 0 1px 4px 0 oklch(0.2 0.01 250 / 0.1);
-    --shadow-overlay: 0 10px 10px -5px oklch(0.2 0.01 250 / 0.1), 0 10px 40px -5px oklch(0.2 0.01 250 / 0.1);
-    --shadow-container: 0 1px 3px 0 oklch(0.2 0.01 250 / 0.06), 0 1px 2px -1px oklch(0.2 0.01 250 / 0.04);
+    --shadow-raised:
+      0 1px 6px -1px oklch(0.2 0.01 250 / 0.08),
+      0 1px 4px 0 oklch(0.2 0.01 250 / 0.1);
+    --shadow-overlay:
+      0 10px 10px -5px oklch(0.2 0.01 250 / 0.1),
+      0 10px 40px -5px oklch(0.2 0.01 250 / 0.1);
+    --shadow-container:
+      0 1px 3px 0 oklch(0.2 0.01 250 / 0.06),
+      0 1px 2px -1px oklch(0.2 0.01 250 / 0.04);
   }
 }

@@ -1,16 +1,16 @@
-import { useEffect, useState } from 'react';
-import { Button, Skeleton } from '../../components/ui';
-import { instanceSettingsService } from '../../services/instanceService';
-import { getApiErrorMessage } from '../../api/client';
-import type { InstanceGeneralSection } from '../../api/types';
+import { useEffect, useState } from "react";
+import { Button, Skeleton } from "../../components/ui";
+import { instanceSettingsService } from "../../services/instanceService";
+import { getApiErrorMessage } from "../../api/client";
+import type { InstanceGeneralSection } from "../../api/types";
 
 export function InstanceAdminGeneralPage() {
-  const [instanceName, setInstanceName] = useState('');
-  const [adminEmail, setAdminEmail] = useState('');
-  const [instanceId, setInstanceId] = useState('');
+  const [instanceName, setInstanceName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [instanceId, setInstanceId] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -19,9 +19,9 @@ export function InstanceAdminGeneralPage() {
       .then((settings) => {
         if (cancelled) return;
         const g = (settings.general || {}) as InstanceGeneralSection;
-        setInstanceName(String(g.instance_name ?? '').trim());
-        setAdminEmail(String(g.admin_email ?? '').trim());
-        setInstanceId(String(g.instance_id ?? '').trim());
+        setInstanceName(String(g.instance_name ?? "").trim());
+        setAdminEmail(String(g.admin_email ?? "").trim());
+        setInstanceId(String(g.instance_id ?? "").trim());
       })
       .catch((err) => {
         if (!cancelled) setError(getApiErrorMessage(err));
@@ -35,11 +35,11 @@ export function InstanceAdminGeneralPage() {
   }, []);
 
   const handleSave = () => {
-    setError('');
+    setError("");
     setSaving(true);
     // Only instance_name is editable; backend preserves admin_email and instance_id
     instanceSettingsService
-      .updateSection('general', { instance_name: instanceName })
+      .updateSection("general", { instance_name: instanceName })
       .then(() => {})
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setSaving(false));
@@ -77,16 +77,23 @@ export function InstanceAdminGeneralPage() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h1 className="text-base font-semibold text-[var(--txt-primary)]">General settings</h1>
+        <h1 className="text-base font-semibold text-[var(--txt-primary)]">
+          General settings
+        </h1>
         <p className="mt-0.5 text-xs text-[var(--txt-secondary)]">
-          Change the name of your instance. Admin email and instance ID are set at setup and cannot be changed here.
+          Change the name of your instance. Admin email and instance ID are set
+          at setup and cannot be changed here.
         </p>
       </div>
 
-      {error && <p className="text-sm text-[var(--txt-danger-primary)]">{error}</p>}
+      {error && (
+        <p className="text-sm text-[var(--txt-danger-primary)]">{error}</p>
+      )}
 
       <section className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--txt-secondary)]">Instance details</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--txt-secondary)]">
+          Instance details
+        </h2>
         <div className="space-y-2.5">
           <label className="block text-xs font-medium text-[var(--txt-secondary)]">
             Name of instance
@@ -105,7 +112,9 @@ export function InstanceAdminGeneralPage() {
               value={adminEmail}
               className="mt-0.5 block w-full rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-2.5 py-1.5 text-xs text-[var(--txt-tertiary)] focus:outline-none"
             />
-            <p className="mt-0.5 text-[11px] text-[var(--txt-tertiary)]">Set at initial setup.</p>
+            <p className="mt-0.5 text-[11px] text-[var(--txt-tertiary)]">
+              Set at initial setup.
+            </p>
           </label>
           <label className="block text-xs font-medium text-[var(--txt-secondary)]">
             Instance ID
@@ -115,13 +124,20 @@ export function InstanceAdminGeneralPage() {
               value={instanceId}
               className="mt-0.5 block w-full rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-2.5 py-1.5 text-xs text-[var(--txt-tertiary)] focus:outline-none"
             />
-            <p className="mt-0.5 text-[11px] text-[var(--txt-tertiary)]">Generated at setup.</p>
+            <p className="mt-0.5 text-[11px] text-[var(--txt-tertiary)]">
+              Generated at setup.
+            </p>
           </label>
         </div>
       </section>
 
-      <Button size="sm" className="text-xs" onClick={handleSave} disabled={saving}>
-        {saving ? 'Saving…' : 'Save changes'}
+      <Button
+        size="sm"
+        className="text-xs"
+        onClick={handleSave}
+        disabled={saving}
+      >
+        {saving ? "Saving…" : "Save changes"}
       </Button>
     </div>
   );

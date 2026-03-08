@@ -1,8 +1,5 @@
-import { apiClient } from '../api/client';
-import type {
-  StickyApiResponse,
-  CreateStickyRequest,
-} from '../api/types';
+import { apiClient } from "../api/client";
+import type { StickyApiResponse, CreateStickyRequest } from "../api/types";
 
 /**
  * Stickies API (workspace-scoped).
@@ -10,18 +7,18 @@ import type {
 export const stickiesService = {
   async list(workspaceSlug: string): Promise<StickyApiResponse[]> {
     const { data } = await apiClient.get<StickyApiResponse[]>(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/stickies/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/stickies/`,
     );
     return data;
   },
 
   async create(
     workspaceSlug: string,
-    payload: CreateStickyRequest
+    payload: CreateStickyRequest,
   ): Promise<StickyApiResponse> {
     const { data } = await apiClient.post<StickyApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/stickies/`,
-      payload
+      payload,
     );
     return data;
   },
@@ -29,18 +26,18 @@ export const stickiesService = {
   async update(
     workspaceSlug: string,
     id: string,
-    payload: { name?: string; description?: string; color?: string }
+    payload: { name?: string; description?: string; color?: string },
   ): Promise<StickyApiResponse> {
     const { data } = await apiClient.patch<StickyApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/stickies/${encodeURIComponent(id)}/`,
-      payload
+      payload,
     );
     return data;
   },
 
   async delete(workspaceSlug: string, id: string): Promise<void> {
     await apiClient.delete(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/stickies/${encodeURIComponent(id)}/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/stickies/${encodeURIComponent(id)}/`,
     );
   },
 };

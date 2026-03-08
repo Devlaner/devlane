@@ -45,7 +45,7 @@ func main() {
 	sqlDB, _ := db.DB()
 	defer sqlDB.Close()
 
-	// Redis 
+	// Redis
 	var rdb *redis.Client
 	if client, err := redis.New(cfg, log); err != nil {
 		log.Warn("redis", "error", err)
@@ -54,7 +54,7 @@ func main() {
 		defer rdb.Close()
 	}
 
-	// RabbitMQ 
+	// RabbitMQ
 	var queuePublisher *queue.Publisher
 	var rmq *rabbitmq.Client
 	if client, err := rabbitmq.New(cfg, log); err != nil {
@@ -69,20 +69,21 @@ func main() {
 		}
 	}
 
-	// MinIO
-	mc, err := minio.New(cfg, log)
-	if err != nil {
+	// MinIO (optional: file uploads for covers, avatars, logos)
+	var mc *minio.Client
+	if client, err := minio.New(cfg, log); err != nil {
 		log.Warn("minio", "error", err)
 	} else {
-		_ = mc
+		mc = client
 	}
 
 	r := router.New(router.Config{
-		Log:              log,
-		DB:               db,
-		Redis:            rdb,
-		Queue:            queuePublisher,
-		CORSAllowOrigin:  cfg.CORSAllowOrigin,
+		Log:             log,
+		DB:              db,
+		Redis:           rdb,
+		Queue:           queuePublisher,
+		Minio:           mc,
+		CORSAllowOrigin: cfg.CORSAllowOrigin,
 	})
 
 	// Start task consumer when RabbitMQ is available

@@ -32,8 +32,8 @@ func NewService(userStore *store.UserStore, sessionStore *store.SessionStore) *S
 }
 
 type SignUpRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=8"`
+	Email     string `json:"email" binding:"required,email"`
+	Password  string `json:"password" binding:"required,min=8"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 }
@@ -62,13 +62,13 @@ func (s *Service) SignUp(ctx context.Context, req SignUpRequest) (sessionKey str
 		return "", nil, err
 	}
 	u := &model.User{
-		Username:   username,
-		Email:      &email,
-		Password:   string(hash),
-		FirstName:  req.FirstName,
-		LastName:   req.LastName,
+		Username:    username,
+		Email:       &email,
+		Password:    string(hash),
+		FirstName:   req.FirstName,
+		LastName:    req.LastName,
 		DisplayName: strings.TrimSpace(req.FirstName + " " + req.LastName),
-		IsActive:   true,
+		IsActive:    true,
 	}
 	if err := s.userStore.Create(ctx, u); err != nil {
 		return "", nil, err
