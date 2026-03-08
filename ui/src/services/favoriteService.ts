@@ -1,4 +1,4 @@
-import { apiClient } from '../api/client';
+import { apiClient } from "../api/client";
 
 /**
  * Favorite projects API (current user).
@@ -12,7 +12,7 @@ export const favoriteService = {
    */
   async getFavoriteProjectIds(): Promise<string[]> {
     const { data } = await apiClient.get<{ project_ids: string[] }>(
-      '/api/users/me/favorite-projects/'
+      "/api/users/me/favorite-projects/",
     );
     return data.project_ids ?? [];
   },
@@ -22,16 +22,19 @@ export const favoriteService = {
    */
   async addFavorite(workspaceSlug: string, projectId: string): Promise<void> {
     await apiClient.post(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/favorite`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/favorite`,
     );
   },
 
   /**
    * DELETE /api/workspaces/:slug/projects/:projectId/favorite
    */
-  async removeFavorite(workspaceSlug: string, projectId: string): Promise<void> {
+  async removeFavorite(
+    workspaceSlug: string,
+    projectId: string,
+  ): Promise<void> {
     await apiClient.delete(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/favorite`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/favorite`,
     );
   },
 };

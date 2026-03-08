@@ -6,6 +6,7 @@ import (
 	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const FavoriteEntityTypeProject = "project"
@@ -27,15 +28,8 @@ func (s *UserFavoriteStore) ListProjectIDsByUser(ctx context.Context, userID uui
 }
 
 // AddProject adds a project to the user's favorites. workspaceID is stored for the favorite record.
+// Idempotent: uses ON CONFLICT DO NOTHING so duplicate inserts are ignored.
 func (s *UserFavoriteStore) AddProject(ctx context.Context, userID, workspaceID, projectID uuid.UUID) error {
-	// Idempotent: ignore if already exists
-	var count int64
-	s.db.WithContext(ctx).Model(&model.UserFavorite{}).
-		Where("user_id = ? AND entity_type = ? AND entity_identifier = ?", userID, FavoriteEntityTypeProject, projectID).
-		Count(&count)
-	if count > 0 {
-		return nil
-	}
 	fav := &model.UserFavorite{
 		Name:             "project",
 		Type:             "project",
@@ -45,7 +39,10 @@ func (s *UserFavoriteStore) AddProject(ctx context.Context, userID, workspaceID,
 		ProjectID:        &projectID,
 		UserID:           userID,
 	}
-	return s.db.WithContext(ctx).Create(fav).Error
+	return s.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "entity_type"}, {Name: "entity_identifier"}},
+		DoNothing: true,
+	}).Create(fav).Error
 }
 
 // RemoveProject removes a project from the user's favorites.

@@ -1,11 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { Avatar, Button, Card, CardContent } from '../components/ui';
-import { workspaceService } from '../services/workspaceService';
-import { projectService } from '../services/projectService';
-import { issueService } from '../services/issueService';
-import { notificationService } from '../services/notificationService';
-import type { WorkspaceApiResponse, NotificationApiResponse, ProjectApiResponse, IssueApiResponse } from '../api/types';
+import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
+import { Avatar, Button, Card, CardContent } from "../components/ui";
+import { workspaceService } from "../services/workspaceService";
+import { projectService } from "../services/projectService";
+import { issueService } from "../services/issueService";
+import { notificationService } from "../services/notificationService";
+import type {
+  WorkspaceApiResponse,
+  NotificationApiResponse,
+  ProjectApiResponse,
+  IssueApiResponse,
+} from "../api/types";
 
 function formatTimeAgo(iso: string): string {
   const d = new Date(iso);
@@ -15,22 +20,27 @@ function formatTimeAgo(iso: string): string {
   const min = Math.floor(sec / 60);
   const hr = Math.floor(min / 60);
   const day = Math.floor(hr / 24);
-  if (day > 0) return `${day} day${day === 1 ? '' : 's'} ago`;
-  if (hr > 0) return `${hr} hour${hr === 1 ? '' : 's'} ago`;
-  if (min > 0) return `${min} minute${min === 1 ? '' : 's'} ago`;
-  if (sec > 0) return `${sec} second${sec === 1 ? '' : 's'} ago`;
-  return 'less than a minute ago';
+  if (day > 0) return `${day} day${day === 1 ? "" : "s"} ago`;
+  if (hr > 0) return `${hr} hour${hr === 1 ? "" : "s"} ago`;
+  if (min > 0) return `${min} minute${min === 1 ? "" : "s"} ago`;
+  if (sec > 0) return `${sec} second${sec === 1 ? "" : "s"} ago`;
+  return "less than a minute ago";
 }
 
 export function NotificationsPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
-  const [inboxTab, setInboxTab] = useState<'all' | 'mentions'>('all');
+  const [inboxTab, setInboxTab] = useState<"all" | "mentions">("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
-  const [notifications, setNotifications] = useState<NotificationApiResponse[]>([]);
-  const [selectedProject, setSelectedProject] = useState<ProjectApiResponse | null>(null);
-  const [selectedIssue, setSelectedIssue] = useState<IssueApiResponse | null>(null);
+  const [notifications, setNotifications] = useState<NotificationApiResponse[]>(
+    [],
+  );
+  const [selectedProject, setSelectedProject] =
+    useState<ProjectApiResponse | null>(null);
+  const [selectedIssue, setSelectedIssue] = useState<IssueApiResponse | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -71,18 +81,21 @@ export function NotificationsPage() {
       id: n.id,
       projectId: n.project_id ?? null,
       issueId: n.entity_identifier ?? null,
-      type: n.entity_name ?? 'all',
+      type: n.entity_name ?? "all",
       actorUserId: n.triggered_by_id ?? null,
       title: n.title,
       message: n.message,
       createdAt: n.created_at,
       readAt: n.read_at ?? null,
     }));
-    if (inboxTab === 'mentions') return list.filter((i) => i.type === 'mention');
+    if (inboxTab === "mentions")
+      return list.filter((i) => i.type === "mention");
     return list;
   }, [notifications, inboxTab]);
 
-  const selectedItem = selectedId ? items.find((i) => i.id === selectedId) ?? null : null;
+  const selectedItem = selectedId
+    ? (items.find((i) => i.id === selectedId) ?? null)
+    : null;
 
   useEffect(() => {
     if (!workspaceSlug || !selectedItem) {
@@ -98,7 +111,11 @@ export function NotificationsPage() {
         await notificationService.markRead(workspaceSlug, selectedItem.id);
         if (!cancelled) {
           setNotifications((prev) =>
-            prev.map((n) => (n.id === selectedItem.id ? { ...n, read_at: new Date().toISOString() } : n))
+            prev.map((n) =>
+              n.id === selectedItem.id
+                ? { ...n, read_at: new Date().toISOString() }
+                : n,
+            ),
           );
         }
       } catch {
@@ -144,35 +161,42 @@ export function NotificationsPage() {
     );
   }
   if (!workspace) {
-    return <div className="p-4 text-[var(--txt-secondary)]">Workspace not found.</div>;
+    return (
+      <div className="p-4 text-[var(--txt-secondary)]">
+        Workspace not found.
+      </div>
+    );
   }
 
-  const listWidth = 'min(420px, 35%)';
+  const listWidth = "min(420px, 35%)";
 
   return (
     <div className="flex h-full min-h-0 w-full">
-      <div className="flex shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-canvas)]" style={{ width: listWidth }}>
+      <div
+        className="flex shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-canvas)]"
+        style={{ width: listWidth }}
+      >
         <div className="shrink-0 border-b border-[var(--border-subtle)] px-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex gap-1">
               <button
                 type="button"
-                onClick={() => setInboxTab('all')}
+                onClick={() => setInboxTab("all")}
                 className={`border-b-2 px-4 py-2.5 text-sm font-medium ${
-                  inboxTab === 'all'
-                    ? 'border-[var(--brand-default)] text-[var(--txt-primary)]'
-                    : 'border-transparent text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]'
+                  inboxTab === "all"
+                    ? "border-[var(--brand-default)] text-[var(--txt-primary)]"
+                    : "border-transparent text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]"
                 }`}
               >
                 All
               </button>
               <button
                 type="button"
-                onClick={() => setInboxTab('mentions')}
+                onClick={() => setInboxTab("mentions")}
                 className={`border-b-2 px-4 py-2.5 text-sm font-medium ${
-                  inboxTab === 'mentions'
-                    ? 'border-[var(--brand-default)] text-[var(--txt-primary)]'
-                    : 'border-transparent text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]'
+                  inboxTab === "mentions"
+                    ? "border-[var(--brand-default)] text-[var(--txt-primary)]"
+                    : "border-transparent text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]"
                 }`}
               >
                 Mentions
@@ -195,13 +219,19 @@ export function NotificationsPage() {
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {items.length === 0 ? (
-            <div className="p-4 text-sm text-[var(--txt-tertiary)]">No notifications.</div>
+            <div className="p-4 text-sm text-[var(--txt-tertiary)]">
+              No notifications.
+            </div>
           ) : (
             <ul className="divide-y divide-[var(--border-subtle)]">
               {items.map((item) => {
-                const actorName = item.actorUserId ? item.actorUserId.slice(0, 8) : 'system';
-                const project = item.projectId ? projects.find((p) => p.id === item.projectId) ?? null : null;
-                const issueRef = item.issueId ? item.issueId.slice(-4) : '—';
+                const actorName = item.actorUserId
+                  ? item.actorUserId.slice(0, 8)
+                  : "system";
+                const project = item.projectId
+                  ? (projects.find((p) => p.id === item.projectId) ?? null)
+                  : null;
+                const issueRef = item.issueId ? item.issueId.slice(-4) : "—";
                 const isSelected = selectedId === item.id;
                 return (
                   <li key={item.id}>
@@ -209,23 +239,34 @@ export function NotificationsPage() {
                       type="button"
                       onClick={() => setSelectedId(item.id)}
                       className={`flex w-full gap-3 px-4 py-3 text-left transition-colors ${
-                        isSelected ? 'bg-[var(--bg-layer-1)]' : 'hover:bg-[var(--bg-layer-1-hover)]'
+                        isSelected
+                          ? "bg-[var(--bg-layer-1)]"
+                          : "hover:bg-[var(--bg-layer-1-hover)]"
                       }`}
                     >
                       <Avatar name={actorName} size="md" className="shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm text-[var(--txt-primary)]">
-                          <span className="font-medium">{actorName}</span>{' '}
-                          <span className="text-[var(--txt-secondary)]">{item.type}</span>{' '}
+                          <span className="font-medium">{actorName}</span>{" "}
+                          <span className="text-[var(--txt-secondary)]">
+                            {item.type}
+                          </span>{" "}
                           <span className="font-semibold">{item.title}</span>
                         </p>
                         <p className="mt-0.5 truncate text-sm text-[var(--txt-secondary)]">
-                          {project ? (project.identifier ?? project.name) : '—'}-{issueRef}
+                          {project ? (project.identifier ?? project.name) : "—"}
+                          -{issueRef}
                         </p>
                       </div>
                       <span className="shrink-0 text-right text-xs text-[var(--txt-tertiary)]">
-                        <span className="block">{formatTimeAgo(item.createdAt)}</span>
-                        {!item.readAt && <span className="mt-1 inline-block rounded bg-[var(--brand-200)] px-2 py-0.5 text-[10px] font-medium text-[var(--brand-default)]">New</span>}
+                        <span className="block">
+                          {formatTimeAgo(item.createdAt)}
+                        </span>
+                        {!item.readAt && (
+                          <span className="mt-1 inline-block rounded bg-[var(--brand-200)] px-2 py-0.5 text-[10px] font-medium text-[var(--brand-default)]">
+                            New
+                          </span>
+                        )}
                       </span>
                     </button>
                   </li>
@@ -245,8 +286,12 @@ export function NotificationsPage() {
           <div className="h-full overflow-y-auto px-[var(--padding-page)] py-6">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <h2 className="truncate text-lg font-semibold text-[var(--txt-primary)]">{selectedItem.title}</h2>
-                <p className="mt-1 text-sm text-[var(--txt-secondary)]">{formatTimeAgo(selectedItem.createdAt)}</p>
+                <h2 className="truncate text-lg font-semibold text-[var(--txt-primary)]">
+                  {selectedItem.title}
+                </h2>
+                <p className="mt-1 text-sm text-[var(--txt-secondary)]">
+                  {formatTimeAgo(selectedItem.createdAt)}
+                </p>
               </div>
               <div className="shrink-0">
                 <Button
@@ -255,12 +300,16 @@ export function NotificationsPage() {
                   disabled={!!selectedItem.readAt}
                   onClick={async () => {
                     if (!workspaceSlug) return;
-                    await notificationService.markRead(workspaceSlug, selectedItem.id);
-                    const refreshed = await notificationService.list(workspaceSlug);
+                    await notificationService.markRead(
+                      workspaceSlug,
+                      selectedItem.id,
+                    );
+                    const refreshed =
+                      await notificationService.list(workspaceSlug);
                     setNotifications(refreshed ?? []);
                   }}
                 >
-                  {selectedItem.readAt ? 'Read' : 'Mark read'}
+                  {selectedItem.readAt ? "Read" : "Mark read"}
                 </Button>
               </div>
             </div>
@@ -268,23 +317,35 @@ export function NotificationsPage() {
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <Card variant="outlined">
                 <CardContent className="space-y-1">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--txt-tertiary)]">Project</p>
-                  <p className="text-sm text-[var(--txt-primary)]">{selectedProject?.name ?? '—'}</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--txt-tertiary)]">
+                    Project
+                  </p>
+                  <p className="text-sm text-[var(--txt-primary)]">
+                    {selectedProject?.name ?? "—"}
+                  </p>
                 </CardContent>
               </Card>
               <Card variant="outlined">
                 <CardContent className="space-y-1">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--txt-tertiary)]">Issue</p>
-                  <p className="text-sm text-[var(--txt-primary)]">{selectedIssue?.name ?? '—'}</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--txt-tertiary)]">
+                    Issue
+                  </p>
+                  <p className="text-sm text-[var(--txt-primary)]">
+                    {selectedIssue?.name ?? "—"}
+                  </p>
                 </CardContent>
               </Card>
             </div>
 
             <Card variant="outlined" className="mt-4">
               <CardContent>
-                <p className="text-xs font-medium uppercase tracking-wide text-[var(--txt-tertiary)]">Message</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-[var(--txt-tertiary)]">
+                  Message
+                </p>
                 <pre className="mt-2 whitespace-pre-wrap break-words rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3 text-xs text-[var(--txt-secondary)]">
-                  {selectedItem.message ? JSON.stringify(selectedItem.message, null, 2) : '—'}
+                  {selectedItem.message
+                    ? JSON.stringify(selectedItem.message, null, 2)
+                    : "—"}
                 </pre>
               </CardContent>
             </Card>

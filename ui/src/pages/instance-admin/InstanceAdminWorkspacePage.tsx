@@ -1,19 +1,21 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Button, Skeleton } from '../../components/ui';
-import { workspaceService } from '../../services/workspaceService';
-import { instanceSettingsService } from '../../services/instanceService';
-import { getApiErrorMessage } from '../../api/client';
-import type { InstanceGeneralSection } from '../../api/types';
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Button, Skeleton } from "../../components/ui";
+import { workspaceService } from "../../services/workspaceService";
+import { instanceSettingsService } from "../../services/instanceService";
+import { getApiErrorMessage } from "../../api/client";
+import type { InstanceGeneralSection } from "../../api/types";
 
 export function InstanceAdminWorkspacePage() {
   const navigate = useNavigate();
-  const [workspaces, setWorkspaces] = useState<Array<{ id: string; name: string; slug: string }>>([]);
+  const [workspaces, setWorkspaces] = useState<
+    Array<{ id: string; name: string; slug: string }>
+  >([]);
   const [onlyAdminCanCreate, setOnlyAdminCanCreate] = useState(false);
   const [loading, setLoading] = useState(true);
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -26,7 +28,7 @@ export function InstanceAdminWorkspacePage() {
               id: w.id,
               name: w.name,
               slug: w.slug,
-            }))
+            })),
           );
         }
       })
@@ -63,10 +65,10 @@ export function InstanceAdminWorkspacePage() {
 
   const handleToggle = () => {
     const next = !onlyAdminCanCreate;
-    setError('');
+    setError("");
     setSaving(true);
     instanceSettingsService
-      .updateSection('general', { only_admin_can_create_workspace: next })
+      .updateSection("general", { only_admin_can_create_workspace: next })
       .then(() => setOnlyAdminCanCreate(next))
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setSaving(false));
@@ -95,7 +97,10 @@ export function InstanceAdminWorkspacePage() {
           </div>
           <ul className="space-y-2">
             {[1, 2, 3].map((i) => (
-              <li key={i} className="flex items-center justify-between gap-3 rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3">
+              <li
+                key={i}
+                className="flex items-center justify-between gap-3 rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3"
+              >
                 <div className="min-w-0 flex-1">
                   <Skeleton className="h-4 w-32" />
                   <Skeleton className="mt-0.5 h-3 w-20" />
@@ -112,17 +117,26 @@ export function InstanceAdminWorkspacePage() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h1 className="text-base font-semibold text-[var(--txt-primary)]">Workspaces on this instance</h1>
-        <p className="mt-0.5 text-xs text-[var(--txt-secondary)]">See all workspaces and control who can create them.</p>
+        <h1 className="text-base font-semibold text-[var(--txt-primary)]">
+          Workspaces on this instance
+        </h1>
+        <p className="mt-0.5 text-xs text-[var(--txt-secondary)]">
+          See all workspaces and control who can create them.
+        </p>
       </div>
 
-      {error && <p className="text-sm text-[var(--txt-danger-primary)]">{error}</p>}
+      {error && (
+        <p className="text-sm text-[var(--txt-danger-primary)]">{error}</p>
+      )}
 
       <section className="flex items-start justify-between gap-3 rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3">
         <div>
-          <p className="text-xs font-medium text-[var(--txt-primary)]">Prevent anyone else from creating a workspace.</p>
+          <p className="text-xs font-medium text-[var(--txt-primary)]">
+            Prevent anyone else from creating a workspace.
+          </p>
           <p className="mt-0.5 text-xs text-[var(--txt-secondary)]">
-            Toggling this on will let only you (the instance admin) create workspaces. You will have to invite users to new workspaces.
+            Toggling this on will let only you (the instance admin) create
+            workspaces. You will have to invite users to new workspaces.
           </p>
         </div>
         <label className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full bg-[var(--neutral-400)] has-[:checked]:bg-[var(--brand-default)]">
@@ -144,15 +158,23 @@ export function InstanceAdminWorkspacePage() {
               All workspaces on this instance • {workspaces.length}
             </h2>
             <p className="mt-0.5 text-xs text-[var(--txt-secondary)]">
-              You can&apos;t yet delete workspaces and you can only go to the workspace if you are an Admin or a Member.
+              You can&apos;t yet delete workspaces and you can only go to the
+              workspace if you are an Admin or a Member.
             </p>
           </div>
-          <Button size="sm" type="button" className="text-xs" onClick={() => navigate('/instance-admin/workspace/create')}>
+          <Button
+            size="sm"
+            type="button"
+            className="text-xs"
+            onClick={() => navigate("/instance-admin/workspace/create")}
+          >
             Create workspace
           </Button>
         </div>
         {error && (
-          <p className="mb-3 text-sm text-[var(--txt-danger-primary)]">{error}</p>
+          <p className="mb-3 text-sm text-[var(--txt-danger-primary)]">
+            {error}
+          </p>
         )}
         <ul className="space-y-2">
           {workspaces.map((w) => (
@@ -165,8 +187,12 @@ export function InstanceAdminWorkspacePage() {
                   {w.name.charAt(0)}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-[var(--txt-primary)]">{w.name}</p>
-                  <p className="text-xs text-[var(--txt-tertiary)]">[{w.slug}]</p>
+                  <p className="text-sm font-medium text-[var(--txt-primary)]">
+                    {w.name}
+                  </p>
+                  <p className="text-xs text-[var(--txt-tertiary)]">
+                    [{w.slug}]
+                  </p>
                 </div>
               </div>
               <Link
@@ -174,7 +200,14 @@ export function InstanceAdminWorkspacePage() {
                 className="flex size-8 shrink-0 items-center justify-center rounded text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
                 aria-label="Go to workspace"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                   <polyline points="15 3 21 3 21 9" />
                   <line x1="10" y1="14" x2="21" y2="3" />

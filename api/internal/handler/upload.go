@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -45,11 +47,29 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 		return
 	}
 
-	contentType := file.Header.Get("Content-Type")
+	f, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
+		return
+	}
+	defer f.Close()
+
+	// Detect MIME from file bytes instead of trusting client Content-Type
+	buf := make([]byte, 512)
+	n, _ := io.ReadFull(f, buf)
+	buf = buf[:n]
+	contentType := http.DetectContentType(buf)
+	// Go's DetectContentType may not recognize WebP; check magic bytes (RIFF....WEBP)
+	if contentType == "application/octet-stream" && n >= 12 && string(buf[0:4]) == "RIFF" && string(buf[8:12]) == "WEBP" {
+		contentType = "image/webp"
+	}
 	if !allowedImageTypes[contentType] {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Supported: .jpeg, .jpg, .png, .webp"})
 		return
 	}
+
+	// Recombine read bytes with remainder for upload
+	body := io.MultiReader(bytes.NewReader(buf), f)
 
 	ext := strings.ToLower(filepath.Ext(file.Filename))
 	if ext == "" {
@@ -62,14 +82,7 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 	now := time.Now().UTC()
 	objectName := fmt.Sprintf("uploads/%d/%02d/%s%s", now.Year(), now.Month(), uuid.New().String(), ext)
 
-	f, err := file.Open()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
-		return
-	}
-	defer f.Close()
-
-	if err := h.Minio.PutObject(c.Request.Context(), objectName, f, file.Size, contentType); err != nil {
+	if err := h.Minio.PutObject(c.Request.Context(), objectName, body, file.Size, contentType); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file"})
 		return
 	}
@@ -85,7 +98,7 @@ func (h *UploadHandler) ServeFile(c *gin.Context) {
 		return
 	}
 	path := strings.TrimPrefix(c.Param("path"), "/")
-	if path == "" || strings.Contains(path, "..") {
+	if path == "" || strings.Contains(path, "..") || !strings.HasPrefix(path, "uploads/") {
 		c.Status(http.StatusBadRequest)
 		return
 	}

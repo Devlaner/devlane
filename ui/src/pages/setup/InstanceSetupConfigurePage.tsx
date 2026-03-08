@@ -1,29 +1,58 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button, Input } from '../../components/ui';
-import { useAuth } from '../../contexts/AuthContext';
-import { instanceService } from '../../services/instanceService';
-import { getApiErrorMessage } from '../../api/client';
+import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button, Input } from "../../components/ui";
+import { useAuth } from "../../contexts/AuthContext";
+import { instanceService } from "../../services/instanceService";
+import { getApiErrorMessage } from "../../api/client";
 
 const LogoMark = () => (
   <span
     className="flex size-9 items-center justify-center rounded-lg bg-[var(--bg-accent-primary)] text-[var(--txt-on-color)]"
     aria-hidden
   >
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 2l3 9h9l-7 5 2.5 8-7.5-5.5-7.5 5.5 2.5-8-7-5h9z" />
     </svg>
   </span>
 );
 
 const IconEye = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
     <circle cx="12" cy="12" r="3" />
   </svg>
 );
 const IconEyeOff = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.576 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" />
     <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
     <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-4.355" />
@@ -32,7 +61,17 @@ const IconEyeOff = () => (
 );
 
 const IconCheck = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <path d="M20 6L9 17l-5-5" />
   </svg>
 );
@@ -46,7 +85,7 @@ function usePasswordRequirements(password: string) {
       number: /\d/.test(password),
       special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
     }),
-    [password]
+    [password],
   );
 }
 
@@ -55,7 +94,9 @@ function PasswordRequirement({ met, label }: { met: boolean; label: string }) {
     <div className="flex items-center gap-2 text-sm text-[var(--txt-secondary)]">
       <span
         className={`flex size-5 shrink-0 items-center justify-center rounded-full ${
-          met ? 'bg-[var(--bg-success-primary)] text-[var(--txt-on-color)]' : 'bg-[var(--bg-layer-1)] text-[var(--txt-placeholder)]'
+          met
+            ? "bg-[var(--bg-success-primary)] text-[var(--txt-on-color)]"
+            : "bg-[var(--bg-layer-1)] text-[var(--txt-placeholder)]"
         }`}
         aria-hidden
       >
@@ -69,43 +110,45 @@ function PasswordRequirement({ met, label }: { met: boolean; label: string }) {
 export function InstanceSetupConfigurePage() {
   const navigate = useNavigate();
   const { setUserFromApi } = useAuth();
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [allowUsageData, setAllowUsageData] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const req = usePasswordRequirements(password);
-  const allMet = req.minLength && req.upper && req.lower && req.number && req.special;
-  const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
+  const allMet =
+    req.minLength && req.upper && req.lower && req.number && req.special;
+  const passwordsMatch =
+    password === confirmPassword && confirmPassword.length > 0;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setError("");
     if (!firstName.trim() || !lastName.trim()) {
-      setError('Please enter your first and last name.');
+      setError("Please enter your first and last name.");
       return;
     }
     if (!email.trim()) {
-      setError('Please enter your email.');
+      setError("Please enter your email.");
       return;
     }
     if (!companyName.trim()) {
-      setError('Please enter your company name.');
+      setError("Please enter your company name.");
       return;
     }
     if (!allMet) {
-      setError('Please meet all password requirements.');
+      setError("Please meet all password requirements.");
       return;
     }
     if (!passwordsMatch) {
-      setError('Passwords do not match.');
+      setError("Passwords do not match.");
       return;
     }
     setIsSubmitting(true);
@@ -118,7 +161,7 @@ export function InstanceSetupConfigurePage() {
         company_name: companyName.trim() || undefined,
       });
       setUserFromApi(user);
-      navigate('/setup/complete', { replace: true });
+      navigate("/setup/complete", { replace: true });
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
@@ -182,13 +225,16 @@ export function InstanceSetupConfigurePage() {
             />
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="setup-password" className="text-sm font-medium text-[var(--txt-secondary)]">
+              <label
+                htmlFor="setup-password"
+                className="text-sm font-medium text-[var(--txt-secondary)]"
+              >
                 Set a password *
               </label>
               <div className="relative">
                 <input
                   id="setup-password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="New password..."
@@ -200,28 +246,43 @@ export function InstanceSetupConfigurePage() {
                   type="button"
                   onClick={() => setShowPassword((p) => !p)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <IconEyeOff /> : <IconEye />}
                 </button>
               </div>
               <div className="mt-2 flex flex-col gap-1.5">
-                <PasswordRequirement met={req.minLength} label="Min 8 characters" />
-                <PasswordRequirement met={req.upper} label="Min 1 upper-case letter" />
-                <PasswordRequirement met={req.lower} label="Min 1 lower-case letter" />
+                <PasswordRequirement
+                  met={req.minLength}
+                  label="Min 8 characters"
+                />
+                <PasswordRequirement
+                  met={req.upper}
+                  label="Min 1 upper-case letter"
+                />
+                <PasswordRequirement
+                  met={req.lower}
+                  label="Min 1 lower-case letter"
+                />
                 <PasswordRequirement met={req.number} label="Min 1 number" />
-                <PasswordRequirement met={req.special} label="Min 1 special character" />
+                <PasswordRequirement
+                  met={req.special}
+                  label="Min 1 special character"
+                />
               </div>
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="setup-confirm-password" className="text-sm font-medium text-[var(--txt-secondary)]">
+              <label
+                htmlFor="setup-confirm-password"
+                className="text-sm font-medium text-[var(--txt-secondary)]"
+              >
                 Confirm password *
               </label>
               <div className="relative">
                 <input
                   id="setup-confirm-password"
-                  type={showConfirmPassword ? 'text' : 'password'}
+                  type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm password"
@@ -233,7 +294,9 @@ export function InstanceSetupConfigurePage() {
                   type="button"
                   onClick={() => setShowConfirmPassword((p) => !p)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  aria-label={
+                    showConfirmPassword ? "Hide password" : "Show password"
+                  }
                 >
                   {showConfirmPassword ? <IconEyeOff /> : <IconEye />}
                 </button>
@@ -248,19 +311,24 @@ export function InstanceSetupConfigurePage() {
                 className="mt-0.5 size-4 rounded border-[var(--border-subtle)] bg-[var(--bg-surface-1)] text-[var(--bg-accent-primary)] focus:ring-[var(--border-accent-strong)]"
               />
               <span className="text-[var(--txt-secondary)]">
-                Allow Devlane to anonymously collect usage events.{' '}
-                <a href="#" className="text-[var(--txt-accent-primary)] underline hover:no-underline">
+                Allow Devlane to anonymously collect usage events.{" "}
+                <a
+                  href="#"
+                  className="text-[var(--txt-accent-primary)] underline hover:no-underline"
+                >
                   See more
                 </a>
               </span>
             </label>
 
             {error && (
-              <p className="text-sm text-[var(--txt-danger-primary)]">{error}</p>
+              <p className="text-sm text-[var(--txt-danger-primary)]">
+                {error}
+              </p>
             )}
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Setting up…' : 'Continue'}
+              {isSubmitting ? "Setting up…" : "Continue"}
             </Button>
           </form>
         </div>

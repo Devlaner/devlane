@@ -1,10 +1,13 @@
-import { useCallback, useState } from 'react';
-import { Button, Modal } from './ui';
-import { instanceSettingsService, type UnsplashSearchResult } from '../services/instanceService';
-import { uploadImage } from '../services/uploadService';
+import { useCallback, useEffect, useState } from "react";
+import { Button, Modal } from "./ui";
+import {
+  instanceSettingsService,
+  type UnsplashSearchResult,
+} from "../services/instanceService";
+import { uploadImage } from "../services/uploadService";
 
-const TAB_UNSPLASH = 'unsplash';
-const TAB_UPLOAD = 'upload';
+const TAB_UNSPLASH = "unsplash";
+const TAB_UPLOAD = "upload";
 type Tab = typeof TAB_UNSPLASH | typeof TAB_UPLOAD;
 
 export interface CoverImageModalProps {
@@ -14,10 +17,17 @@ export interface CoverImageModalProps {
   title?: string;
 }
 
-export function CoverImageModal({ open, onClose, onSelect, title = 'Select cover image' }: CoverImageModalProps) {
+export function CoverImageModal({
+  open,
+  onClose,
+  onSelect,
+  title = "Select cover image",
+}: CoverImageModalProps) {
   const [tab, setTab] = useState<Tab>(TAB_UNSPLASH);
-  const [unsplashQuery, setUnsplashQuery] = useState('');
-  const [unsplashResults, setUnsplashResults] = useState<UnsplashSearchResult[]>([]);
+  const [unsplashQuery, setUnsplashQuery] = useState("");
+  const [unsplashResults, setUnsplashResults] = useState<
+    UnsplashSearchResult[]
+  >([]);
   const [unsplashLoading, setUnsplashLoading] = useState(false);
   const [unsplashError, setUnsplashError] = useState<string | null>(null);
   const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
@@ -26,15 +36,30 @@ export function CoverImageModal({ open, onClose, onSelect, title = 'Select cover
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!open) {
+      setTab(TAB_UNSPLASH);
+      setUnsplashQuery("");
+      setUnsplashResults([]);
+      setUnsplashError(null);
+      setSelectedUrl(null);
+      setUploadFile(null);
+      setUploadPreview(null);
+      setUploadError(null);
+    }
+  }, [open]);
+
   const handleSearch = useCallback(async () => {
     if (!unsplashQuery.trim()) return;
     setUnsplashError(null);
     setUnsplashLoading(true);
     try {
-      const { results } = await instanceSettingsService.unsplashSearch(unsplashQuery.trim());
+      const { results } = await instanceSettingsService.unsplashSearch(
+        unsplashQuery.trim(),
+      );
       setUnsplashResults(results);
     } catch (e) {
-      setUnsplashError(e instanceof Error ? e.message : 'Search failed');
+      setUnsplashError(e instanceof Error ? e.message : "Search failed");
       setUnsplashResults([]);
     } finally {
       setUnsplashLoading(false);
@@ -48,28 +73,33 @@ export function CoverImageModal({ open, onClose, onSelect, title = 'Select cover
     }
   }, [selectedUrl, onSelect, onClose]);
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!allowed.includes(file.type)) {
-      setUploadError('Invalid file type. Supported: .jpeg, .jpg, .png, .webp');
-      return;
-    }
-    setUploadError(null);
-    setUploadFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setUploadPreview(reader.result as string);
-    reader.readAsDataURL(file);
-  }, []);
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+      if (!allowed.includes(file.type)) {
+        setUploadError(
+          "Invalid file type. Supported: .jpeg, .jpg, .png, .webp",
+        );
+        return;
+      }
+      setUploadError(null);
+      setUploadFile(file);
+      const reader = new FileReader();
+      reader.onload = () => setUploadPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    },
+    [],
+  );
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
     if (!file) return;
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
     if (!allowed.includes(file.type)) {
-      setUploadError('Invalid file type. Supported: .jpeg, .jpg, .png, .webp');
+      setUploadError("Invalid file type. Supported: .jpeg, .jpg, .png, .webp");
       return;
     }
     setUploadError(null);
@@ -79,7 +109,10 @@ export function CoverImageModal({ open, onClose, onSelect, title = 'Select cover
     reader.readAsDataURL(file);
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => e.preventDefault(), []);
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => e.preventDefault(),
+    [],
+  );
 
   const handleUploadSave = useCallback(async () => {
     if (!uploadFile) return;
@@ -90,7 +123,7 @@ export function CoverImageModal({ open, onClose, onSelect, title = 'Select cover
       onSelect(url);
       onClose();
     } catch (e) {
-      setUploadError(e instanceof Error ? e.message : 'Upload failed');
+      setUploadError(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setUploadLoading(false);
     }
@@ -113,23 +146,32 @@ export function CoverImageModal({ open, onClose, onSelect, title = 'Select cover
         </Button>
       )}
       {tab === TAB_UPLOAD && (
-        <Button disabled={!uploadFile || uploadLoading} onClick={handleUploadSave}>
-          {uploadLoading ? 'Uploading…' : 'Upload & Save'}
+        <Button
+          disabled={!uploadFile || uploadLoading}
+          onClick={handleUploadSave}
+        >
+          {uploadLoading ? "Uploading…" : "Upload & Save"}
         </Button>
       )}
     </>
   );
 
   return (
-    <Modal open={open} onClose={onClose} title={title} footer={footer} className="max-w-2xl">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={title}
+      footer={footer}
+      className="max-w-2xl"
+    >
       <div className="flex gap-2 border-b border-[var(--border-subtle)] pb-3 mb-3">
         <button
           type="button"
           onClick={() => setTab(TAB_UNSPLASH)}
           className={`rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium transition-colors ${
             tab === TAB_UNSPLASH
-              ? 'bg-[var(--brand-default)] text-white'
-              : 'text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)]'
+              ? "bg-[var(--brand-default)] text-white"
+              : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)]"
           }`}
         >
           Unsplash
@@ -139,8 +181,8 @@ export function CoverImageModal({ open, onClose, onSelect, title = 'Select cover
           onClick={() => setTab(TAB_UPLOAD)}
           className={`rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium transition-colors ${
             tab === TAB_UPLOAD
-              ? 'bg-[var(--brand-default)] text-white'
-              : 'text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)]'
+              ? "bg-[var(--brand-default)] text-white"
+              : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)]"
           }`}
         >
           Upload
@@ -154,15 +196,23 @@ export function CoverImageModal({ open, onClose, onSelect, title = 'Select cover
               type="text"
               value={unsplashQuery}
               onChange={(e) => setUnsplashQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="Search for images"
               className="min-w-0 flex-1 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
             />
-            <Button variant="secondary" onClick={handleSearch} disabled={unsplashLoading}>
-              {unsplashLoading ? 'Searching…' : 'Search'}
+            <Button
+              variant="secondary"
+              onClick={handleSearch}
+              disabled={unsplashLoading}
+            >
+              {unsplashLoading ? "Searching…" : "Search"}
             </Button>
           </div>
-          {unsplashError && <p className="text-sm text-[var(--txt-danger-primary)]">{unsplashError}</p>}
+          {unsplashError && (
+            <p className="text-sm text-[var(--txt-danger-primary)]">
+              {unsplashError}
+            </p>
+          )}
           <div className="grid grid-cols-4 gap-2 max-h-64 overflow-y-auto">
             {unsplashResults.map((r) => (
               <button
@@ -171,11 +221,15 @@ export function CoverImageModal({ open, onClose, onSelect, title = 'Select cover
                 onClick={() => setSelectedUrl(r.url)}
                 className={`relative aspect-video rounded-[var(--radius-md)] overflow-hidden border-2 transition-colors ${
                   selectedUrl === r.url
-                    ? 'border-[var(--brand-default)] ring-2 ring-[var(--brand-200)]'
-                    : 'border-transparent hover:border-[var(--border-strong)]'
+                    ? "border-[var(--brand-default)] ring-2 ring-[var(--brand-200)]"
+                    : "border-transparent hover:border-[var(--border-strong)]"
                 }`}
               >
-                <img src={r.thumb} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={r.thumb}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
               </button>
             ))}
           </div>
@@ -190,15 +244,28 @@ export function CoverImageModal({ open, onClose, onSelect, title = 'Select cover
               onDragOver={handleDragOver}
               className="flex flex-col items-center justify-center rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border-subtle)] bg-[var(--bg-layer-2)] py-12 px-4"
             >
-              <p className="text-sm text-[var(--txt-secondary)] mb-2">Drag & drop image here</p>
+              <p className="text-sm text-[var(--txt-secondary)] mb-2">
+                Drag & drop image here
+              </p>
               <label className="cursor-pointer">
-                <span className="text-sm font-medium text-[var(--txt-accent-primary)] hover:underline">Browse</span>
-                <input type="file" accept=".jpeg,.jpg,.png,.webp" className="sr-only" onChange={handleFileChange} />
+                <span className="text-sm font-medium text-[var(--txt-accent-primary)] hover:underline">
+                  Browse
+                </span>
+                <input
+                  type="file"
+                  accept=".jpeg,.jpg,.png,.webp"
+                  className="sr-only"
+                  onChange={handleFileChange}
+                />
               </label>
             </div>
           ) : (
             <div className="relative rounded-[var(--radius-md)] border border-[var(--border-subtle)] overflow-hidden bg-[var(--bg-layer-2)]">
-              <img src={uploadPreview} alt="Preview" className="w-full max-h-64 object-contain" />
+              <img
+                src={uploadPreview}
+                alt="Preview"
+                className="w-full max-h-64 object-contain"
+              />
               <div className="absolute top-2 right-2">
                 <button
                   type="button"
@@ -210,8 +277,14 @@ export function CoverImageModal({ open, onClose, onSelect, title = 'Select cover
               </div>
             </div>
           )}
-          <p className="text-xs text-[var(--txt-tertiary)]">File formats supported: .jpeg, .jpg, .png, .webp</p>
-          {uploadError && <p className="text-sm text-[var(--txt-danger-primary)]">{uploadError}</p>}
+          <p className="text-xs text-[var(--txt-tertiary)]">
+            File formats supported: .jpeg, .jpg, .png, .webp
+          </p>
+          {uploadError && (
+            <p className="text-sm text-[var(--txt-danger-primary)]">
+              {uploadError}
+            </p>
+          )}
         </div>
       )}
     </Modal>

@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { Button } from '../ui';
-import { useAuth } from '../../contexts/AuthContext';
-import { workspaceService } from '../../services/workspaceService';
-import { projectService } from '../../services/projectService';
-import type { WorkspaceApiResponse, ProjectApiResponse } from '../../api/types';
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { Button } from "../ui";
+import { useAuth } from "../../contexts/AuthContext";
+import { workspaceService } from "../../services/workspaceService";
+import { projectService } from "../../services/projectService";
+import type { WorkspaceApiResponse, ProjectApiResponse } from "../../api/types";
 
 export function Header() {
   const { user, logout } = useAuth();
@@ -22,17 +22,29 @@ export function Header() {
       return;
     }
     let cancelled = false;
-    workspaceService.getBySlug(workspaceSlug).then((w) => {
-      if (!cancelled) setWorkspace(w);
-    }).catch(() => { if (!cancelled) setWorkspace(null); });
+    workspaceService
+      .getBySlug(workspaceSlug)
+      .then((w) => {
+        if (!cancelled) setWorkspace(w);
+      })
+      .catch(() => {
+        if (!cancelled) setWorkspace(null);
+      });
     if (projectId) {
-      projectService.get(workspaceSlug!, projectId).then((p) => {
-        if (!cancelled) setProject(p ?? null);
-      }).catch(() => { if (!cancelled) setProject(null); });
+      projectService
+        .get(workspaceSlug!, projectId)
+        .then((p) => {
+          if (!cancelled) setProject(p ?? null);
+        })
+        .catch(() => {
+          if (!cancelled) setProject(null);
+        });
     } else {
       setProject(null);
     }
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [workspaceSlug, projectId]);
 
   const breadcrumbs: { label: string; href?: string }[] = [];
@@ -53,17 +65,18 @@ export function Header() {
     >
       <div className="flex items-center gap-4">
         <Link
-          to={workspace ? `/${workspace.slug}` : '/'}
+          to={workspace ? `/${workspace.slug}` : "/"}
           className="text-lg font-semibold text-[var(--txt-primary)] no-underline hover:text-[var(--txt-accent-primary)]"
         >
           Devlane
         </Link>
-        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm">
+        <nav
+          aria-label="Breadcrumb"
+          className="flex items-center gap-2 text-sm"
+        >
           {breadcrumbs.map((b, i) => (
             <span key={i} className="flex items-center gap-2">
-              {i > 0 && (
-                <span className="text-[var(--txt-tertiary)]">/</span>
-              )}
+              {i > 0 && <span className="text-[var(--txt-tertiary)]">/</span>}
               {b.href ? (
                 <Link
                   to={b.href}
@@ -80,7 +93,9 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-3">
-        <span className="text-sm text-[var(--txt-secondary)]">{user?.name}</span>
+        <span className="text-sm text-[var(--txt-secondary)]">
+          {user?.name}
+        </span>
         <Button variant="ghost" size="sm" onClick={logout}>
           Log out
         </Button>

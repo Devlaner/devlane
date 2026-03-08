@@ -1,92 +1,247 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { Card, CardContent, Button, Modal, Input } from '../components/ui';
-import { useAuth } from '../contexts/AuthContext';
-import { workspaceService } from '../services/workspaceService';
-import { projectService } from '../services/projectService';
-import { quickLinksService } from '../services/quickLinksService';
-import { stickiesService } from '../services/stickiesService';
-import { recentsService } from '../services/recentsService';
+import { useEffect, useRef, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { Card, CardContent, Button, Modal, Input } from "../components/ui";
+import { useAuth } from "../contexts/AuthContext";
+import { workspaceService } from "../services/workspaceService";
+import { projectService } from "../services/projectService";
+import { quickLinksService } from "../services/quickLinksService";
+import { stickiesService } from "../services/stickiesService";
+import { recentsService } from "../services/recentsService";
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
   QuickLinkApiResponse,
   StickyApiResponse,
   RecentVisitApiResponse,
-} from '../api/types';
+} from "../api/types";
 
 // ---------------------------------------------------------------------------
 // Icons (Devlane-style)
 // ---------------------------------------------------------------------------
 
 const IconPlus = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M5 12h14" /><path d="M12 5v14" />
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M5 12h14" />
+    <path d="M12 5v14" />
   </svg>
 );
 const IconMoon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
   </svg>
 );
 const IconTarget = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" />
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <circle cx="12" cy="12" r="10" />
+    <circle cx="12" cy="12" r="6" />
+    <circle cx="12" cy="12" r="2" />
   </svg>
 );
 const IconFileText = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
     <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-    <path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" />
+    <path d="M10 9H8" />
+    <path d="M16 13H8" />
+    <path d="M16 17H8" />
   </svg>
 );
 const IconSearch = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <circle cx="11" cy="11" r="8" />
+    <path d="m21 21-4.3-4.3" />
   </svg>
 );
 const IconClipboard = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
     <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-    <path d="M12 11h4" /><path d="M12 16h4" /><path d="M8 11h.01" /><path d="M8 16h.01" />
+    <path d="M12 11h4" />
+    <path d="M12 16h4" />
+    <path d="M8 11h.01" />
+    <path d="M8 16h.01" />
   </svg>
 );
 const IconChevronDown = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <path d="m6 9 6 6 6-6" />
   </svg>
 );
 const IconX = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M18 6 6 18" />
+    <path d="m6 6 12 12" />
   </svg>
 );
 const IconPalette = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <circle cx="13.5" cy="6.5" r=".5" /><circle cx="17.5" cy="10.5" r=".5" /><circle cx="8.5" cy="7.5" r=".5" /><circle cx="6.5" cy="12.5" r=".5" />
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <circle cx="13.5" cy="6.5" r=".5" />
+    <circle cx="17.5" cy="10.5" r=".5" />
+    <circle cx="8.5" cy="7.5" r=".5" />
+    <circle cx="6.5" cy="12.5" r=".5" />
     <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.75-.2 2.5-.5" />
   </svg>
 );
 const IconBold = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" /><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" />
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" />
+    <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" />
   </svg>
 );
 const IconItalic = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <line x1="19" y1="4" x2="10" y2="4" /><line x1="14" y1="20" x2="5" y2="20" /><line x1="15" y1="4" x2="9" y2="20" />
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <line x1="19" y1="4" x2="10" y2="4" />
+    <line x1="14" y1="20" x2="5" y2="20" />
+    <line x1="15" y1="4" x2="9" y2="20" />
   </svg>
 );
 const IconList = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <line x1="8" y1="6" x2="21" y2="6" />
+    <line x1="8" y1="12" x2="21" y2="12" />
+    <line x1="8" y1="18" x2="21" y2="18" />
+    <line x1="3" y1="6" x2="3.01" y2="6" />
+    <line x1="3" y1="12" x2="3.01" y2="12" />
+    <line x1="3" y1="18" x2="3.01" y2="18" />
   </svg>
 );
 const IconTrash = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" />
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M3 6h18" />
+    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+    <line x1="10" y1="11" x2="10" y2="17" />
+    <line x1="14" y1="11" x2="14" y2="17" />
   </svg>
 );
 
@@ -96,18 +251,39 @@ const IconTrash = () => (
 
 function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
 }
 
 function formatDateTime(date: Date): string {
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const days = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   const d = date.getDate();
   const h = date.getHours();
   const m = date.getMinutes();
-  return `${days[date.getDay()]}, ${months[date.getMonth()]} ${d} ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  return `${days[date.getDay()]}, ${months[date.getMonth()]} ${d} ${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
 function formatRelativeTime(iso: string): string {
@@ -117,10 +293,12 @@ function formatRelativeTime(iso: string): string {
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
-  if (diffDays === 1) return '1 day ago';
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60)
+    return `${diffMins} minute${diffMins === 1 ? "" : "s"} ago`;
+  if (diffHours < 24)
+    return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
+  if (diffDays === 1) return "1 day ago";
   return `${diffDays} days ago`;
 }
 
@@ -132,22 +310,24 @@ export function WorkspaceHomePage() {
   const { user } = useAuth();
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
-  const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
+  const [_projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [quicklinks, setQuicklinks] = useState<QuickLinkApiResponse[]>([]);
   const [stickies, setStickies] = useState<StickyApiResponse[]>([]);
   const [recents, setRecents] = useState<RecentVisitApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [addQuicklinkOpen, setAddQuicklinkOpen] = useState(false);
   const [addStickyOpen, setAddStickyOpen] = useState(false);
-  const [quicklinkUrl, setQuicklinkUrl] = useState('');
-  const [quicklinkTitle, setQuicklinkTitle] = useState('');
-  const [stickyContent, setStickyContent] = useState('');
+  const [quicklinkUrl, setQuicklinkUrl] = useState("");
+  const [quicklinkTitle, setQuicklinkTitle] = useState("");
+  const [stickyContent, setStickyContent] = useState("");
   const [quicklinkSubmitting, setQuicklinkSubmitting] = useState(false);
   const [stickySubmitting, setStickySubmitting] = useState(false);
   const [recentsFilterOpen, setRecentsFilterOpen] = useState(false);
-  const [recentsFilterValue, setRecentsFilterValue] = useState<'All' | 'Work Items' | 'Pages' | 'Projects'>('All');
+  const [recentsFilterValue, setRecentsFilterValue] = useState<
+    "All" | "Work Items" | "Pages" | "Projects"
+  >("All");
   const [stickySearchOpen, setStickySearchOpen] = useState(false);
-  const [stickySearchQuery, setStickySearchQuery] = useState('');
+  const [stickySearchQuery, setStickySearchQuery] = useState("");
   const recentsFilterTriggerRef = useRef<HTMLButtonElement>(null);
   const recentsFilterDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -192,24 +372,27 @@ export function WorkspaceHomePage() {
 
   const refetchQuicklinks = () => {
     if (workspaceSlug) {
-      quickLinksService.list(workspaceSlug).then(setQuicklinks).catch(() => {});
+      quickLinksService
+        .list(workspaceSlug)
+        .then(setQuicklinks)
+        .catch(() => {});
     }
   };
   const refetchStickies = () => {
     if (workspaceSlug) {
-      stickiesService.list(workspaceSlug).then(setStickies).catch(() => {});
+      stickiesService
+        .list(workspaceSlug)
+        .then(setStickies)
+        .catch(() => {});
     }
   };
-  const refetchRecents = () => {
-    if (workspaceSlug) {
-      recentsService.list(workspaceSlug).then(setRecents).catch(() => {});
-    }
-  };
+  // Reserved for future use (e.g. refresh recents list):
+  // const refetchRecents = () => { if (workspaceSlug) { recentsService.list(workspaceSlug).then(setRecents).catch(() => {}); } };
 
   const handleCloseQuicklink = () => {
     setAddQuicklinkOpen(false);
-    setQuicklinkUrl('');
-    setQuicklinkTitle('');
+    setQuicklinkUrl("");
+    setQuicklinkTitle("");
   };
   const handleAddQuicklink = async () => {
     if (!workspaceSlug || !quicklinkUrl.trim()) return;
@@ -225,26 +408,19 @@ export function WorkspaceHomePage() {
       setQuicklinkSubmitting(false);
     }
   };
-  const handleDeleteQuicklink = async (id: string) => {
-    if (!workspaceSlug) return;
-    try {
-      await quickLinksService.delete(workspaceSlug, id);
-      refetchQuicklinks();
-    } catch {
-      // already handled by interceptor
-    }
-  };
+  // Reserved for future use (delete quicklink from UI):
+  // const handleDeleteQuicklink = async (id: string) => { if (!workspaceSlug) return; try { await quickLinksService.delete(workspaceSlug, id); refetchQuicklinks(); } catch {} };
   const handleCloseSticky = () => {
     setAddStickyOpen(false);
-    setStickyContent('');
+    setStickyContent("");
   };
   const handleAddSticky = async () => {
     if (!workspaceSlug) return;
     setStickySubmitting(true);
     try {
       await stickiesService.create(workspaceSlug, {
-        name: stickyContent.trim().slice(0, 255) || 'Untitled',
-        description: stickyContent.trim() || '',
+        name: stickyContent.trim().slice(0, 255) || "Untitled",
+        description: stickyContent.trim() || "",
       });
       refetchStickies();
       handleCloseSticky();
@@ -269,11 +445,12 @@ export function WorkspaceHomePage() {
       if (
         recentsFilterTriggerRef.current?.contains(target) ||
         recentsFilterDropdownRef.current?.contains(target)
-      ) return;
+      )
+        return;
       setRecentsFilterOpen(false);
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [recentsFilterOpen]);
 
   if (loading) {
@@ -285,29 +462,32 @@ export function WorkspaceHomePage() {
   }
   if (!workspace) {
     return (
-      <div className="text-[var(--txt-secondary)]">
-        Workspace not found.
-      </div>
+      <div className="text-[var(--txt-secondary)]">Workspace not found.</div>
     );
   }
 
   const baseUrl = `/${workspace.slug}`;
-  const recentsFilterOptions = ['All', 'Work Items', 'Pages', 'Projects'] as const;
+  const recentsFilterOptions = [
+    "All",
+    "Work Items",
+    "Pages",
+    "Projects",
+  ] as const;
   const filteredRecents =
-    recentsFilterValue === 'All'
+    recentsFilterValue === "All"
       ? recents
-      : recentsFilterValue === 'Work Items'
-        ? recents.filter((r) => r.entity_name === 'issue')
-        : recentsFilterValue === 'Pages'
-          ? recents.filter((r) => r.entity_name === 'page')
-          : recents.filter((r) => r.entity_name === 'project');
+      : recentsFilterValue === "Work Items"
+        ? recents.filter((r) => r.entity_name === "issue")
+        : recentsFilterValue === "Pages"
+          ? recents.filter((r) => r.entity_name === "page")
+          : recents.filter((r) => r.entity_name === "project");
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 pb-8">
       {/* Welcome */}
       <section className="text-center">
         <h1 className="text-2xl font-bold tracking-tight text-[var(--txt-primary)]">
-          {getGreeting()}, {user?.name ?? 'User'}
+          {getGreeting()}, {user?.name ?? "User"}
         </h1>
         <p className="mt-1 flex items-center justify-center gap-2 text-sm text-[var(--txt-tertiary)]">
           <span className="text-[var(--txt-icon-tertiary)]">
@@ -320,7 +500,9 @@ export function WorkspaceHomePage() {
       {/* Quicklinks */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-[var(--txt-primary)]">Quicklinks</h2>
+          <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+            Quicklinks
+          </h2>
           <Button
             variant="ghost"
             size="sm"
@@ -340,8 +522,11 @@ export function WorkspaceHomePage() {
               <Button variant="secondary" onClick={handleCloseQuicklink}>
                 Cancel
               </Button>
-              <Button onClick={handleAddQuicklink} disabled={!quicklinkUrl.trim() || quicklinkSubmitting}>
-                {quicklinkSubmitting ? 'Adding…' : 'Add Quicklink'}
+              <Button
+                onClick={handleAddQuicklink}
+                disabled={!quicklinkUrl.trim() || quicklinkSubmitting}
+              >
+                {quicklinkSubmitting ? "Adding…" : "Add Quicklink"}
               </Button>
             </>
           }
@@ -360,7 +545,8 @@ export function WorkspaceHomePage() {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
-                Display title <span className="text-[var(--txt-tertiary)]">Optional</span>
+                Display title{" "}
+                <span className="text-[var(--txt-tertiary)]">Optional</span>
               </label>
               <Input
                 value={quicklinkTitle}
@@ -379,13 +565,18 @@ export function WorkspaceHomePage() {
               ? `${baseUrl}/projects/${ql.project_id}`
               : ql.url;
             const content = (
-              <Card variant="outlined" className="transition-colors hover:bg-[var(--bg-layer-transparent-hover)]">
+              <Card
+                variant="outlined"
+                className="transition-colors hover:bg-[var(--bg-layer-transparent-hover)]"
+              >
                 <CardContent className="flex items-center gap-3 p-3">
                   <div className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-layer-1)] text-[var(--txt-icon-tertiary)]">
                     <IconTarget />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-[var(--txt-primary)]">{label}</p>
+                    <p className="truncate font-medium text-[var(--txt-primary)]">
+                      {label}
+                    </p>
                     <p className="text-xs text-[var(--txt-tertiary)]">
                       {formatRelativeTime(ql.updated_at)}
                     </p>
@@ -398,7 +589,13 @@ export function WorkspaceHomePage() {
                 {content}
               </Link>
             ) : (
-              <a key={ql.id} href={href} target="_blank" rel="noopener noreferrer" className="block no-underline">
+              <a
+                key={ql.id}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block no-underline"
+              >
                 {content}
               </a>
             );
@@ -410,7 +607,9 @@ export function WorkspaceHomePage() {
               <div className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-layer-1)] text-[var(--txt-icon-tertiary)]">
                 <IconTarget />
               </div>
-              <p className="text-sm text-[var(--txt-tertiary)]">No quicklinks yet. Add one to jump back to a project.</p>
+              <p className="text-sm text-[var(--txt-tertiary)]">
+                No quicklinks yet. Add one to jump back to a project.
+              </p>
             </CardContent>
           </Card>
         )}
@@ -419,7 +618,9 @@ export function WorkspaceHomePage() {
       {/* Recents */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-[var(--txt-primary)]">Recents</h2>
+          <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+            Recents
+          </h2>
           <div className="relative">
             <button
               ref={recentsFilterTriggerRef}
@@ -462,14 +663,15 @@ export function WorkspaceHomePage() {
           <CardContent className="divide-y divide-[var(--border-subtle)] p-0">
             {filteredRecents.map((r) => {
               const recentsLink =
-                r.entity_name === 'issue' && r.project_id && r.entity_identifier
+                r.entity_name === "issue" && r.project_id && r.entity_identifier
                   ? `${baseUrl}/projects/${r.project_id}/issues/${r.entity_identifier}`
-                  : r.entity_name === 'project' && r.entity_identifier
+                  : r.entity_name === "project" && r.entity_identifier
                     ? `${baseUrl}/projects/${r.entity_identifier}`
-                    : r.entity_name === 'page' && r.entity_identifier
+                    : r.entity_name === "page" && r.entity_identifier
                       ? `${baseUrl}/pages/${r.entity_identifier}`
                       : null;
-              const idLabel = r.display_identifier || r.entity_identifier || r.id;
+              const idLabel =
+                r.display_identifier || r.entity_identifier || r.id;
               const titleLabel = r.display_title || r.entity_name;
               const inner = (
                 <>
@@ -478,8 +680,12 @@ export function WorkspaceHomePage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="flex items-baseline gap-2 text-[13px]">
-                      <span className="font-medium text-[var(--txt-primary)]">{idLabel}</span>
-                      <span className="truncate text-[var(--txt-secondary)]">{titleLabel}</span>
+                      <span className="font-medium text-[var(--txt-primary)]">
+                        {idLabel}
+                      </span>
+                      <span className="truncate text-[var(--txt-secondary)]">
+                        {titleLabel}
+                      </span>
                     </p>
                     <p className="mt-0.5 text-xs text-[var(--txt-tertiary)]">
                       {formatRelativeTime(r.last_visited_at)}
@@ -516,10 +722,12 @@ export function WorkspaceHomePage() {
       {/* Your stickies */}
       <section>
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-base font-semibold text-[var(--txt-primary)]">Your stickies</h2>
+          <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+            Your stickies
+          </h2>
           <div className="flex flex-1 items-center justify-end gap-1 min-w-0">
             <div
-              className={`overflow-hidden transition-[width] duration-200 ease-out ${stickySearchOpen ? 'w-56' : 'w-0'}`}
+              className={`overflow-hidden transition-[width] duration-200 ease-out ${stickySearchOpen ? "w-56" : "w-0"}`}
             >
               <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-2 py-1.5">
                 <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
@@ -536,7 +744,7 @@ export function WorkspaceHomePage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setStickySearchQuery('');
+                    setStickySearchQuery("");
                     setStickySearchOpen(false);
                   }}
                   className="shrink-0 rounded p-0.5 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-secondary)]"
@@ -577,7 +785,7 @@ export function WorkspaceHomePage() {
                 Cancel
               </Button>
               <Button onClick={handleAddSticky} disabled={stickySubmitting}>
-                {stickySubmitting ? 'Adding…' : 'Add sticky'}
+                {stickySubmitting ? "Adding…" : "Add sticky"}
               </Button>
             </>
           }
@@ -585,7 +793,8 @@ export function WorkspaceHomePage() {
           <div className="flex flex-col gap-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
-                Content <span className="text-[var(--txt-tertiary)]">Optional</span>
+                Content{" "}
+                <span className="text-[var(--txt-tertiary)]">Optional</span>
               </label>
               <textarea
                 value={stickyContent}
@@ -599,7 +808,9 @@ export function WorkspaceHomePage() {
         </Modal>
         {(() => {
           const filteredStickies = stickies.filter((s) =>
-            s.name.toLowerCase().includes(stickySearchQuery.toLowerCase().trim())
+            s.name
+              .toLowerCase()
+              .includes(stickySearchQuery.toLowerCase().trim()),
           );
           if (filteredStickies.length === 0) {
             return (
@@ -610,8 +821,8 @@ export function WorkspaceHomePage() {
                   </span>
                   <p className="max-w-sm text-center text-sm italic text-[var(--txt-placeholder)]">
                     {stickySearchQuery.trim()
-                      ? 'No stickies match your search.'
-                      : 'Jot down an idea, capture an aha, or record a brainwave. Add a sticky to get started.'}
+                      ? "No stickies match your search."
+                      : "Jot down an idea, capture an aha, or record a brainwave. Add a sticky to get started."}
                   </p>
                 </CardContent>
               </Card>
@@ -621,61 +832,69 @@ export function WorkspaceHomePage() {
             <div className="grid grid-cols-3 gap-4">
               {filteredStickies.map((sticky) => {
                 const isDefaultDark =
-                  !sticky.color || sticky.color === '#0d0d0d' || sticky.color.toLowerCase() === '#0d0d0d';
+                  !sticky.color ||
+                  sticky.color === "#0d0d0d" ||
+                  sticky.color.toLowerCase() === "#0d0d0d";
                 return (
-                <div
-                  key={sticky.id}
-                  className={`flex min-h-[120px] flex-col rounded-[var(--radius-md)] border border-[var(--border-subtle)] p-3 shadow-sm ${isDefaultDark ? 'bg-[var(--bg-layer-2)]' : ''}`}
-                  style={isDefaultDark ? undefined : { backgroundColor: sticky.color }}
-                >
-                  <div className="min-h-0 flex-1 text-sm text-[var(--txt-primary)]">
-                    <p className="whitespace-pre-wrap break-words">{sticky.name}</p>
-                    {sticky.description && (
-                      <p className="mt-1 whitespace-pre-wrap break-words text-[var(--txt-secondary)]">
-                        {sticky.description}
+                  <div
+                    key={sticky.id}
+                    className={`flex min-h-[120px] flex-col rounded-[var(--radius-md)] border border-[var(--border-subtle)] p-3 shadow-sm ${isDefaultDark ? "bg-[var(--bg-layer-2)]" : ""}`}
+                    style={
+                      isDefaultDark
+                        ? undefined
+                        : { backgroundColor: sticky.color }
+                    }
+                  >
+                    <div className="min-h-0 flex-1 text-sm text-[var(--txt-primary)]">
+                      <p className="whitespace-pre-wrap break-words">
+                        {sticky.name}
                       </p>
-                    )}
+                      {sticky.description && (
+                        <p className="mt-1 whitespace-pre-wrap break-words text-[var(--txt-secondary)]">
+                          {sticky.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="mt-2 flex items-center gap-1 border-t border-[var(--border-subtle)] pt-2">
+                      <button
+                        type="button"
+                        className="rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+                        aria-label="Change color"
+                      >
+                        <IconPalette />
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+                        aria-label="Bold"
+                      >
+                        <IconBold />
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+                        aria-label="Italic"
+                      >
+                        <IconItalic />
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+                        aria-label="List"
+                      >
+                        <IconList />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSticky(sticky.id)}
+                        className="ml-auto rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-danger-primary)]"
+                        aria-label="Delete"
+                      >
+                        <IconTrash />
+                      </button>
+                    </div>
                   </div>
-                  <div className="mt-2 flex items-center gap-1 border-t border-[var(--border-subtle)] pt-2">
-                    <button
-                      type="button"
-                      className="rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)]"
-                      aria-label="Change color"
-                    >
-                      <IconPalette />
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)]"
-                      aria-label="Bold"
-                    >
-                      <IconBold />
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)]"
-                      aria-label="Italic"
-                    >
-                      <IconItalic />
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)]"
-                      aria-label="List"
-                    >
-                      <IconList />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteSticky(sticky.id)}
-                      className="ml-auto rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-danger-primary)]"
-                      aria-label="Delete"
-                    >
-                      <IconTrash />
-                    </button>
-                  </div>
-                </div>
-              );
+                );
               })}
             </div>
           );

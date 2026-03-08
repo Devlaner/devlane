@@ -1,7 +1,17 @@
-import { Button } from '../ui';
+import { Button } from "../ui";
 
 const IconWorkspace = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z" />
     <path d="M3 9 12 3l9 6" />
     <path d="M12 3v6" />
@@ -12,7 +22,9 @@ interface CreateWorkspaceSetupHintProps {
   onDismiss: () => void;
 }
 
-export function CreateWorkspaceSetupHint({ onDismiss }: CreateWorkspaceSetupHintProps) {
+export function CreateWorkspaceSetupHint({
+  onDismiss,
+}: CreateWorkspaceSetupHintProps) {
   return (
     <div
       className="fixed bottom-6 right-6 z-50 w-full max-w-sm rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-4 shadow-[var(--shadow-overlay)]"
@@ -21,15 +33,23 @@ export function CreateWorkspaceSetupHint({ onDismiss }: CreateWorkspaceSetupHint
     >
       <div className="flex gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-[var(--txt-primary)]">Create workspace</h3>
+          <h3 className="text-sm font-semibold text-[var(--txt-primary)]">
+            Create workspace
+          </h3>
           <p className="mt-1 text-xs text-[var(--txt-secondary)]">
-            Instance setup is complete. Welcome to your Devlane instance. Start your journey by creating your first workspace.
+            Instance setup is complete. Welcome to your Devlane instance. Start
+            your journey by creating your first workspace.
           </p>
           <div className="mt-3 flex gap-2">
             <Button size="sm" type="button" onClick={onDismiss}>
               Create workspace
             </Button>
-            <Button size="sm" variant="secondary" type="button" onClick={onDismiss}>
+            <Button
+              size="sm"
+              variant="secondary"
+              type="button"
+              onClick={onDismiss}
+            >
               Close
             </Button>
           </div>

@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react';
-import { Button, Modal } from './ui';
-import { uploadImage } from '../services/uploadService';
+import { useCallback, useEffect, useState } from "react";
+import { Button, Modal } from "./ui";
+import { uploadImage } from "../services/uploadService";
 
 export interface UploadImageModalProps {
   open: boolean;
@@ -9,34 +9,50 @@ export interface UploadImageModalProps {
   title?: string;
 }
 
-export function UploadImageModal({ open, onClose, onSave, title = 'Upload image' }: UploadImageModalProps) {
+export function UploadImageModal({
+  open,
+  onClose,
+  onSave,
+  title = "Upload image",
+}: UploadImageModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!allowed.includes(f.type)) {
-      setError('Invalid file type. Supported: .jpeg, .jpg, .png, .webp');
-      return;
+  useEffect(() => {
+    if (!open) {
+      setFile(null);
+      setPreview(null);
+      setError(null);
     }
-    setError(null);
-    setFile(f);
-    const reader = new FileReader();
-    reader.onload = () => setPreview(reader.result as string);
-    reader.readAsDataURL(f);
-  }, []);
+  }, [open]);
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const f = e.target.files?.[0];
+      if (!f) return;
+      const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+      if (!allowed.includes(f.type)) {
+        setError("Invalid file type. Supported: .jpeg, .jpg, .png, .webp");
+        return;
+      }
+      setError(null);
+      setFile(f);
+      const reader = new FileReader();
+      reader.onload = () => setPreview(reader.result as string);
+      reader.readAsDataURL(f);
+    },
+    [],
+  );
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const f = e.dataTransfer.files?.[0];
     if (!f) return;
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
     if (!allowed.includes(f.type)) {
-      setError('Invalid file type. Supported: .jpeg, .jpg, .png, .webp');
+      setError("Invalid file type. Supported: .jpeg, .jpg, .png, .webp");
       return;
     }
     setError(null);
@@ -46,7 +62,10 @@ export function UploadImageModal({ open, onClose, onSave, title = 'Upload image'
     reader.readAsDataURL(f);
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => e.preventDefault(), []);
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => e.preventDefault(),
+    [],
+  );
 
   const handleRemove = useCallback(() => {
     setFile(null);
@@ -63,7 +82,7 @@ export function UploadImageModal({ open, onClose, onSave, title = 'Upload image'
       onSave(url);
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Upload failed');
+      setError(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setLoading(false);
     }
@@ -72,7 +91,11 @@ export function UploadImageModal({ open, onClose, onSave, title = 'Upload image'
   const footer = (
     <>
       {preview && (
-        <Button variant="secondary" className="text-[var(--txt-danger-primary)]" onClick={handleRemove}>
+        <Button
+          variant="secondary"
+          className="text-[var(--txt-danger-primary)]"
+          onClick={handleRemove}
+        >
           Remove
         </Button>
       )}
@@ -80,13 +103,19 @@ export function UploadImageModal({ open, onClose, onSave, title = 'Upload image'
         Cancel
       </Button>
       <Button disabled={!file || loading} onClick={handleUploadSave}>
-        {loading ? 'Uploading…' : 'Upload & Save'}
+        {loading ? "Uploading…" : "Upload & Save"}
       </Button>
     </>
   );
 
   return (
-    <Modal open={open} onClose={onClose} title={title} footer={footer} className="max-w-md">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={title}
+      footer={footer}
+      className="max-w-md"
+    >
       <div className="space-y-3">
         {!preview ? (
           <div
@@ -94,15 +123,28 @@ export function UploadImageModal({ open, onClose, onSave, title = 'Upload image'
             onDragOver={handleDragOver}
             className="flex flex-col items-center justify-center rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border-subtle)] bg-[var(--bg-layer-2)] py-12 px-4"
           >
-            <p className="text-sm text-[var(--txt-secondary)] mb-2">Drag & drop image here</p>
+            <p className="text-sm text-[var(--txt-secondary)] mb-2">
+              Drag & drop image here
+            </p>
             <label className="cursor-pointer">
-              <span className="text-sm font-medium text-[var(--txt-accent-primary)] hover:underline">Browse</span>
-              <input type="file" accept=".jpeg,.jpg,.png,.webp" className="sr-only" onChange={handleFileChange} />
+              <span className="text-sm font-medium text-[var(--txt-accent-primary)] hover:underline">
+                Browse
+              </span>
+              <input
+                type="file"
+                accept=".jpeg,.jpg,.png,.webp"
+                className="sr-only"
+                onChange={handleFileChange}
+              />
             </label>
           </div>
         ) : (
           <div className="relative rounded-[var(--radius-md)] border border-[var(--border-subtle)] overflow-hidden bg-[var(--bg-layer-2)]">
-            <img src={preview} alt="Preview" className="w-full max-h-64 object-contain" />
+            <img
+              src={preview}
+              alt="Preview"
+              className="w-full max-h-64 object-contain"
+            />
             <div className="absolute top-2 right-2">
               <button
                 type="button"
@@ -114,8 +156,12 @@ export function UploadImageModal({ open, onClose, onSave, title = 'Upload image'
             </div>
           </div>
         )}
-        <p className="text-xs text-[var(--txt-tertiary)]">File formats supported: .jpeg, .jpg, .png, .webp</p>
-        {error && <p className="text-sm text-[var(--txt-danger-primary)]">{error}</p>}
+        <p className="text-xs text-[var(--txt-tertiary)]">
+          File formats supported: .jpeg, .jpg, .png, .webp
+        </p>
+        {error && (
+          <p className="text-sm text-[var(--txt-danger-primary)]">{error}</p>
+        )}
       </div>
     </Modal>
   );

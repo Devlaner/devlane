@@ -1,8 +1,5 @@
-import { apiClient } from '../api/client';
-import type {
-  IssueApiResponse,
-  CreateIssueRequest,
-} from '../api/types';
+import { apiClient } from "../api/client";
+import type { IssueApiResponse, CreateIssueRequest } from "../api/types";
 
 export interface ListIssuesParams {
   limit?: number;
@@ -13,13 +10,14 @@ export const issueService = {
   async list(
     workspaceSlug: string,
     projectId: string,
-    params?: ListIssuesParams
+    params?: ListIssuesParams,
   ): Promise<IssueApiResponse[]> {
     const searchParams = new URLSearchParams();
-    if (params?.limit != null) searchParams.set('limit', String(params.limit));
-    if (params?.offset != null) searchParams.set('offset', String(params.offset));
+    if (params?.limit != null) searchParams.set("limit", String(params.limit));
+    if (params?.offset != null)
+      searchParams.set("offset", String(params.offset));
     const qs = searchParams.toString();
-    const url = `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${qs ? `?${qs}` : ''}`;
+    const url = `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${qs ? `?${qs}` : ""}`;
     const { data } = await apiClient.get<IssueApiResponse[]>(url);
     return data;
   },
@@ -27,10 +25,10 @@ export const issueService = {
   async get(
     workspaceSlug: string,
     projectId: string,
-    issueId: string
+    issueId: string,
   ): Promise<IssueApiResponse> {
     const { data } = await apiClient.get<IssueApiResponse>(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/`,
     );
     return data;
   },
@@ -38,11 +36,11 @@ export const issueService = {
   async create(
     workspaceSlug: string,
     projectId: string,
-    payload: CreateIssueRequest
+    payload: CreateIssueRequest,
   ): Promise<IssueApiResponse> {
     const { data } = await apiClient.post<IssueApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/`,
-      payload
+      payload,
     );
     return data;
   },
@@ -51,11 +49,11 @@ export const issueService = {
     workspaceSlug: string,
     projectId: string,
     issueId: string,
-    payload: Partial<CreateIssueRequest & { state_id?: string | null }>
+    payload: Partial<CreateIssueRequest & { state_id?: string | null }>,
   ): Promise<IssueApiResponse> {
     const { data } = await apiClient.patch<IssueApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/`,
-      payload
+      payload,
     );
     return data;
   },
@@ -63,10 +61,10 @@ export const issueService = {
   async delete(
     workspaceSlug: string,
     projectId: string,
-    issueId: string
+    issueId: string,
   ): Promise<void> {
     await apiClient.delete(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/`,
     );
   },
 };

@@ -1,110 +1,444 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Link, NavLink, useLocation, useParams } from 'react-router-dom';
-import { workspaceService } from '../../services/workspaceService';
-import { projectService } from '../../services/projectService';
-import { favoriteService } from '../../services/favoriteService';
-import type { WorkspaceApiResponse, ProjectApiResponse } from '../../api/types';
-import type { Project } from '../../types';
-import { CreateWorkItemModal } from '../CreateWorkItemModal';
-import { Avatar, Button } from '../ui';
-import { useAuth } from '../../contexts/AuthContext';
-import { useFavorites } from '../../contexts/FavoritesContext';
-import { cn, getImageUrl } from '../../lib/utils';
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Link, NavLink, useLocation, useParams } from "react-router-dom";
+import { workspaceService } from "../../services/workspaceService";
+import { projectService } from "../../services/projectService";
+import { favoriteService } from "../../services/favoriteService";
+import type { WorkspaceApiResponse, ProjectApiResponse } from "../../api/types";
+import { CreateWorkItemModal } from "../CreateWorkItemModal";
+import { Avatar, Button } from "../ui";
+import { useAuth } from "../../contexts/AuthContext";
+import { useFavorites } from "../../contexts/FavoritesContext";
+import { cn, getImageUrl } from "../../lib/utils";
 
 const SIDEBAR_WIDTH = 256;
 const SIDEBAR_WIDTH_COLLAPSED = 0;
 
 // Icons (Devlane-style outline)
 const IconPanelLeft = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M9 3v18" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <rect width="18" height="18" x="3" y="3" rx="2" />
+    <path d="M9 3v18" />
+  </svg>
 );
 const IconHome = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <polyline points="9 22 9 12 15 12 15 22" />
+  </svg>
 );
 const IconInbox = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="22 12 16 12 14 15 10 15 8 12 2 12" /><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+    <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+  </svg>
 );
 const IconUser = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
 );
 const IconBriefcase = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect width="20" height="14" x="2" y="7" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <rect width="20" height="14" x="2" y="7" rx="2" ry="2" />
+    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+  </svg>
 );
 const IconBarChart = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="12" x2="12" y1="20" y2="10" /><line x1="18" x2="18" y1="20" y2="4" /><line x1="6" x2="6" y1="20" y2="16" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <line x1="12" x2="12" y1="20" y2="10" />
+    <line x1="18" x2="18" y1="20" y2="4" />
+    <line x1="6" x2="6" y1="20" y2="16" />
+  </svg>
 );
 const IconArchive = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect width="20" height="5" x="2" y="3" rx="1" /><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /><path d="M10 12h4" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <rect width="20" height="5" x="2" y="3" rx="1" />
+    <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+    <path d="M10 12h4" />
+  </svg>
 );
 const IconSearch = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <circle cx="11" cy="11" r="8" />
+    <path d="m21 21-4.3-4.3" />
+  </svg>
 );
 const IconPencil = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+  </svg>
 );
 const IconChevronRight = ({ className }: { className?: string }) => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden><path d="m9 18 6-6-6-6" /></svg>
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <path d="m9 18 6-6-6-6" />
+  </svg>
 );
 const IconFileStack = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M16 2v6h6" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-2" /><path d="M17 2v4a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V2" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M16 2v6h6" />
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <path d="M7 10H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-2" />
+    <path d="M17 2v4a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V2" />
+  </svg>
 );
 const IconIterationCw = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" /><path d="M16 21h5v-5" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
+    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+    <path d="M16 21h5v-5" />
+  </svg>
 );
 const IconLayers = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" /><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" /><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
+    <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" />
+    <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" />
+  </svg>
 );
 const IconLayoutList = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="8" x2="21" y1="6" y2="6" /><line x1="8" x2="21" y1="12" y2="12" /><line x1="8" x2="21" y1="18" y2="18" /><line x1="3" x2="3.01" y1="6" y2="6" /><line x1="3" x2="3.01" y1="12" y2="12" /><line x1="3" x2="3.01" y1="18" y2="18" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <line x1="8" x2="21" y1="6" y2="6" />
+    <line x1="8" x2="21" y1="12" y2="12" />
+    <line x1="8" x2="21" y1="18" y2="18" />
+    <line x1="3" x2="3.01" y1="6" y2="6" />
+    <line x1="3" x2="3.01" y1="12" y2="12" />
+    <line x1="3" x2="3.01" y1="18" y2="18" />
+  </svg>
 );
 const IconFileText = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+    <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+    <path d="M10 9H8" />
+    <path d="M16 13H8" />
+    <path d="M16 17H8" />
+  </svg>
 );
 const IconHelp = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <circle cx="12" cy="12" r="10" />
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+    <path d="M12 17h.01" />
+  </svg>
 );
 const IconBook = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+  </svg>
 );
 const IconChevronDown = ({ className }: { className?: string }) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden><path d="m6 9 6 6 6-6" /></svg>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <path d="m6 9 6 6 6-6" />
+  </svg>
 );
 const IconChevronUp = ({ className }: { className?: string }) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden><path d="m18 15-6-6-6 6" /></svg>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <path d="m18 15-6-6-6 6" />
+  </svg>
 );
 const IconCheck = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 6 9 17l-5-5" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
 );
 const IconSettings = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
 );
 const IconUserPlus = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" x2="19" y1="8" y2="14" /><line x1="22" x2="16" y1="11" y2="11" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <line x1="19" x2="19" y1="8" y2="14" />
+    <line x1="22" x2="16" y1="11" y2="11" />
+  </svg>
 );
 const IconEnvelope = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <rect width="20" height="16" x="2" y="4" rx="2" />
+    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+  </svg>
 );
 const IconLogOut = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" x2="9" y1="12" y2="12" />
+  </svg>
 );
 
 const projectNavItems = [
-  { key: 'issues', to: 'issues', label: 'Work items', Icon: IconFileStack },
-  { key: 'cycles', to: 'cycles', label: 'Cycles', Icon: IconIterationCw },
-  { key: 'modules', to: 'modules', label: 'Modules', Icon: IconLayers },
-  { key: 'views', to: 'views', label: 'Views', Icon: IconLayoutList },
-  { key: 'pages', to: 'pages', label: 'Pages', Icon: IconFileText },
+  { key: "issues", to: "issues", label: "Work items", Icon: IconFileStack },
+  { key: "cycles", to: "cycles", label: "Cycles", Icon: IconIterationCw },
+  { key: "modules", to: "modules", label: "Modules", Icon: IconLayers },
+  { key: "views", to: "views", label: "Views", Icon: IconLayoutList },
+  { key: "pages", to: "pages", label: "Pages", Icon: IconFileText },
 ];
 
 export function Sidebar() {
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [workspaceDropdownOpen, setWorkspaceDropdownOpen] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; minWidth: number } | null>(null);
-  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(new Set());
-  const [workspaceSectionExpanded, setWorkspaceSectionExpanded] = useState(true);
-  const [favoritesSectionExpanded, setFavoritesSectionExpanded] = useState(true);
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    top: number;
+    left: number;
+    minWidth: number;
+  } | null>(null);
+  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [workspaceSectionExpanded, setWorkspaceSectionExpanded] =
+    useState(true);
+  const [favoritesSectionExpanded, setFavoritesSectionExpanded] =
+    useState(true);
   const [projectsSectionExpanded, setProjectsSectionExpanded] = useState(true);
   const [createWorkItemOpen, setCreateWorkItemOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState<WorkspaceApiResponse[]>([]);
@@ -114,28 +448,27 @@ export function Sidebar() {
   const workspaceDropdownRef = useRef<HTMLDivElement>(null);
 
   const location = useLocation();
-  const { workspaceSlug: paramsSlug, projectId } = useParams<{ workspaceSlug?: string; projectId?: string }>();
+  const { workspaceSlug: paramsSlug, projectId } = useParams<{
+    workspaceSlug?: string;
+    projectId?: string;
+  }>();
   // Derive workspace slug from URL when useParams doesn't provide it (e.g. parent route context)
   const pathSegment = location.pathname.match(/^\/([^/]+)/)?.[1];
   const slugFromPath =
     pathSegment &&
-    !['login', 'setup', 'instance-admin', 'auth'].includes(pathSegment)
+    !["login", "setup", "instance-admin", "auth"].includes(pathSegment)
       ? pathSegment
       : undefined;
   const workspaceSlug = paramsSlug ?? slugFromPath;
-  const workspace = workspaces.find((w) => w.slug === workspaceSlug) ?? workspaces[0] ?? null;
-  const baseUrl = workspaceSlug ? `/${workspaceSlug}` : (workspace ? `/${workspace.slug}` : '');
-  const favoriteProjects = projects.filter((p) => favoriteProjectIds.includes(p.id));
-  const projectsForModal: Project[] = useMemo(
-    () =>
-      projects.map((p) => ({
-        id: p.id,
-        workspaceId: p.workspace_id,
-        name: p.name,
-        identifier: p.identifier ?? p.id.slice(0, 2),
-        description: p.description ?? null,
-      })),
-    [projects]
+  const workspace =
+    workspaces.find((w) => w.slug === workspaceSlug) ?? workspaces[0] ?? null;
+  const baseUrl = workspaceSlug
+    ? `/${workspaceSlug}`
+    : workspace
+      ? `/${workspace.slug}`
+      : "";
+  const favoriteProjects = projects.filter((p) =>
+    favoriteProjectIds.includes(p.id),
   );
 
   useEffect(() => {
@@ -143,7 +476,9 @@ export function Sidebar() {
     workspaceService.list().then((list) => {
       if (!cancelled) setWorkspaces(list);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Load projects for the current workspace (from URL slug or from workspace list when at root)
@@ -154,28 +489,44 @@ export function Sidebar() {
       return;
     }
     let cancelled = false;
-    projectService.list(slugForProjects).then((list) => {
-      if (!cancelled) setProjects(list);
-    }).catch(() => {
-      if (!cancelled) setProjects([]);
-    });
-    return () => { cancelled = true; };
+    projectService
+      .list(slugForProjects)
+      .then((list) => {
+        if (!cancelled) setProjects(list);
+      })
+      .catch(() => {
+        if (!cancelled) setProjects([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [slugForProjects]);
 
   useEffect(() => {
     let cancelled = false;
-    favoriteService.getFavoriteProjectIds().then((ids) => {
-      if (!cancelled) setFavoriteProjectIds(ids);
-    }).catch(() => {
-      if (!cancelled) setFavoriteProjectIds([]);
-    });
-    return () => { cancelled = true; };
+    favoriteService
+      .getFavoriteProjectIds()
+      .then((ids) => {
+        if (!cancelled) setFavoriteProjectIds(ids);
+      })
+      .catch(() => {
+        if (!cancelled) setFavoriteProjectIds([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     if (!baseUrl) return;
     const path = location.pathname;
-    if (path === `${baseUrl}/projects` || path === `${baseUrl}/views` || path === `${baseUrl}/drafts` || path === `${baseUrl}/archives` || path.startsWith(`${baseUrl}/analytics`)) {
+    if (
+      path === `${baseUrl}/projects` ||
+      path === `${baseUrl}/views` ||
+      path === `${baseUrl}/drafts` ||
+      path === `${baseUrl}/archives` ||
+      path.startsWith(`${baseUrl}/analytics`)
+    ) {
       setWorkspaceSectionExpanded(true);
     }
     if (projectId && path.startsWith(`${baseUrl}/projects/`)) {
@@ -192,24 +543,29 @@ export function Sidebar() {
       const el = workspaceTriggerRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      setDropdownPosition({ top: rect.bottom + 4, left: rect.left, minWidth: rect.width });
+      setDropdownPosition({
+        top: rect.bottom + 4,
+        left: rect.left,
+        minWidth: rect.width,
+      });
     };
     updatePosition();
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
       if (
         workspaceTriggerRef.current?.contains(target) ||
         workspaceDropdownRef.current?.contains(target)
-      ) return;
+      )
+        return;
       setWorkspaceDropdownOpen(false);
     };
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
-      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [workspaceDropdownOpen]);
 
@@ -228,7 +584,11 @@ export function Sidebar() {
     <>
       <div
         className="flex h-full shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-surface-1)] transition-all duration-300 ease-in-out"
-        style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}
+        style={{
+          width: `${width}px`,
+          minWidth: `${width}px`,
+          maxWidth: `${width}px`,
+        }}
         role="complementary"
         aria-label="Main sidebar"
       >
@@ -246,22 +606,32 @@ export function Sidebar() {
             >
               <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-layer-1)] text-sm font-semibold text-[var(--txt-secondary)]">
                 {workspace?.logo && getImageUrl(workspace.logo) ? (
-                  <img src={getImageUrl(workspace.logo)!} alt="" className="h-full w-full object-cover" />
+                  <img
+                    src={getImageUrl(workspace.logo)!}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
-                  (workspace?.name ?? '—').slice(0, 2).toUpperCase()
+                  (workspace?.name ?? "—").slice(0, 2).toUpperCase()
                 )}
               </div>
               <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--txt-primary)]">
-                {workspace?.name ?? 'Loading…'}
+                {workspace?.name ?? "Loading…"}
               </span>
               <span
                 className={cn(
-                  'shrink-0 text-[var(--txt-icon-tertiary)] transition-opacity',
-                  workspaceDropdownOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                  "shrink-0 text-[var(--txt-icon-tertiary)] transition-opacity",
+                  workspaceDropdownOpen
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100",
                 )}
                 aria-hidden
               >
-                {workspaceDropdownOpen ? <IconChevronUp /> : <IconChevronDown />}
+                {workspaceDropdownOpen ? (
+                  <IconChevronUp />
+                ) : (
+                  <IconChevronDown />
+                )}
               </span>
             </button>
             <div className="flex shrink-0 items-center gap-1">
@@ -273,7 +643,11 @@ export function Sidebar() {
               >
                 <IconPanelLeft />
               </button>
-              <Avatar name={user?.name ?? 'User'} src={getImageUrl(user?.avatarUrl)} size="sm" />
+              <Avatar
+                name={user?.name ?? "User"}
+                src={getImageUrl(user?.avatarUrl)}
+                size="sm"
+              />
             </div>
           </div>
 
@@ -285,7 +659,7 @@ export function Sidebar() {
                 ref={workspaceDropdownRef}
                 className="z-50 min-w-[280px] rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-4 shadow-[var(--shadow-lg)]"
                 style={{
-                  position: 'fixed',
+                  position: "fixed",
                   top: dropdownPosition.top,
                   left: dropdownPosition.left,
                   minWidth: Math.max(dropdownPosition.minWidth, 280),
@@ -300,26 +674,33 @@ export function Sidebar() {
                 <div className="mb-4 flex items-start gap-3">
                   <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-xs font-semibold uppercase tracking-wide text-[var(--txt-secondary)]">
                     {workspace?.logo && getImageUrl(workspace.logo) ? (
-                      <img src={getImageUrl(workspace.logo)!} alt="" className="h-full w-full object-cover" />
+                      <img
+                        src={getImageUrl(workspace.logo)!}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
-                      (workspace?.name ?? '—').slice(0, 2)
+                      (workspace?.name ?? "—").slice(0, 2)
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-[var(--txt-primary)]">
-                      {workspace?.name ?? '—'}
+                      {workspace?.name ?? "—"}
                     </p>
                     <p className="text-xs text-[var(--txt-tertiary)]">
                       Members
                     </p>
                   </div>
-                  <span className="shrink-0 text-[var(--txt-primary)]" aria-hidden>
+                  <span
+                    className="shrink-0 text-[var(--txt-primary)]"
+                    aria-hidden
+                  >
                     <IconCheck />
                   </span>
                 </div>
                 <div className="mb-3 flex gap-1.5">
                   <Link
-                    to={baseUrl ? `${baseUrl}/settings` : '/settings'}
+                    to={baseUrl ? `${baseUrl}/settings` : "/settings"}
                     onClick={() => setWorkspaceDropdownOpen(false)}
                     className="flex flex-1 items-center justify-center gap-1 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-1.5 py-1.5 text-[12px] font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-2-hover)] whitespace-nowrap"
                   >
@@ -327,7 +708,11 @@ export function Sidebar() {
                     Settings
                   </Link>
                   <Link
-                    to={baseUrl ? `${baseUrl}/settings?section=members` : '/settings'}
+                    to={
+                      baseUrl
+                        ? `${baseUrl}/settings?section=members`
+                        : "/settings"
+                    }
                     onClick={() => setWorkspaceDropdownOpen(false)}
                     className="flex flex-1 items-center justify-center gap-1 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-1.5 py-1.5 text-[12px] font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-2-hover)] whitespace-nowrap no-underline"
                   >
@@ -337,7 +722,11 @@ export function Sidebar() {
                 </div>
                 <div className="flex flex-col gap-0.5 border-t border-[var(--border-subtle)] pt-3">
                   <Link
-                    to={baseUrl ? `${baseUrl}/settings?section=members` : '/settings'}
+                    to={
+                      baseUrl
+                        ? `${baseUrl}/settings?section=members`
+                        : "/settings"
+                    }
                     onClick={() => setWorkspaceDropdownOpen(false)}
                     className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-2 text-left text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)] no-underline"
                   >
@@ -357,7 +746,7 @@ export function Sidebar() {
                   </button>
                 </div>
               </div>,
-              document.body
+              document.body,
             )}
 
           {/* 2. New work item + Search */}
@@ -381,264 +770,299 @@ export function Sidebar() {
 
           {/* Scrollable area: primary nav, workspace, favorites, projects */}
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          {/* 3. Primary nav: Home, Inbox, Your work */}
-          <div className="flex flex-col gap-0.5 px-2 py-2">
-            <NavLink
-              to={baseUrl || (workspace ? `/${workspace.slug}` : '/')}
-              end
-              className={({ isActive }) =>
-                cn(
-                  'flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors',
-                  isActive
-                    ? 'bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]'
-                    : 'text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]'
-                )
-              }
-            >
-              <span className={cn('flex size-4 shrink-0 items-center justify-center', 'text-[var(--txt-icon-tertiary)]')}>
-                <IconHome />
-              </span>
-              Home
-            </NavLink>
-            <NavLink
-              to={baseUrl ? `${baseUrl}/notifications` : '/'}
-              end
-              className={({ isActive }) =>
-                cn(
-                  'flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors',
-                  isActive
-                    ? 'bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]'
-                    : 'text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]'
-                )
-              }
-            >
-              <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
-                <IconInbox />
-              </span>
-              Inbox
-            </NavLink>
-            <NavLink
-              to={baseUrl && user ? `${baseUrl}/profile/${user.id}` : baseUrl || '/'}
-              end
-              className={({ isActive }) =>
-                cn(
-                  'flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors',
-                  isActive
-                    ? 'bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]'
-                    : 'text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]'
-                )
-              }
-            >
-              <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
-                <IconUser />
-              </span>
-              Your work
-            </NavLink>
-          </div>
+            {/* 3. Primary nav: Home, Inbox, Your work */}
+            <div className="flex flex-col gap-0.5 px-2 py-2">
+              <NavLink
+                to={baseUrl || (workspace ? `/${workspace.slug}` : "/")}
+                end
+                className={({ isActive }) =>
+                  cn(
+                    "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                    isActive
+                      ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
+                      : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                  )
+                }
+              >
+                <span
+                  className={cn(
+                    "flex size-4 shrink-0 items-center justify-center",
+                    "text-[var(--txt-icon-tertiary)]",
+                  )}
+                >
+                  <IconHome />
+                </span>
+                Home
+              </NavLink>
+              <NavLink
+                to={baseUrl ? `${baseUrl}/notifications` : "/"}
+                end
+                className={({ isActive }) =>
+                  cn(
+                    "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                    isActive
+                      ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
+                      : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                  )
+                }
+              >
+                <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                  <IconInbox />
+                </span>
+                Inbox
+              </NavLink>
+              <NavLink
+                to={
+                  baseUrl && user
+                    ? `${baseUrl}/profile/${user.id}`
+                    : baseUrl || "/"
+                }
+                end
+                className={({ isActive }) =>
+                  cn(
+                    "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                    isActive
+                      ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
+                      : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                  )
+                }
+              >
+                <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                  <IconUser />
+                </span>
+                Your work
+              </NavLink>
+            </div>
 
-          {/* 4. Workspace section (collapsible) */}
-          <div className="flex flex-col gap-0.5 px-2 pt-2 pb-1">
-            <button
-              type="button"
-              onClick={() => setWorkspaceSectionExpanded((e) => !e)}
-              className="group flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-[var(--txt-placeholder)] outline-none hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-secondary)]"
-              aria-expanded={workspaceSectionExpanded}
-            >
-              <span>Workspace</span>
-              <span className="flex size-4 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
-                <IconChevronRight className={cn('text-[var(--txt-icon-tertiary)]', workspaceSectionExpanded && 'rotate-90')} />
-              </span>
-            </button>
-            {workspaceSectionExpanded && (
-              <div className="flex flex-col gap-0.5 pl-1">
-            <NavLink
-              to={baseUrl ? `${baseUrl}/projects` : '/'}
-              end
-              className={({ isActive }) =>
-                cn(
-                  'flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors',
-                  isActive
-                    ? 'bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]'
-                    : 'text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]'
-                )
-              }
-            >
-              <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
-                <IconBriefcase />
-              </span>
-              Projects
-            </NavLink>
-            <NavLink
-              to={baseUrl ? `${baseUrl}/views` : '/'}
-              end
-              className={({ isActive }) =>
-                cn(
-                  'flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors',
-                  isActive
-                    ? 'bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]'
-                    : 'text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]'
-                )
-              }
-            >
-              <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
-                <IconLayoutList />
-              </span>
-              Views
-            </NavLink>
-            <NavLink
-              to={baseUrl ? `${baseUrl}/analytics` : '/'}
-              end={false}
-              className={({ isActive }) =>
-                cn(
-                  'flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors',
-                  isActive
-                    ? 'bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]'
-                    : 'text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]'
-                )
-              }
-            >
-              <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
-                <IconBarChart />
-              </span>
-              Analytics
-            </NavLink>
-            <NavLink
-              to={baseUrl ? `${baseUrl}/drafts` : '/'}
-              end
-              className={({ isActive }) =>
-                cn(
-                  'flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors',
-                  isActive
-                    ? 'bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]'
-                    : 'text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]'
-                )
-              }
-            >
-              <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
-                <IconPencil />
-              </span>
-              Drafts
-            </NavLink>
-            <NavLink
-              to={baseUrl ? `${baseUrl}/archives` : '/'}
-              end
-              className={({ isActive }) =>
-                cn(
-                  'flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors',
-                  isActive
-                    ? 'bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]'
-                    : 'text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]'
-                )
-              }
-            >
-              <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
-                <IconArchive />
-              </span>
-              Archives
-            </NavLink>
-              </div>
-            )}
-          </div>
-
-          {/* 6. Favorites section (collapsible) */}
-          <div className="flex flex-col gap-0.5 px-2 pt-3 pb-1">
-            <button
-              type="button"
-              onClick={() => setFavoritesSectionExpanded((e) => !e)}
-              className="group flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-[var(--txt-placeholder)] outline-none hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-secondary)]"
-              aria-expanded={favoritesSectionExpanded}
-            >
-              <span>Favorites</span>
-              <span className="flex size-4 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
-                <IconChevronRight className={cn('text-[var(--txt-icon-tertiary)]', favoritesSectionExpanded && 'rotate-90')} />
-              </span>
-            </button>
-            {favoritesSectionExpanded && (
-              <div className="flex flex-col gap-0.5 pl-1 py-1">
-                {favoriteProjects.map((project) => (
-                  <Link
-                    key={project.id}
-                    to={`${baseUrl}/projects/${project.id}`}
-                    className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]"
-                  >
-                    <div className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-[var(--bg-layer-1)] text-[10px] font-medium text-[var(--txt-tertiary)]">
-                      {(project.identifier ?? project.id.slice(0, 2)).slice(0, 2)}
-                    </div>
-                    <span className="truncate">{project.name}</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 7. Projects section (collapsible) */}
-          <div className="flex flex-col flex-1 min-h-0">
+            {/* 4. Workspace section (collapsible) */}
             <div className="flex flex-col gap-0.5 px-2 pt-2 pb-1">
               <button
                 type="button"
-                onClick={() => setProjectsSectionExpanded((e) => !e)}
+                onClick={() => setWorkspaceSectionExpanded((e) => !e)}
                 className="group flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-[var(--txt-placeholder)] outline-none hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-secondary)]"
-                aria-expanded={projectsSectionExpanded}
+                aria-expanded={workspaceSectionExpanded}
               >
-                <span>Projects</span>
+                <span>Workspace</span>
                 <span className="flex size-4 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
-                  <IconChevronRight className={cn('text-[var(--txt-icon-tertiary)]', projectsSectionExpanded && 'rotate-90')} />
+                  <IconChevronRight
+                    className={cn(
+                      "text-[var(--txt-icon-tertiary)]",
+                      workspaceSectionExpanded && "rotate-90",
+                    )}
+                  />
                 </span>
               </button>
+              {workspaceSectionExpanded && (
+                <div className="flex flex-col gap-0.5 pl-1">
+                  <NavLink
+                    to={baseUrl ? `${baseUrl}/projects` : "/"}
+                    end
+                    className={({ isActive }) =>
+                      cn(
+                        "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                        isActive
+                          ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
+                          : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                      )
+                    }
+                  >
+                    <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                      <IconBriefcase />
+                    </span>
+                    Projects
+                  </NavLink>
+                  <NavLink
+                    to={baseUrl ? `${baseUrl}/views` : "/"}
+                    end
+                    className={({ isActive }) =>
+                      cn(
+                        "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                        isActive
+                          ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
+                          : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                      )
+                    }
+                  >
+                    <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                      <IconLayoutList />
+                    </span>
+                    Views
+                  </NavLink>
+                  <NavLink
+                    to={baseUrl ? `${baseUrl}/analytics` : "/"}
+                    end={false}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                        isActive
+                          ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
+                          : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                      )
+                    }
+                  >
+                    <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                      <IconBarChart />
+                    </span>
+                    Analytics
+                  </NavLink>
+                  <NavLink
+                    to={baseUrl ? `${baseUrl}/drafts` : "/"}
+                    end
+                    className={({ isActive }) =>
+                      cn(
+                        "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                        isActive
+                          ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
+                          : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                      )
+                    }
+                  >
+                    <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                      <IconPencil />
+                    </span>
+                    Drafts
+                  </NavLink>
+                  <NavLink
+                    to={baseUrl ? `${baseUrl}/archives` : "/"}
+                    end
+                    className={({ isActive }) =>
+                      cn(
+                        "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                        isActive
+                          ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
+                          : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                      )
+                    }
+                  >
+                    <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                      <IconArchive />
+                    </span>
+                    Archives
+                  </NavLink>
+                </div>
+              )}
             </div>
-            {projectsSectionExpanded && (
-            <div className="flex flex-col gap-0.5 px-2 py-1 pb-2">
-              {projects.map((project) => {
-                const isExpanded = expandedProjectIds.has(project.id) || projectId === project.id;
-                const projectUrl = `${baseUrl}/projects/${project.id}`;
-                return (
-                  <div key={project.id} className="flex flex-col gap-0.5">
-                    <button
-                      type="button"
-                      onClick={() => toggleProject(project.id)}
-                      className="group flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)] px-1.5 py-1.5 text-left text-[13px] font-medium text-[var(--txt-secondary)] outline-none hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]"
-                      aria-expanded={isExpanded}
-                    >
-                      <span className="flex min-w-0 flex-1 items-center gap-2">
-                        <div className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-[var(--bg-layer-1)] text-[10px] font-medium text-[var(--txt-tertiary)]">
-                          {(project.identifier ?? project.id.slice(0, 2)).slice(0, 2)}
-                        </div>
-                        <span className="truncate">{project.name}</span>
-                      </span>
-                      <span className="flex size-5 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
-                        <IconChevronRight className={cn('text-[var(--txt-icon-tertiary)]', isExpanded && 'rotate-90')} />
-                      </span>
-                    </button>
-                    {isExpanded && (
-                      <div className="ml-5 flex flex-col gap-0.5 border-l border-[var(--border-subtle)] pl-2">
-                        {projectNavItems.map(({ key, to, label, Icon }) => (
-                          <NavLink
-                            key={key}
-                            to={`${projectUrl}/${to}`}
-                            className={({ isActive }) =>
-                              cn(
-                                'flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1 text-[13px] font-medium outline-none',
-                                isActive
-                                  ? 'bg-[var(--bg-layer-transparent-active)] text-[var(--txt-primary)]'
-                                  : 'text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]'
-                              )
-                            }
-                          >
-                            <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
-                              <Icon />
-                            </span>
-                            {label}
-                          </NavLink>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            )}
-          </div>
 
+            {/* 6. Favorites section (collapsible) */}
+            <div className="flex flex-col gap-0.5 px-2 pt-3 pb-1">
+              <button
+                type="button"
+                onClick={() => setFavoritesSectionExpanded((e) => !e)}
+                className="group flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-[var(--txt-placeholder)] outline-none hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-secondary)]"
+                aria-expanded={favoritesSectionExpanded}
+              >
+                <span>Favorites</span>
+                <span className="flex size-4 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
+                  <IconChevronRight
+                    className={cn(
+                      "text-[var(--txt-icon-tertiary)]",
+                      favoritesSectionExpanded && "rotate-90",
+                    )}
+                  />
+                </span>
+              </button>
+              {favoritesSectionExpanded && (
+                <div className="flex flex-col gap-0.5 pl-1 py-1">
+                  {favoriteProjects.map((project) => (
+                    <Link
+                      key={project.id}
+                      to={`${baseUrl}/projects/${project.id}`}
+                      className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]"
+                    >
+                      <div className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-[var(--bg-layer-1)] text-[10px] font-medium text-[var(--txt-tertiary)]">
+                        {(project.identifier ?? project.id.slice(0, 2)).slice(
+                          0,
+                          2,
+                        )}
+                      </div>
+                      <span className="truncate">{project.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 7. Projects section (collapsible) */}
+            <div className="flex flex-col flex-1 min-h-0">
+              <div className="flex flex-col gap-0.5 px-2 pt-2 pb-1">
+                <button
+                  type="button"
+                  onClick={() => setProjectsSectionExpanded((e) => !e)}
+                  className="group flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-[var(--txt-placeholder)] outline-none hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-secondary)]"
+                  aria-expanded={projectsSectionExpanded}
+                >
+                  <span>Projects</span>
+                  <span className="flex size-4 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
+                    <IconChevronRight
+                      className={cn(
+                        "text-[var(--txt-icon-tertiary)]",
+                        projectsSectionExpanded && "rotate-90",
+                      )}
+                    />
+                  </span>
+                </button>
+              </div>
+              {projectsSectionExpanded && (
+                <div className="flex flex-col gap-0.5 px-2 py-1 pb-2">
+                  {projects.map((project) => {
+                    const isExpanded =
+                      expandedProjectIds.has(project.id) ||
+                      projectId === project.id;
+                    const projectUrl = `${baseUrl}/projects/${project.id}`;
+                    return (
+                      <div key={project.id} className="flex flex-col gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => toggleProject(project.id)}
+                          className="group flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)] px-1.5 py-1.5 text-left text-[13px] font-medium text-[var(--txt-secondary)] outline-none hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]"
+                          aria-expanded={isExpanded}
+                        >
+                          <span className="flex min-w-0 flex-1 items-center gap-2">
+                            <div className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-[var(--bg-layer-1)] text-[10px] font-medium text-[var(--txt-tertiary)]">
+                              {(
+                                project.identifier ?? project.id.slice(0, 2)
+                              ).slice(0, 2)}
+                            </div>
+                            <span className="truncate">{project.name}</span>
+                          </span>
+                          <span className="flex size-5 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
+                            <IconChevronRight
+                              className={cn(
+                                "text-[var(--txt-icon-tertiary)]",
+                                isExpanded && "rotate-90",
+                              )}
+                            />
+                          </span>
+                        </button>
+                        {isExpanded && (
+                          <div className="ml-5 flex flex-col gap-0.5 border-l border-[var(--border-subtle)] pl-2">
+                            {projectNavItems.map(({ key, to, label, Icon }) => (
+                              <NavLink
+                                key={key}
+                                to={`${projectUrl}/${to}`}
+                                className={({ isActive }) =>
+                                  cn(
+                                    "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1 text-[13px] font-medium outline-none",
+                                    isActive
+                                      ? "bg-[var(--bg-layer-transparent-active)] text-[var(--txt-primary)]"
+                                      : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                                  )
+                                }
+                              >
+                                <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                                  <Icon />
+                                </span>
+                                {label}
+                              </NavLink>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 8. Footer: Community + Help + Settings */}
@@ -659,7 +1083,7 @@ export function Sidebar() {
                 <IconHelp />
               </button>
               <Link
-                to={baseUrl ? `${baseUrl}/settings` : '/settings'}
+                to={baseUrl ? `${baseUrl}/settings` : "/settings"}
                 className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-icon-secondary)]"
                 aria-label="Settings"
               >
@@ -673,7 +1097,7 @@ export function Sidebar() {
       {collapsed && (
         <div
           className="flex shrink-0 flex-col items-center border-r border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-3"
-          style={{ width: '48px', minWidth: '48px' }}
+          style={{ width: "48px", minWidth: "48px" }}
         >
           <button
             type="button"
@@ -681,15 +1105,17 @@ export function Sidebar() {
             className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)]"
             aria-label="Expand sidebar"
           >
-            <span className="rotate-180"><IconPanelLeft /></span>
+            <span className="rotate-180">
+              <IconPanelLeft />
+            </span>
           </button>
         </div>
       )}
       <CreateWorkItemModal
         open={createWorkItemOpen}
         onClose={() => setCreateWorkItemOpen(false)}
-        workspaceSlug={workspace?.slug ?? ''}
-        projects={projectsForModal}
+        workspaceSlug={workspace?.slug ?? ""}
+        projects={projects}
       />
     </>
   );

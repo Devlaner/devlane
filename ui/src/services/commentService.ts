@@ -1,14 +1,14 @@
-import { apiClient } from '../api/client';
-import type { IssueCommentApiResponse } from '../api/types';
+import { apiClient } from "../api/client";
+import type { IssueCommentApiResponse } from "../api/types";
 
 export const commentService = {
   async list(
     workspaceSlug: string,
     projectId: string,
-    issueId: string
+    issueId: string,
   ): Promise<IssueCommentApiResponse[]> {
     const { data } = await apiClient.get<IssueCommentApiResponse[]>(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/comments/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/comments/`,
     );
     return data;
   },
@@ -17,11 +17,11 @@ export const commentService = {
     workspaceSlug: string,
     projectId: string,
     issueId: string,
-    comment: string
+    comment: string,
   ): Promise<IssueCommentApiResponse> {
     const { data } = await apiClient.post<IssueCommentApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/comments/`,
-      { comment }
+      { comment },
     );
     return data;
   },
@@ -31,11 +31,11 @@ export const commentService = {
     projectId: string,
     issueId: string,
     commentId: string,
-    comment: string
+    comment: string,
   ): Promise<IssueCommentApiResponse> {
     const { data } = await apiClient.patch<IssueCommentApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/comments/${encodeURIComponent(commentId)}/`,
-      { comment }
+      { comment },
     );
     return data;
   },
@@ -44,10 +44,10 @@ export const commentService = {
     workspaceSlug: string,
     projectId: string,
     issueId: string,
-    commentId: string
+    commentId: string,
   ): Promise<void> {
     await apiClient.delete(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/comments/${encodeURIComponent(commentId)}/`
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/comments/${encodeURIComponent(commentId)}/`,
     );
   },
 };

@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Button, Input } from './ui';
-import { projectService } from '../services/projectService';
-import type { ProjectApiResponse } from '../api/types';
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { Button, Input } from "./ui";
+import { projectService } from "../services/projectService";
+import type { ProjectApiResponse } from "../api/types";
 
 export interface CreateProjectModalProps {
   open: boolean;
@@ -12,15 +12,25 @@ export interface CreateProjectModalProps {
 }
 
 const COVER_GRADIENTS = [
-  'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%)',
-  'linear-gradient(135deg, #0ea5e9 0%, #38bdf8 50%, #7dd3fc 100%)',
-  'linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%)',
-  'linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #fcd34d 100%)',
-  'linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #f9a8d4 100%)',
+  "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%)",
+  "linear-gradient(135deg, #0ea5e9 0%, #38bdf8 50%, #7dd3fc 100%)",
+  "linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%)",
+  "linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #fcd34d 100%)",
+  "linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #f9a8d4 100%)",
 ];
 
 const IconGlobe = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <circle cx="12" cy="12" r="10" />
     <line x1="2" y1="12" x2="22" y2="12" />
     <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
@@ -28,7 +38,17 @@ const IconGlobe = () => (
 );
 
 const IconUsers = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
     <circle cx="9" cy="7" r="4" />
     <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
@@ -37,7 +57,17 @@ const IconUsers = () => (
 );
 
 const IconInfo = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <circle cx="12" cy="12" r="10" />
     <path d="M12 16v-4" />
     <path d="M12 8h.01" />
@@ -45,7 +75,17 @@ const IconInfo = () => (
 );
 
 const IconX = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <path d="M18 6 6 18" />
     <path d="m6 6 12 12" />
   </svg>
@@ -57,26 +97,26 @@ export function CreateProjectModal({
   workspaceSlug,
   onSuccess,
 }: CreateProjectModalProps) {
-  const [name, setName] = useState('');
-  const [identifier, setIdentifier] = useState('');
-  const [description, setDescription] = useState('');
-  const [error, setError] = useState('');
+  const [name, setName] = useState("");
+  const [identifier, setIdentifier] = useState("");
+  const [description, setDescription] = useState("");
+  const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [coverIndex, setCoverIndex] = useState(0);
 
   const handleClose = () => {
-    setName('');
-    setIdentifier('');
-    setDescription('');
-    setError('');
+    setName("");
+    setIdentifier("");
+    setDescription("");
+    setError("");
     onClose();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     if (!name.trim()) {
-      setError('Project name is required.');
+      setError("Project name is required.");
       return;
     }
     setSubmitting(true);
@@ -88,7 +128,9 @@ export function CreateProjectModal({
       onSuccess?.(project);
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create project.');
+      setError(
+        err instanceof Error ? err.message : "Failed to create project.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -97,19 +139,21 @@ export function CreateProjectModal({
   useEffect(() => {
     if (!open) return;
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
-    document.addEventListener('keydown', handleEscape);
-    document.body.style.overflow = 'hidden';
+    document.addEventListener("keydown", handleEscape);
+    document.body.style.overflow = "hidden";
     return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = '';
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "";
     };
   }, [open, onClose]);
 
   if (!open) return null;
 
-  const coverStyle = { background: COVER_GRADIENTS[coverIndex % COVER_GRADIENTS.length] };
+  const coverStyle = {
+    background: COVER_GRADIENTS[coverIndex % COVER_GRADIENTS.length],
+  };
 
   return createPortal(
     <div
@@ -118,7 +162,9 @@ export function CreateProjectModal({
       aria-modal="true"
       aria-labelledby="create-project-modal-title"
     >
-      <h2 id="create-project-modal-title" className="sr-only">Create project</h2>
+      <h2 id="create-project-modal-title" className="sr-only">
+        Create project
+      </h2>
       <div
         className="absolute inset-0 bg-[var(--bg-backdrop)]"
         onClick={handleClose}
@@ -173,7 +219,11 @@ export function CreateProjectModal({
               <Input
                 label="Project ID"
                 value={identifier}
-                onChange={(e) => setIdentifier(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
+                onChange={(e) =>
+                  setIdentifier(
+                    e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ""),
+                  )
+                }
                 placeholder="e.g. PROJ"
                 disabled={submitting}
                 className="w-full pr-9"
@@ -213,21 +263,28 @@ export function CreateProjectModal({
           </div>
 
           {error && (
-            <p className="mt-3 text-sm text-[var(--txt-danger-primary)]">{error}</p>
+            <p className="mt-3 text-sm text-[var(--txt-danger-primary)]">
+              {error}
+            </p>
           )}
 
           {/* Actions */}
           <div className="mt-6 flex justify-end gap-2 border-t border-[var(--border-subtle)] pt-4">
-            <Button type="button" variant="secondary" onClick={handleClose} disabled={submitting}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleClose}
+              disabled={submitting}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={submitting || !name.trim()}>
-              {submitting ? 'Creating…' : 'Create project'}
+              {submitting ? "Creating…" : "Create project"}
             </Button>
           </div>
         </form>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

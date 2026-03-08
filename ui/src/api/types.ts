@@ -381,8 +381,11 @@ export interface IssueViewApiResponse {
 export interface PageApiResponse {
   id: string;
   name: string;
+  /** Display title (may equal name); use for list display. */
+  title?: string;
   description_html?: string;
   owned_by_id: string;
+  updated_by_id?: string | null;
   workspace_id: string;
   access: number;
   parent_id?: string | null;

@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 const DROPDOWN_Z_INDEX = 9999;
 
@@ -14,7 +14,7 @@ export interface DropdownProps {
   compact?: boolean;
   panelClassName?: string;
   /** When 'right', panel's right edge aligns with trigger's right edge (opens toward left). Default 'left'. */
-  align?: 'left' | 'right';
+  align?: "left" | "right";
 }
 
 export function Dropdown({
@@ -27,11 +27,15 @@ export function Dropdown({
   children,
   compact = false,
   panelClassName,
-  align = 'left',
+  align = "left",
 }: DropdownProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ top: number; left?: number; right?: number } | null>(null);
+  const [position, setPosition] = useState<{
+    top: number;
+    left?: number;
+    right?: number;
+  } | null>(null);
   const open = openId === id;
 
   useLayoutEffect(() => {
@@ -40,8 +44,11 @@ export function Dropdown({
       return;
     }
     const rect = triggerRef.current.getBoundingClientRect();
-    if (align === 'right') {
-      setPosition({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    if (align === "right") {
+      setPosition({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      });
     } else {
       setPosition({ top: rect.bottom + 4, left: rect.left });
     }
@@ -58,8 +65,8 @@ export function Dropdown({
         onOpen(null);
       }
     };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, [open, onOpen]);
 
   return (
@@ -70,8 +77,8 @@ export function Dropdown({
         onClick={() => onOpen(open ? null : id)}
         className={
           compact
-            ? 'inline-flex min-w-0 items-center gap-1 rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-1.5 py-1 text-xs text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)] [&_svg]:size-3'
-            : 'inline-flex min-w-0 items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-sm text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]'
+            ? "inline-flex min-w-0 items-center gap-1 rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-1.5 py-1 text-xs text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)] [&_svg]:size-3"
+            : "inline-flex min-w-0 items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-sm text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
         }
       >
         <span className="shrink-0 text-[var(--txt-icon-tertiary)]">{icon}</span>
@@ -82,9 +89,12 @@ export function Dropdown({
         createPortal(
           <div
             ref={panelRef}
-            className={panelClassName ?? 'max-h-60 min-w-[140px] overflow-auto rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-[var(--shadow-raised)]'}
+            className={
+              panelClassName ??
+              "max-h-60 min-w-[140px] overflow-auto rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-[var(--shadow-raised)]"
+            }
             style={{
-              position: 'fixed',
+              position: "fixed",
               top: position.top,
               ...(position.left !== undefined && { left: position.left }),
               ...(position.right !== undefined && { right: position.right }),
@@ -93,7 +103,7 @@ export function Dropdown({
           >
             {children}
           </div>,
-          document.body
+          document.body,
         )}
     </div>
   );

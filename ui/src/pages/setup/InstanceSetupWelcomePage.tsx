@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router-dom';
-import { Button } from '../../components/ui';
+import { useNavigate } from "react-router-dom";
+import { Button } from "../../components/ui";
 
 /** Devlane logo mark: blue square with white star */
 const LogoMark = () => (
@@ -7,7 +7,16 @@ const LogoMark = () => (
     className="flex size-9 items-center justify-center rounded-lg bg-[var(--bg-accent-primary)] text-[var(--txt-on-color)]"
     aria-hidden
   >
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 2l3 9h9l-7 5 2.5 8-7.5-5.5-7.5 5.5 2.5-8-7-5h9z" />
     </svg>
   </span>
@@ -26,7 +35,13 @@ const WelcomeIllustration = () => (
       {/* Soft grid / layers in background */}
       <defs>
         <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeOpacity="0.08" strokeWidth="0.5" />
+          <path
+            d="M 20 0 L 0 0 0 20"
+            fill="none"
+            stroke="currentColor"
+            strokeOpacity="0.08"
+            strokeWidth="0.5"
+          />
         </pattern>
         <linearGradient id="rocketGrad" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="var(--bg-layer-2)" />
@@ -47,12 +62,48 @@ const WelcomeIllustration = () => (
       />
       <path d="M140 24 L148 48 L132 48 Z" fill="url(#accentGrad)" />
       {/* Small “confetti” circles */}
-      <circle cx="80" cy="50" r="4" fill="var(--bg-accent-subtle)" opacity="0.9" />
-      <circle cx="200" cy="60" r="3" fill="var(--bg-success-subtle)" opacity="0.9" />
-      <circle cx="70" cy="100" r="3" fill="var(--bg-warning-subtle)" opacity="0.9" />
-      <circle cx="210" cy="90" r="4" fill="var(--bg-accent-subtle)" opacity="0.8" />
-      <circle cx="100" cy="120" r="3" fill="var(--bg-success-subtle)" opacity="0.8" />
-      <circle cx="180" cy="45" r="3" fill="var(--bg-warning-subtle)" opacity="0.8" />
+      <circle
+        cx="80"
+        cy="50"
+        r="4"
+        fill="var(--bg-accent-subtle)"
+        opacity="0.9"
+      />
+      <circle
+        cx="200"
+        cy="60"
+        r="3"
+        fill="var(--bg-success-subtle)"
+        opacity="0.9"
+      />
+      <circle
+        cx="70"
+        cy="100"
+        r="3"
+        fill="var(--bg-warning-subtle)"
+        opacity="0.9"
+      />
+      <circle
+        cx="210"
+        cy="90"
+        r="4"
+        fill="var(--bg-accent-subtle)"
+        opacity="0.8"
+      />
+      <circle
+        cx="100"
+        cy="120"
+        r="3"
+        fill="var(--bg-success-subtle)"
+        opacity="0.8"
+      />
+      <circle
+        cx="180"
+        cy="45"
+        r="3"
+        fill="var(--bg-warning-subtle)"
+        opacity="0.8"
+      />
     </svg>
   </div>
 );
@@ -90,7 +141,7 @@ export function InstanceSetupWelcomePage() {
             type="button"
             size="lg"
             className="mt-8 w-full max-w-xs"
-            onClick={() => navigate('/setup/configure', { replace: true })}
+            onClick={() => navigate("/setup/configure", { replace: true })}
           >
             Get started
           </Button>

@@ -1,32 +1,33 @@
-import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Button, Input, Card, CardContent } from '../components/ui';
-import { useAuth } from '../contexts/AuthContext';
+import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Button, Input, Card, CardContent } from "../components/ui";
+import { useAuth } from "../contexts/AuthContext";
 
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const returnPath = (location.state as { from?: { pathname?: string } })?.from?.pathname ?? '/';
+  const returnPath =
+    (location.state as { from?: { pathname?: string } })?.from?.pathname ?? "/";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setError("");
     setIsSubmitting(true);
     try {
       const success = await login(email, password);
       if (success) {
         navigate(returnPath, { replace: true });
       } else {
-        setError('Invalid email or password.');
+        setError("Invalid email or password.");
       }
     } catch {
-      setError('Something went wrong. Please try again.');
+      setError("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -63,7 +64,7 @@ export function LoginPage() {
               autoComplete="current-password"
             />
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Signing in…' : 'Sign in'}
+              {isSubmitting ? "Signing in…" : "Sign in"}
             </Button>
           </form>
         </CardContent>

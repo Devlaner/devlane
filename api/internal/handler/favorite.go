@@ -84,7 +84,7 @@ func (h *FavoriteHandler) RemoveFavoriteProject(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.Favorites == nil {
+	if h.Favorites == nil || h.Project == nil {
 		c.JSON(http.StatusOK, gin.H{"message": "ok"})
 		return
 	}
