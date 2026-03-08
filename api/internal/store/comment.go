@@ -33,6 +33,20 @@ func (s *CommentStore) ListByIssueID(ctx context.Context, issueID uuid.UUID) ([]
 	return list, err
 }
 
+// ListByCreatedByID returns comments by the given user, newest first (for activity feed).
+func (s *CommentStore) ListByCreatedByID(ctx context.Context, createdByID uuid.UUID, limit int) ([]model.IssueComment, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	var list []model.IssueComment
+	err := s.db.WithContext(ctx).
+		Where("created_by_id = ? AND deleted_at IS NULL", createdByID).
+		Order("created_at DESC").
+		Limit(limit).
+		Find(&list).Error
+	return list, err
+}
+
 func (s *CommentStore) Update(ctx context.Context, c *model.IssueComment) error {
 	return s.db.WithContext(ctx).Save(c).Error
 }

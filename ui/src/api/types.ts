@@ -183,6 +183,61 @@ export interface UserApiResponse {
   date_joined: string;
   created_at: string;
   updated_at: string;
+  user_timezone?: string;
+}
+
+/** PATCH /api/users/me/ (email not updatable) */
+export interface UpdateMeRequest {
+  first_name?: string;
+  last_name?: string;
+  display_name?: string;
+  user_timezone?: string;
+}
+
+/** POST /api/users/me/change-password/ */
+export interface ChangePasswordRequest {
+  current_password: string;
+  new_password: string;
+}
+
+/** GET /api/users/me/notification-preferences/ */
+export interface NotificationPreferencesResponse {
+  property_change: boolean;
+  state_change: boolean;
+  comment: boolean;
+  mention: boolean;
+  issue_completed: boolean;
+}
+
+/** GET /api/users/me/activity/ */
+export interface UserActivityItem {
+  id: string;
+  type: string;
+  created_at: string;
+  description: string;
+  issue_id?: string;
+  issue_name?: string;
+  workspace_id?: string;
+  project_id?: string;
+}
+
+/** GET /api/users/me/tokens/ */
+export interface ApiTokenResponse {
+  id: string;
+  label: string;
+  description: string;
+  is_active: boolean;
+  last_used?: string | null;
+  expired_at?: string | null;
+  created_at: string;
+}
+
+/** POST /api/users/me/tokens/ request */
+export interface CreateTokenRequest {
+  label: string;
+  description?: string;
+  expires_in?: string;
+  expired_at?: string;
 }
 
 /** POST /auth/sign-in/ request */

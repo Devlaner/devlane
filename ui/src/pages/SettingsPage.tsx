@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, Button, Avatar, Modal } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,6 +6,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
 import { labelService } from '../services/labelService';
+import { userService } from '../services/userService';
+import { authService } from '../services/authService';
 import type {
   LabelApiResponse,
   ProjectApiResponse,
@@ -13,6 +15,8 @@ import type {
   WorkspaceApiResponse,
   WorkspaceInviteApiResponse,
   WorkspaceMemberApiResponse,
+  UserActivityItem,
+  ApiTokenResponse,
 } from '../api/types';
 
 // ---------------------------------------------------------------------------
@@ -147,6 +151,44 @@ const IconEyeOff = () => (
     <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" /><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" /><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" /><line x1="2" y1="2" x2="22" y2="22" />
   </svg>
 );
+function formatRelativeTime(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const s = Math.floor((now.getTime() - d.getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)} minutes ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} hours ago`;
+  if (s < 2592000) return `${Math.floor(s / 86400)} days ago`;
+  if (s < 31536000) return `${Math.floor(s / 2592000)} months ago`;
+  return `${Math.floor(s / 31536000)} years ago`;
+}
+
+// Build timezone options: UTC offset + label (e.g. "UTC-07:00 America/Los_Angeles")
+function getTimezoneOptions(): { value: string; label: string }[] {
+  try {
+    const ids = typeof Intl !== 'undefined' && typeof (Intl as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf === 'function'
+      ? (Intl as { supportedValuesOf: (key: string) => string[] }).supportedValuesOf('timeZone')
+      : ['UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Asia/Tokyo', 'Asia/Kolkata', 'Australia/Sydney'];
+    const now = new Date();
+    return ids.map((value) => {
+      try {
+        const formatter = new Intl.DateTimeFormat('en-US', { timeZone: value, timeZoneName: 'longOffset' });
+        const parts = formatter.formatToParts(now);
+        const offsetPart = parts.find((p) => p.type === 'timeZoneName');
+        const offset = offsetPart?.value ?? 'UTC';
+        return { value, label: `${offset} ${value}` };
+      } catch {
+        return { value, label: value };
+      }
+    }).sort((a, b) => a.label.localeCompare(b.label));
+  } catch {
+    return [
+      { value: 'UTC', label: 'UTC UTC' },
+      { value: 'America/New_York', label: 'America/New York' },
+    ];
+  }
+}
+
 const IconMessageCircle = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
@@ -260,7 +302,7 @@ export function SettingsPage() {
   const { workspaceSlug, projectId: projectIdFromPath } = useParams<{ workspaceSlug: string; projectId?: string }>();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, setUserFromApi } = useAuth();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMemberApiResponse[]>([]);
@@ -392,7 +434,99 @@ export function SettingsPage() {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [inviteRows, setInviteRows] = useState<{ id: number; email: string; role: 'member' | 'admin' }[]>([{ id: 0, email: '', role: 'member' }]);
   const [inviting, setInviting] = useState(false);
+  const [profileSaveLoading, setProfileSaveLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [preferencesSaveLoading, setPreferencesSaveLoading] = useState(false);
+  const [timezoneDropdownOpen, setTimezoneDropdownOpen] = useState(false);
+  const [timezoneSearch, setTimezoneSearch] = useState('');
+  const timezoneDropdownRef = useRef<HTMLDivElement>(null);
+  const [notifPrefsLoaded, setNotifPrefsLoaded] = useState(false);
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+  const [changePasswordError, setChangePasswordError] = useState<string | null>(null);
+  const [activityList, setActivityList] = useState<UserActivityItem[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [tokensList, setTokensList] = useState<ApiTokenResponse[]>([]);
+  const [tokensLoading, setTokensLoading] = useState(false);
+  const [createTokenModalOpen, setCreateTokenModalOpen] = useState(false);
+  const [createdTokenValue, setCreatedTokenValue] = useState<string | null>(null);
+  const [tokenForm, setTokenForm] = useState({ label: '', description: '', expiresIn: '' as string });
+  const [revokingId, setRevokingId] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const timezoneOptions = useMemo(() => getTimezoneOptions(), []);
+  const filteredTimezoneOptions = useMemo(() => {
+    if (!timezoneSearch.trim()) return timezoneOptions;
+    const q = timezoneSearch.toLowerCase();
+    return timezoneOptions.filter((o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q));
+  }, [timezoneOptions, timezoneSearch]);
+
+  useEffect(() => {
+    if (!isAccountTab || !user) return;
+    let cancelled = false;
+    authService.getMe().then((api) => {
+      if (cancelled || !api) return;
+      setFirstName(api.first_name ?? user?.name?.split(' ')[0] ?? '');
+      setLastName(api.last_name ?? '');
+      setDisplayName(api.display_name ?? '');
+      setProfileEmail(api.email ?? '');
+      const tz = (api as { user_timezone?: string }).user_timezone;
+      if (tz) setTimezone(tz);
+    });
+    return () => { cancelled = true; };
+  }, [isAccountTab, user?.id]);
+
+  useEffect(() => {
+    if (!isAccountTab || accountSection !== 'notifications') return;
+    let cancelled = false;
+    setNotifPrefsLoaded(false);
+    userService.getNotificationPreferences().then((p) => {
+      if (cancelled) return;
+      setNotifProperty(p.property_change);
+      setNotifState(p.state_change);
+      setNotifComments(p.comment);
+      setNotifMentions(p.mention);
+      setNotifCompleted(p.issue_completed);
+      setNotifPrefsLoaded(true);
+    }).catch(() => { if (!cancelled) setNotifPrefsLoaded(true); });
+    return () => { cancelled = true; };
+  }, [isAccountTab, accountSection]);
+
+  useEffect(() => {
+    if (!isAccountTab || accountSection !== 'activity') return;
+    let cancelled = false;
+    setActivityLoading(true);
+    userService.getActivity().then((r) => {
+      if (!cancelled) {
+        setActivityList(r.activities ?? []);
+        setActivityLoading(false);
+      }
+    }).catch(() => { if (!cancelled) setActivityLoading(false); });
+    return () => { cancelled = true; };
+  }, [isAccountTab, accountSection]);
+
+  useEffect(() => {
+    if (!isAccountTab || accountSection !== 'tokens') return;
+    let cancelled = false;
+    setTokensLoading(true);
+    userService.listTokens().then((r) => {
+      if (!cancelled) {
+        setTokensList(r.tokens ?? []);
+        setTokensLoading(false);
+      }
+    }).catch(() => { if (!cancelled) setTokensLoading(false); });
+    return () => { cancelled = true; };
+  }, [isAccountTab, accountSection]);
+
+  useEffect(() => {
+    if (!timezoneDropdownOpen) return;
+    const close = (e: MouseEvent) => {
+      if (timezoneDropdownRef.current && !timezoneDropdownRef.current.contains(e.target as Node)) {
+        setTimezoneDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [timezoneDropdownOpen]);
 
   useEffect(() => {
     if (isProjectsTab && workspace && projects.length > 0 && !projectIdParam) {
@@ -662,13 +796,6 @@ export function SettingsPage() {
         <main className="min-w-0 flex-1">
           {isAccountTab && accountSection === 'profile' && (
             <div className="space-y-6">
-              <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--brand-200)] px-4 py-3">
-                <span className="text-[var(--txt-icon-secondary)]"><IconInfo /></span>
-                <p className="flex-1 text-sm text-[var(--txt-primary)]">Timezone & Language settings have been moved to preferences.</p>
-                <Link to={`${accountSettingsUrl}?section=preferences`}>
-                  <Button variant="ghost" size="sm">Go to preferences</Button>
-                </Link>
-              </div>
               <div className="relative h-32 overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-layer-2)]">
                 <div className="absolute inset-0 bg-gradient-to-br from-[var(--neutral-800)] to-[var(--neutral-1000)]" />
                 <Button variant="secondary" size="sm" className="absolute bottom-2 right-2 gap-1.5 text-[13px]">Change cover</Button>
@@ -695,10 +822,33 @@ export function SettingsPage() {
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">Email <span className="text-[var(--txt-danger-primary)]">*</span></label>
-                  <input type="email" value={profileEmail} onChange={(e) => setProfileEmail(e.target.value)} className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]" />
+                  <input type="email" value={profileEmail} readOnly disabled className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-3 py-2 text-sm text-[var(--txt-tertiary)] cursor-not-allowed" />
                 </div>
               </div>
-              <Button>Save changes</Button>
+              {profileError && <p className="text-sm text-[var(--txt-danger-primary)]">{profileError}</p>}
+              <Button
+                disabled={profileSaveLoading}
+                onClick={async () => {
+                  setProfileError(null);
+                  setProfileSaveLoading(true);
+                  try {
+                    const api = await userService.updateMe({
+                      first_name: firstName,
+                      last_name: lastName,
+                      display_name: displayName,
+                    });
+                    setUserFromApi(api);
+                  } catch (e: unknown) {
+                    setProfileError(e && typeof e === 'object' && 'response' in e && typeof (e as { response?: { data?: { error?: string } } }).response?.data?.error === 'string'
+                      ? (e as { response: { data: { error: string } } }).response.data.error
+                      : 'Failed to save profile');
+                  } finally {
+                    setProfileSaveLoading(false);
+                  }
+                }}
+              >
+                {profileSaveLoading ? 'Saving…' : 'Save changes'}
+              </Button>
               <Card variant="outlined" className="border-[var(--border-subtle)]">
                 <button type="button" onClick={() => setDeactivateOpen(!deactivateOpen)} className="flex w-full items-center justify-between px-4 py-3 text-left">
                   <span className="text-sm font-medium text-[var(--txt-danger-primary)]">Deactivate account</span>
@@ -751,12 +901,47 @@ export function SettingsPage() {
                   <div>
                     <label className="block text-sm font-medium text-[var(--txt-primary)]">Timezone</label>
                     <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">Current timezone setting.</p>
-                    <div className="relative mt-2 max-w-xs">
-                      <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]">
-                        <option value="UTC">UTC</option>
-                        <option value="America/New_York">America/New York</option>
-                      </select>
-                      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]"><IconChevronDown /></span>
+                    <div className="relative mt-2 max-w-xs" ref={timezoneDropdownRef}>
+                      <button
+                        type="button"
+                        onClick={() => setTimezoneDropdownOpen((o) => !o)}
+                        className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                      >
+                        <span className="truncate">{timezoneOptions.find((o) => o.value === timezone)?.label ?? timezone}</span>
+                        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]"><IconChevronDown /></span>
+                      </button>
+                      {timezoneDropdownOpen && (
+                        <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-lg">
+                          <div className="border-b border-[var(--border-subtle)] p-2">
+                            <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2 py-1.5">
+                              <IconSearch />
+                              <input
+                                type="text"
+                                value={timezoneSearch}
+                                onChange={(e) => setTimezoneSearch(e.target.value)}
+                                placeholder="Search"
+                                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] outline-none placeholder:text-[var(--txt-placeholder)]"
+                              />
+                            </div>
+                          </div>
+                          <div className="max-h-48 overflow-y-auto p-1">
+                            {filteredTimezoneOptions.map((o) => (
+                              <button
+                                key={o.value}
+                                type="button"
+                                onClick={() => {
+                                  setTimezone(o.value);
+                                  setTimezoneDropdownOpen(false);
+                                  setTimezoneSearch('');
+                                }}
+                                className={`w-full rounded-[var(--radius-md)] px-2 py-1.5 text-left text-sm ${o.value === timezone ? 'bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]' : 'text-[var(--txt-primary)] hover:bg-[var(--bg-layer-transparent-hover)]'}`}
+                              >
+                                {o.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div>
@@ -771,6 +956,19 @@ export function SettingsPage() {
                   </div>
                 </div>
               </div>
+              <Button
+                disabled={preferencesSaveLoading}
+                onClick={async () => {
+                  setPreferencesSaveLoading(true);
+                  try {
+                    await userService.updateMe({ user_timezone: timezone });
+                  } finally {
+                    setPreferencesSaveLoading(false);
+                  }
+                }}
+              >
+                {preferencesSaveLoading ? 'Saving…' : 'Save preferences'}
+              </Button>
             </div>
           )}
 
@@ -782,18 +980,33 @@ export function SettingsPage() {
               </div>
               <div className="space-y-4">
                 {[
-                  { id: 'property', label: 'Property changes', desc: "Notify me when work items' properties like assignees, priority, estimates or anything else changes.", value: notifProperty, set: setNotifProperty },
-                  { id: 'state', label: 'State change', desc: "Notify me when the work items moves to a different state", value: notifState, set: setNotifState },
-                  { id: 'completed', label: 'Work item completed', desc: 'Notify me only when a work item is completed', value: notifCompleted, set: setNotifCompleted },
-                  { id: 'comments', label: 'Comments', desc: 'Notify me when someone leaves a comment on the work item', value: notifComments, set: setNotifComments },
-                  { id: 'mentions', label: 'Mentions', desc: 'Notify me only when someone mentions me in the comments or description', value: notifMentions, set: setNotifMentions },
-                ].map(({ id, label, desc, value, set }) => (
+                  { id: 'property', label: 'Property changes', desc: "Notify me when work items' properties like assignees, priority, estimates or anything else changes.", value: notifProperty, set: setNotifProperty, key: 'property_change' as const },
+                  { id: 'state', label: 'State change', desc: "Notify me when the work items moves to a different state", value: notifState, set: setNotifState, key: 'state_change' as const },
+                  { id: 'completed', label: 'Work item completed', desc: 'Notify me only when a work item is completed', value: notifCompleted, set: setNotifCompleted, key: 'issue_completed' as const },
+                  { id: 'comments', label: 'Comments', desc: 'Notify me when someone leaves a comment on the work item', value: notifComments, set: setNotifComments, key: 'comment' as const },
+                  { id: 'mentions', label: 'Mentions', desc: 'Notify me only when someone mentions me in the comments or description', value: notifMentions, set: setNotifMentions, key: 'mention' as const },
+                ].map(({ id, label, desc, value, set, key }) => (
                   <div key={id} className="flex items-start justify-between gap-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 py-3">
                     <div>
                       <p className="text-sm font-medium text-[var(--txt-primary)]">{label}</p>
                       <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">{desc}</p>
                     </div>
-                    <button type="button" role="switch" aria-checked={value} onClick={() => set(!value)} className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${value ? 'bg-[var(--brand-default)]' : 'bg-[var(--neutral-400)]'}`}>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={value}
+                      disabled={!notifPrefsLoaded}
+                      onClick={async () => {
+                        const next = !value;
+                        set(next);
+                        try {
+                          await userService.updateNotificationPreferences({ [key]: next });
+                        } catch {
+                          set(value);
+                        }
+                      }}
+                      className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${value ? 'bg-[var(--brand-default)]' : 'bg-[var(--neutral-400)]'}`}
+                    >
                       <span className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-4' : 'translate-x-0'}`} />
                     </button>
                   </div>
@@ -828,7 +1041,37 @@ export function SettingsPage() {
                   </div>
                 </div>
               </div>
-              <Button>Change password</Button>
+              {changePasswordError && <p className="text-sm text-[var(--txt-danger-primary)]">{changePasswordError}</p>}
+              <Button
+                disabled={changePasswordLoading || !currentPassword || !newPassword || newPassword.length < 8 || newPassword !== confirmPassword}
+                onClick={async () => {
+                  setChangePasswordError(null);
+                  if (newPassword.length < 8) {
+                    setChangePasswordError('New password must be at least 8 characters');
+                    return;
+                  }
+                  if (newPassword !== confirmPassword) {
+                    setChangePasswordError('New password and confirmation do not match');
+                    return;
+                  }
+                  setChangePasswordLoading(true);
+                  try {
+                    await userService.changePassword({ current_password: currentPassword, new_password: newPassword });
+                    setCurrentPassword('');
+                    setNewPassword('');
+                    setConfirmPassword('');
+                  } catch (e: unknown) {
+                    const msg = e && typeof e === 'object' && 'response' in e && typeof (e as { response?: { data?: { error?: string } } }).response?.data?.error === 'string'
+                      ? (e as { response: { data: { error: string } } }).response.data.error
+                      : 'Failed to change password';
+                    setChangePasswordError(msg);
+                  } finally {
+                    setChangePasswordLoading(false);
+                  }
+                }}
+              >
+                {changePasswordLoading ? 'Changing…' : 'Change password'}
+              </Button>
             </div>
           )}
 
@@ -838,11 +1081,36 @@ export function SettingsPage() {
                 <h2 className="text-base font-semibold text-[var(--txt-primary)]">Activity</h2>
                 <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">Track your recent actions and changes across all projects and work items.</p>
               </div>
-              <Card variant="outlined">
-                <CardContent className="py-10 text-center">
-                  <p className="text-sm text-[var(--txt-tertiary)]">No activity yet.</p>
-                </CardContent>
-              </Card>
+              {activityLoading ? (
+                <div className="py-10 text-center text-sm text-[var(--txt-tertiary)]">Loading activity…</div>
+              ) : activityList.length === 0 ? (
+                <Card variant="outlined">
+                  <CardContent className="py-10 text-center">
+                    <p className="text-sm text-[var(--txt-tertiary)]">No activity yet.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {activityList.map((a) => (
+                    <div key={a.id} className="flex gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 py-3">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--bg-layer-2)] text-[var(--txt-icon-tertiary)]">
+                        {a.type === 'comment' ? <IconMessageCircle /> : <IconActivity />}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-[var(--txt-secondary)]">
+                          You commented {formatRelativeTime(a.created_at)}
+                        </p>
+                        {a.description && <p className="mt-1 text-sm font-medium text-[var(--txt-primary)]">{a.description}</p>}
+                        {a.issue_id && a.issue_name && workspaceSlug && (
+                          <Link to={`/${workspaceSlug}/projects/${a.project_id}/issues/${a.issue_id}`} className="mt-1 inline-block text-sm text-[var(--txt-accent-primary)] hover:underline">
+                            {a.issue_name}
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -853,16 +1121,125 @@ export function SettingsPage() {
                   <h2 className="text-base font-semibold text-[var(--txt-primary)]">Personal Access Tokens</h2>
                   <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">Generate secure API tokens to integrate your data with external systems and applications.</p>
                 </div>
-                <Button size="sm" className="gap-1.5">
+                <Button size="sm" className="gap-1.5" onClick={() => { setCreateTokenModalOpen(true); setCreatedTokenValue(null); setTokenForm({ label: '', description: '', expiresIn: '' }); }}>
                   <IconPlus />
                   Add personal access token
                 </Button>
               </div>
-              <Card variant="outlined">
-                <CardContent className="py-10 text-center">
-                  <p className="text-sm text-[var(--txt-tertiary)]">No tokens yet.</p>
-                </CardContent>
-              </Card>
+              {tokensLoading ? (
+                <div className="py-10 text-center text-sm text-[var(--txt-tertiary)]">Loading tokens…</div>
+              ) : tokensList.length === 0 ? (
+                <Card variant="outlined">
+                  <CardContent className="py-10 text-center">
+                    <p className="text-sm text-[var(--txt-tertiary)]">No tokens yet.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-2">
+                  {tokensList.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between gap-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 py-3">
+                      <div>
+                        <p className="text-sm font-medium text-[var(--txt-primary)]">{t.label}</p>
+                        {t.description && <p className="text-xs text-[var(--txt-tertiary)]">{t.description}</p>}
+                        <p className="mt-0.5 text-xs text-[var(--txt-placeholder)]">Created {formatRelativeTime(t.created_at)}</p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="text-[var(--txt-danger-primary)]"
+                        disabled={revokingId === t.id}
+                        onClick={async () => {
+                          setRevokingId(t.id);
+                          try {
+                            await userService.revokeToken(t.id);
+                            setTokensList((prev) => prev.filter((x) => x.id !== t.id));
+                          } finally {
+                            setRevokingId(null);
+                          }
+                        }}
+                      >
+                        {revokingId === t.id ? 'Revoking…' : 'Revoke'}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <Modal open={createTokenModalOpen} onClose={() => { setCreateTokenModalOpen(false); setCreatedTokenValue(null); }} title={createdTokenValue ? 'Token created' : 'Create token'}>
+                {createdTokenValue ? (
+                  <div className="space-y-4">
+                    <p className="text-sm text-[var(--txt-secondary)]">Copy this token now; it will not be shown again.</p>
+                    <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-3 py-2 font-mono text-sm text-[var(--txt-primary)] break-all">
+                      {createdTokenValue}
+                    </div>
+                    <div className="flex justify-end">
+                      <Button onClick={() => { setCreateTokenModalOpen(false); setCreatedTokenValue(null); }}>Done</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">Title</label>
+                      <input
+                        type="text"
+                        value={tokenForm.label}
+                        onChange={(e) => setTokenForm((f) => ({ ...f, label: e.target.value }))}
+                        placeholder="Title"
+                        className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">Description</label>
+                      <textarea
+                        value={tokenForm.description}
+                        onChange={(e) => setTokenForm((f) => ({ ...f, description: e.target.value }))}
+                        placeholder="Description"
+                        rows={2}
+                        className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">Expiration</label>
+                      <div className="relative max-w-xs">
+                        <select
+                          value={tokenForm.expiresIn}
+                          onChange={(e) => setTokenForm((f) => ({ ...f, expiresIn: e.target.value }))}
+                          className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                        >
+                          <option value="">Never expires</option>
+                          <option value="7d">1 week</option>
+                          <option value="30d">1 month</option>
+                          <option value="90d">3 months</option>
+                          <option value="365d">1 year</option>
+                        </select>
+                        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]"><IconChevronDown /></span>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="secondary" onClick={() => setCreateTokenModalOpen(false)}>Cancel</Button>
+                      <Button
+                        disabled={!tokenForm.label.trim()}
+                        onClick={async () => {
+                          try {
+                            const res = await userService.createToken({
+                              label: tokenForm.label.trim(),
+                              description: tokenForm.description.trim() || undefined,
+                              expires_in: tokenForm.expiresIn || undefined,
+                            });
+                            setCreatedTokenValue(res.token);
+                            const list = await userService.listTokens();
+                            setTokensList(list.tokens ?? []);
+                          } catch {
+                            // could set error state
+                          }
+                        }}
+                      >
+                        Generate token
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </Modal>
             </div>
           )}
 
