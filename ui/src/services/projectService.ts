@@ -41,6 +41,36 @@ export const projectService = {
     return data;
   },
 
+  /**
+   * Update project name or identifier.
+   * PATCH /api/workspaces/:slug/projects/:projectId/
+   */
+  async update(
+    workspaceSlug: string,
+    projectId: string,
+    payload: {
+      name?: string;
+      identifier?: string;
+      description?: string;
+      timezone?: string;
+      project_lead_id?: string | null;
+      default_assignee_id?: string | null;
+      guest_view_all_features?: boolean;
+      module_view?: boolean;
+      cycle_view?: boolean;
+      issue_views_view?: boolean;
+      page_view?: boolean;
+      intake_view?: boolean;
+      is_time_tracking_enabled?: boolean;
+    }
+  ): Promise<ProjectApiResponse> {
+    const { data } = await apiClient.patch<ProjectApiResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/`,
+      payload
+    );
+    return data;
+  },
+
   async listMembers(workspaceSlug: string, projectId: string): Promise<ProjectMemberApiResponse[]> {
     const { data } = await apiClient.get<ProjectMemberApiResponse[]>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/members/`
@@ -65,5 +95,39 @@ export const projectService = {
       payload
     );
     return data;
+  },
+
+  /**
+   * Update a project member's role. pk is the project_members row id.
+   */
+  async updateMember(
+    workspaceSlug: string,
+    projectId: string,
+    memberPk: string,
+    role: number
+  ): Promise<ProjectMemberApiResponse> {
+    const { data } = await apiClient.patch<ProjectMemberApiResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/members/${encodeURIComponent(memberPk)}/`,
+      { role }
+    );
+    return data;
+  },
+
+  /**
+   * Remove a member from the project. pk is the project_members row id.
+   */
+  async deleteMember(workspaceSlug: string, projectId: string, memberPk: string): Promise<void> {
+    await apiClient.delete(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/members/${encodeURIComponent(memberPk)}/`
+    );
+  },
+
+  /**
+   * Delete a project invitation.
+   */
+  async deleteInvite(workspaceSlug: string, projectId: string, invitePk: string): Promise<void> {
+    await apiClient.delete(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/invitations/${encodeURIComponent(invitePk)}/`
+    );
   },
 };

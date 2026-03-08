@@ -48,8 +48,10 @@ type Project struct {
 	CycleView            bool           `gorm:"default:true" json:"cycle_view"`
 	IssueViewsView       bool           `gorm:"column:issue_views_view;default:true" json:"issue_views_view"`
 	PageView             bool           `gorm:"default:true" json:"page_view"`
-	IntakeView           bool           `gorm:"default:true" json:"intake_view"`
-	Timezone             string         `gorm:"default:UTC" json:"timezone"`
+	IntakeView              bool   `gorm:"default:true" json:"intake_view"`
+	IsTimeTrackingEnabled   bool   `gorm:"column:is_time_tracking_enabled;default:false" json:"is_time_tracking_enabled"`
+	GuestViewAllFeatures    bool   `gorm:"column:guest_view_all_features;default:false" json:"guest_view_all_features"`
+	Timezone                string `gorm:"default:UTC" json:"timezone"`
 }
 
 func (Project) TableName() string { return "projects" }

@@ -5,13 +5,17 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
+import { issueService } from '../services/issueService';
 import { labelService } from '../services/labelService';
+import { stateService } from '../services/stateService';
 import { userService } from '../services/userService';
 import { authService } from '../services/authService';
 import type {
   LabelApiResponse,
   ProjectApiResponse,
+  ProjectInviteApiResponse,
   ProjectMemberApiResponse,
+  StateApiResponse,
   WorkspaceApiResponse,
   WorkspaceInviteApiResponse,
   WorkspaceMemberApiResponse,
@@ -320,6 +324,8 @@ export function SettingsPage() {
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [workspaceInvites, setWorkspaceInvites] = useState<WorkspaceInviteApiResponse[]>([]);
+  const [projectInvites, setProjectInvites] = useState<ProjectInviteApiResponse[]>([]);
+  const [projectStates, setProjectStates] = useState<StateApiResponse[]>([]);
   const [projectMembers, setProjectMembers] = useState<ProjectMemberApiResponse[]>([]);
   const [projectLabels, setProjectLabels] = useState<LabelApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -372,27 +378,32 @@ export function SettingsPage() {
   const selectedProjectId = projectIdParam && projects.some((p) => p.id === projectIdParam) ? projectIdParam : (projects[0]?.id ?? null);
   const selectedProject = selectedProjectId ? (projects.find((p) => p.id === selectedProjectId) ?? null) : null;
   const pendingInvites = workspaceInvites.filter((i) => !i.accepted);
+  const pendingProjectInvites = projectInvites.filter((i) => !i.accepted);
 
   useEffect(() => {
     if (!workspaceSlug || !selectedProjectId) {
       setProjectMembers([]);
       setProjectLabels([]);
+      setProjectInvites([]);
       return;
     }
     let cancelled = false;
     Promise.all([
       projectService.listMembers(workspaceSlug, selectedProjectId),
       labelService.list(workspaceSlug, selectedProjectId),
+      projectService.listInvites(workspaceSlug, selectedProjectId),
     ])
-      .then(([membersList, labelsList]) => {
+      .then(([membersList, labelsList, invitesList]) => {
         if (cancelled) return;
         setProjectMembers(membersList ?? []);
         setProjectLabels(labelsList ?? []);
+        setProjectInvites(invitesList ?? []);
       })
       .catch(() => {
         if (!cancelled) {
           setProjectMembers([]);
           setProjectLabels([]);
+          setProjectInvites([]);
         }
       });
     return () => {
@@ -400,13 +411,48 @@ export function SettingsPage() {
     };
   }, [workspaceSlug, selectedProjectId]);
 
+  useEffect(() => {
+    if (isProjectsTab && projectSection === 'states' && workspaceSlug && selectedProjectId) {
+      let cancelled = false;
+      stateService.list(workspaceSlug, selectedProjectId).then((list) => {
+        if (!cancelled) setProjectStates(list ?? []);
+      }).catch(() => { if (!cancelled) setProjectStates([]); });
+      return () => { cancelled = true; };
+    }
+    setProjectStates([]);
+  }, [isProjectsTab, projectSection, workspaceSlug, selectedProjectId]);
+
+  useEffect(() => {
+    if (workspace?.name != null) setWorkspaceName(workspace.name);
+  }, [workspace?.id, workspace?.name]);
+
+  useEffect(() => {
+    if (selectedProject) {
+      setProjectName(selectedProject.name);
+      setProjectDescription(selectedProject.description ?? '');
+      if (selectedProject.timezone != null) setProjectTimezone(selectedProject.timezone);
+      setProjectLeadId(selectedProject.project_lead_id ?? null);
+      setDefaultAssigneeId(selectedProject.default_assignee_id ?? null);
+      setGuestAccess(selectedProject.guest_view_all_features ?? false);
+      setFeatureCycles(selectedProject.cycle_view ?? true);
+      setFeatureModules(selectedProject.module_view ?? true);
+      setFeatureViews(selectedProject.issue_views_view ?? true);
+      setFeaturePages(selectedProject.page_view ?? true);
+      setFeatureIntake(selectedProject.intake_view ?? false);
+      setFeatureTimeTracking(selectedProject.is_time_tracking_enabled ?? false);
+    }
+  }, [selectedProject?.id, selectedProject?.name, selectedProject?.description, selectedProject?.timezone, selectedProject?.project_lead_id, selectedProject?.default_assignee_id, selectedProject?.guest_view_all_features, selectedProject?.cycle_view, selectedProject?.module_view, selectedProject?.issue_views_view, selectedProject?.page_view, selectedProject?.intake_view, selectedProject?.is_time_tracking_enabled]);
+
   const [workspaceName, setWorkspaceName] = useState('');
   const [companySize, setCompanySize] = useState('51-200');
+  const [generalUpdateLoading, setGeneralUpdateLoading] = useState(false);
+  const [generalUpdateError, setGeneralUpdateError] = useState<string | null>(null);
   const [membersSearch, setMembersSearch] = useState('');
   const [deleteWorkspaceOpen, setDeleteWorkspaceOpen] = useState(false);
   const [exportProjectOpen, setExportProjectOpen] = useState(false);
   const [exportProjectValue, setExportProjectValue] = useState('all');
   const [exportFormat, setExportFormat] = useState('csv');
+  const [exporting, setExporting] = useState(false);
   const [firstName, setFirstName] = useState(user?.name?.split(' ')[0] ?? '');
   const [lastName, setLastName] = useState(user?.name?.split(' ').slice(1).join(' ') ?? '');
   const [displayName, setDisplayName] = useState(user?.name?.split(' ')[0]?.toLowerCase() ?? '');
@@ -435,6 +481,18 @@ export function SettingsPage() {
   const [defaultAssigneeId, setDefaultAssigneeId] = useState<string | null>(null);
   const [guestAccess, setGuestAccess] = useState(true);
   const [projectMembersSearch, setProjectMembersSearch] = useState('');
+  const [projectUpdateLoading, setProjectUpdateLoading] = useState(false);
+  const [projectUpdateError, setProjectUpdateError] = useState<string | null>(null);
+  const [inviteTarget, setInviteTarget] = useState<'workspace' | 'project' | null>(null);
+  const [projectLabelModalOpen, setProjectLabelModalOpen] = useState(false);
+  const [projectLabelEdit, setProjectLabelEdit] = useState<LabelApiResponse | null>(null);
+  const [projectLabelName, setProjectLabelName] = useState('');
+  const [projectLabelColor, setProjectLabelColor] = useState('#6366f1');
+  const [projectStateModalOpen, setProjectStateModalOpen] = useState(false);
+  const [projectStateEdit, setProjectStateEdit] = useState<StateApiResponse | null>(null);
+  const [projectStateName, setProjectStateName] = useState('');
+  const [projectStateColor, setProjectStateColor] = useState('#94a3b8');
+  const [projectStateGroup, setProjectStateGroup] = useState('backlog');
   const [featureCycles, setFeatureCycles] = useState(true);
   const [featureModules, setFeatureModules] = useState(true);
   const [featureViews, setFeatureViews] = useState(true);
@@ -453,6 +511,9 @@ export function SettingsPage() {
   const [timezoneDropdownOpen, setTimezoneDropdownOpen] = useState(false);
   const [timezoneSearch, setTimezoneSearch] = useState('');
   const timezoneDropdownRef = useRef<HTMLDivElement>(null);
+  const [projectTimezoneDropdownOpen, setProjectTimezoneDropdownOpen] = useState(false);
+  const [projectTimezoneSearch, setProjectTimezoneSearch] = useState('');
+  const projectTimezoneDropdownRef = useRef<HTMLDivElement>(null);
   const [notifPrefsLoaded, setNotifPrefsLoaded] = useState(false);
   const [changePasswordLoading, setChangePasswordLoading] = useState(false);
   const [changePasswordError, setChangePasswordError] = useState<string | null>(null);
@@ -472,6 +533,11 @@ export function SettingsPage() {
     const q = timezoneSearch.toLowerCase();
     return timezoneOptions.filter((o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q));
   }, [timezoneOptions, timezoneSearch]);
+  const filteredProjectTimezoneOptions = useMemo(() => {
+    if (!projectTimezoneSearch.trim()) return timezoneOptions;
+    const q = projectTimezoneSearch.toLowerCase();
+    return timezoneOptions.filter((o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q));
+  }, [timezoneOptions, projectTimezoneSearch]);
 
   useEffect(() => {
     if (!isAccountTab || !user) return;
@@ -540,6 +606,17 @@ export function SettingsPage() {
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [timezoneDropdownOpen]);
+
+  useEffect(() => {
+    if (!projectTimezoneDropdownOpen) return;
+    const close = (e: MouseEvent) => {
+      if (projectTimezoneDropdownRef.current && !projectTimezoneDropdownRef.current.contains(e.target as Node)) {
+        setProjectTimezoneDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [projectTimezoneDropdownOpen]);
 
   useEffect(() => {
     if (isProjectsTab && workspace && projects.length > 0 && !projectIdParam) {
@@ -1299,17 +1376,80 @@ export function SettingsPage() {
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">Project Timezone</label>
-                  <div className="relative max-w-xs">
-                    <select value={projectTimezone} onChange={(e) => setProjectTimezone(e.target.value)} className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]">
-                      <option value="UTC">UTC</option>
-                      <option value="UTC+04:00 Baku">UTC+04:00 Baku</option>
-                    </select>
-                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]"><IconChevronDown /></span>
+                  <div className="relative max-w-xs" ref={projectTimezoneDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setProjectTimezoneDropdownOpen((o) => !o)}
+                      className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                    >
+                      <span className="truncate">{timezoneOptions.find((o) => o.value === projectTimezone)?.label ?? projectTimezone}</span>
+                      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]"><IconChevronDown /></span>
+                    </button>
+                    {projectTimezoneDropdownOpen && (
+                      <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-lg">
+                        <div className="border-b border-[var(--border-subtle)] p-2">
+                          <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2 py-1.5">
+                            <IconSearch />
+                            <input
+                              type="text"
+                              value={projectTimezoneSearch}
+                              onChange={(e) => setProjectTimezoneSearch(e.target.value)}
+                              placeholder="Search"
+                              className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] outline-none placeholder:text-[var(--txt-placeholder)]"
+                            />
+                          </div>
+                        </div>
+                        <div className="max-h-48 overflow-y-auto p-1">
+                          {filteredProjectTimezoneOptions.map((o) => (
+                            <button
+                              key={o.value}
+                              type="button"
+                              onClick={() => {
+                                setProjectTimezone(o.value);
+                                setProjectTimezoneDropdownOpen(false);
+                                setProjectTimezoneSearch('');
+                              }}
+                              className={`w-full rounded-[var(--radius-md)] px-2 py-1.5 text-left text-sm ${o.value === projectTimezone ? 'bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]' : 'text-[var(--txt-primary)] hover:bg-[var(--bg-layer-transparent-hover)]'}`}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-              <Button>Update project</Button>
-              <p className="text-sm text-[var(--txt-tertiary)]">Created on Feb 09, 2026</p>
+              {projectUpdateError && (
+                <p className="text-sm text-[var(--txt-danger-primary)]">{projectUpdateError}</p>
+              )}
+              <Button
+                disabled={projectUpdateLoading}
+                onClick={async () => {
+                  if (!workspaceSlug || !selectedProjectId || !projectName.trim()) return;
+                  setProjectUpdateError(null);
+                  setProjectUpdateLoading(true);
+                  try {
+                    const updated = await projectService.update(workspaceSlug, selectedProjectId, { name: projectName.trim(), description: projectDescription ?? '', timezone: projectTimezone });
+                    setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                    if (selectedProject?.id === updated.id) {
+                      setProjectUpdateError(null);
+                    }
+                  } catch (err: unknown) {
+                    const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Failed to update project';
+                    setProjectUpdateError(msg);
+                  } finally {
+                    setProjectUpdateLoading(false);
+                  }
+                }}
+              >
+                {projectUpdateLoading ? 'Updating…' : 'Update project'}
+              </Button>
+              {selectedProject?.created_at && (
+                <p className="text-sm text-[var(--txt-tertiary)]">
+                  Created on {new Date(selectedProject.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+              )}
             </div>
           )}
 
@@ -1323,7 +1463,19 @@ export function SettingsPage() {
                     <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">Select the project lead for the project.</p>
                   </div>
                   <div className="relative min-w-[180px]">
-                    <select value={projectLeadId ?? ''} onChange={(e) => setProjectLeadId(e.target.value || null)} className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]">
+                    <select
+                      value={projectLeadId ?? ''}
+                      onChange={async (e) => {
+                        const v = e.target.value || null;
+                        setProjectLeadId(v);
+                        if (!workspaceSlug || !selectedProjectId) return;
+                        try {
+                          const updated = await projectService.update(workspaceSlug, selectedProjectId, { project_lead_id: v ?? '' });
+                          setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                        } catch {}
+                      }}
+                      className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                    >
                       <option value="">Select</option>
                       {workspaceMembers.map((m) => (
                         <option key={m.member_id} value={m.member_id}>{memberLabel(m.member_id)}</option>
@@ -1338,7 +1490,19 @@ export function SettingsPage() {
                     <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">Select the default assignee for the project.</p>
                   </div>
                   <div className="relative min-w-[120px]">
-                    <select value={defaultAssigneeId ?? 'none'} onChange={(e) => setDefaultAssigneeId(e.target.value === 'none' ? null : e.target.value)} className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]">
+                    <select
+                      value={defaultAssigneeId ?? 'none'}
+                      onChange={async (e) => {
+                        const v = e.target.value === 'none' ? null : e.target.value;
+                        setDefaultAssigneeId(v);
+                        if (!workspaceSlug || !selectedProjectId) return;
+                        try {
+                          const updated = await projectService.update(workspaceSlug, selectedProjectId, { default_assignee_id: v ?? '' });
+                          setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                        } catch {}
+                      }}
+                      className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                    >
                       <option value="none">None</option>
                       {workspaceMembers.map((m) => (
                         <option key={m.member_id} value={m.member_id}>{memberLabel(m.member_id)}</option>
@@ -1352,7 +1516,23 @@ export function SettingsPage() {
                     <p className="text-sm font-medium text-[var(--txt-primary)]">Guest access</p>
                     <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">This will allow guests to have view access to all the project work items.</p>
                   </div>
-                  <button type="button" role="switch" aria-checked={guestAccess} onClick={() => setGuestAccess(!guestAccess)} className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${guestAccess ? 'bg-[var(--brand-default)]' : 'bg-[var(--neutral-400)]'}`}>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={guestAccess}
+                    onClick={async () => {
+                      const next = !guestAccess;
+                      setGuestAccess(next);
+                      if (!workspaceSlug || !selectedProjectId) return;
+                      try {
+                        const updated = await projectService.update(workspaceSlug, selectedProjectId, { guest_view_all_features: next });
+                        setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                      } catch {
+                        setGuestAccess(guestAccess);
+                      }
+                    }}
+                    className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${guestAccess ? 'bg-[var(--brand-default)]' : 'bg-[var(--neutral-400)]'}`}
+                  >
                     <span className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${guestAccess ? 'translate-x-4' : 'translate-x-0'}`} />
                   </button>
                 </div>
@@ -1364,10 +1544,12 @@ export function SettingsPage() {
                     <span className="text-[var(--txt-icon-tertiary)]"><IconSearch /></span>
                     <input type="text" value={projectMembersSearch} onChange={(e) => setProjectMembersSearch(e.target.value)} placeholder="Search" className="w-32 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none" />
                   </div>
-                  <Button size="sm" className="gap-1.5"><IconPlus /> Add member</Button>
+                  <Button size="sm" className="gap-1.5" onClick={() => { setInviteTarget('project'); setInviteModalOpen(true); }}>
+                    <IconPlus /> Add member
+                  </Button>
                 </div>
               </div>
-              <Card variant="outlined">
+              <Card className="border-0 shadow-none">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
@@ -1380,7 +1562,7 @@ export function SettingsPage() {
                     </thead>
                     <tbody>
                       {filteredProjectMembers.map((m) => (
-                        <tr key={m.id} className="border-b border-[var(--border-subtle)] last:border-0">
+                        <tr key={m.id}>
                           <td className="py-3 pr-4">
                             <div className="flex items-center gap-2">
                               <Avatar name={memberLabel(m.member_id)} size="sm" />
@@ -1391,7 +1573,19 @@ export function SettingsPage() {
                           <td className="py-3 pr-4">
                             <div className="relative inline-block min-w-[100px]">
                               <select
-                                defaultValue={roleLabel(m.role)}
+                                value={roleLabel(m.role)}
+                                onChange={async (e) => {
+                                  const v = e.target.value as 'member' | 'admin';
+                                  const role = v === 'admin' ? 20 : 10;
+                                  if (!workspaceSlug || !selectedProjectId || role === m.role) return;
+                                  try {
+                                    await projectService.updateMember(workspaceSlug, selectedProjectId, m.id, role);
+                                    const list = await projectService.listMembers(workspaceSlug, selectedProjectId);
+                                    setProjectMembers(list ?? []);
+                                  } catch {
+                                    // could toast
+                                  }
+                                }}
                                 className="w-full appearance-none rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1.5 pl-2.5 pr-7 text-sm capitalize text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
                               >
                                 <option value="member">Member</option>
@@ -1411,6 +1605,27 @@ export function SettingsPage() {
                   </table>
                 </div>
               </Card>
+              {pendingProjectInvites.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-sm font-semibold text-[var(--txt-primary)] mb-2">Pending invites</h3>
+                  <div className="space-y-2">
+                    {pendingProjectInvites.map((inv) => (
+                      <div key={inv.id} className="flex items-center justify-between gap-3 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-3">
+                        <span className="text-sm text-[var(--txt-primary)]">{inv.email}</span>
+                        <span className="rounded-full bg-[var(--bg-warning-subtle)] px-2.5 py-0.5 text-xs font-medium text-[var(--txt-warning-primary)]">Pending</span>
+                        <Button size="sm" variant="secondary" onClick={async () => {
+                          if (!workspaceSlug || !selectedProjectId) return;
+                          try {
+                            await projectService.deleteInvite(workspaceSlug, selectedProjectId, inv.id);
+                            const list = await projectService.listInvites(workspaceSlug, selectedProjectId);
+                            setProjectInvites(list ?? []);
+                          } catch {}
+                        }}>Revoke</Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1422,21 +1637,43 @@ export function SettingsPage() {
               </div>
               <div className="space-y-3">
                 {[
-                  { id: 'cycles', label: 'Cycles', desc: 'Timebox work per project and adjust the time period as needed. One cycle can be 2 weeks, the next 1 week.', value: featureCycles, set: setFeatureCycles, icon: <IconClock /> },
-                  { id: 'modules', label: 'Modules', desc: 'Organize work into sub-projects with dedicated leads and assignees.', value: featureModules, set: setFeatureModules, icon: <IconGrid /> },
-                  { id: 'views', label: 'Views', desc: 'Save custom sorts, filters, and display options or share them with your team.', value: featureViews, set: setFeatureViews, icon: <IconLayers /> },
-                  { id: 'pages', label: 'Pages', desc: 'Create and edit free-form content; notes, docs, anything.', value: featurePages, set: setFeaturePages, icon: <IconFileText /> },
-                  { id: 'intake', label: 'Intake', desc: 'Let non-members share bugs, feedback, and suggestions; without disrupting your workflow.', value: featureIntake, set: setFeatureIntake, icon: <IconInbox /> },
-                ].map(({ id, label, desc, value, set, icon }) => (
+                  { id: 'cycles', label: 'Cycles', desc: 'Timebox work per project and adjust the time period as needed. One cycle can be 2 weeks, the next 1 week.', value: featureCycles, set: setFeatureCycles, key: 'cycle_view' as const },
+                  { id: 'modules', label: 'Modules', desc: 'Organize work into sub-projects with dedicated leads and assignees.', value: featureModules, set: setFeatureModules, key: 'module_view' as const },
+                  { id: 'views', label: 'Views', desc: 'Save custom sorts, filters, and display options or share them with your team.', value: featureViews, set: setFeatureViews, key: 'issue_views_view' as const },
+                  { id: 'pages', label: 'Pages', desc: 'Create and edit free-form content; notes, docs, anything.', value: featurePages, set: setFeaturePages, key: 'page_view' as const },
+                  { id: 'intake', label: 'Intake', desc: 'Let non-members share bugs, feedback, and suggestions; without disrupting your workflow.', value: featureIntake, set: setFeatureIntake, key: 'intake_view' as const },
+                ].map(({ id, label, desc, value, set, key }) => (
                   <div key={id} className="flex items-start justify-between gap-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 py-3">
                     <div className="flex items-start gap-3">
-                      <span className="text-[var(--txt-icon-tertiary)]">{icon}</span>
+                      <span className="text-[var(--txt-icon-tertiary)]">
+                        {id === 'cycles' && <IconClock />}
+                        {id === 'modules' && <IconGrid />}
+                        {id === 'views' && <IconLayers />}
+                        {id === 'pages' && <IconFileText />}
+                        {id === 'intake' && <IconInbox />}
+                      </span>
                       <div>
                         <p className="text-sm font-medium text-[var(--txt-primary)]">{label}</p>
                         <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">{desc}</p>
                       </div>
                     </div>
-                    <button type="button" role="switch" aria-checked={value} onClick={() => set(!value)} className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${value ? 'bg-[var(--brand-default)]' : 'bg-[var(--neutral-400)]'}`}>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={value}
+                      onClick={async () => {
+                        const next = !value;
+                        set(next);
+                        if (!workspaceSlug || !selectedProjectId) return;
+                        try {
+                          const updated = await projectService.update(workspaceSlug, selectedProjectId, { [key]: next });
+                          setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                        } catch {
+                          set(value);
+                        }
+                      }}
+                      className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${value ? 'bg-[var(--brand-default)]' : 'bg-[var(--neutral-400)]'}`}
+                    >
                       <span className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-4' : 'translate-x-0'}`} />
                     </button>
                   </div>
@@ -1450,11 +1687,27 @@ export function SettingsPage() {
                 <div className="flex items-start gap-3">
                   <span className="text-[var(--txt-icon-tertiary)]"><IconClock /></span>
                   <div>
-                    <p className="text-sm font-medium text-[var(--txt-primary)]">Time Tracking <span className="ml-1 rounded bg-[var(--neutral-400)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--txt-secondary)]">Pro</span></p>
+                    <p className="text-sm font-medium text-[var(--txt-primary)]">Time Tracking</p>
                     <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">Log time spent on work items and projects.</p>
                   </div>
                 </div>
-                <button type="button" role="switch" aria-checked={featureTimeTracking} onClick={() => setFeatureTimeTracking(!featureTimeTracking)} className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${featureTimeTracking ? 'bg-[var(--brand-default)]' : 'bg-[var(--neutral-400)]'}`}>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={featureTimeTracking}
+                  onClick={async () => {
+                    const next = !featureTimeTracking;
+                    setFeatureTimeTracking(next);
+                    if (!workspaceSlug || !selectedProjectId) return;
+                    try {
+                      const updated = await projectService.update(workspaceSlug, selectedProjectId, { is_time_tracking_enabled: next });
+                      setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                    } catch {
+                      setFeatureTimeTracking(featureTimeTracking);
+                    }
+                  }}
+                  className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${featureTimeTracking ? 'bg-[var(--brand-default)]' : 'bg-[var(--neutral-400)]'}`}
+                >
                   <span className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${featureTimeTracking ? 'translate-x-4' : 'translate-x-0'}`} />
                 </button>
               </div>
@@ -1463,31 +1716,59 @@ export function SettingsPage() {
 
           {isProjectsTab && selectedProject && projectSection === 'states' && (
             <div className="space-y-6">
-              <div>
-                <h2 className="text-base font-semibold text-[var(--txt-primary)]">States</h2>
-                <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">Define and customize workflow states to track the progress of your work items.</p>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-base font-semibold text-[var(--txt-primary)]">States</h2>
+                  <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">Define and customize workflow states to track the progress of your work items.</p>
+                </div>
+                <Button size="sm" className="gap-1.5" onClick={() => { setProjectStateEdit(null); setProjectStateName(''); setProjectStateColor('#94a3b8'); setProjectStateGroup('backlog'); setProjectStateModalOpen(true); }}>
+                  <IconPlus /> Add state
+                </Button>
               </div>
-              <div className="space-y-2">
-                {[
-                  { name: 'Backlog', color: '#94a3b8', children: ['Backlog'] },
-                  { name: 'Unstarted', color: '#94a3b8', children: ['Todo'] },
-                  { name: 'Started', color: '#f59e0b', children: ['In Progress'] },
-                  { name: 'Completed', color: '#22c55e', children: ['Done'] },
-                  { name: 'Cancelled', color: '#94a3b8', children: ['Cancelled'] },
-                ].map((group) => (
-                  <Card key={group.name} variant="outlined" className="overflow-hidden">
-                    <button type="button" className="flex w-full items-center justify-between px-4 py-3 text-left">
-                      <div className="flex items-center gap-2">
-                        <span className="shrink-0 text-[var(--txt-icon-tertiary)]"><IconCog /></span>
-                        <span className="text-sm font-medium text-[var(--txt-primary)]">{group.name}</span>
-                        {group.children.map((c) => (
-                          <span key={c} className="rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2 py-0.5 text-xs text-[var(--txt-secondary)]" style={{ marginLeft: 4 }}>{c}</span>
-                        ))}
+              <div className="space-y-4">
+                {(() => {
+                  const byGroup = projectStates.reduce<Record<string, StateApiResponse[]>>((acc, s) => {
+                    const g = (s.group ?? 'backlog').toLowerCase();
+                    if (!acc[g]) acc[g] = [];
+                    acc[g].push(s);
+                    return acc;
+                  }, {});
+                  const order = ['backlog', 'unstarted', 'started', 'completed', 'cancelled'];
+                  const groupKeys = [...new Set([...order, ...Object.keys(byGroup)])];
+                  return groupKeys.map((group) => {
+                    const states = byGroup[group] ?? [];
+                    return (
+                      <div key={group}>
+                        <h3 className="text-sm font-medium text-[var(--txt-secondary)] mb-2 capitalize">{group}</h3>
+                        <div className="space-y-2">
+                          {states.length === 0 ? (
+                            <p className="text-sm text-[var(--txt-tertiary)] py-2">No states in this group.</p>
+                          ) : (
+                            states.map((st) => (
+                              <Card key={st.id} variant="outlined" className="flex items-center justify-between gap-3 px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: st.color ?? 'var(--border-subtle)' }} />
+                                  <span className="text-sm font-medium text-[var(--txt-primary)]">{st.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button size="sm" variant="secondary" onClick={() => { setProjectStateEdit(st); setProjectStateName(st.name); setProjectStateColor(st.color ?? '#94a3b8'); setProjectStateGroup(st.group ?? 'backlog'); setProjectStateModalOpen(true); }}>Edit</Button>
+                                  <Button size="sm" variant="secondary" className="text-[var(--txt-danger-primary)]" onClick={async () => {
+                                    if (!workspaceSlug || !selectedProjectId) return;
+                                    try {
+                                      await stateService.delete(workspaceSlug, selectedProjectId, st.id);
+                                      const list = await stateService.list(workspaceSlug, selectedProjectId);
+                                      setProjectStates(list ?? []);
+                                    } catch {}
+                                  }}>Delete</Button>
+                                </div>
+                              </Card>
+                            ))
+                          )}
+                        </div>
                       </div>
-                      <span className="text-[var(--txt-icon-tertiary)]"><IconPlus /></span>
-                    </button>
-                  </Card>
-                ))}
+                    );
+                  });
+                })()}
               </div>
             </div>
           )}
@@ -1499,13 +1780,26 @@ export function SettingsPage() {
                   <h2 className="text-base font-semibold text-[var(--txt-primary)]">Labels</h2>
                   <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">Create custom labels to categorize and organize your work items.</p>
                 </div>
-                <Button size="sm" className="gap-1.5"><IconPlus /> Add label</Button>
+                <Button size="sm" className="gap-1.5" onClick={() => { setProjectLabelEdit(null); setProjectLabelName(''); setProjectLabelColor('#6366f1'); setProjectLabelModalOpen(true); }}><IconPlus /> Add label</Button>
               </div>
               <div className="space-y-2">
                 {projectLabels.map((label) => (
-                  <Card key={label.id} variant="outlined" className="flex items-center gap-3 px-4 py-3">
-                    <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: label.color ?? 'var(--border-subtle)' }} />
-                    <span className="text-sm font-medium capitalize text-[var(--txt-primary)]">{label.name}</span>
+                  <Card key={label.id} variant="outlined" className="flex items-center justify-between gap-3 px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: label.color ?? 'var(--border-subtle)' }} />
+                      <span className="text-sm font-medium capitalize text-[var(--txt-primary)]">{label.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => { setProjectLabelEdit(label); setProjectLabelName(label.name); setProjectLabelColor(label.color ?? '#6366f1'); setProjectLabelModalOpen(true); }}>Edit</Button>
+                      <Button size="sm" variant="secondary" className="text-[var(--txt-danger-primary)]" onClick={async () => {
+                        if (!workspaceSlug || !selectedProjectId) return;
+                        try {
+                          await labelService.delete(workspaceSlug, selectedProjectId, label.id);
+                          const list = await labelService.list(workspaceSlug, selectedProjectId);
+                          setProjectLabels(list ?? []);
+                        } catch {}
+                      }}>Delete</Button>
+                    </div>
                   </Card>
                 ))}
               </div>
@@ -1517,6 +1811,7 @@ export function SettingsPage() {
               <div>
                 <h2 className="text-base font-semibold text-[var(--txt-primary)]">Estimates</h2>
                 <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">Set up estimation systems to track and communicate the effort required for each work item.</p>
+                <p className="mt-2 text-sm text-[var(--txt-tertiary)]">Estimate systems will be available when the API is connected.</p>
               </div>
               <div className="flex justify-end">
                 <Button size="sm" className="gap-1.5"><IconPlus /> Add Estimate</Button>
@@ -1643,7 +1938,28 @@ export function SettingsPage() {
                   />
                 </div>
               </div>
-              <Button>Update workspace</Button>
+              {generalUpdateError && (
+                <p className="text-sm text-[var(--txt-danger-primary)]">{generalUpdateError}</p>
+              )}
+              <Button
+                disabled={generalUpdateLoading}
+                onClick={async () => {
+                  if (!workspaceSlug || !workspaceName.trim()) return;
+                  setGeneralUpdateError(null);
+                  setGeneralUpdateLoading(true);
+                  try {
+                    const updated = await workspaceService.update(workspaceSlug, { name: workspaceName.trim() });
+                    setWorkspace(updated);
+                  } catch (err: unknown) {
+                    const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Failed to update workspace';
+                    setGeneralUpdateError(msg);
+                  } finally {
+                    setGeneralUpdateLoading(false);
+                  }
+                }}
+              >
+                {generalUpdateLoading ? 'Updating…' : 'Update workspace'}
+              </Button>
               <Card variant="outlined" className="border-[var(--border-subtle)]">
                 <button
                   type="button"
@@ -1689,13 +2005,13 @@ export function SettingsPage() {
                       className="w-40 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
                     />
                   </div>
-                  <Button size="sm" className="gap-1.5" onClick={() => setInviteModalOpen(true)}>
+                  <Button size="sm" className="gap-1.5" onClick={() => { setInviteTarget('workspace'); setInviteModalOpen(true); }}>
                     <IconPlus />
                     Add member
                   </Button>
                 </div>
               </div>
-              <Card variant="outlined">
+              <Card className="border-0 shadow-none">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
@@ -1710,19 +2026,31 @@ export function SettingsPage() {
                     </thead>
                     <tbody>
                       {filteredMembers.map((m) => (
-                        <tr key={m.id} className="border-b border-[var(--border-subtle)] last:border-0">
+                        <tr key={m.id}>
                           <td className="py-3 pr-4">
                             <div className="flex items-center gap-2">
                               <Avatar name={memberLabel(m.member_id)} size="sm" />
                               <span className="text-[var(--txt-primary)]">{memberLabel(m.member_id)}</span>
                             </div>
                           </td>
-                          <td className="py-3 pr-4 text-[var(--txt-secondary)]">{memberLabel(m.member_id)}</td>
-                          <td className="py-3 pr-4 text-[var(--txt-secondary)]">—</td>
+                          <td className="py-3 pr-4 text-[var(--txt-secondary)]">{m.member_display_name?.trim() || memberLabel(m.member_id)}</td>
+                          <td className="py-3 pr-4 text-[var(--txt-secondary)]">{m.member_email ?? '—'}</td>
                           <td className="py-3 pr-4">
                             <div className="relative inline-block min-w-[100px]">
                               <select
-                                defaultValue={roleLabel(m.role)}
+                                value={roleLabel(m.role)}
+                                onChange={async (e) => {
+                                  const v = e.target.value as 'member' | 'admin';
+                                  const role = v === 'admin' ? 20 : 10;
+                                  if (!workspaceSlug || role === m.role) return;
+                                  try {
+                                    await workspaceService.updateMember(workspaceSlug, m.id, role);
+                                    const list = await workspaceService.listMembers(workspaceSlug);
+                                    setWorkspaceMembers(list ?? []);
+                                  } catch {
+                                    // could toast or set per-row error
+                                  }
+                                }}
                                 className="w-full appearance-none rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1.5 pl-2.5 pr-7 text-sm capitalize text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
                               >
                                 <option value="member">Member</option>
@@ -1899,15 +2227,71 @@ export function SettingsPage() {
         </main>
       </div>
 
-      {/* Export CSV modal */}
+      {/* Export modal */}
       <Modal
         open={exportProjectOpen}
-        onClose={() => setExportProjectOpen(false)}
+        onClose={() => !exporting && setExportProjectOpen(false)}
         title={`Export ${exportFormat.toUpperCase()}`}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setExportProjectOpen(false)}>Cancel</Button>
-            <Button onClick={() => setExportProjectOpen(false)}>Export</Button>
+            <Button variant="secondary" onClick={() => setExportProjectOpen(false)} disabled={exporting}>Cancel</Button>
+            <Button
+              disabled={exporting}
+              onClick={async () => {
+                if (!workspaceSlug) return;
+                setExporting(true);
+                try {
+                  const projectIds = exportProjectValue === 'all' ? projects.map((p) => p.id) : [exportProjectValue];
+                  const allIssues: Array<Record<string, unknown> & { project_id?: string; project_name?: string }> = [];
+                  for (const pid of projectIds) {
+                    const issues = await issueService.list(workspaceSlug, pid, { limit: 2000 });
+                    const proj = projects.find((p) => p.id === pid);
+                    for (const i of issues) {
+                      allIssues.push({
+                        ...i,
+                        project_id: pid,
+                        project_name: proj?.name,
+                      });
+                    }
+                  }
+                  const fmt = exportFormat === 'xlsx' ? 'csv' : exportFormat;
+                  let blob: Blob;
+                  let filename: string;
+                  const base = `export-${workspace?.slug ?? workspaceSlug}-${new Date().toISOString().slice(0, 10)}`;
+                  if (fmt === 'json') {
+                    const str = JSON.stringify(allIssues, null, 2);
+                    blob = new Blob([str], { type: 'application/json' });
+                    filename = `${base}.json`;
+                  } else {
+                    const headers = ['id', 'project_id', 'project_name', 'name', 'priority', 'state_id', 'created_at', 'updated_at', 'description'];
+                    const rows = allIssues.map((row) =>
+                      headers.map((h) => {
+                        const v = row[h];
+                        if (v == null) return '';
+                        const s = String(v);
+                        return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+                      }).join(',')
+                    );
+                    const csv = [headers.join(','), ...rows].join('\r\n');
+                    blob = new Blob([csv], { type: 'text/csv' });
+                    filename = `${base}.csv`;
+                  }
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = filename;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  setExportProjectOpen(false);
+                } catch {
+                  // could set export error state
+                } finally {
+                  setExporting(false);
+                }
+              }}
+            >
+              {exporting ? 'Exporting…' : 'Export'}
+            </Button>
           </>
         }
       >
@@ -1928,6 +2312,9 @@ export function SettingsPage() {
               <IconChevronDown />
             </span>
           </div>
+          {exportFormat === 'xlsx' && (
+            <p className="mt-2 text-sm text-[var(--txt-tertiary)]">Excel export will download as CSV for now.</p>
+          )}
         </div>
       </Modal>
 
@@ -1936,6 +2323,7 @@ export function SettingsPage() {
         open={inviteModalOpen}
         onClose={() => {
           setInviteModalOpen(false);
+          setInviteTarget(null);
           setInviteRows([{ id: 0, email: '', role: 'member' }]);
         }}
         title="Invite people to collaborate"
@@ -1945,6 +2333,7 @@ export function SettingsPage() {
               variant="secondary"
               onClick={() => {
                 setInviteModalOpen(false);
+                setInviteTarget(null);
                 setInviteRows([{ id: 0, email: '', role: 'member' }]);
               }}
             >
@@ -1959,22 +2348,38 @@ export function SettingsPage() {
                   .filter((r) => r.email.length > 0);
                 if (rows.length === 0) {
                   setInviteModalOpen(false);
+                  setInviteTarget(null);
                   setInviteRows([{ id: 0, email: '', role: 'member' }]);
                   return;
                 }
                 setInviting(true);
                 try {
-                  await Promise.all(
-                    rows.map((r) =>
-                      workspaceService.createInvite(workspaceSlug, {
-                        email: r.email,
-                        role: r.role === 'admin' ? 20 : 10,
-                      })
-                    )
-                  );
-                  const refreshed = await workspaceService.listInvites(workspaceSlug);
-                  setWorkspaceInvites(refreshed ?? []);
+                  const roleNum = (r: { role: 'member' | 'admin' }) => (r.role === 'admin' ? 20 : 10);
+                  if (inviteTarget === 'project' && selectedProjectId) {
+                    await Promise.all(
+                      rows.map((r) =>
+                        projectService.createInvite(workspaceSlug, selectedProjectId, {
+                          email: r.email,
+                          role: roleNum(r),
+                        })
+                      )
+                    );
+                    const refreshed = await projectService.listInvites(workspaceSlug, selectedProjectId);
+                    setProjectInvites(refreshed ?? []);
+                  } else {
+                    await Promise.all(
+                      rows.map((r) =>
+                        workspaceService.createInvite(workspaceSlug, {
+                          email: r.email,
+                          role: roleNum(r),
+                        })
+                      )
+                    );
+                    const refreshed = await workspaceService.listInvites(workspaceSlug);
+                    setWorkspaceInvites(refreshed ?? []);
+                  }
                   setInviteModalOpen(false);
+                  setInviteTarget(null);
                   setInviteRows([{ id: 0, email: '', role: 'member' }]);
                 } finally {
                   setInviting(false);
@@ -1987,7 +2392,7 @@ export function SettingsPage() {
         }
       >
         <p className="mb-4 text-sm text-[var(--txt-secondary)]">
-          Invite people to collaborate on your workspace.
+          {inviteTarget === 'project' ? 'Invite people to this project.' : 'Invite people to collaborate on your workspace.'}
         </p>
         <div className="space-y-3">
           {inviteRows.map((row) => (
@@ -2034,6 +2439,108 @@ export function SettingsPage() {
             <IconPlus />
             Add more
           </button>
+        </div>
+      </Modal>
+
+      {/* Project state (workflow) add/edit modal */}
+      <Modal
+        open={projectStateModalOpen}
+        onClose={() => { setProjectStateModalOpen(false); setProjectStateEdit(null); }}
+        title={projectStateEdit ? 'Edit state' : 'Add state'}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setProjectStateModalOpen(false); setProjectStateEdit(null); }}>Cancel</Button>
+            <Button
+              disabled={!projectStateName.trim()}
+              onClick={async () => {
+                if (!workspaceSlug || !selectedProjectId || !projectStateName.trim()) return;
+                try {
+                  if (projectStateEdit) {
+                    await stateService.update(workspaceSlug, selectedProjectId, projectStateEdit.id, { name: projectStateName.trim(), color: projectStateColor });
+                  } else {
+                    await stateService.create(workspaceSlug, selectedProjectId, { name: projectStateName.trim(), color: projectStateColor, group: projectStateGroup });
+                  }
+                  const list = await stateService.list(workspaceSlug, selectedProjectId);
+                  setProjectStates(list ?? []);
+                  setProjectStateModalOpen(false);
+                  setProjectStateEdit(null);
+                } catch {}
+              }}
+            >
+              {projectStateEdit ? 'Save' : 'Create'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">Name</label>
+            <input type="text" value={projectStateName} onChange={(e) => setProjectStateName(e.target.value)} className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]" placeholder="e.g. In Progress" />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">Color</label>
+            <div className="flex items-center gap-2">
+              <input type="color" value={projectStateColor} onChange={(e) => setProjectStateColor(e.target.value)} className="h-9 w-14 cursor-pointer rounded border border-[var(--border-subtle)]" />
+              <input type="text" value={projectStateColor} onChange={(e) => setProjectStateColor(e.target.value)} className="flex-1 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]" />
+            </div>
+          </div>
+          {!projectStateEdit && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">Group</label>
+              <select value={projectStateGroup} onChange={(e) => setProjectStateGroup(e.target.value)} className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]">
+                <option value="backlog">Backlog</option>
+                <option value="unstarted">Unstarted</option>
+                <option value="started">Started</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Project label add/edit modal */}
+      <Modal
+        open={projectLabelModalOpen}
+        onClose={() => { setProjectLabelModalOpen(false); setProjectLabelEdit(null); }}
+        title={projectLabelEdit ? 'Edit label' : 'Add label'}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setProjectLabelModalOpen(false); setProjectLabelEdit(null); }}>Cancel</Button>
+            <Button
+              disabled={!projectLabelName.trim()}
+              onClick={async () => {
+                if (!workspaceSlug || !selectedProjectId || !projectLabelName.trim()) return;
+                try {
+                  if (projectLabelEdit) {
+                    await labelService.update(workspaceSlug, selectedProjectId, projectLabelEdit.id, { name: projectLabelName.trim(), color: projectLabelColor });
+                  } else {
+                    await labelService.create(workspaceSlug, selectedProjectId, { name: projectLabelName.trim(), color: projectLabelColor });
+                  }
+                  const list = await labelService.list(workspaceSlug, selectedProjectId);
+                  setProjectLabels(list ?? []);
+                  setProjectLabelModalOpen(false);
+                  setProjectLabelEdit(null);
+                } catch {}
+              }}
+            >
+              {projectLabelEdit ? 'Save' : 'Create'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">Name</label>
+            <input type="text" value={projectLabelName} onChange={(e) => setProjectLabelName(e.target.value)} className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]" placeholder="e.g. Bug" />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">Color</label>
+            <div className="flex items-center gap-2">
+              <input type="color" value={projectLabelColor} onChange={(e) => setProjectLabelColor(e.target.value)} className="h-9 w-14 cursor-pointer rounded border border-[var(--border-subtle)]" />
+              <input type="text" value={projectLabelColor} onChange={(e) => setProjectLabelColor(e.target.value)} className="flex-1 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]" />
+            </div>
+          </div>
         </div>
       </Modal>
     </div>

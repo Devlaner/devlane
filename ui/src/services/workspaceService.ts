@@ -60,4 +60,55 @@ export const workspaceService = {
     );
     return data;
   },
+
+  /**
+   * Update workspace name or slug.
+   * PATCH /api/workspaces/:slug/
+   */
+  async update(
+    slug: string,
+    payload: { name?: string; slug?: string }
+  ): Promise<WorkspaceApiResponse> {
+    const { data } = await apiClient.patch<WorkspaceApiResponse>(
+      `/api/workspaces/${encodeURIComponent(slug)}/`,
+      payload
+    );
+    return data;
+  },
+
+  /**
+   * Update a member's role. pk is the workspace member row id.
+   * PATCH /api/workspaces/:slug/members/:pk/
+   */
+  async updateMember(
+    workspaceSlug: string,
+    memberPk: string,
+    role: number
+  ): Promise<WorkspaceMemberApiResponse> {
+    const { data } = await apiClient.patch<WorkspaceMemberApiResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/members/${encodeURIComponent(memberPk)}/`,
+      { role }
+    );
+    return data;
+  },
+
+  /**
+   * Remove a member from the workspace. pk is the workspace member row id.
+   * DELETE /api/workspaces/:slug/members/:pk/
+   */
+  async deleteMember(workspaceSlug: string, memberPk: string): Promise<void> {
+    await apiClient.delete(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/members/${encodeURIComponent(memberPk)}/`
+    );
+  },
+
+  /**
+   * Delete a workspace invitation.
+   * DELETE /api/workspaces/:slug/invitations/:pk/
+   */
+  async deleteInvite(workspaceSlug: string, invitePk: string): Promise<void> {
+    await apiClient.delete(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/invitations/${encodeURIComponent(invitePk)}/`
+    );
+  },
 };

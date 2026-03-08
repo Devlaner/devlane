@@ -78,7 +78,7 @@ func (s *ProjectService) Create(ctx context.Context, workspaceSlug, name, identi
 	return p, nil
 }
 
-func (s *ProjectService) Update(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID, name, identifier *string) (*model.Project, error) {
+func (s *ProjectService) Update(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID, name, identifier, description, timezone *string, projectLeadIDSet bool, projectLeadID *uuid.UUID, defaultAssigneeIDSet bool, defaultAssigneeID *uuid.UUID, guestViewAllFeatures *bool, moduleView, cycleView, issueViewsView, pageView, intakeView, isTimeTrackingEnabled *bool) (*model.Project, error) {
 	p, err := s.GetByID(ctx, workspaceSlug, projectID, userID)
 	if err != nil {
 		return nil, err
@@ -88,6 +88,39 @@ func (s *ProjectService) Update(ctx context.Context, workspaceSlug string, proje
 	}
 	if identifier != nil {
 		p.Identifier = *identifier
+	}
+	if description != nil {
+		p.Description = *description
+	}
+	if timezone != nil {
+		p.Timezone = *timezone
+	}
+	if projectLeadIDSet {
+		p.ProjectLeadID = projectLeadID
+	}
+	if defaultAssigneeIDSet {
+		p.DefaultAssigneeID = defaultAssigneeID
+	}
+	if guestViewAllFeatures != nil {
+		p.GuestViewAllFeatures = *guestViewAllFeatures
+	}
+	if moduleView != nil {
+		p.ModuleView = *moduleView
+	}
+	if cycleView != nil {
+		p.CycleView = *cycleView
+	}
+	if issueViewsView != nil {
+		p.IssueViewsView = *issueViewsView
+	}
+	if pageView != nil {
+		p.PageView = *pageView
+	}
+	if intakeView != nil {
+		p.IntakeView = *intakeView
+	}
+	if isTimeTrackingEnabled != nil {
+		p.IsTimeTrackingEnabled = *isTimeTrackingEnabled
 	}
 	if err := s.ps.Update(ctx, p); err != nil {
 		return nil, err

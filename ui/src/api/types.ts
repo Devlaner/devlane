@@ -58,6 +58,16 @@ export interface ProjectApiResponse {
   description?: string;
   identifier?: string;
   slug?: string;
+  timezone?: string;
+  project_lead_id?: string | null;
+  default_assignee_id?: string | null;
+  guest_view_all_features?: boolean;
+  module_view?: boolean;
+  cycle_view?: boolean;
+  issue_views_view?: boolean;
+  page_view?: boolean;
+  intake_view?: boolean;
+  is_time_tracking_enabled?: boolean;
   created_at?: string;
   updated_at?: string;
 }

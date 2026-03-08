@@ -116,18 +116,51 @@ func (h *ProjectHandler) Update(c *gin.Context) {
 		return
 	}
 	var body struct {
-		Name       string `json:"name"`
-		Identifier string `json:"identifier"`
+		Name                  string  `json:"name"`
+		Identifier            string  `json:"identifier"`
+		Description           *string `json:"description"`
+		Timezone              *string `json:"timezone"`
+		ProjectLeadID         *string `json:"project_lead_id"`
+		DefaultAssigneeID     *string `json:"default_assignee_id"`
+		GuestViewAllFeatures  *bool   `json:"guest_view_all_features"`
+		ModuleView            *bool   `json:"module_view"`
+		CycleView             *bool   `json:"cycle_view"`
+		IssueViewsView        *bool   `json:"issue_views_view"`
+		PageView              *bool   `json:"page_view"`
+		IntakeView            *bool   `json:"intake_view"`
+		IsTimeTrackingEnabled *bool   `json:"is_time_tracking_enabled"`
 	}
 	_ = c.ShouldBindJSON(&body)
-	var name, identifier *string
+	var name, identifier, description, timezone *string
 	if body.Name != "" {
 		name = &body.Name
 	}
 	if body.Identifier != "" {
 		identifier = &body.Identifier
 	}
-	p, err := h.Project.Update(c.Request.Context(), slug, projectID, user.ID, name, identifier)
+	if body.Description != nil {
+		description = body.Description
+	}
+	if body.Timezone != nil {
+		timezone = body.Timezone
+	}
+	var projectLeadIDPtr *uuid.UUID
+	if body.ProjectLeadID != nil {
+		if *body.ProjectLeadID == "" {
+			projectLeadIDPtr = nil
+		} else if id, err := uuid.Parse(*body.ProjectLeadID); err == nil {
+			projectLeadIDPtr = &id
+		}
+	}
+	var defaultAssigneeIDPtr *uuid.UUID
+	if body.DefaultAssigneeID != nil {
+		if *body.DefaultAssigneeID == "" {
+			defaultAssigneeIDPtr = nil
+		} else if id, err := uuid.Parse(*body.DefaultAssigneeID); err == nil {
+			defaultAssigneeIDPtr = &id
+		}
+	}
+	p, err := h.Project.Update(c.Request.Context(), slug, projectID, user.ID, name, identifier, description, timezone, body.ProjectLeadID != nil, projectLeadIDPtr, body.DefaultAssigneeID != nil, defaultAssigneeIDPtr, body.GuestViewAllFeatures, body.ModuleView, body.CycleView, body.IssueViewsView, body.PageView, body.IntakeView, body.IsTimeTrackingEnabled)
 	if err != nil {
 		if err == service.ErrProjectNotFound || err == service.ErrProjectForbidden {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
