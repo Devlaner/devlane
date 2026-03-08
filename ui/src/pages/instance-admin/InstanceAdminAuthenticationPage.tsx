@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button, Skeleton } from "../../components/ui";
 import { instanceSettingsService } from "../../services/instanceService";
 import { getApiErrorMessage } from "../../api/client";
@@ -78,7 +78,7 @@ const IconGitLab = () => (
 
 const AUTH_MODES: Array<{
   key: keyof InstanceAuthSection;
-  Icon: () => JSX.Element;
+  Icon: () => React.ReactElement;
   name: string;
   desc: string;
   action?: string;
@@ -128,7 +128,7 @@ export function InstanceAdminAuthenticationPage() {
     gitlab: false,
   });
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [_saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {

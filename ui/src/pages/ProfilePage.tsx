@@ -2,6 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Avatar, Card, CardContent } from "../components/ui";
+import { getImageUrl } from "../lib/utils";
 import { workspaceService } from "../services/workspaceService";
 import { projectService } from "../services/projectService";
 import { issueService } from "../services/issueService";
@@ -13,7 +14,7 @@ import type {
   StateApiResponse,
   WorkspaceMemberApiResponse,
 } from "../api/types";
-import type { Issue } from "../types";
+// import type { Issue } from "../types"; // reserved for future use
 
 type TabId = "summary" | "assigned" | "created" | "subscribed" | "activity";
 
@@ -119,7 +120,12 @@ export function ProfilePage() {
         : [],
     [profileUser, issues],
   );
-  const issuesAssigned = useMemo(() => [], []); // API does not return assignee on issue yet
+  const issuesAssigned = useMemo((): IssueApiResponse[] => {
+    if (!profileUser?.id) return [];
+    return issues.filter((i) =>
+      (i.assignee_ids ?? []).includes(profileUser.id),
+    );
+  }, [profileUser?.id, issues]);
   const issuesSubscribed = issuesAssigned.length;
   const issuesSubscribedList = issuesAssigned;
 
@@ -178,7 +184,8 @@ export function ProfilePage() {
       none: 0,
     };
     issuesAssigned.forEach((i) => {
-      counts[i.priority] = (counts[i.priority] ?? 0) + 1;
+      const p = i.priority ?? "none";
+      counts[p] = (counts[p] ?? 0) + 1;
     });
     return counts;
   }, [issuesAssigned]);
@@ -198,12 +205,28 @@ export function ProfilePage() {
     id: string;
     projectId: string;
     issueId: string;
-    action: string;
+    type: string;
     createdAt: string;
+    labelName?: string;
+    cycleName?: string;
+    assigneeName?: string;
   }> => {
     if (!profileUser) return [];
-    return [];
-  }, [profileUser]);
+    const created = issuesCreated
+      .map((i) => ({
+        id: `created-${i.id}`,
+        projectId: i.project_id,
+        issueId: i.id,
+        type: "created" as const,
+        createdAt: i.created_at ?? i.updated_at ?? new Date().toISOString(),
+      }))
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      )
+      .slice(0, 20);
+    return created;
+  }, [profileUser, issuesCreated]);
 
   const projectsWithProgress = useMemo(() => {
     return projects
@@ -465,11 +488,15 @@ export function ProfilePage() {
                         );
                         const width = max ? (count / max) * 100 : 0;
                         const barColor =
-                          p === "urgent" || p === "high"
-                            ? "var(--bg-danger-subtle)"
-                            : p === "medium"
-                              ? "var(--bg-warning-subtle)"
-                              : "var(--bg-layer-2)";
+                          p === "urgent"
+                            ? "#ef4444"
+                            : p === "high"
+                              ? "#f87171"
+                              : p === "medium"
+                                ? "#f59e0b"
+                                : p === "low"
+                                  ? "#60a5fa"
+                                  : "#94a3b8";
                         return (
                           <div key={p} className="flex items-center gap-3">
                             <span className="w-16 shrink-0 capitalize text-sm text-[var(--txt-secondary)]">
@@ -607,7 +634,9 @@ export function ProfilePage() {
                           <li key={act.id} className="flex gap-3 px-4 py-3">
                             <Avatar
                               name={profileUser?.name ?? "?"}
-                              src={profileUser?.avatarUrl}
+                              src={
+                                getImageUrl(profileUser?.avatarUrl) ?? undefined
+                              }
                               size="sm"
                               className="shrink-0"
                             />
@@ -630,6 +659,7 @@ export function ProfilePage() {
             issues={issuesAssigned}
             states={states}
             projects={projects}
+            members={members}
             baseUrl={baseUrl}
             workspaceSlug={workspace.slug}
           />
@@ -639,6 +669,7 @@ export function ProfilePage() {
             issues={issuesCreated}
             states={states}
             projects={projects}
+            members={members}
             baseUrl={baseUrl}
             workspaceSlug={workspace.slug}
           />
@@ -648,6 +679,7 @@ export function ProfilePage() {
             issues={issuesSubscribedList}
             states={states}
             projects={projects}
+            members={members}
             baseUrl={baseUrl}
             workspaceSlug={workspace.slug}
           />
@@ -669,7 +701,18 @@ export function ProfilePage() {
           variant="outlined"
           className="flex min-h-0 flex-1 flex-col overflow-hidden border border-[var(--border-subtle)] bg-white"
         >
-          <div className="relative h-20 shrink-0 bg-gradient-to-br from-[var(--brand-default)] to-[#0ea5e9]">
+          <div
+            className="relative h-20 shrink-0 bg-gradient-to-br from-[var(--brand-default)] to-[#0ea5e9]"
+            style={
+              getImageUrl(profileUser?.coverImageUrl)
+                ? {
+                    backgroundImage: `url(${getImageUrl(profileUser?.coverImageUrl)})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }
+                : undefined
+            }
+          >
             <button
               type="button"
               className="absolute right-2 top-2 rounded p-1.5 text-white/80 hover:bg-white/20 hover:text-white"
@@ -695,7 +738,7 @@ export function ProfilePage() {
             <div className="mb-3 flex justify-center shrink-0">
               <Avatar
                 name={profileUser?.name ?? "?"}
-                src={profileUser?.avatarUrl}
+                src={getImageUrl(profileUser?.avatarUrl) ?? undefined}
                 size="lg"
                 className="h-14 w-14 border-4 border-white shadow"
               />
@@ -871,6 +914,7 @@ function WorkItemsList({
   issues,
   states: statesList,
   projects: projectsList,
+  members: membersList = [],
   baseUrl,
   workspaceSlug: _workspaceSlug,
 }: {
@@ -880,17 +924,29 @@ function WorkItemsList({
     state_id?: string | null;
     name: string;
     sequence_id?: number;
+    assignee_ids?: string[];
   }>;
   states: StateApiResponse[];
   projects: ProjectApiResponse[];
+  members?: WorkspaceMemberApiResponse[];
   baseUrl: string;
   workspaceSlug: string;
 }) {
   const getStateName = (stateId: string) =>
     statesList.find((s) => s.id === stateId)?.name ?? stateId;
-  const getUser = (_id: string | null) => null;
+  const getUser = (
+    userId: string | null,
+  ): { name: string; avatarUrl?: string | null } | null => {
+    if (!userId) return null;
+    const m = membersList.find((x) => x.member_id === userId);
+    const display = m?.member_display_name?.trim();
+    const emailUser = m?.member_email?.split("@")[0]?.trim();
+    const name = display || emailUser || "Member";
+    const avatarUrl = m?.member_avatar ?? null;
+    return { name, avatarUrl };
+  };
   const getLabelNames = (_labelIds: string[] = []) => [] as string[];
-  const getCycle = (_cycleId: string | null) => null;
+  const getCycle = (_cycleId: string | null): { name: string } | null => null;
 
   return (
     <div className="space-y-0">
@@ -1011,6 +1067,7 @@ function WorkItemsList({
                   state_id?: string | null;
                   name: string;
                   sequence_id?: number;
+                  assignee_ids?: string[];
                 };
                 const project = apiIssue.project_id
                   ? projectsList.find((p) => p.id === apiIssue.project_id)
@@ -1020,7 +1077,8 @@ function WorkItemsList({
                   : issue.id;
                 const issueUrl = `${baseUrl}/projects/${apiIssue.project_id}/issues/${issue.id}`;
                 const stateName = getStateName(apiIssue.state_id ?? "");
-                const assignee = getUser(null);
+                const primaryAssigneeId = apiIssue.assignee_ids?.[0] ?? null;
+                const assignee = getUser(primaryAssigneeId);
                 const cycle = getCycle(null);
                 const labelNames = getLabelNames([]);
                 return (
@@ -1088,7 +1146,7 @@ function WorkItemsList({
                       {assignee && (
                         <Avatar
                           name={assignee.name}
-                          src={assignee.avatarUrl}
+                          src={getImageUrl(assignee.avatarUrl) ?? undefined}
                           size="sm"
                           className="shrink-0"
                         />

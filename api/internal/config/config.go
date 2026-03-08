@@ -40,8 +40,6 @@ type Config struct {
 	MigrationsPath string
 
 	CORSAllowOrigin string
-	// AppBaseURL is the public URL of the frontend (e.g. https://app.example.com). Used for invite links in emails. If empty, CORSAllowOrigin is used.
-	AppBaseURL string
 }
 
 func (c *Config) DSN() string {
@@ -86,7 +84,6 @@ func Load() (*Config, error) {
 		MinIOUseSSL:          minioSSL,
 		MigrationsPath:       getEnv("MIGRATIONS_PATH", "migrations"),
 		CORSAllowOrigin:      getEnv("CORS_ORIGIN", "http://localhost:5173"),
-		AppBaseURL:           getEnv("APP_BASE_URL", ""),
 	}
 
 	return cfg, nil

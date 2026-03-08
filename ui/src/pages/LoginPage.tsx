@@ -12,12 +12,8 @@ export function LoginPage() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const from = (
-    location.state as { from?: { pathname?: string; search?: string } }
-  )?.from;
-  const returnPath = from
-    ? (from.pathname ?? "/") + (from.search ? `?${from.search}` : "")
-    : "/";
+  const returnPath =
+    (location.state as { from?: { pathname?: string } })?.from?.pathname ?? "/";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

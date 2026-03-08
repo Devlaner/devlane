@@ -83,13 +83,16 @@ func (s *WorkspaceService) Create(ctx context.Context, name, slug string, ownerI
 	return w, nil
 }
 
-func (s *WorkspaceService) Update(ctx context.Context, slug string, userID uuid.UUID, name, newSlug *string) (*model.Workspace, error) {
+func (s *WorkspaceService) Update(ctx context.Context, slug string, userID uuid.UUID, name, newSlug, logo *string) (*model.Workspace, error) {
 	w, err := s.GetBySlug(ctx, slug, userID)
 	if err != nil {
 		return nil, err
 	}
 	if name != nil {
 		w.Name = *name
+	}
+	if logo != nil {
+		w.Logo = *logo
 	}
 	if newSlug != nil {
 		slugVal := strings.TrimSpace(strings.ToLower(*newSlug))

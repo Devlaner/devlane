@@ -48,7 +48,10 @@ export function InstanceAdminAIPage() {
     const apiKeyToSend = apiKeyLocal !== undefined ? apiKeyLocal : ai.api_key;
     const payload: InstanceAISection = { ...ai, api_key: apiKeyToSend ?? "" };
     instanceSettingsService
-      .updateSection("ai", payload)
+      .updateSection(
+        "ai",
+        payload as import("../../api/types").InstanceSettingSectionValue,
+      )
       .then((res) => {
         setApiKeyLocal(undefined);
         if (res.value)

@@ -53,9 +53,7 @@ export const userService = {
     return data;
   },
 
-  async createToken(
-    payload: CreateTokenRequest,
-  ): Promise<{
+  async createToken(payload: CreateTokenRequest): Promise<{
     token: string;
     label: string;
     description: string;

@@ -194,7 +194,9 @@ export function CyclesPage() {
 
   const getIssueCount = (cycleId: string) =>
     cycles.find((c) => c.id === cycleId)?.issue_count ?? 0;
-  const getUser = (_userId: string | null) => null;
+  const getUser = (
+    _userId: string | null,
+  ): { name: string; avatarUrl?: string | null } | null => null;
 
   if (loading) {
     return (

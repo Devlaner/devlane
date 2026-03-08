@@ -64,7 +64,10 @@ export function InstanceAdminEmailPage() {
       password: passwordToSend ?? "",
     };
     instanceSettingsService
-      .updateSection("email", payload)
+      .updateSection(
+        "email",
+        payload as import("../../api/types").InstanceSettingSectionValue,
+      )
       .then((res) => {
         setSmtpPasswordLocal(undefined);
         if (res.value)
