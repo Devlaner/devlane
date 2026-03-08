@@ -313,7 +313,11 @@ func (h *AuthHandler) UpdateNotificationPreferences(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
 		return
 	}
-	p, _ := h.NotifPrefs.GetGlobal(c.Request.Context(), user.ID)
+	p, err := h.NotifPrefs.GetGlobal(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load preferences"})
+		return
+	}
 	if p == nil {
 		p = &model.UserNotificationPreference{UserID: user.ID}
 		p.PropertyChange = true
@@ -410,11 +414,17 @@ func (h *AuthHandler) CreateToken(c *gin.Context) {
 	var expiredAt *time.Time
 	if req.ExpiredAt != nil && *req.ExpiredAt != "" {
 		t, err := time.Parse(time.RFC3339, *req.ExpiredAt)
-		if err == nil {
-			expiredAt = &t
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expired_at value", "detail": err.Error()})
+			return
 		}
+		expiredAt = &t
 	} else if req.ExpiresIn != nil && *req.ExpiresIn != "" {
 		expiredAt = parseExpiresIn(*req.ExpiresIn)
+		if expiredAt == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expires_in value; use 7d, 30d, 90d, 365d, or 1 week, 1 month, 3 months, 1 year"})
+			return
+		}
 	}
 	plain, err := h.ApiTokens.Create(c.Request.Context(), user.ID, req.Label, req.Description, expiredAt)
 	if err != nil {

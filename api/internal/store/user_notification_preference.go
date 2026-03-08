@@ -38,7 +38,10 @@ func (s *UserNotificationPreferenceStore) UpsertGlobal(ctx context.Context, p *m
 		p.WorkspaceID = nil
 		p.ProjectID = nil
 	}
-	existing, _ := s.GetGlobal(ctx, p.UserID)
+	existing, err := s.GetGlobal(ctx, p.UserID)
+	if err != nil {
+		return err
+	}
 	if existing != nil {
 		existing.PropertyChange = p.PropertyChange
 		existing.StateChange = p.StateChange

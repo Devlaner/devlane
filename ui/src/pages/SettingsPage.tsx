@@ -156,11 +156,24 @@ function formatRelativeTime(iso: string): string {
   const now = new Date();
   const s = Math.floor((now.getTime() - d.getTime()) / 1000);
   if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)} minutes ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)} hours ago`;
-  if (s < 2592000) return `${Math.floor(s / 86400)} days ago`;
-  if (s < 31536000) return `${Math.floor(s / 2592000)} months ago`;
-  return `${Math.floor(s / 31536000)} years ago`;
+  if (s < 3600) {
+    const minutes = Math.floor(s / 60);
+    return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+  }
+  if (s < 86400) {
+    const hours = Math.floor(s / 3600);
+    return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+  }
+  if (s < 2592000) {
+    const days = Math.floor(s / 86400);
+    return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+  }
+  if (s < 31536000) {
+    const months = Math.floor(s / 2592000);
+    return `${months} ${months === 1 ? 'month' : 'months'} ago`;
+  }
+  const years = Math.floor(s / 31536000);
+  return `${years} ${years === 1 ? 'year' : 'years'} ago`;
 }
 
 // Build timezone options: UTC offset + label (e.g. "UTC-07:00 America/Los_Angeles")

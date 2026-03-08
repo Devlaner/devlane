@@ -122,10 +122,16 @@ func (s *Service) UpdateProfile(ctx context.Context, u *model.User) error {
 	return s.userStore.Update(ctx, u)
 }
 
-// ChangePassword verifies current password and sets a new one. Returns ErrInvalidCredentials if current password is wrong.
+// ChangePassword verifies current password and sets a new one. Returns ErrInvalidCredentials if current password is wrong or user not found.
 func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error {
 	u, err := s.userStore.GetByID(ctx, userID)
-	if err != nil || u == nil {
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrInvalidCredentials
+		}
+		return err
+	}
+	if u == nil {
 		return ErrInvalidCredentials
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(currentPassword)); err != nil {

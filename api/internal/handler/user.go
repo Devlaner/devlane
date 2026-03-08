@@ -48,7 +48,7 @@ func (h *UserHandler) GetActivity(c *gin.Context) {
 	}
 	issues, err := h.Issues.ListByIDs(ctx, issueIDs)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"activities": []gin.H{}})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load activity"})
 		return
 	}
 	issueMap := make(map[string]string) // issue_id -> name
