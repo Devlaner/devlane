@@ -117,6 +117,34 @@ func (s *Service) UserFromSession(ctx context.Context, sessionKey string) (*mode
 	return s.userStore.GetByID(ctx, data.UserID)
 }
 
+// UpdateProfile updates the user's profile (first name, last name, display name, timezone). Email is not updatable.
+func (s *Service) UpdateProfile(ctx context.Context, u *model.User) error {
+	return s.userStore.Update(ctx, u)
+}
+
+// ChangePassword verifies current password and sets a new one. Returns ErrInvalidCredentials if current password is wrong or user not found.
+func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error {
+	u, err := s.userStore.GetByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrInvalidCredentials
+		}
+		return err
+	}
+	if u == nil {
+		return ErrInvalidCredentials
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(currentPassword)); err != nil {
+		return ErrInvalidCredentials
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcryptCost)
+	if err != nil {
+		return err
+	}
+	u.Password = string(hash)
+	return s.userStore.Update(ctx, u)
+}
+
 func (s *Service) createSession(ctx context.Context, userID uuid.UUID) (string, error) {
 	key := make([]byte, 20)
 	if _, err := rand.Read(key); err != nil {

@@ -17,6 +17,7 @@ type ApiToken struct {
 	WorkspaceID  *uuid.UUID     `gorm:"type:uuid" json:"workspace_id,omitempty"`
 	IsActive     bool           `gorm:"column:is_active;default:true" json:"is_active"`
 	LastUsed     *time.Time     `gorm:"type:timestamptz" json:"last_used,omitempty"`
+	ExpiredAt    *time.Time     `gorm:"type:timestamptz" json:"expired_at,omitempty"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
 	CreatedByID  *uuid.UUID     `gorm:"type:uuid" json:"created_by_id,omitempty"`

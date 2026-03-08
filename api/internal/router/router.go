@@ -62,10 +62,12 @@ func New(cfg Config) *gin.Engine {
 	workspaceUserLinkStore := store.NewWorkspaceUserLinkStore(cfg.DB)
 	stickyStore := store.NewStickyStore(cfg.DB)
 	userRecentVisitStore := store.NewUserRecentVisitStore(cfg.DB)
+	userNotifPrefStore := store.NewUserNotificationPreferenceStore(cfg.DB)
+	apiTokenStore := store.NewApiTokenStore(cfg.DB)
 
 	// Auth
 	authSvc := auth.NewService(userStore, sessionStore)
-	authHandler := &handler.AuthHandler{Auth: authSvc, Settings: instanceSettingStore, Winv: workspaceInviteStore, Ws: workspaceStore}
+	authHandler := &handler.AuthHandler{Auth: authSvc, Settings: instanceSettingStore, Winv: workspaceInviteStore, Ws: workspaceStore, NotifPrefs: userNotifPrefStore, ApiTokens: apiTokenStore}
 	// Instance setup (no auth) — first-run flow; seeds general settings (instance_id, admin_email, instance_name)
 	instanceHandler := &handler.InstanceHandler{Auth: authSvc, Users: userStore, Settings: instanceSettingStore}
 	r.GET("/api/instance/setup-status/", instanceHandler.SetupStatus)
@@ -104,12 +106,21 @@ func New(cfg Config) *gin.Engine {
 	workspaceLinkHandler := &handler.WorkspaceLinkHandler{Link: workspaceLinkSvc}
 	stickyHandler := &handler.StickyHandler{Sticky: stickySvc}
 	recentVisitHandler := &handler.RecentVisitHandler{Recent: recentVisitSvc}
+	userHandler := &handler.UserHandler{Comments: commentStore, Issues: issueStore}
 
 	// Protected API: require auth
 	api := r.Group("/api")
 	api.Use(middleware.RequireAuth(authSvc, cfg.Log))
 	{
 		api.GET("/users/me/", authHandler.Me)
+		api.PATCH("/users/me/", authHandler.UpdateMe)
+		api.POST("/users/me/change-password/", authHandler.ChangePassword)
+		api.GET("/users/me/notification-preferences/", authHandler.GetNotificationPreferences)
+		api.PUT("/users/me/notification-preferences/", authHandler.UpdateNotificationPreferences)
+		api.GET("/users/me/activity/", userHandler.GetActivity)
+		api.GET("/users/me/tokens/", authHandler.ListTokens)
+		api.POST("/users/me/tokens/", authHandler.CreateToken)
+		api.DELETE("/users/me/tokens/:id/", authHandler.RevokeToken)
 		api.GET("/instance/settings/", instanceSettingsHandler.GetSettings)
 		api.PATCH("/instance/settings/:key", instanceSettingsHandler.UpdateSetting)
 		api.GET("/users/me/workspaces/", workspaceHandler.List)

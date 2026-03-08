@@ -2,6 +2,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -11,13 +12,17 @@ import (
 	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/store"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type AuthHandler struct {
-	Auth    *auth.Service
-	Settings *store.InstanceSettingStore
-	Winv    *store.WorkspaceInviteStore
-	Ws      *store.WorkspaceStore
+	Auth        *auth.Service
+	Settings    *store.InstanceSettingStore
+	Winv        *store.WorkspaceInviteStore
+	Ws         *store.WorkspaceStore
+	NotifPrefs  *store.UserNotificationPreferenceStore
+	ApiTokens   *store.ApiTokenStore
 }
 
 type SignInRequest struct {
@@ -170,6 +175,318 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	c.JSON(http.StatusOK, userResponse(user))
 }
 
+// UpdateMeRequest is the body for PATCH /api/users/me/
+type UpdateMeRequest struct {
+	FirstName    *string `json:"first_name"`
+	LastName     *string `json:"last_name"`
+	DisplayName  *string `json:"display_name"`
+	UserTimezone *string `json:"user_timezone"`
+}
+
+// UpdateMe updates the authenticated user's profile (email is not updatable).
+// PATCH /api/users/me/
+func (h *AuthHandler) UpdateMe(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	var req UpdateMeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
+	if req.FirstName != nil {
+		user.FirstName = *req.FirstName
+	}
+	if req.LastName != nil {
+		user.LastName = *req.LastName
+	}
+	if req.DisplayName != nil {
+		user.DisplayName = *req.DisplayName
+	}
+	if req.UserTimezone != nil {
+		user.UserTimezone = *req.UserTimezone
+	}
+	if err := h.Auth.UpdateProfile(c.Request.Context(), user); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})
+		return
+	}
+	c.JSON(http.StatusOK, userResponse(user))
+}
+
+// ChangePasswordRequest is the body for POST /api/users/me/change-password/
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required,min=8"`
+}
+
+// ChangePassword changes the authenticated user's password.
+// POST /api/users/me/change-password/
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	var req ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
+	if err := h.Auth.ChangePassword(c.Request.Context(), user.ID, req.CurrentPassword, req.NewPassword); err != nil {
+		if err == auth.ErrInvalidCredentials {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Current password is incorrect"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to change password"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// GetNotificationPreferences returns account-level notification preferences.
+// GET /api/users/me/notification-preferences/
+func (h *AuthHandler) GetNotificationPreferences(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	if h.NotifPrefs == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"property_change":  true,
+			"state_change":     true,
+			"comment":          true,
+			"mention":          true,
+			"issue_completed":  true,
+		})
+		return
+	}
+	p, err := h.NotifPrefs.GetGlobal(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load preferences"})
+		return
+	}
+	if p == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"property_change":  true,
+			"state_change":     true,
+			"comment":          true,
+			"mention":          true,
+			"issue_completed":  true,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"property_change":  p.PropertyChange,
+		"state_change":     p.StateChange,
+		"comment":          p.Comment,
+		"mention":          p.Mention,
+		"issue_completed":  p.IssueCompleted,
+	})
+}
+
+// UpdateNotificationPreferencesRequest is the body for PUT /api/users/me/notification-preferences/
+type UpdateNotificationPreferencesRequest struct {
+	PropertyChange *bool `json:"property_change"`
+	StateChange    *bool `json:"state_change"`
+	Comment        *bool `json:"comment"`
+	Mention        *bool `json:"mention"`
+	IssueCompleted *bool `json:"issue_completed"`
+}
+
+// UpdateNotificationPreferences updates account-level notification preferences.
+// PUT /api/users/me/notification-preferences/
+func (h *AuthHandler) UpdateNotificationPreferences(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	if h.NotifPrefs == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Not configured"})
+		return
+	}
+	var req UpdateNotificationPreferencesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
+	p, err := h.NotifPrefs.GetGlobal(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load preferences"})
+		return
+	}
+	if p == nil {
+		p = &model.UserNotificationPreference{UserID: user.ID}
+		p.PropertyChange = true
+		p.StateChange = true
+		p.Comment = true
+		p.Mention = true
+		p.IssueCompleted = true
+	}
+	if req.PropertyChange != nil {
+		p.PropertyChange = *req.PropertyChange
+	}
+	if req.StateChange != nil {
+		p.StateChange = *req.StateChange
+	}
+	if req.Comment != nil {
+		p.Comment = *req.Comment
+	}
+	if req.Mention != nil {
+		p.Mention = *req.Mention
+	}
+	if req.IssueCompleted != nil {
+		p.IssueCompleted = *req.IssueCompleted
+	}
+	if err := h.NotifPrefs.UpsertGlobal(c.Request.Context(), p); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save preferences"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"property_change": p.PropertyChange,
+		"state_change":    p.StateChange,
+		"comment":         p.Comment,
+		"mention":         p.Mention,
+		"issue_completed": p.IssueCompleted,
+	})
+}
+
+// ListTokens returns the current user's API tokens (without secret values).
+// GET /api/users/me/tokens/
+func (h *AuthHandler) ListTokens(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	if h.ApiTokens == nil {
+		c.JSON(http.StatusOK, gin.H{"tokens": []gin.H{}})
+		return
+	}
+	list, err := h.ApiTokens.ListByUserID(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list tokens"})
+		return
+	}
+	out := make([]gin.H, 0, len(list))
+	for _, t := range list {
+		out = append(out, gin.H{
+			"id":          t.ID.String(),
+			"label":       t.Label,
+			"description": t.Description,
+			"is_active":   t.IsActive,
+			"last_used":   t.LastUsed,
+			"expired_at":  t.ExpiredAt,
+			"created_at":  t.CreatedAt,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"tokens": out})
+}
+
+// CreateTokenRequest is the body for POST /api/users/me/tokens/
+type CreateTokenRequest struct {
+	Label       string  `json:"label" binding:"required"`
+	Description string  `json:"description"`
+	ExpiresIn   *string `json:"expires_in"` // e.g. "7d", "30d", "90d", "365d", or empty for never
+	ExpiredAt   *string `json:"expired_at"` // ISO date for custom expiry
+}
+
+// CreateToken creates a new API token and returns it once (including secret).
+// POST /api/users/me/tokens/
+func (h *AuthHandler) CreateToken(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	if h.ApiTokens == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Not configured"})
+		return
+	}
+	var req CreateTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
+	var expiredAt *time.Time
+	if req.ExpiredAt != nil && *req.ExpiredAt != "" {
+		t, err := time.Parse(time.RFC3339, *req.ExpiredAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expired_at value", "detail": err.Error()})
+			return
+		}
+		expiredAt = &t
+	} else if req.ExpiresIn != nil && *req.ExpiresIn != "" {
+		expiredAt = parseExpiresIn(*req.ExpiresIn)
+		if expiredAt == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expires_in value; use 7d, 30d, 90d, 365d, or 1 week, 1 month, 3 months, 1 year"})
+			return
+		}
+	}
+	plain, err := h.ApiTokens.Create(c.Request.Context(), user.ID, req.Label, req.Description, expiredAt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create token"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{
+		"token":       plain,
+		"label":       req.Label,
+		"description": req.Description,
+		"expired_at":  expiredAt,
+		"message":     "Copy this token now; it will not be shown again.",
+	})
+}
+
+func parseExpiresIn(s string) *time.Time {
+	now := time.Now().UTC()
+	var d time.Duration
+	switch s {
+	case "7d", "1 week", "1week":
+		d = 7 * 24 * time.Hour
+	case "30d", "1 month", "1month":
+		d = 30 * 24 * time.Hour
+	case "90d", "3 months", "3months":
+		d = 90 * 24 * time.Hour
+	case "365d", "1 year", "1year":
+		d = 365 * 24 * time.Hour
+	default:
+		return nil
+	}
+	t := now.Add(d)
+	return &t
+}
+
+// RevokeToken deletes an API token.
+// DELETE /api/users/me/tokens/:id/
+func (h *AuthHandler) RevokeToken(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	if h.ApiTokens == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Not configured"})
+		return
+	}
+	tokenID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid token id"})
+		return
+	}
+	if err := h.ApiTokens.Delete(c.Request.Context(), tokenID, user.ID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Token not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to revoke token"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 func setSessionCookie(c *gin.Context, sessionKey string) {
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     middleware.SessionCookieName,
@@ -198,18 +515,19 @@ func userResponse(u *model.User) gin.H {
 		return gin.H{}
 	}
 	return gin.H{
-		"id":           u.ID.String(),
-		"email":        u.Email,
-		"username":     u.Username,
-		"first_name":   u.FirstName,
-		"last_name":    u.LastName,
-		"display_name": u.DisplayName,
-		"avatar":       u.Avatar,
-		"is_active":    u.IsActive,
-		"is_onboarded": u.IsOnboarded,
-		"date_joined":  u.DateJoined,
-		"created_at":   u.CreatedAt,
-		"updated_at":   u.UpdatedAt,
+		"id":            u.ID.String(),
+		"email":         u.Email,
+		"username":      u.Username,
+		"first_name":    u.FirstName,
+		"last_name":     u.LastName,
+		"display_name":  u.DisplayName,
+		"avatar":        u.Avatar,
+		"is_active":     u.IsActive,
+		"is_onboarded":  u.IsOnboarded,
+		"date_joined":   u.DateJoined,
+		"created_at":    u.CreatedAt,
+		"updated_at":    u.UpdatedAt,
+		"user_timezone": u.UserTimezone,
 	}
 }
 

@@ -26,6 +26,16 @@ func (s *IssueStore) GetByID(ctx context.Context, id uuid.UUID) (*model.Issue, e
 	return &i, nil
 }
 
+// ListByIDs returns issues by IDs (order not preserved).
+func (s *IssueStore) ListByIDs(ctx context.Context, ids []uuid.UUID) ([]model.Issue, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	var list []model.Issue
+	err := s.db.WithContext(ctx).Where("id IN ? AND deleted_at IS NULL", ids).Find(&list).Error
+	return list, err
+}
+
 func (s *IssueStore) ListByProjectID(ctx context.Context, projectID uuid.UUID, limit, offset int) ([]model.Issue, error) {
 	var list []model.Issue
 	q := s.db.WithContext(ctx).Where("project_id = ? AND deleted_at IS NULL", projectID).Order("sort_order ASC, created_at DESC")
