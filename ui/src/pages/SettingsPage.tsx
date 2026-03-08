@@ -2280,7 +2280,7 @@ export function SettingsPage() {
                     const rows = allIssues.map((row) =>
                       headers.map((h) => {
                         const v = row[h];
-                        if (v == null) return '';
+                        if (v === null || v === undefined) return '';
                         let s: string;
                         if (typeof v === 'object' && v !== null && h === 'description') {
                           s = (row.description_html as string) ?? JSON.stringify(v);
