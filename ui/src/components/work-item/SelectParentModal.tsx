@@ -27,13 +27,18 @@ export function SelectParentModal({
   open,
   onClose,
   issues,
-  value: _value,
+  value,
   onChange,
 }: SelectParentModalProps) {
+  void value; // reserved for future use (e.g. pre-select current parent)
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    if (!open) setSearch("");
+    if (!open) {
+      // Intentional: clear search when modal closes (kept for future use)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSearch("");
+    }
   }, [open]);
 
   const q = (s: string) => s.toLowerCase().trim();

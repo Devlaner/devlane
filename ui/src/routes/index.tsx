@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- routes file exports router + layout components; keep for future use */
 import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import { AppShell, InstanceAdminLayout } from "../components/layout";

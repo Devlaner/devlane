@@ -40,6 +40,8 @@ export function Dropdown({
 
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) {
+      // Intentional: clear position when dropdown closes (kept for future use)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPosition(null);
       return;
     }

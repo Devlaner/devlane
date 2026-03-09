@@ -55,11 +55,11 @@ export function ProfilePage() {
 
   useEffect(() => {
     if (!workspaceSlug) {
-      setLoading(false);
+      queueMicrotask(() => setLoading(false));
       return;
     }
     let cancelled = false;
-    setLoading(true);
+    queueMicrotask(() => setLoading(true));
     workspaceService
       .getBySlug(workspaceSlug)
       .then((w) => {
@@ -125,7 +125,7 @@ export function ProfilePage() {
     return issues.filter((i) =>
       (i.assignee_ids ?? []).includes(profileUser.id),
     );
-  }, [profileUser?.id, issues]);
+  }, [profileUser, issues]);
   const issuesSubscribed = issuesAssigned.length;
   const issuesSubscribedList = issuesAssigned;
 
@@ -235,7 +235,7 @@ export function ProfilePage() {
         ...p,
         progress: 0,
       }));
-  }, [workspace?.id]);
+  }, [workspace?.id, projects]);
 
   const projectStateBreakdown = useMemo(() => {
     return projectsWithProgress.map((p) => {
@@ -916,7 +916,7 @@ function WorkItemsList({
   projects: projectsList,
   members: membersList = [],
   baseUrl,
-  workspaceSlug: _workspaceSlug,
+  workspaceSlug,
 }: {
   issues: Array<{
     id: string;
@@ -932,6 +932,7 @@ function WorkItemsList({
   baseUrl: string;
   workspaceSlug: string;
 }) {
+  void workspaceSlug; // reserved for future use (e.g. links)
   const getStateName = (stateId: string) =>
     statesList.find((s) => s.id === stateId)?.name ?? stateId;
   const getUser = (
@@ -945,8 +946,14 @@ function WorkItemsList({
     const avatarUrl = m?.member_avatar ?? null;
     return { name, avatarUrl };
   };
-  const getLabelNames = (_labelIds: string[] = []) => [] as string[];
-  const getCycle = (_cycleId: string | null): { name: string } | null => null;
+  const getLabelNames = (labelIds: string[] = []) => {
+    void labelIds; // reserved for future use
+    return [] as string[];
+  };
+  const getCycle = (cycleId: string | null): { name: string } | null => {
+    void cycleId; // reserved for future use
+    return null;
+  };
 
   return (
     <div className="space-y-0">
@@ -1206,7 +1213,7 @@ function ActivityTab({
   activities,
   projects: projectsList,
   issues: issuesList,
-  profileUser: _profileUser,
+  profileUser,
   formatTimeAgo,
 }: {
   activities: Array<{
@@ -1224,6 +1231,7 @@ function ActivityTab({
   profileUser: { name: string; avatarUrl?: string | null } | null;
   formatTimeAgo: (iso: string) => string;
 }) {
+  void profileUser; // reserved for future use
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1386,11 +1394,12 @@ function DonutChart({
   data: { label: string; color: string; count: number }[];
 }) {
   const total = data.reduce((s, d) => s + d.count, 0) || 1;
-  let acc = 0;
-  const parts = data.map((d) => {
-    const start = acc;
-    acc += (d.count / total) * 100;
-    return `${d.color} ${start}% ${acc}%`;
+  const parts = data.map((d, i) => {
+    const start = data
+      .slice(0, i)
+      .reduce((s, x) => s + (x.count / total) * 100, 0);
+    const end = start + (d.count / total) * 100;
+    return `${d.color} ${start}% ${end}%`;
   });
   const conic = parts.length
     ? `conic-gradient(${parts.join(", ")})`

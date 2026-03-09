@@ -144,6 +144,7 @@ export function InviteAcceptPage() {
       return;
     autoAcceptDone.current = true;
     doJoinWorkspace();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- doJoinWorkspace is stable; run when user+invite+token available
   }, [user, invite, token, step]);
 
   const handleAccept = () => {

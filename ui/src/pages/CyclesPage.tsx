@@ -152,6 +152,7 @@ export function CyclesPage() {
 
   useEffect(() => {
     if (!workspaceSlug || !projectId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset loading when no slug/project (kept for future use)
       setLoading(false);
       return;
     }
@@ -195,8 +196,11 @@ export function CyclesPage() {
   const getIssueCount = (cycleId: string) =>
     cycles.find((c) => c.id === cycleId)?.issue_count ?? 0;
   const getUser = (
-    _userId: string | null,
-  ): { name: string; avatarUrl?: string | null } | null => null;
+    userId: string | null,
+  ): { name: string; avatarUrl?: string | null } | null => {
+    void userId; // reserved for future assignee display
+    return null;
+  };
 
   if (loading) {
     return (

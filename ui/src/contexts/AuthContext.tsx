@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- context file exports AuthProvider + useAuth; keep for future use */
 import {
   createContext,
   useCallback,

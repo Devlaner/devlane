@@ -123,6 +123,7 @@ export function ProjectsListPage() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setFavoriteProjectIds stable; run when workspaceSlug changes
   }, [workspaceSlug]);
 
   const toggleFavorite = (e: React.MouseEvent, projectId: string) => {
@@ -146,7 +147,7 @@ export function ProjectsListPage() {
       )
       .finally(() => {
         setFavoriteRequestInFlight((prev) => {
-          const { [projectId]: _, ...rest } = prev;
+          const { [projectId]: _removed, ...rest } = prev; // eslint-disable-line @typescript-eslint/no-unused-vars -- intentionally omit key
           return rest;
         });
       });

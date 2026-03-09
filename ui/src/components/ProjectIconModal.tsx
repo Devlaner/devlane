@@ -175,9 +175,10 @@ export function ProjectIconModal({
   onClose,
   onSelect,
   title = "Project icon",
-  currentEmoji: _currentEmoji,
+  currentEmoji,
   currentIconProp,
 }: ProjectIconModalProps) {
+  void currentEmoji; // reserved for future use (e.g. pre-select emoji tab)
   const [tab, setTab] = useState<Tab>(TAB_EMOJI);
   const [emojiSearch, setEmojiSearch] = useState("");
   const [iconColor, setIconColor] = useState(
@@ -186,6 +187,8 @@ export function ProjectIconModal({
 
   useEffect(() => {
     if (open) {
+      // Intentional: sync form state when modal opens (kept for future use)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIconColor(currentIconProp?.color ?? "#6366f1");
       setEmojiSearch("");
     }

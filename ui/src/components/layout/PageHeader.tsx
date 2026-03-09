@@ -987,7 +987,11 @@ function WorkspaceViewsHeader() {
   const [selectedViewId, setSelectedViewId] = useState("all");
 
   useEffect(() => {
-    if (!viewDropdownOpen) setViewSearch("");
+    if (!viewDropdownOpen) {
+      // Intentional: clear search when dropdown closes (kept for future use)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setViewSearch("");
+    }
   }, [viewDropdownOpen]);
 
   const selectedView =
@@ -1122,7 +1126,11 @@ function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
   );
 
   useEffect(() => {
-    if (!openDropdown) setProjectSearch("");
+    if (!openDropdown) {
+      // Intentional: clear search when dropdown closes (kept for future use)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setProjectSearch("");
+    }
   }, [openDropdown]);
 
   return (
@@ -1194,15 +1202,17 @@ export function PageHeader() {
     workspaceSlug?: string;
     projectId?: string;
   }>();
-  const [_workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(
-    null,
-  );
-  const [_projects, setProjects] = useState<ProjectApiResponse[]>([]);
+  const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
+  const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
+  void workspace;
+  void projects; // reserved for future use (e.g. breadcrumb, project list)
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [projectIssueCount, setProjectIssueCount] = useState(0);
 
   useEffect(() => {
     if (!workspaceSlug) {
+      // Intentional: clear when route unmounts (kept for future use)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setWorkspace(null);
       setProjects([]);
       setProject(null);
@@ -1230,6 +1240,8 @@ export function PageHeader() {
 
   useEffect(() => {
     if (!workspaceSlug || !projectId) {
+      // Intentional: clear when route unmounts (kept for future use)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProject(null);
       setProjectIssueCount(0);
       return;

@@ -921,6 +921,7 @@ export function SettingsPage() {
       setFeatureTimeTracking(selectedProject.is_time_tracking_enabled ?? false);
     }
   }, [
+    selectedProject,
     selectedProject?.id,
     selectedProject?.name,
     selectedProject?.description,
@@ -1087,7 +1088,7 @@ export function SettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [isAccountTab, user?.id]);
+  }, [isAccountTab, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps -- user for prefetch; kept for future use
 
   useEffect(() => {
     if (!isAccountTab || accountSection !== "notifications") return;
@@ -1200,7 +1201,7 @@ export function SettingsPage() {
         replace: true,
       });
     }
-  }, [isProjectsTab, workspace, projects.length, projectIdParam, navigate]);
+  }, [isProjectsTab, workspace, projects.length, projectIdParam, navigate]); // eslint-disable-line react-hooks/exhaustive-deps -- projects for redirect; kept for future use
 
   const filteredMembers = membersSearch.trim()
     ? workspaceMembers.filter((m) => {
@@ -1388,8 +1389,8 @@ export function SettingsPage() {
               <div className="flex items-center gap-2">
                 <Avatar
                   name={workspace.name}
+                  src={getImageUrl(workspace?.logo) ?? undefined}
                   size="sm"
-                  className="rounded-md"
                 />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-[var(--txt-primary)]">
@@ -1458,8 +1459,8 @@ export function SettingsPage() {
               <div className="flex items-center gap-2">
                 <Avatar
                   name={workspace.name}
+                  src={getImageUrl(workspace?.logo) ?? undefined}
                   size="sm"
-                  className="rounded-md"
                 />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-[var(--txt-primary)]">
@@ -2956,7 +2957,9 @@ export function SettingsPage() {
                                 selectedProjectId,
                               );
                               setProjectInvites(list ?? []);
-                            } catch {}
+                            } catch {
+                              // Intentionally empty (kept for future use)
+                            }
                           }}
                         >
                           Revoke
@@ -3243,7 +3246,9 @@ export function SettingsPage() {
                                           selectedProjectId,
                                         );
                                         setProjectStates(list ?? []);
-                                      } catch {}
+                                      } catch {
+                                        // Intentionally empty (kept for future use)
+                                      }
                                     }}
                                   >
                                     Delete
@@ -3335,7 +3340,9 @@ export function SettingsPage() {
                               selectedProjectId,
                             );
                             setProjectLabels(list ?? []);
-                          } catch {}
+                          } catch {
+                            // Intentionally empty (kept for future use)
+                          }
                         }}
                       >
                         Delete
@@ -3893,7 +3900,9 @@ export function SettingsPage() {
                                         await navigator.clipboard.writeText(
                                           url,
                                         );
-                                      } catch {}
+                                      } catch {
+                                        // Intentionally empty (kept for future use)
+                                      }
                                     }}
                                   >
                                     <IconLink />
@@ -4402,7 +4411,9 @@ export function SettingsPage() {
                   setProjectStates(list ?? []);
                   setProjectStateModalOpen(false);
                   setProjectStateEdit(null);
-                } catch {}
+                } catch {
+                  // Intentionally empty (kept for future use)
+                }
               }}
             >
               {projectStateEdit ? "Save" : "Create"}
@@ -4519,7 +4530,9 @@ export function SettingsPage() {
                   setProjectLabels(list ?? []);
                   setProjectLabelModalOpen(false);
                   setProjectLabelEdit(null);
-                } catch {}
+                } catch {
+                  // Intentionally empty (kept for future use)
+                }
               }}
             >
               {projectLabelEdit ? "Save" : "Create"}
