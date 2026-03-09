@@ -19,10 +19,9 @@ export const apiClient = axios.create({
 // multipart/form-data with the correct boundary. Otherwise the server gets
 // Content-Type: application/json and cannot parse the multipart form → 400.
 apiClient.interceptors.request.use((config) => {
-  if (config.data instanceof FormData) {
-    const headers = { ...config.headers };
-    delete (headers as Record<string, unknown>)["Content-Type"];
-    config.headers = headers;
+  if (config.data instanceof FormData && config.headers) {
+    const h = config.headers as Record<string, unknown>;
+    delete h["Content-Type"];
   }
   return config;
 });

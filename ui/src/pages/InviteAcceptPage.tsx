@@ -108,6 +108,7 @@ export function InviteAcceptPage() {
   const [ignoring, setIgnoring] = useState(false);
   const [step, setStep] = useState<"invite" | "join">("invite");
   const [joinEmail, setJoinEmail] = useState("");
+  const autoAcceptDone = useRef(false);
 
   useEffect(() => {
     if (!token.trim()) {
