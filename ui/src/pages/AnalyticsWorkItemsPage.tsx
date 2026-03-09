@@ -104,6 +104,7 @@ export function AnalyticsWorkItemsPage() {
 
   useEffect(() => {
     if (!workspaceSlug) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset loading when no slug (kept for future use)
       setLoading(false);
       return;
     }

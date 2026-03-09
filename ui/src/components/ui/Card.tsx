@@ -27,7 +27,8 @@ export function Card({
   );
 }
 
-export interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {}
+/** Props for card header; extends div attributes. Kept as type for future props. */
+export type CardHeaderProps = HTMLAttributes<HTMLDivElement>;
 
 export function CardHeader({ className, children, ...props }: CardHeaderProps) {
   return (
@@ -43,7 +44,8 @@ export function CardHeader({ className, children, ...props }: CardHeaderProps) {
   );
 }
 
-export interface CardContentProps extends HTMLAttributes<HTMLDivElement> {}
+/** Props for card content; extends div attributes. Kept as type for future props. */
+export type CardContentProps = HTMLAttributes<HTMLDivElement>;
 
 export function CardContent({
   className,

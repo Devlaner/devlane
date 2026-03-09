@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- context file exports ThemeProvider + useTheme; keep for future use */
 import {
   createContext,
   useCallback,

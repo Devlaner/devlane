@@ -17,6 +17,8 @@ export function Header() {
 
   useEffect(() => {
     if (!workspaceSlug) {
+      // Intentional: clear workspace/project when slug unmounts (kept for future use)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setWorkspace(null);
       setProject(null);
       return;

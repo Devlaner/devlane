@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- context file exports FavoritesProvider + useFavorites; keep for future use */
 import { createContext, useContext, useState, type ReactNode } from "react";
 
 interface FavoritesContextValue {

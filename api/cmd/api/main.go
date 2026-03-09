@@ -12,11 +12,13 @@ import (
 
 	"github.com/Devlaner/devlane/api/internal/config"
 	"github.com/Devlaner/devlane/api/internal/database"
+	"github.com/Devlaner/devlane/api/internal/mail"
 	"github.com/Devlaner/devlane/api/internal/minio"
 	"github.com/Devlaner/devlane/api/internal/queue"
 	"github.com/Devlaner/devlane/api/internal/rabbitmq"
 	"github.com/Devlaner/devlane/api/internal/redis"
 	"github.com/Devlaner/devlane/api/internal/router"
+	"github.com/Devlaner/devlane/api/internal/store"
 )
 
 func main() {
@@ -93,7 +95,9 @@ func main() {
 		if chConsume, err := rmq.NewChannel(); err == nil {
 			defer chConsume.Close()
 			consumer := queue.NewConsumer(chConsume, log)
-			consumer.Register(queue.QueueEmails, queue.HandleSendEmail(queue.NoopEmailSender(log)))
+			instanceSettingStore := store.NewInstanceSettingStore(db)
+			emailSender := mail.NewSMTPEmailSender(instanceSettingStore, log)
+			consumer.Register(queue.QueueEmails, queue.HandleSendEmail(log, emailSender))
 			consumer.Register(queue.QueueWebhooks, queue.HandleWebhook(queue.NoopWebhookDeliverer(log)))
 			if err := consumer.Run(consumerCtx, []string{queue.QueueEmails, queue.QueueWebhooks}); err != nil {
 				log.Warn("queue consumer", "error", err)

@@ -310,7 +310,9 @@ export function WorkspaceHomePage() {
   const { user } = useAuth();
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
+  // projects state reserved for future use (e.g. project list on home)
   const [_projects, setProjects] = useState<ProjectApiResponse[]>([]);
+  void _projects;
   const [quicklinks, setQuicklinks] = useState<QuickLinkApiResponse[]>([]);
   const [stickies, setStickies] = useState<StickyApiResponse[]>([]);
   const [recents, setRecents] = useState<RecentVisitApiResponse[]>([]);

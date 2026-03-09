@@ -164,6 +164,7 @@ export function WorkspaceViewsPage() {
 
   useEffect(() => {
     if (!workspaceSlug) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset loading when no slug (kept for future use)
       setLoading(false);
       return;
     }
@@ -213,11 +214,31 @@ export function WorkspaceViewsPage() {
   const getStateName = (stateId: string | null | undefined) =>
     stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : "—";
   const getUser = (
-    _userId: string | null,
-  ): { name: string; avatarUrl?: string | null } | null => null;
-  const getLabelNames = (_labelIds: string[] = []) => [] as string[];
-  const getCycleName = (_projectId: string, _cycleId: string | null) => null;
-  const getModuleName = (_projectId: string, _moduleId: string | null) => null;
+    userId: string | null,
+  ): { name: string; avatarUrl?: string | null } | null => {
+    void userId; // reserved for future use
+    return null;
+  };
+  const getLabelNames = (labelIds: string[] = []): string[] => {
+    void labelIds; // reserved for future use
+    return [];
+  };
+  const getCycleName = (
+    projectId: string,
+    cycleId: string | null,
+  ): string | null => {
+    void projectId;
+    void cycleId; // reserved for future use
+    return null;
+  };
+  const getModuleName = (
+    projectId: string,
+    moduleId: string | null,
+  ): string | null => {
+    void projectId;
+    void moduleId; // reserved for future use
+    return null;
+  };
 
   if (loading) {
     return (

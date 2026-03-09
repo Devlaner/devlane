@@ -122,4 +122,16 @@ export const workspaceService = {
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/invitations/${encodeURIComponent(invitePk)}/`,
     );
   },
+
+  /**
+   * Accept a workspace invitation by token (current user is added to the workspace).
+   * POST /api/workspaces/join/
+   */
+  async joinByToken(token: string): Promise<WorkspaceApiResponse> {
+    const { data } = await apiClient.post<WorkspaceApiResponse>(
+      "/api/workspaces/join/",
+      { token },
+    );
+    return data;
+  },
 };

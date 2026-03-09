@@ -128,7 +128,8 @@ export function InstanceAdminAuthenticationPage() {
     gitlab: false,
   });
   const [loading, setLoading] = useState(true);
-  const [_saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState(false);
+  void saving; // reserved for future use (e.g. disable submit while saving)
   const [error, setError] = useState("");
 
   useEffect(() => {

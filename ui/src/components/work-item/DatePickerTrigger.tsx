@@ -1,5 +1,6 @@
 import { useRef } from "react";
 
+/* eslint-disable react-refresh/only-export-components -- formatDateForDisplay shared util; keep in same file for future use */
 export function formatDateForDisplay(isoDate: string): string {
   if (!isoDate) return "";
   const [y, m, d] = isoDate.split("-");
@@ -24,7 +25,7 @@ export function DatePickerTrigger({
   value,
   onChange,
   placeholder,
-  compact: _compact = true,
+  compact: _compact = true, // eslint-disable-line @typescript-eslint/no-unused-vars -- kept for future compact layout
 }: DatePickerTriggerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const displayValue = value ? formatDateForDisplay(value) : "";

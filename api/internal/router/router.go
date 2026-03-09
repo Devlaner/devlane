@@ -23,6 +23,7 @@ type Config struct {
 	Queue           *queue.Publisher // optional: enqueue emails, webhooks
 	Minio           *minio.Client    // optional: file uploads (cover images, avatars, logos)
 	CORSAllowOrigin string           // optional: e.g. "http://localhost:5173" for UI dev
+	AppBaseURL      string           // optional: base URL for invite links; if empty, CORSAllowOrigin is used
 }
 
 // New builds and returns the Gin engine with /api/ and /auth/ routes.
@@ -76,6 +77,10 @@ func New(cfg Config) *gin.Engine {
 	r.GET("/api/instance/setup-status/", instanceHandler.SetupStatus)
 	r.POST("/api/instance/setup/", instanceHandler.InstanceSetup)
 
+	invitationHandler := &handler.InvitationHandler{Winv: workspaceInviteStore, Ws: workspaceStore}
+	r.GET("/api/invitations/by-token/", invitationHandler.GetInviteByToken)
+	r.POST("/api/invitations/decline/", invitationHandler.DeclineInviteByToken)
+
 	instanceSettingsHandler := &handler.InstanceSettingsHandler{Settings: instanceSettingStore}
 
 	// Services
@@ -94,8 +99,19 @@ func New(cfg Config) *gin.Engine {
 	stickySvc := service.NewStickyService(stickyStore, workspaceStore)
 	recentVisitSvc := service.NewRecentVisitService(userRecentVisitStore, workspaceStore, issueStore, projectStore, pageStore)
 
+	// Base URL for invite links (e.g. email links to frontend)
+	appBaseURL := cfg.AppBaseURL
+	if appBaseURL == "" {
+		appBaseURL = cfg.CORSAllowOrigin
+	}
+
 	// Handlers
-	workspaceHandler := &handler.WorkspaceHandler{Workspace: workspaceSvc, Settings: instanceSettingStore}
+	workspaceHandler := &handler.WorkspaceHandler{
+		Workspace:  workspaceSvc,
+		Settings:   instanceSettingStore,
+		Queue:      cfg.Queue,
+		AppBaseURL: appBaseURL,
+	}
 	projectHandler := &handler.ProjectHandler{Project: projectSvc}
 	favoriteHandler := &handler.FavoriteHandler{Project: projectSvc, Favorites: userFavoriteStore}
 	stateHandler := &handler.StateHandler{State: stateSvc}

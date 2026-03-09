@@ -485,6 +485,8 @@ export function Sidebar() {
   const slugForProjects = workspaceSlug ?? workspace?.slug;
   useEffect(() => {
     if (!slugForProjects) {
+      // Intentional: clear projects when workspace unmounts (kept for future use)
+
       setProjects([]);
       return;
     }
@@ -515,6 +517,7 @@ export function Sidebar() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount; setFavoriteProjectIds is stable
   }, []);
 
   useEffect(() => {
@@ -527,6 +530,8 @@ export function Sidebar() {
       path === `${baseUrl}/archives` ||
       path.startsWith(`${baseUrl}/analytics`)
     ) {
+      // Intentional: expand section when on relevant route (kept for future use)
+
       setWorkspaceSectionExpanded(true);
     }
     if (projectId && path.startsWith(`${baseUrl}/projects/`)) {
@@ -536,6 +541,8 @@ export function Sidebar() {
 
   useEffect(() => {
     if (!workspaceDropdownOpen) {
+      // Intentional: clear position when dropdown closes (kept for future use)
+
       setDropdownPosition(null);
       return;
     }

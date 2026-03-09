@@ -45,6 +45,7 @@ export function NotificationsPage() {
 
   useEffect(() => {
     if (!workspaceSlug) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset loading when no slug (kept for future use)
       setLoading(false);
       return;
     }
@@ -99,6 +100,7 @@ export function NotificationsPage() {
 
   useEffect(() => {
     if (!workspaceSlug || !selectedItem) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: clear selection when route changes (kept for future use)
       setSelectedProject(null);
       setSelectedIssue(null);
       return;

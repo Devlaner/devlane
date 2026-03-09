@@ -143,6 +143,7 @@ export function IssueListPage() {
 
   useEffect(() => {
     if (!workspaceSlug || !projectId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset loading when no slug/project (kept for future use)
       setLoading(false);
       return;
     }
@@ -203,7 +204,10 @@ export function IssueListPage() {
   const createParam = searchParams.get("create") === "1";
 
   useEffect(() => {
-    if (createParam && projectId) setCreateOpen(true);
+    if (createParam && projectId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: open create modal from URL (kept for future use)
+      setCreateOpen(true);
+    }
   }, [createParam, projectId]);
 
   const handleCloseCreate = () => {

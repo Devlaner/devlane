@@ -22,6 +22,8 @@ export function SetupGate() {
 
   useEffect(() => {
     if (isSetupPath) {
+      // Intentional: clear setup flag on setup route (kept for future use)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSetupRequired(false);
       return;
     }

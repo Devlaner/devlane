@@ -45,6 +45,14 @@ export interface WorkspaceInviteApiResponse {
   updated_at?: string;
 }
 
+/** GET /api/invitations/by-token/?token=... (public) */
+export interface InviteByTokenResponse {
+  workspace_name: string;
+  workspace_slug: string;
+  email: string;
+  invitation_id: string;
+}
+
 /** Request body for POST /api/workspaces/:slug/projects/ */
 export interface CreateProjectRequest {
   name: string;

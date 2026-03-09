@@ -55,11 +55,11 @@ export function ProfilePage() {
 
   useEffect(() => {
     if (!workspaceSlug) {
-      setLoading(false);
+      queueMicrotask(() => setLoading(false));
       return;
     }
     let cancelled = false;
-    setLoading(true);
+    queueMicrotask(() => setLoading(true));
     workspaceService
       .getBySlug(workspaceSlug)
       .then((w) => {
@@ -125,7 +125,7 @@ export function ProfilePage() {
     return issues.filter((i) =>
       (i.assignee_ids ?? []).includes(profileUser.id),
     );
-  }, [profileUser?.id, issues]);
+  }, [profileUser, issues]);
   const issuesSubscribed = issuesAssigned.length;
   const issuesSubscribedList = issuesAssigned;
 
@@ -235,7 +235,7 @@ export function ProfilePage() {
         ...p,
         progress: 0,
       }));
-  }, [workspace?.id]);
+  }, [workspace?.id, projects]);
 
   const projectStateBreakdown = useMemo(() => {
     return projectsWithProgress.map((p) => {
@@ -292,17 +292,17 @@ export function ProfilePage() {
       {/* Main content */}
       <div className="min-w-0 flex-1 space-y-6 pb-8">
         {/* Tabs */}
-        <div className="border-b border-[var(--border-subtle)]">
+        <div className="border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)]">
           <div className="flex gap-1">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`border-b-2 px-4 py-2.5 text-sm font-medium ${
+                className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? "border-[var(--brand-default)] text-[var(--txt-primary)]"
-                    : "border-transparent text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]"
+                    : "border-transparent text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]"
                 }`}
               >
                 {tab.label}
@@ -322,7 +322,7 @@ export function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("created")}
-                  className="w-full cursor-pointer rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-white text-left transition-colors hover:bg-[var(--bg-layer-1-hover)] focus:outline-none"
+                  className="w-full cursor-pointer rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] text-left transition-colors hover:bg-[var(--bg-layer-1-hover)] focus:outline-none"
                 >
                   <Card
                     variant="outlined"
@@ -358,7 +358,7 @@ export function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("assigned")}
-                  className="w-full cursor-pointer rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-white text-left transition-colors hover:bg-[var(--bg-layer-1-hover)] focus:outline-none"
+                  className="w-full cursor-pointer rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] text-left transition-colors hover:bg-[var(--bg-layer-1-hover)] focus:outline-none"
                 >
                   <Card
                     variant="outlined"
@@ -394,7 +394,7 @@ export function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("subscribed")}
-                  className="w-full cursor-pointer rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-white text-left transition-colors hover:bg-[var(--bg-layer-1-hover)] focus:outline-none"
+                  className="w-full cursor-pointer rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] text-left transition-colors hover:bg-[var(--bg-layer-1-hover)] focus:outline-none"
                 >
                   <Card
                     variant="outlined"
@@ -443,7 +443,7 @@ export function ProfilePage() {
                     <Card
                       key={cat.id}
                       variant="outlined"
-                      className="border border-[var(--border-subtle)] bg-white"
+                      className="border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
                     >
                       <CardContent className="flex items-center gap-3 p-4">
                         <span
@@ -474,7 +474,7 @@ export function ProfilePage() {
                 </h2>
                 <Card
                   variant="outlined"
-                  className="border border-[var(--border-subtle)] bg-white"
+                  className="border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
                 >
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-2">
@@ -531,7 +531,7 @@ export function ProfilePage() {
                 </h2>
                 <Card
                   variant="outlined"
-                  className="border border-[var(--border-subtle)] bg-white"
+                  className="border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
                 >
                   <CardContent className="flex flex-wrap items-center gap-6 p-4">
                     <div className="relative h-32 w-32 shrink-0">
@@ -568,7 +568,7 @@ export function ProfilePage() {
               </h2>
               <Card
                 variant="outlined"
-                className="border border-[var(--border-subtle)] bg-white"
+                className="border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
               >
                 <CardContent className="p-0">
                   <ul className="divide-y divide-[var(--border-subtle)]">
@@ -699,7 +699,7 @@ export function ProfilePage() {
       <aside className="hidden w-72 shrink-0 lg:flex lg:flex-col">
         <Card
           variant="outlined"
-          className="flex min-h-0 flex-1 flex-col overflow-hidden border border-[var(--border-subtle)] bg-white"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
         >
           <div
             className="relative h-20 shrink-0 bg-gradient-to-br from-[var(--brand-default)] to-[#0ea5e9]"
@@ -740,7 +740,7 @@ export function ProfilePage() {
                 name={profileUser?.name ?? "?"}
                 src={getImageUrl(profileUser?.avatarUrl) ?? undefined}
                 size="lg"
-                className="h-14 w-14 border-4 border-white shadow"
+                className="h-14 w-14"
               />
             </div>
             <h3 className="text-center text-base font-semibold text-[var(--txt-primary)] shrink-0">
@@ -916,7 +916,7 @@ function WorkItemsList({
   projects: projectsList,
   members: membersList = [],
   baseUrl,
-  workspaceSlug: _workspaceSlug,
+  workspaceSlug,
 }: {
   issues: Array<{
     id: string;
@@ -932,6 +932,7 @@ function WorkItemsList({
   baseUrl: string;
   workspaceSlug: string;
 }) {
+  void workspaceSlug; // reserved for future use (e.g. links)
   const getStateName = (stateId: string) =>
     statesList.find((s) => s.id === stateId)?.name ?? stateId;
   const getUser = (
@@ -945,8 +946,14 @@ function WorkItemsList({
     const avatarUrl = m?.member_avatar ?? null;
     return { name, avatarUrl };
   };
-  const getLabelNames = (_labelIds: string[] = []) => [] as string[];
-  const getCycle = (_cycleId: string | null): { name: string } | null => null;
+  const getLabelNames = (labelIds: string[] = []) => {
+    void labelIds; // reserved for future use
+    return [] as string[];
+  };
+  const getCycle = (cycleId: string | null): { name: string } | null => {
+    void cycleId; // reserved for future use
+    return null;
+  };
 
   return (
     <div className="space-y-0">
@@ -1051,7 +1058,7 @@ function WorkItemsList({
       </div>
       <Card
         variant="outlined"
-        className="overflow-hidden border border-[var(--border-subtle)] bg-white"
+        className="overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
       >
         <CardContent className="p-0">
           {issues.length === 0 ? (
@@ -1206,7 +1213,7 @@ function ActivityTab({
   activities,
   projects: projectsList,
   issues: issuesList,
-  profileUser: _profileUser,
+  profileUser,
   formatTimeAgo,
 }: {
   activities: Array<{
@@ -1224,6 +1231,7 @@ function ActivityTab({
   profileUser: { name: string; avatarUrl?: string | null } | null;
   formatTimeAgo: (iso: string) => string;
 }) {
+  void profileUser; // reserved for future use
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1239,7 +1247,7 @@ function ActivityTab({
       </div>
       <Card
         variant="outlined"
-        className="border border-[var(--border-subtle)] bg-white"
+        className="border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
       >
         <CardContent className="p-0">
           <ul className="divide-y divide-[var(--border-subtle)]">
@@ -1386,11 +1394,12 @@ function DonutChart({
   data: { label: string; color: string; count: number }[];
 }) {
   const total = data.reduce((s, d) => s + d.count, 0) || 1;
-  let acc = 0;
-  const parts = data.map((d) => {
-    const start = acc;
-    acc += (d.count / total) * 100;
-    return `${d.color} ${start}% ${acc}%`;
+  const parts = data.map((d, i) => {
+    const start = data
+      .slice(0, i)
+      .reduce((s, x) => s + (x.count / total) * 100, 0);
+    const end = start + (d.count / total) * 100;
+    return `${d.color} ${start}% ${end}%`;
   });
   const conic = parts.length
     ? `conic-gradient(${parts.join(", ")})`

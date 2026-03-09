@@ -27,6 +27,9 @@ jobs:
       - name: Verify dependencies
         run: go mod verify
 
+      - name: Check formatting
+        run: test -z "$(gofmt -l .)"
+
       - name: Build
         run: go build -v ./cmd/api/...
 
