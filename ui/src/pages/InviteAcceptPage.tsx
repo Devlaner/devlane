@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, Button } from "../components/ui";
 import { useAuth } from "../contexts/AuthContext";
@@ -132,6 +132,19 @@ export function InviteAcceptPage() {
     };
   }, [token, navigate]);
 
+  const doJoinWorkspace = useCallback(async () => {
+    if (!token || !invite) return;
+    setAccepting(true);
+    try {
+      await workspaceService.joinByToken(token);
+      navigate(`/${invite.workspace_slug}`, { replace: true });
+    } catch {
+      setError("Failed to join workspace. Please try again.");
+    } finally {
+      setAccepting(false);
+    }
+  }, [token, invite, navigate]);
+
   // When user returns from login (already authenticated), auto-accept and go to workspace
   useEffect(() => {
     if (
@@ -144,8 +157,7 @@ export function InviteAcceptPage() {
       return;
     autoAcceptDone.current = true;
     doJoinWorkspace();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- doJoinWorkspace is stable; run when user+invite+token available
-  }, [user, invite, token, step]);
+  }, [user, invite, token, step, doJoinWorkspace]);
 
   const handleAccept = () => {
     if (!token || !invite) return;
@@ -155,19 +167,6 @@ export function InviteAcceptPage() {
       return;
     }
     doJoinWorkspace();
-  };
-
-  const doJoinWorkspace = async () => {
-    if (!token || !invite) return;
-    setAccepting(true);
-    try {
-      await workspaceService.joinByToken(token);
-      navigate(`/${invite.workspace_slug}`, { replace: true });
-    } catch {
-      setError("Failed to join workspace. Please try again.");
-    } finally {
-      setAccepting(false);
-    }
   };
 
   const handleIgnore = async () => {

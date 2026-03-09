@@ -2,6 +2,7 @@ package mail
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log/slog"
 	"net/smtp"
@@ -79,17 +80,64 @@ func NewSMTPEmailSender(instanceSettings *store.InstanceSettingStore, log *slog.
 		addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 		auth := smtp.PlainAuth("", cfg.Username, cfg.Password, cfg.Host)
 		msg := buildMessage(to, from, subject, body)
-		if err := smtp.SendMail(addr, auth, from, []string{to}, msg); err != nil {
-			LogFailed(log, to, subject, "", err)
+		if err := sendMailWithConfig(addr, cfg.Host, cfg.Port, cfg.Security, auth, from, to, msg); err != nil {
 			return err
 		}
-		LogSent(log, to, subject, "")
 		return nil
 	}
 }
 
+// sendMailWithConfig sends email using smtp.SendMail or, for port 465 with SSL,
+// an explicit TLS connection (smtp.SendMail only supports STARTTLS).
+func sendMailWithConfig(addr, host string, port int, security string, auth smtp.Auth, from, to string, msg []byte) error {
+	useImplicitTLS := port == 465 && strings.EqualFold(strings.TrimSpace(security), "SSL")
+	if useImplicitTLS {
+		conn, err := tls.Dial("tcp", addr, &tls.Config{ServerName: host})
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+		client, err := smtp.NewClient(conn, host)
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+		if err := client.Auth(auth); err != nil {
+			return err
+		}
+		if err := client.Mail(from); err != nil {
+			return err
+		}
+		if err := client.Rcpt(to); err != nil {
+			return err
+		}
+		w, err := client.Data()
+		if err != nil {
+			return err
+		}
+		if _, err := w.Write(msg); err != nil {
+			_ = w.Close()
+			return err
+		}
+		if err := w.Close(); err != nil {
+			return err
+		}
+		return client.Quit()
+	}
+	// STARTTLS (port 587) or no security: standard SendMail
+	return smtp.SendMail(addr, auth, from, []string{to}, msg)
+}
+
+// sanitizeHeader removes CR/LF to prevent header injection.
+func sanitizeHeader(s string) string {
+	return strings.NewReplacer("\r", "", "\n", "").Replace(s)
+}
+
 func buildMessage(to, from, subject, body string) []byte {
 	const crlf = "\r\n"
+	to = sanitizeHeader(to)
+	from = sanitizeHeader(from)
+	subject = sanitizeHeader(subject)
 	h := "To: " + to + crlf +
 		"From: " + from + crlf +
 		"Subject: " + subject + crlf +
