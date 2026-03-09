@@ -151,6 +151,16 @@ const InstanceSetupCompletePage = lazy(() =>
     page({ InstanceSetupCompletePage: m.InstanceSetupCompletePage }),
   ),
 );
+const InviteAcceptPage = lazy(() =>
+  import("../pages/InviteAcceptPage").then((m) =>
+    page({ InviteAcceptPage: m.InviteAcceptPage }),
+  ),
+);
+const InviteSignUpPage = lazy(() =>
+  import("../pages/InviteSignUpPage").then((m) =>
+    page({ InviteSignUpPage: m.InviteSignUpPage }),
+  ),
+);
 
 const PageFallback = () => (
   <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
@@ -287,6 +297,21 @@ const router = createBrowserRouter([
             <LoginPage />
           </Suspense>
         ),
+      },
+      {
+        path: "invite",
+        element: (
+          <Suspense fallback={<PageFallback />}>
+            <Outlet />
+          </Suspense>
+        ),
+        children: [
+          { index: true, element: <InviteAcceptPage /> },
+          {
+            path: "sign-up",
+            element: <InviteSignUpPage />,
+          },
+        ],
       },
       {
         element: <AppLayout />,

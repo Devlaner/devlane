@@ -606,6 +606,22 @@ const IconTrash = () => (
     <line x1="14" y1="11" x2="14" y2="17" />
   </svg>
 );
+const IconLink = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
 const IconGlobe = () => (
   <svg
     width="16"
@@ -993,6 +1009,10 @@ export function SettingsPage() {
   const [autoArchive, setAutoArchive] = useState(true);
   const [autoClose, setAutoClose] = useState(true);
   const [pendingInvitesExpanded, setPendingInvitesExpanded] = useState(true);
+  const [pendingInviteMenuId, setPendingInviteMenuId] = useState<string | null>(
+    null,
+  );
+  const pendingInviteMenuRef = useRef<HTMLDivElement>(null);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [inviteRows, setInviteRows] = useState<
     { id: number; email: string; role: "member" | "admin" }[]
@@ -1159,6 +1179,20 @@ export function SettingsPage() {
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [projectTimezoneDropdownOpen]);
+
+  useEffect(() => {
+    if (!pendingInviteMenuId) return;
+    const close = (e: MouseEvent) => {
+      if (
+        pendingInviteMenuRef.current &&
+        !pendingInviteMenuRef.current.contains(e.target as Node)
+      ) {
+        setPendingInviteMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [pendingInviteMenuId]);
 
   useEffect(() => {
     if (isProjectsTab && workspace && projects.length > 0 && !projectIdParam) {
@@ -3820,13 +3854,79 @@ export function SettingsPage() {
                                 <IconChevronDown />
                               </span>
                             </div>
-                            <button
-                              type="button"
-                              className="flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
-                              aria-label="More options"
+                            <div
+                              className="relative shrink-0"
+                              ref={
+                                pendingInviteMenuId === inv.id
+                                  ? pendingInviteMenuRef
+                                  : undefined
+                              }
                             >
-                              <IconMoreVertical />
-                            </button>
+                              <button
+                                type="button"
+                                className="flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                                aria-label="More options"
+                                aria-expanded={pendingInviteMenuId === inv.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPendingInviteMenuId((id) =>
+                                    id === inv.id ? null : inv.id,
+                                  );
+                                }}
+                              >
+                                <IconMoreVertical />
+                              </button>
+                              {pendingInviteMenuId === inv.id && (
+                                <div
+                                  className="absolute right-0 top-full z-10 mt-1 min-w-[140px] rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-lg"
+                                  role="menu"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    type="button"
+                                    role="menuitem"
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                                    onClick={async () => {
+                                      setPendingInviteMenuId(null);
+                                      const url = `${window.location.origin}/invite?token=${inv.token}`;
+                                      try {
+                                        await navigator.clipboard.writeText(
+                                          url,
+                                        );
+                                      } catch {}
+                                    }}
+                                  >
+                                    <IconLink />
+                                    Copy link
+                                  </button>
+                                  <button
+                                    type="button"
+                                    role="menuitem"
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--txt-destructive)] hover:bg-[var(--bg-destructive-subtle)]"
+                                    onClick={async () => {
+                                      setPendingInviteMenuId(null);
+                                      if (!workspaceSlug) return;
+                                      try {
+                                        await workspaceService.deleteInvite(
+                                          workspaceSlug,
+                                          inv.id,
+                                        );
+                                        const list =
+                                          await workspaceService.listInvites(
+                                            workspaceSlug,
+                                          );
+                                        setWorkspaceInvites(list ?? []);
+                                      } catch {
+                                        // could toast
+                                      }
+                                    }}
+                                  >
+                                    <IconTrash />
+                                    Remove
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         );
                       })

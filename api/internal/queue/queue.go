@@ -25,11 +25,12 @@ const (
 
 // SendEmailPayload is the payload for send_email task.
 type SendEmailPayload struct {
-	To      string            `json:"to"`
-	Subject string            `json:"subject"`
-	Body    string            `json:"body"`
-	Kind    string            `json:"kind"` // e.g. forgot_password, workspace_invite, project_invite
-	Extra   map[string]string `json:"extra,omitempty"`
+	To        string            `json:"to"`
+	Subject   string            `json:"subject"`
+	Body      string            `json:"body"`
+	Kind      string            `json:"kind"`                 // e.g. forgot_password, workspace_invite, project_invite
+	InviteURL string            `json:"invite_url,omitempty"` // optional; logged for debugging (e.g. workspace invite link)
+	Extra     map[string]string `json:"extra,omitempty"`
 }
 
 // WebhookPayload is the payload for webhook_deliver task.

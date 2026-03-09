@@ -15,6 +15,18 @@ export const apiClient = axios.create({
   },
 });
 
+// When sending FormData (e.g. file upload), omit Content-Type so the browser sets
+// multipart/form-data with the correct boundary. Otherwise the server gets
+// Content-Type: application/json and cannot parse the multipart form → 400.
+apiClient.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    const headers = { ...config.headers };
+    delete (headers as Record<string, unknown>)["Content-Type"];
+    config.headers = headers;
+  }
+  return config;
+});
+
 /** Shape of API error response body (backend may return { error: string }) */
 export interface ApiErrorResponse {
   error?: string;

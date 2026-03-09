@@ -292,17 +292,17 @@ export function ProfilePage() {
       {/* Main content */}
       <div className="min-w-0 flex-1 space-y-6 pb-8">
         {/* Tabs */}
-        <div className="border-b border-[var(--border-subtle)]">
+        <div className="border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)]">
           <div className="flex gap-1">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`border-b-2 px-4 py-2.5 text-sm font-medium ${
+                className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? "border-[var(--brand-default)] text-[var(--txt-primary)]"
-                    : "border-transparent text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]"
+                    : "border-transparent text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]"
                 }`}
               >
                 {tab.label}
@@ -322,7 +322,7 @@ export function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("created")}
-                  className="w-full cursor-pointer rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-white text-left transition-colors hover:bg-[var(--bg-layer-1-hover)] focus:outline-none"
+                  className="w-full cursor-pointer rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] text-left transition-colors hover:bg-[var(--bg-layer-1-hover)] focus:outline-none"
                 >
                   <Card
                     variant="outlined"
@@ -358,7 +358,7 @@ export function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("assigned")}
-                  className="w-full cursor-pointer rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-white text-left transition-colors hover:bg-[var(--bg-layer-1-hover)] focus:outline-none"
+                  className="w-full cursor-pointer rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] text-left transition-colors hover:bg-[var(--bg-layer-1-hover)] focus:outline-none"
                 >
                   <Card
                     variant="outlined"
@@ -394,7 +394,7 @@ export function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("subscribed")}
-                  className="w-full cursor-pointer rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-white text-left transition-colors hover:bg-[var(--bg-layer-1-hover)] focus:outline-none"
+                  className="w-full cursor-pointer rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] text-left transition-colors hover:bg-[var(--bg-layer-1-hover)] focus:outline-none"
                 >
                   <Card
                     variant="outlined"
@@ -443,7 +443,7 @@ export function ProfilePage() {
                     <Card
                       key={cat.id}
                       variant="outlined"
-                      className="border border-[var(--border-subtle)] bg-white"
+                      className="border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
                     >
                       <CardContent className="flex items-center gap-3 p-4">
                         <span
@@ -474,7 +474,7 @@ export function ProfilePage() {
                 </h2>
                 <Card
                   variant="outlined"
-                  className="border border-[var(--border-subtle)] bg-white"
+                  className="border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
                 >
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-2">
@@ -531,7 +531,7 @@ export function ProfilePage() {
                 </h2>
                 <Card
                   variant="outlined"
-                  className="border border-[var(--border-subtle)] bg-white"
+                  className="border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
                 >
                   <CardContent className="flex flex-wrap items-center gap-6 p-4">
                     <div className="relative h-32 w-32 shrink-0">
@@ -568,7 +568,7 @@ export function ProfilePage() {
               </h2>
               <Card
                 variant="outlined"
-                className="border border-[var(--border-subtle)] bg-white"
+                className="border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
               >
                 <CardContent className="p-0">
                   <ul className="divide-y divide-[var(--border-subtle)]">
@@ -699,7 +699,7 @@ export function ProfilePage() {
       <aside className="hidden w-72 shrink-0 lg:flex lg:flex-col">
         <Card
           variant="outlined"
-          className="flex min-h-0 flex-1 flex-col overflow-hidden border border-[var(--border-subtle)] bg-white"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
         >
           <div
             className="relative h-20 shrink-0 bg-gradient-to-br from-[var(--brand-default)] to-[#0ea5e9]"
@@ -740,7 +740,7 @@ export function ProfilePage() {
                 name={profileUser?.name ?? "?"}
                 src={getImageUrl(profileUser?.avatarUrl) ?? undefined}
                 size="lg"
-                className="h-14 w-14 border-4 border-white shadow"
+                className="h-14 w-14"
               />
             </div>
             <h3 className="text-center text-base font-semibold text-[var(--txt-primary)] shrink-0">
@@ -1051,7 +1051,7 @@ function WorkItemsList({
       </div>
       <Card
         variant="outlined"
-        className="overflow-hidden border border-[var(--border-subtle)] bg-white"
+        className="overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
       >
         <CardContent className="p-0">
           {issues.length === 0 ? (
@@ -1239,7 +1239,7 @@ function ActivityTab({
       </div>
       <Card
         variant="outlined"
-        className="border border-[var(--border-subtle)] bg-white"
+        className="border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
       >
         <CardContent className="p-0">
           <ul className="divide-y divide-[var(--border-subtle)]">

@@ -7,13 +7,19 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
-  const [email, setEmail] = useState("");
+
+  const state = location.state as {
+    from?: { pathname?: string; search?: string };
+    email?: string;
+  } | null;
+  const from = state?.from;
+  const returnPath = from ? (from.pathname ?? "/") + (from.search ?? "") : "/";
+  const prefilledEmail = state?.email ?? "";
+
+  const [email, setEmail] = useState(prefilledEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const returnPath =
-    (location.state as { from?: { pathname?: string } })?.from?.pathname ?? "/";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

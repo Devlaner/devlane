@@ -169,8 +169,8 @@
     --red-900: oklch(0.8834 0.0616 18.39);
 
     --bg-screen: var(--neutral-200);
-    --bg-canvas: var(--neutral-black);
     --bg-surface-1: var(--neutral-100);
+    --bg-canvas: var(--bg-surface-1); /* same as sidebar in dark theme */
     --bg-surface-2: var(--neutral-200);
     --bg-layer-1: var(--neutral-200);
     --bg-layer-1-hover: var(--neutral-300);

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 
+	"github.com/Devlaner/devlane/api/internal/mail"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -78,8 +79,8 @@ func (c *Consumer) defaultHandler(ctx context.Context, queue string, body []byte
 
 // --- Handlers for email and webhook (can be extended with real SMTP/HTTP) ---
 
-// HandleSendEmail parses send_email task and runs the given sender.
-func HandleSendEmail(sender func(ctx context.Context, to, subject, body string) error) TaskHandler {
+// HandleSendEmail parses send_email task, logs attempt/result (including invite_url), and runs the given sender.
+func HandleSendEmail(log *slog.Logger, sender func(ctx context.Context, to, subject, body string) error) TaskHandler {
 	return func(ctx context.Context, queue string, body []byte) error {
 		var msg struct {
 			Type    string           `json:"type"`
@@ -91,7 +92,15 @@ func HandleSendEmail(sender func(ctx context.Context, to, subject, body string) 
 		if msg.Type != TaskSendEmail {
 			return nil
 		}
-		return sender(ctx, msg.Payload.To, msg.Payload.Subject, msg.Payload.Body)
+		p := &msg.Payload
+		mail.LogSendAttempt(log, p.To, p.Subject, p.Kind, p.InviteURL)
+		err := sender(ctx, p.To, p.Subject, p.Body)
+		if err != nil {
+			mail.LogFailed(log, p.To, p.Subject, p.InviteURL, err)
+			return err
+		}
+		mail.LogSent(log, p.To, p.Subject, p.InviteURL)
+		return nil
 	}
 }
 
