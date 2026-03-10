@@ -18,7 +18,6 @@ import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { workspaceService } from "../services/workspaceService";
 import { ProjectNetworkSelect } from "../components/ProjectNetworkSelect";
-import { ProjectLeadSelect } from "../components/ProjectLeadSelect";
 import { projectService } from "../services/projectService";
 import { issueService } from "../services/issueService";
 import { labelService } from "../services/labelService";
@@ -622,23 +621,6 @@ const IconLink = () => (
   >
     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
     <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-  </svg>
-);
-const IconGlobe = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <circle cx="12" cy="12" r="10" />
-    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
-    <path d="M2 12h20" />
   </svg>
 );
 const IconTag = () => (
