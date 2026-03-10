@@ -57,6 +57,20 @@ export interface InviteByTokenResponse {
 export interface CreateProjectRequest {
   name: string;
   identifier?: string;
+  description?: string;
+  timezone?: string;
+  cover_image?: string;
+  emoji?: string;
+  icon_prop?: ProjectIconProp | null;
+  project_lead_id?: string;
+  default_assignee_id?: string;
+  guest_view_all_features?: boolean;
+  module_view?: boolean;
+  cycle_view?: boolean;
+  issue_views_view?: boolean;
+  page_view?: boolean;
+  intake_view?: boolean;
+  is_time_tracking_enabled?: boolean;
 }
 
 /** Project icon_prop from API (name + optional color) */

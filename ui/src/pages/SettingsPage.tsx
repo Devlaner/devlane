@@ -17,6 +17,8 @@ import { getImageUrl } from "../lib/utils";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { workspaceService } from "../services/workspaceService";
+import { ProjectNetworkSelect } from "../components/ProjectNetworkSelect";
+import { ProjectLeadSelect } from "../components/ProjectLeadSelect";
 import { projectService } from "../services/projectService";
 import { issueService } from "../services/issueService";
 import { labelService } from "../services/labelService";
@@ -910,6 +912,10 @@ export function SettingsPage() {
       setProjectDescription(selectedProject.description ?? "");
       if (selectedProject.timezone != null)
         setProjectTimezone(selectedProject.timezone);
+      // Derive Network dropdown value from guest_view_all_features so it reflects persisted visibility
+      setProjectNetwork(
+        selectedProject.guest_view_all_features ? "public" : "private",
+      );
       setProjectLeadId(selectedProject.project_lead_id ?? null);
       setDefaultAssigneeId(selectedProject.default_assignee_id ?? null);
       setGuestAccess(selectedProject.guest_view_all_features ?? false);
@@ -2477,24 +2483,34 @@ export function SettingsPage() {
                     </span>
                   </div>
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
-                    Network
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={projectNetwork}
-                      onChange={(e) => setProjectNetwork(e.target.value)}
-                      className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
-                    >
-                      <option value="public">Public</option>
-                      <option value="private">Private</option>
-                    </select>
-                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
-                      <IconGlobe />
-                    </span>
-                  </div>
-                </div>
+                <ProjectNetworkSelect
+                  value={projectNetwork}
+                  onChange={async (v) => {
+                    // Map network dropdown to the same guest_view_all_features flag used elsewhere
+                    const nextGuestAccess = v === "public";
+                    setProjectNetwork(v);
+                    setGuestAccess(nextGuestAccess);
+                    if (!workspaceSlug || !selectedProjectId) return;
+                    try {
+                      const updated = await projectService.update(
+                        workspaceSlug,
+                        selectedProjectId,
+                        { guest_view_all_features: nextGuestAccess },
+                      );
+                      setProjects((prev) =>
+                        prev.map((p) =>
+                          p.id === updated.id ? updated : p,
+                        ),
+                      );
+                    } catch {
+                      // revert local state on failure
+                      setProjectNetwork(
+                        nextGuestAccess ? "private" : "public",
+                      );
+                      setGuestAccess(!nextGuestAccess);
+                    }
+                  }}
+                />
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
                     Project Timezone
@@ -2703,7 +2719,7 @@ export function SettingsPage() {
                     >
                       <option value="">Select</option>
                       {workspaceMembers.map((m) => (
-                        <option key={m.member_id} value={m.member_id}>
+                        <option key={m.member_id} value={m.member_id ?? ""}>
                           {memberLabel(m.member_id)}
                         </option>
                       ))}

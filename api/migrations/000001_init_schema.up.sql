@@ -1424,6 +1424,8 @@ CREATE TABLE user_favorites (
     updated_by_id UUID REFERENCES users (id) ON DELETE SET NULL,
     parent_id UUID REFERENCES user_favorites (id) ON DELETE CASCADE
 );
+CREATE UNIQUE INDEX idx_user_fav_entity
+    ON user_favorites (user_id, entity_type, entity_identifier);
 CREATE TABLE user_recent_visits (
     id UUID PRIMARY KEY ,
     workspace_id UUID NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE,
