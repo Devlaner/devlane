@@ -1,8 +1,21 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button, Input } from "./ui";
+import { CoverImageModal } from "./CoverImageModal";
+import {
+  ProjectIconDisplay,
+  ProjectIconModal,
+  type ProjectIconSelection,
+} from "./ProjectIconModal";
 import { projectService } from "../services/projectService";
-import type { ProjectApiResponse } from "../api/types";
+import type {
+  ProjectApiResponse,
+  WorkspaceMemberApiResponse,
+} from "../api/types";
+import { useAuth } from "../contexts/AuthContext";
+import { workspaceService } from "../services/workspaceService";
+import { ProjectNetworkSelect } from "./ProjectNetworkSelect";
+import { ProjectLeadSelect } from "./ProjectLeadSelect";
 
 export interface CreateProjectModalProps {
   open: boolean;
@@ -18,43 +31,6 @@ const COVER_GRADIENTS = [
   "linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #fcd34d 100%)",
   "linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #f9a8d4 100%)",
 ];
-
-const IconGlobe = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <circle cx="12" cy="12" r="10" />
-    <line x1="2" y1="12" x2="22" y2="12" />
-    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-  </svg>
-);
-
-const IconUsers = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
-);
 
 const IconInfo = () => (
   <svg
@@ -97,17 +73,33 @@ export function CreateProjectModal({
   workspaceSlug,
   onSuccess,
 }: CreateProjectModalProps) {
+  const { user } = useAuth();
   const [name, setName] = useState("");
   const [identifier, setIdentifier] = useState("");
   const [description, setDescription] = useState("");
+  const [emoji, setEmoji] = useState<string | null>(null);
+  const [iconProp, setIconProp] =
+    useState<ProjectIconSelection["icon_prop"]>(null);
+  const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [network, setNetwork] = useState<"public" | "private">("public");
+  const [projectLeadId, setProjectLeadId] = useState<string | null>(null);
+  const [workspaceMembers, setWorkspaceMembers] = useState<
+    WorkspaceMemberApiResponse[]
+  >([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [coverIndex, setCoverIndex] = useState(0);
+  const [coverModalOpen, setCoverModalOpen] = useState(false);
+  const [iconModalOpen, setIconModalOpen] = useState(false);
 
   const handleClose = () => {
     setName("");
     setIdentifier("");
     setDescription("");
+    setEmoji(null);
+    setIconProp(null);
+    setCoverImage(null);
+    setNetwork("public");
+    setProjectLeadId(null);
     setError("");
     onClose();
   };
@@ -121,10 +113,18 @@ export function CreateProjectModal({
     }
     setSubmitting(true);
     try {
-      const project = await projectService.create(workspaceSlug, {
+      const payload: Parameters<typeof projectService.create>[1] = {
         name: name.trim(),
         identifier: identifier.trim() || undefined,
-      });
+        description: description.trim() || undefined,
+        cover_image: coverImage || undefined,
+        emoji: emoji ?? undefined,
+        icon_prop: iconProp ?? undefined,
+        guest_view_all_features: network === "public" ? true : undefined,
+        project_lead_id: projectLeadId ?? undefined,
+      };
+
+      const project = await projectService.create(workspaceSlug, payload);
       onSuccess?.(project);
       handleClose();
     } catch (err) {
@@ -138,22 +138,39 @@ export function CreateProjectModal({
 
   useEffect(() => {
     if (!open) return;
+
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", handleEscape);
     document.body.style.overflow = "hidden";
+
+    // Load workspace members for project lead dropdown
+    workspaceService
+      .listMembers(workspaceSlug)
+      .then((members) => setWorkspaceMembers(members))
+      .catch(() => {
+        // ignore for create modal; dropdown will just be empty
+      });
+
     return () => {
       document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "";
     };
-  }, [open, onClose]);
+  }, [open, onClose, workspaceSlug]);
 
   if (!open) return null;
 
-  const coverStyle = {
-    background: COVER_GRADIENTS[coverIndex % COVER_GRADIENTS.length],
-  };
+  const coverStyle =
+    coverImage != null
+      ? {
+          backgroundImage: `url(${coverImage})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }
+      : {
+          background: COVER_GRADIENTS[0],
+        };
 
   return createPortal(
     <div
@@ -171,11 +188,11 @@ export function CreateProjectModal({
         aria-hidden
       />
       <div
-        className="relative z-10 w-full max-w-lg overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-overlay)]"
+        className="relative z-10 w-full max-w-2xl overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-overlay)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Cover + Close */}
-        <div className="relative h-28 w-full shrink-0" style={coverStyle}>
+        <div className="relative h-36 w-full shrink-0" style={coverStyle}>
           <button
             type="button"
             onClick={handleClose}
@@ -186,26 +203,34 @@ export function CreateProjectModal({
           </button>
           <button
             type="button"
-            onClick={() => setCoverIndex((i) => i + 1)}
+            onClick={() => setCoverModalOpen(true)}
             className="absolute bottom-3 right-3 rounded-md bg-white/20 px-2.5 py-1.5 text-xs font-medium text-white backdrop-blur-sm hover:bg-white/30"
           >
-            Change cover
+            Choose image
           </button>
         </div>
 
-        {/* Icon placeholder overlapping cover */}
+        {/* Icon overlapping cover */}
         <div className="px-5 -mt-6 relative z-10">
-          <div className="flex size-12 items-center justify-center rounded-lg border-2 border-[var(--bg-surface-1)] bg-[var(--bg-layer-2)] text-2xl shadow-sm">
-            📁
-          </div>
+          <button
+            type="button"
+            onClick={() => setIconModalOpen(true)}
+            className="flex size-12 items-center justify-center rounded-lg border-2 border-[var(--bg-surface-1)] bg-[var(--bg-layer-2)] text-2xl shadow-sm hover:bg-[var(--bg-layer-transparent-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--border-strong)]"
+            aria-label="Change project icon"
+          >
+            <ProjectIconDisplay
+              emoji={emoji ?? undefined}
+              icon_prop={iconProp ?? undefined}
+              size={24}
+            />
+          </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-5 pb-5 pt-2">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2 sm:grid-cols-1">
+        <form onSubmit={handleSubmit} className="px-5 pb-5 pt-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="sm:col-span-2">
               <Input
-                label="Project name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Project name"
@@ -215,9 +240,8 @@ export function CreateProjectModal({
                 className="w-full"
               />
             </div>
-            <div className="relative sm:col-span-2">
+            <div className="relative">
               <Input
-                label="Project ID"
                 value={identifier}
                 onChange={(e) =>
                   setIdentifier(
@@ -237,9 +261,6 @@ export function CreateProjectModal({
             </div>
           </div>
           <div className="mt-4">
-            <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
-              Description
-            </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -250,16 +271,19 @@ export function CreateProjectModal({
             />
           </div>
 
-          {/* Visibility / type tags (Plane-style) */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-xs font-medium text-[var(--txt-secondary)]">
-              <IconGlobe />
-              Public
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-xs font-medium text-[var(--txt-secondary)]">
-              <IconUsers />
-              Lead
-            </span>
+          {/* Network + Project Lead (under description, side by side) */}
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <ProjectNetworkSelect
+              value={network}
+              onChange={setNetwork}
+              disabled={submitting}
+            />
+            <ProjectLeadSelect
+              value={projectLeadId}
+              members={workspaceMembers}
+              onChange={setProjectLeadId}
+              disabled={submitting || !user}
+            />
           </div>
 
           {error && (
@@ -283,6 +307,32 @@ export function CreateProjectModal({
             </Button>
           </div>
         </form>
+
+        {/* Cover and icon selection modals (reused from settings) */}
+        <CoverImageModal
+          open={coverModalOpen}
+          onClose={() => setCoverModalOpen(false)}
+          onSelect={(url) => {
+            setCoverImage(url);
+            setCoverModalOpen(false);
+          }}
+          title="Select project cover"
+        />
+        <ProjectIconModal
+          open={iconModalOpen}
+          onClose={() => setIconModalOpen(false)}
+          onSelect={(selection) => {
+            if (selection.emoji != null) {
+              setEmoji(selection.emoji);
+              setIconProp(null);
+            } else {
+              setEmoji(null);
+              setIconProp(selection.icon_prop ?? null);
+            }
+            setIconModalOpen(false);
+          }}
+          title="Project icon"
+        />
       </div>
     </div>,
     document.body,

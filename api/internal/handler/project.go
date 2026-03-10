@@ -84,8 +84,22 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 	}
 	slug := c.Param("slug")
 	var body struct {
-		Name       string `json:"name" binding:"required"`
-		Identifier string `json:"identifier"`
+		Name                  string                 `json:"name" binding:"required"`
+		Identifier            string                 `json:"identifier"`
+		Description           *string                `json:"description"`
+		Timezone              *string                `json:"timezone"`
+		CoverImage            *string                `json:"cover_image"`
+		Emoji                 *string                `json:"emoji"`
+		IconProp              map[string]interface{} `json:"icon_prop"`
+		ProjectLeadID         *string                `json:"project_lead_id"`
+		DefaultAssigneeID     *string                `json:"default_assignee_id"`
+		GuestViewAllFeatures  *bool                  `json:"guest_view_all_features"`
+		ModuleView            *bool                  `json:"module_view"`
+		CycleView             *bool                  `json:"cycle_view"`
+		IssueViewsView        *bool                  `json:"issue_views_view"`
+		PageView              *bool                  `json:"page_view"`
+		IntakeView            *bool                  `json:"intake_view"`
+		IsTimeTrackingEnabled *bool                  `json:"is_time_tracking_enabled"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
@@ -100,6 +114,106 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create project"})
 		return
 	}
+
+	// If additional fields were provided, immediately apply them using the same logic as Update.
+	if body.Description != nil ||
+		body.Timezone != nil ||
+		body.CoverImage != nil ||
+		body.Emoji != nil ||
+		len(body.IconProp) > 0 ||
+		body.ProjectLeadID != nil ||
+		body.DefaultAssigneeID != nil ||
+		body.GuestViewAllFeatures != nil ||
+		body.ModuleView != nil ||
+		body.CycleView != nil ||
+		body.IssueViewsView != nil ||
+		body.PageView != nil ||
+		body.IntakeView != nil ||
+		body.IsTimeTrackingEnabled != nil {
+
+		// Reuse Update's field handling by calling the service directly.
+		var (
+			description, timezone *string
+			coverImage            *string
+			iconProp              *model.JSONMap
+			projectLeadIDPtr      *uuid.UUID
+			defaultAssigneeIDPtr  *uuid.UUID
+		)
+
+		if body.Description != nil {
+			description = body.Description
+		}
+		if body.Timezone != nil {
+			timezone = body.Timezone
+		}
+		if body.CoverImage != nil {
+			coverImage = body.CoverImage
+		}
+		if body.Emoji != nil && *body.Emoji != "" {
+			empty := model.JSONMap{}
+			iconProp = &empty
+		} else if len(body.IconProp) > 0 {
+			ip := model.JSONMap(body.IconProp)
+			iconProp = &ip
+		}
+		projectLeadSet := false
+		if body.ProjectLeadID != nil {
+			projectLeadSet = true
+			if *body.ProjectLeadID != "" {
+				id, parseErr := uuid.Parse(*body.ProjectLeadID)
+				if parseErr != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project_lead_id", "detail": "must be a valid UUID"})
+					return
+				}
+				projectLeadIDPtr = &id
+			}
+		}
+		defaultAssigneeSet := false
+		if body.DefaultAssigneeID != nil {
+			defaultAssigneeSet = true
+			if *body.DefaultAssigneeID != "" {
+				id, parseErr := uuid.Parse(*body.DefaultAssigneeID)
+				if parseErr != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid default_assignee_id", "detail": "must be a valid UUID"})
+					return
+				}
+				defaultAssigneeIDPtr = &id
+			}
+		}
+
+		updated, err := h.Project.Update(
+			c.Request.Context(),
+			slug,
+			p.ID,
+			user.ID,
+			nil, // name
+			nil, // identifier
+			description,
+			timezone,
+			coverImage,
+			body.Emoji,
+			iconProp,
+			projectLeadSet,
+			projectLeadIDPtr,
+			defaultAssigneeSet,
+			defaultAssigneeIDPtr,
+			body.GuestViewAllFeatures,
+			body.ModuleView,
+			body.CycleView,
+			body.IssueViewsView,
+			body.PageView,
+			body.IntakeView,
+			body.IsTimeTrackingEnabled,
+		)
+		if err != nil {
+			// If the follow-up update fails, still return the base project creation result.
+			c.JSON(http.StatusCreated, p)
+			return
+		}
+		c.JSON(http.StatusCreated, updated)
+		return
+	}
+
 	c.JSON(http.StatusCreated, p)
 }
 
