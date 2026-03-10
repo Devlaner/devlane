@@ -8,7 +8,10 @@ interface ProjectLeadSelectProps {
   disabled?: boolean;
 }
 
-const memberLabel = (members: WorkspaceMemberApiResponse[], memberId: string | null | undefined) => {
+const memberLabel = (
+  members: WorkspaceMemberApiResponse[],
+  memberId: string | null | undefined,
+) => {
   if (!memberId) return "—";
   const m = members.find((wm) => wm.member_id === memberId);
   const display = m?.member_display_name?.trim();
@@ -52,4 +55,3 @@ export function ProjectLeadSelect({
     </div>
   );
 }
-

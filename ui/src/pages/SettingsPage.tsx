@@ -2498,15 +2498,11 @@ export function SettingsPage() {
                         { guest_view_all_features: nextGuestAccess },
                       );
                       setProjects((prev) =>
-                        prev.map((p) =>
-                          p.id === updated.id ? updated : p,
-                        ),
+                        prev.map((p) => (p.id === updated.id ? updated : p)),
                       );
                     } catch {
                       // revert local state on failure
-                      setProjectNetwork(
-                        nextGuestAccess ? "private" : "public",
-                      );
+                      setProjectNetwork(nextGuestAccess ? "private" : "public");
                       setGuestAccess(!nextGuestAccess);
                     }
                   }}
