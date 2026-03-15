@@ -265,7 +265,7 @@ export function WorkspaceViewsFiltersDropdown({
         return proj ?? [];
       })
       .then((proj) => {
-        if (cancelled || !proj.length) return;
+        if (cancelled || !proj || !proj.length) return;
         return Promise.all(
           proj.map((p) =>
             Promise.all([
