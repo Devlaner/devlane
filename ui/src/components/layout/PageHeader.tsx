@@ -979,7 +979,7 @@ function WorkspaceViewsHeader() {
 
   useEffect(() => {
     if (!workspaceSlug) {
-      setCustomViews([]);
+      queueMicrotask(() => setCustomViews([]));
       return;
     }
     viewService
@@ -990,7 +990,7 @@ function WorkspaceViewsHeader() {
 
   useEffect(() => {
     if (!viewDropdownOpen) {
-      setViewSearch("");
+      queueMicrotask(() => setViewSearch(""));
     }
   }, [viewDropdownOpen]);
 

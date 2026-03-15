@@ -27,7 +27,7 @@ import {
   type DisplayPropertyKey,
 } from "../types/workspaceViewDisplay";
 
-const IconChevronDown = () => (
+const IconChevronDown = (props: React.SVGAttributes<SVGSVGElement>) => (
   <svg
     width="14"
     height="14"
@@ -36,11 +36,12 @@ const IconChevronDown = () => (
     stroke="currentColor"
     strokeWidth="2"
     aria-hidden
+    {...props}
   >
     <path d="m6 9 6 6 6-6" />
   </svg>
 );
-const IconUser = () => (
+const IconUser = (props: React.SVGAttributes<SVGSVGElement>) => (
   <svg
     width="14"
     height="14"
@@ -49,12 +50,13 @@ const IconUser = () => (
     stroke="currentColor"
     strokeWidth="2"
     aria-hidden
+    {...props}
   >
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
     <circle cx="12" cy="7" r="4" />
   </svg>
 );
-const IconTag = () => (
+const IconTag = (props: React.SVGAttributes<SVGSVGElement>) => (
   <svg
     width="14"
     height="14"
@@ -63,11 +65,12 @@ const IconTag = () => (
     stroke="currentColor"
     strokeWidth="2"
     aria-hidden
+    {...props}
   >
     <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
   </svg>
 );
-const IconRadio = () => (
+const IconRadio = (props: React.SVGAttributes<SVGSVGElement>) => (
   <svg
     width="14"
     height="14"
@@ -76,12 +79,13 @@ const IconRadio = () => (
     stroke="currentColor"
     strokeWidth="2"
     aria-hidden
+    {...props}
   >
     <circle cx="12" cy="12" r="10" />
     <circle cx="12" cy="12" r="6" />
   </svg>
 );
-const IconBarChart = () => (
+const IconBarChart = (props: React.SVGAttributes<SVGSVGElement>) => (
   <svg
     width="14"
     height="14"
@@ -90,6 +94,7 @@ const IconBarChart = () => (
     stroke="currentColor"
     strokeWidth="2"
     aria-hidden
+    {...props}
   >
     <line x1="12" y1="20" x2="12" y2="10" />
     <line x1="18" y1="20" x2="18" y2="4" />
@@ -132,7 +137,7 @@ export function WorkspaceViewsPage() {
     }
     if (!workspaceSlug || !viewId || !isCustomViewId(viewId) || viewAppliedRef.current) return;
     viewAppliedRef.current = true;
-    setViewLoading(true);
+    queueMicrotask(() => setViewLoading(true));
     viewService
       .get(workspaceSlug, viewId)
       .then((view) => {
@@ -337,23 +342,6 @@ export function WorkspaceViewsPage() {
     members.find((m) => m.member_id === memberId);
   const getLabel = (labelId: string): LabelApiResponse | undefined =>
     labels.find((l) => l.id === labelId);
-  const getCycleName = (
-    projectId: string,
-    cycleId: string | null,
-  ): string | null => {
-    void projectId;
-    void cycleId; // reserved for future use
-    return null;
-  };
-  const getModuleName = (
-    projectId: string,
-    moduleId: string | null,
-  ): string | null => {
-    void projectId;
-    void moduleId; // reserved for future use
-    return null;
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
