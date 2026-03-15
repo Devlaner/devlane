@@ -15,6 +15,10 @@ export interface DropdownProps {
   panelClassName?: string;
   /** When 'right', panel's right edge aligns with trigger's right edge (opens toward left). Default 'left'. */
   align?: "left" | "right";
+  /** Optional class for the trigger button (e.g. table cell style: full width, hover only). */
+  triggerClassName?: string;
+  /** Optional custom trigger content (when set, icon and displayValue are ignored and this is rendered inside the trigger). */
+  triggerContent?: React.ReactNode;
 }
 
 export function Dropdown({
@@ -28,6 +32,8 @@ export function Dropdown({
   compact = false,
   panelClassName,
   align = "left",
+  triggerClassName,
+  triggerContent,
 }: DropdownProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -37,6 +43,11 @@ export function Dropdown({
     right?: number;
   } | null>(null);
   const open = openId === id;
+
+  const defaultTriggerClass =
+    compact
+      ? "inline-flex min-w-0 items-center gap-1 rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-1.5 py-1 text-xs text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)] [&_svg]:size-3"
+      : "inline-flex min-w-0 items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-sm text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]";
 
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) {
@@ -77,14 +88,14 @@ export function Dropdown({
         ref={triggerRef}
         type="button"
         onClick={() => onOpen(open ? null : id)}
-        className={
-          compact
-            ? "inline-flex min-w-0 items-center gap-1 rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-1.5 py-1 text-xs text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)] [&_svg]:size-3"
-            : "inline-flex min-w-0 items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-sm text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
-        }
+        className={triggerClassName ?? defaultTriggerClass}
       >
-        <span className="shrink-0 text-[var(--txt-icon-tertiary)]">{icon}</span>
-        <span className="truncate">{displayValue || label}</span>
+        {triggerContent ?? (
+          <>
+            <span className="shrink-0 text-[var(--txt-icon-tertiary)]">{icon}</span>
+            <span className="truncate">{displayValue || label}</span>
+          </>
+        )}
       </button>
       {open &&
         position &&
