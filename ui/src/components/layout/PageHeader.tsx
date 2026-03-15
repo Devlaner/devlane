@@ -2,15 +2,27 @@ import { useState, useRef, useEffect } from "react";
 import {
   Link,
   useLocation,
+  useNavigate,
   useParams,
   useSearchParams,
 } from "react-router-dom";
 import { Button } from "../ui";
 import { Dropdown } from "../work-item";
+import {
+  WorkspaceViewsFiltersDropdown,
+  WorkspaceViewsDisplayDropdown,
+  WorkspaceViewsEllipsisMenu,
+  CreateViewModal,
+} from "../workspace-views";
 import { workspaceService } from "../../services/workspaceService";
 import { projectService } from "../../services/projectService";
 import { issueService } from "../../services/issueService";
-import type { WorkspaceApiResponse, ProjectApiResponse } from "../../api/types";
+import { viewService } from "../../services/viewService";
+import type {
+  WorkspaceApiResponse,
+  ProjectApiResponse,
+  IssueViewApiResponse,
+} from "../../api/types";
 
 export type ProjectSection =
   | "issues"
@@ -18,10 +30,6 @@ export type ProjectSection =
   | "modules"
   | "views"
   | "pages";
-
-// ---------------------------------------------------------------------------
-// Icons
-// ---------------------------------------------------------------------------
 
 const IconHome = () => (
   <svg
@@ -311,6 +319,17 @@ const IconLayers = () => (
     <path d="M5 14l7 4 7-4" />
   </svg>
 );
+const IconViewsPlane = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="currentColor"
+    aria-hidden
+  >
+    <path d="M14.3926 10.7735C14.7013 10.6192 15.0771 10.7451 15.2314 11.0538C15.3854 11.3623 15.2604 11.7373 14.9521 11.8917L8.52344 15.1056C8.46846 15.1331 8.33457 15.2069 8.18262 15.2355H8.18164C8.06516 15.2572 7.94558 15.2573 7.8291 15.2355C7.67698 15.2069 7.54234 15.1331 7.4873 15.1056L1.05957 11.8917C0.750903 11.7374 0.626065 11.3625 0.780273 11.0538C0.934594 10.7452 1.30948 10.6194 1.61816 10.7735L8.00488 13.9669L14.3926 10.7735ZM14.3926 7.44054C14.7013 7.28618 15.0771 7.41114 15.2314 7.71983C15.3858 8.02847 15.2607 8.40424 14.9521 8.5587L8.52344 11.7726C8.46839 11.8001 8.33451 11.8739 8.18262 11.9025H8.18164C8.06519 11.9242 7.94554 11.9242 7.8291 11.9025C7.67698 11.8739 7.54234 11.8001 7.4873 11.7726L1.05957 8.5587C0.750834 8.40433 0.625905 8.02857 0.780273 7.71983C0.934713 7.41138 1.30956 7.28634 1.61816 7.44054L8.00488 10.6339L14.3926 7.44054ZM7.91699 0.751084C8.00545 0.742877 8.09504 0.747328 8.18262 0.763779C8.33432 0.79232 8.46833 0.865118 8.52344 0.892686L14.9521 4.10753C15.1636 4.21348 15.2969 4.42959 15.2969 4.66612C15.2969 4.90266 15.1636 5.11875 14.9521 5.22472L8.52344 8.43956C8.46831 8.46714 8.33434 8.53992 8.18262 8.56847H8.18164C8.06513 8.59024 7.94561 8.59028 7.8291 8.56847C7.67698 8.53994 7.54235 8.46708 7.4873 8.43956L1.05957 5.22472C0.84784 5.11884 0.713867 4.90285 0.713867 4.66612C0.713883 4.42941 0.847843 4.21339 1.05957 4.10753L7.4873 0.892686C7.54232 0.865181 7.67699 0.7923 7.8291 0.763779L7.91699 0.751084ZM2.73535 4.66612L8.00488 7.30089L13.2754 4.66612L8.00488 2.03038L2.73535 4.66612Z" />
+  </svg>
+);
 const IconLayoutGrid = () => (
   <svg
     width="16"
@@ -343,22 +362,6 @@ const IconColumns = () => (
   >
     <rect width="7" height="18" x="3" y="3" rx="1" />
     <rect width="7" height="18" x="14" y="3" rx="1" />
-  </svg>
-);
-const IconEye = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-    <circle cx="12" cy="12" r="3" />
   </svg>
 );
 const IconBarChart = () => (
@@ -433,9 +436,6 @@ const IconFileText = () => (
     <line x1="10" y1="9" x2="8" y2="9" />
   </svg>
 );
-// ---------------------------------------------------------------------------
-// Project section dropdown (Work items / Cycles / Modules / Views / Pages)
-// ---------------------------------------------------------------------------
 
 const SECTION_LABELS: Record<ProjectSection, string> = {
   issues: "Work items",
@@ -449,7 +449,7 @@ const SECTION_ICONS: Record<ProjectSection, React.ReactNode> = {
   issues: <IconClipboard />,
   cycles: <IconCycle />,
   modules: <IconGrid />,
-  views: <IconEye />,
+  views: <IconViewsPlane />,
   pages: <IconFileText />,
 };
 
@@ -540,10 +540,6 @@ function ProjectSectionDropdown({
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Header content by route
-// ---------------------------------------------------------------------------
 
 function YourWorkHeader() {
   return (
@@ -969,46 +965,83 @@ function ProjectSectionHeader({
   );
 }
 
-// ---------------------------------------------------------------------------
-// WorkspaceViewsHeader (Views under Workspace in sidebar)
-// ---------------------------------------------------------------------------
-
-const WORKSPACE_VIEW_OPTIONS = [
-  { id: "all", name: "All work items" },
+/** Default workspace view options (Plane-style: all-issues, assigned, created, subscribed). */
+const DEFAULT_WORKSPACE_VIEWS = [
+  { id: "all-issues", name: "All work items" },
   { id: "assigned", name: "Assigned" },
   { id: "created", name: "Created" },
   { id: "subscribed", name: "Subscribed" },
-  { id: "view-2", name: "view 2", userGenerated: true as const },
-];
+] as const;
+
+const LONG_LIST_PANEL_STYLE = { maxHeight: "min(70vh, 28rem)" };
 
 function WorkspaceViewsHeader() {
+  const { workspaceSlug, viewId: urlViewId } = useParams<{
+    workspaceSlug?: string;
+    viewId?: string;
+  }>();
+  const navigate = useNavigate();
   const [viewDropdownOpen, setViewDropdownOpen] = useState<string | null>(null);
+  const [filtersDropdownOpen, setFiltersDropdownOpen] = useState<string | null>(
+    null,
+  );
+  const [displayDropdownOpen, setDisplayDropdownOpen] = useState<string | null>(
+    null,
+  );
+  const [createViewModalOpen, setCreateViewModalOpen] = useState(false);
   const [viewSearch, setViewSearch] = useState("");
-  const [selectedViewId, setSelectedViewId] = useState("all");
+  const [customViews, setCustomViews] = useState<IssueViewApiResponse[]>([]);
+
+  useEffect(() => {
+    if (!workspaceSlug) {
+      queueMicrotask(() => setCustomViews([]));
+      return;
+    }
+    viewService
+      .list(workspaceSlug)
+      .then((list) => setCustomViews(list ?? []))
+      .catch(() => setCustomViews([]));
+  }, [workspaceSlug]);
 
   useEffect(() => {
     if (!viewDropdownOpen) {
-      // Intentional: clear search when dropdown closes (kept for future use)
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setViewSearch("");
+      queueMicrotask(() => setViewSearch(""));
     }
   }, [viewDropdownOpen]);
 
+  const selectedViewId = urlViewId ?? "all-issues";
+  const allOptions = [
+    ...DEFAULT_WORKSPACE_VIEWS,
+    ...customViews.map((v) => ({ id: v.id, name: v.name })),
+  ];
   const selectedView =
-    WORKSPACE_VIEW_OPTIONS.find((v) => v.id === selectedViewId) ??
-    WORKSPACE_VIEW_OPTIONS[0];
+    DEFAULT_WORKSPACE_VIEWS.find((v) => v.id === selectedViewId) ??
+    customViews.find((v) => v.id === selectedViewId) ??
+    DEFAULT_WORKSPACE_VIEWS[0];
+  const displayName = selectedView?.name ?? "All work items";
   const q = (s: string) => s.trim().toLowerCase();
-  const filteredViews = WORKSPACE_VIEW_OPTIONS.filter((v) =>
+  const filteredViews = allOptions.filter((v) =>
     q(v.name).includes(q(viewSearch)),
   );
+
+  const handleSelectView = (id: string) => {
+    setViewDropdownOpen(null);
+    if (!workspaceSlug) return;
+    navigate(`/${workspaceSlug}/views/${id}`);
+  };
 
   return (
     <>
       <div className="flex items-center gap-2 text-sm font-medium text-[var(--txt-secondary)]">
-        <span className="flex size-5 items-center justify-center text-[var(--txt-icon-tertiary)]">
-          <IconEye />
-        </span>
-        <span>Views</span>
+        <Link
+          to={workspaceSlug ? `/${workspaceSlug}/views/all-issues` : "/"}
+          className="flex items-center gap-1.5 text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]"
+        >
+          <span className="flex size-5 items-center justify-center text-[var(--txt-icon-tertiary)]">
+            <IconViewsPlane />
+          </span>
+          <span>Views</span>
+        </Link>
         <span className="text-[var(--txt-icon-tertiary)]" aria-hidden>
           &gt;
         </span>
@@ -1017,12 +1050,12 @@ function WorkspaceViewsHeader() {
           openId={viewDropdownOpen}
           onOpen={setViewDropdownOpen}
           label="All work items"
-          icon={<IconLayers />}
-          displayValue={selectedView.name}
-          panelClassName="flex min-w-[220px] max-h-[320px] flex-col rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)]"
+          icon={<IconViewsPlane />}
+          displayValue={displayName}
+          panelClassName="flex min-w-[220px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)] overflow-hidden"
           align="left"
         >
-          <div className="sticky top-0 border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-2">
+          <div className="sticky top-0 shrink-0 border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-2">
             <div className="flex items-center gap-2 rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-2 py-1.5">
               <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
                 <IconSearch />
@@ -1036,15 +1069,15 @@ function WorkspaceViewsHeader() {
               />
             </div>
           </div>
-          <div className="overflow-auto py-1">
+          <div
+            className="min-h-0 flex-1 overflow-y-auto py-1"
+            style={LONG_LIST_PANEL_STYLE}
+          >
             {filteredViews.map((view) => (
               <button
                 key={view.id}
                 type="button"
-                onClick={() => {
-                  setSelectedViewId(view.id);
-                  setViewDropdownOpen(null);
-                }}
+                onClick={() => handleSelectView(view.id)}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
               >
                 <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
@@ -1062,36 +1095,39 @@ function WorkspaceViewsHeader() {
         </Dropdown>
       </div>
       <div className="flex items-center gap-1">
-        <button
-          type="button"
-          className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+        <WorkspaceViewsFiltersDropdown
+          openId={filtersDropdownOpen}
+          onOpen={setFiltersDropdownOpen}
+        />
+        <WorkspaceViewsDisplayDropdown
+          openId={displayDropdownOpen}
+          onOpen={setDisplayDropdownOpen}
+        />
+        <Button
+          size="sm"
+          className="gap-1.5 text-[13px] font-medium"
+          onClick={() => setCreateViewModalOpen(true)}
         >
-          <IconFilter /> Filters <IconChevronDown />
-        </button>
-        <button
-          type="button"
-          className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
-        >
-          Display <IconChevronDown />
-        </button>
-        <Button size="sm" className="gap-1.5 text-[13px] font-medium">
           <IconPlus /> Add view
         </Button>
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
-          aria-label="More options"
-        >
-          <IconMoreVertical />
-        </button>
+        <CreateViewModal
+          open={createViewModalOpen}
+          onClose={() => setCreateViewModalOpen(false)}
+          onCreated={() => {
+            setCreateViewModalOpen(false);
+            if (workspaceSlug) {
+              viewService
+                .list(workspaceSlug)
+                .then((list) => setCustomViews(list ?? []))
+                .catch(() => {});
+            }
+          }}
+        />
+        <WorkspaceViewsEllipsisMenu />
       </div>
     </>
   );
 }
-
-// ---------------------------------------------------------------------------
-// AnalyticsHeader
-// ---------------------------------------------------------------------------
 
 function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
@@ -1300,7 +1336,9 @@ export function PageHeader() {
     (pathname === `/${workspaceSlug}/analytics` ||
       pathname.startsWith(`/${workspaceSlug}/analytics/`));
   const isWorkspaceViewsPage =
-    workspaceSlug && pathname === `/${workspaceSlug}/views`;
+    workspaceSlug &&
+    (pathname === `/${workspaceSlug}/views` ||
+      pathname.startsWith(`/${workspaceSlug}/views/`));
 
   const projectSection: ProjectSection | null = isIssuesPage
     ? "issues"
