@@ -1,7 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   Link,
-  useLocation,
   useNavigate,
   useParams,
   useSearchParams,
@@ -123,7 +122,6 @@ export function WorkspaceViewsPage() {
     workspaceSlug?: string;
     viewId?: string;
   }>();
-  const location = useLocation();
   const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);

@@ -98,10 +98,16 @@ export function parseWorkspaceViewFiltersFromSearchParams(
   params: URLSearchParams,
 ): WorkspaceViewFilters {
   const priority = parseEnumList(params.get(PARAM_KEYS.priority), PRIORITIES);
-  const stateGroup = parseEnumList(params.get(PARAM_KEYS.state_group), STATE_GROUPS);
+  const stateGroup = parseEnumList(
+    params.get(PARAM_KEYS.state_group),
+    STATE_GROUPS,
+  );
   const grouping =
     parseSingle(params.get(PARAM_KEYS.grouping), GROUPING_OPTIONS) ?? "all";
-  const startDate = parseEnumList(params.get(PARAM_KEYS.start_date), DATE_PRESETS);
+  const startDate = parseEnumList(
+    params.get(PARAM_KEYS.start_date),
+    DATE_PRESETS,
+  );
   const dueDate = parseEnumList(params.get(PARAM_KEYS.due_date), DATE_PRESETS);
 
   const startAfter = params.get(PARAM_KEYS.start_after)?.trim() || null;
