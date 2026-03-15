@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Modal } from "../ui";
 import { Button, Input } from "../ui";
 import { viewService } from "../../services/viewService";
@@ -7,7 +7,10 @@ import {
   parseWorkspaceViewFiltersFromSearchParams,
   workspaceViewFiltersToSearchParams,
 } from "../../types/workspaceViewFilters";
-import { useSearchParams } from "react-router-dom";
+import {
+  parseWorkspaceViewDisplayFromSearchParams,
+  type DisplayPropertyKey,
+} from "../../types/workspaceViewDisplay";
 
 export interface CreateViewModalProps {
   open: boolean;
@@ -21,6 +24,7 @@ export function CreateViewModal({
   onCreated,
 }: CreateViewModalProps) {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<"filters" | "display">("filters");
   const [title, setTitle] = useState("");
@@ -39,17 +43,26 @@ export function CreateViewModal({
     try {
       const filters = parseWorkspaceViewFiltersFromSearchParams(searchParams);
       const filterParams = workspaceViewFiltersToSearchParams(filters);
-      await viewService.create(workspaceSlug, {
+      const display = parseWorkspaceViewDisplayFromSearchParams(searchParams);
+      const display_properties: Record<string, boolean> = {};
+      display.properties.forEach((k: DisplayPropertyKey) => {
+        display_properties[k] = true;
+      });
+      const display_filters: Record<string, unknown> = {
+        sub_issue: display.showSubWorkItems,
+      };
+      const created = await viewService.create(workspaceSlug, {
         name: title.trim(),
         description: description.trim() || undefined,
         filters: filterParams as Record<string, unknown>,
-        display_filters: {},
-        display_properties: {},
+        display_filters,
+        display_properties,
       });
       setTitle("");
       setDescription("");
       onClose();
       onCreated?.();
+      navigate(`/${workspaceSlug}/views/${created.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create view.");
     } finally {

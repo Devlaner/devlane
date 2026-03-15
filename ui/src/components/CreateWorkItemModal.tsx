@@ -223,6 +223,8 @@ export function CreateWorkItemModal({
   const [labelSearch, setLabelSearch] = useState("");
   const [cycleSearch, setCycleSearch] = useState("");
   const [moduleSearch, setModuleSearch] = useState("");
+  const [createLabelLoading, setCreateLabelLoading] = useState(false);
+  const [createLabelError, setCreateLabelError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!openDropdown) {
@@ -232,6 +234,7 @@ export function CreateWorkItemModal({
       setLabelSearch("");
       setCycleSearch("");
       setModuleSearch("");
+      setCreateLabelError(null);
     }
   }, [openDropdown]);
 
@@ -462,6 +465,24 @@ export function CreateWorkItemModal({
     );
   };
 
+  const handleCreateLabel = async () => {
+    const name = labelSearch.trim();
+    if (!name || !workspaceSlug || !pid) return;
+    setCreateLabelError(null);
+    setCreateLabelLoading(true);
+    try {
+      const created = await labelService.create(workspaceSlug, pid, { name });
+      setLabels((prev) => [...prev, created]);
+      setLabelIds((prev) => [...prev, created.id]);
+      setLabelSearch("");
+      setOpenDropdown(null);
+    } catch (err) {
+      setCreateLabelError(err instanceof Error ? err.message : "Failed to create label.");
+    } finally {
+      setCreateLabelLoading(false);
+    }
+  };
+
   if (!open) return null;
 
   return createPortal(
@@ -690,6 +711,29 @@ export function CreateWorkItemModal({
                       {l.name}
                     </button>
                   ))}
+                  {labelSearch.trim() &&
+                    !labels.some(
+                      (l) => l.name.toLowerCase() === labelSearch.trim().toLowerCase()
+                    ) && (
+                    <>
+                      <div className="my-1 border-t border-[var(--border-subtle)]" />
+                      <button
+                        type="button"
+                        onClick={handleCreateLabel}
+                        disabled={createLabelLoading}
+                        className="w-full text-left text-[var(--brand-default)] hover:bg-[var(--bg-layer-1-hover)] disabled:opacity-50"
+                      >
+                        {createLabelLoading
+                          ? "Creating…"
+                          : `Create label "${labelSearch.trim()}"`}
+                      </button>
+                      {createLabelError && (
+                        <p className="px-2 py-1 text-xs text-red-600">
+                          {createLabelError}
+                        </p>
+                      )}
+                    </>
+                  )}
                 </div>
               </Dropdown>
               <DatePickerTrigger

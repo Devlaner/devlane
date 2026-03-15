@@ -470,6 +470,14 @@ const router = createBrowserRouter([
                 ),
               },
               {
+                path: "views/:viewId",
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <WorkspaceViewsPage />
+                  </Suspense>
+                ),
+              },
+              {
                 path: "drafts",
                 element: (
                   <Suspense fallback={<PageFallback />}>

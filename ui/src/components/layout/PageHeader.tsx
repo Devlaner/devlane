@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   Link,
   useLocation,
+  useNavigate,
   useParams,
   useSearchParams,
 } from "react-router-dom";
@@ -11,7 +12,8 @@ import { WorkspaceViewsFiltersDropdown, WorkspaceViewsDisplayDropdown, Workspace
 import { workspaceService } from "../../services/workspaceService";
 import { projectService } from "../../services/projectService";
 import { issueService } from "../../services/issueService";
-import type { WorkspaceApiResponse, ProjectApiResponse } from "../../api/types";
+import { viewService } from "../../services/viewService";
+import type { WorkspaceApiResponse, ProjectApiResponse, IssueViewApiResponse } from "../../api/types";
 
 export type ProjectSection =
   | "issues"
@@ -955,40 +957,65 @@ function ProjectSectionHeader({
   );
 }
 
-const WORKSPACE_VIEW_OPTIONS = [
-  { id: "all", name: "All work items" },
+/** Default workspace view options (Plane-style: all-issues, assigned, created, subscribed). */
+const DEFAULT_WORKSPACE_VIEWS = [
+  { id: "all-issues", name: "All work items" },
   { id: "assigned", name: "Assigned" },
   { id: "created", name: "Created" },
   { id: "subscribed", name: "Subscribed" },
-  { id: "view-2", name: "view 2", userGenerated: true as const },
-];
+] as const;
 
 const LONG_LIST_PANEL_STYLE = { maxHeight: "min(70vh, 28rem)" };
 
 function WorkspaceViewsHeader() {
-  const { workspaceSlug } = useParams();
+  const { workspaceSlug, viewId: urlViewId } = useParams<{ workspaceSlug?: string; viewId?: string }>();
+  const navigate = useNavigate();
   const [viewDropdownOpen, setViewDropdownOpen] = useState<string | null>(null);
   const [filtersDropdownOpen, setFiltersDropdownOpen] = useState<string | null>(null);
   const [displayDropdownOpen, setDisplayDropdownOpen] = useState<string | null>(null);
   const [createViewModalOpen, setCreateViewModalOpen] = useState(false);
   const [viewSearch, setViewSearch] = useState("");
-  const [selectedViewId, setSelectedViewId] = useState("all");
+  const [customViews, setCustomViews] = useState<IssueViewApiResponse[]>([]);
+
+  useEffect(() => {
+    if (!workspaceSlug) {
+      setCustomViews([]);
+      return;
+    }
+    viewService
+      .list(workspaceSlug)
+      .then((list) => setCustomViews(list ?? []))
+      .catch(() => setCustomViews([]));
+  }, [workspaceSlug]);
 
   useEffect(() => {
     if (!viewDropdownOpen) {
-      // Intentional: clear search when dropdown closes (kept for future use)
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setViewSearch("");
     }
   }, [viewDropdownOpen]);
 
+  const selectedViewId = urlViewId ?? "all-issues";
+  const allOptions = [
+    ...DEFAULT_WORKSPACE_VIEWS,
+    ...customViews.map((v) => ({ id: v.id, name: v.name })),
+  ];
   const selectedView =
-    WORKSPACE_VIEW_OPTIONS.find((v) => v.id === selectedViewId) ??
-    WORKSPACE_VIEW_OPTIONS[0];
+    DEFAULT_WORKSPACE_VIEWS.find((v) => v.id === selectedViewId) ??
+    customViews.find((v) => v.id === selectedViewId) ??
+    DEFAULT_WORKSPACE_VIEWS[0];
+  const displayName = selectedView?.name ?? "All work items";
   const q = (s: string) => s.trim().toLowerCase();
-  const filteredViews = WORKSPACE_VIEW_OPTIONS.filter((v) =>
-    q(v.name).includes(q(viewSearch)),
-  );
+  const filteredViews = allOptions.filter((v) => q(v.name).includes(q(viewSearch)));
+
+  const handleSelectView = (id: string) => {
+    setViewDropdownOpen(null);
+    if (!workspaceSlug) return;
+    if (id === "all-issues") {
+      navigate(`/${workspaceSlug}/views`);
+    } else {
+      navigate(`/${workspaceSlug}/views/${id}`);
+    }
+  };
 
   return (
     <>
@@ -1011,7 +1038,7 @@ function WorkspaceViewsHeader() {
           onOpen={setViewDropdownOpen}
           label="All work items"
           icon={<IconViewsPlane />}
-          displayValue={selectedView.name}
+          displayValue={displayName}
           panelClassName="flex min-w-[220px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)] overflow-hidden"
           align="left"
         >
@@ -1034,10 +1061,7 @@ function WorkspaceViewsHeader() {
               <button
                 key={view.id}
                 type="button"
-                onClick={() => {
-                  setSelectedViewId(view.id);
-                  setViewDropdownOpen(null);
-                }}
+                onClick={() => handleSelectView(view.id)}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
               >
                 <span className="shrink-0 text-[var(--txt-icon-tertiary)]">

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "../components/ui";
 import { CreateWorkItemModal } from "../components/CreateWorkItemModal";
 import { workspaceService } from "../services/workspaceService";
@@ -7,6 +7,7 @@ import { projectService } from "../services/projectService";
 import { issueService } from "../services/issueService";
 import { stateService } from "../services/stateService";
 import { labelService } from "../services/labelService";
+import { viewService } from "../services/viewService";
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
@@ -22,6 +23,7 @@ import {
 } from "../types/workspaceViewFilters";
 import {
   parseWorkspaceViewDisplayFromSearchParams,
+  DISPLAY_PROPERTY_KEYS,
   type DisplayPropertyKey,
 } from "../types/workspaceViewDisplay";
 
@@ -94,10 +96,22 @@ const IconBarChart = () => (
     <line x1="6" y1="20" x2="6" y2="16" />
   </svg>
 );
+
+const STATIC_VIEW_IDS = ["all-issues", "assigned", "created", "subscribed"];
+
+function isCustomViewId(viewId: string | undefined): boolean {
+  if (!viewId) return false;
+  return !STATIC_VIEW_IDS.includes(viewId);
+}
+
 export function WorkspaceViewsPage() {
-  const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
+  const { workspaceSlug, viewId } = useParams<{ workspaceSlug?: string; viewId?: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
+  const [viewNotFound, setViewNotFound] = useState(false);
+  const viewAppliedRef = useRef(false);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
   const [states, setStates] = useState<StateApiResponse[]>([]);
@@ -107,6 +121,36 @@ export function WorkspaceViewsPage() {
   const [searchParams] = useSearchParams();
   const filters = parseWorkspaceViewFiltersFromSearchParams(searchParams);
   const display = parseWorkspaceViewDisplayFromSearchParams(searchParams);
+
+  // When viewing a saved view, fetch it and apply its filters/display to URL once (Plane-style).
+  useEffect(() => {
+    if (!workspaceSlug || !viewId || !isCustomViewId(viewId) || viewAppliedRef.current) return;
+    viewAppliedRef.current = true;
+    setViewNotFound(false);
+    viewService
+      .get(workspaceSlug, viewId)
+      .then((view) => {
+        const params = new URLSearchParams();
+        const f = view.filters as Record<string, string> | undefined;
+        if (f && typeof f === "object") {
+          Object.entries(f).forEach(([k, v]) => {
+            if (v != null && v !== "") params.set(k, String(v));
+          });
+        }
+        const dp = view.display_properties as Record<string, boolean> | undefined;
+        if (dp && typeof dp === "object") {
+          const keys = Object.entries(dp)
+            .filter(([, v]) => v)
+            .map(([k]) => k)
+            .filter((k): k is DisplayPropertyKey => DISPLAY_PROPERTY_KEYS.includes(k as DisplayPropertyKey));
+          if (keys.length) params.set("display", keys.join(","));
+        }
+        const df = view.display_filters as Record<string, unknown> | undefined;
+        if (df?.sub_issue === true) params.set("show_sub", "1");
+        navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+      })
+      .catch(() => setViewNotFound(true));
+  }, [workspaceSlug, viewId, navigate, location.pathname]);
 
   const filteredIssues = useMemo(() => {
     const stateGroupMap: Record<string, StateGroup> = {
@@ -398,7 +442,7 @@ export function WorkspaceViewsPage() {
     module: "Module",
     cycle: "Cycle",
   };
-  const totalCols = 4 + optionalColumns.length;
+  const totalCols = 3 + optionalColumns.length;
 
   return (
     <div className="flex h-full flex-col">
@@ -407,9 +451,6 @@ export function WorkspaceViewsPage() {
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
             <tr className="border-b border-[var(--border-subtle)] bg-[var(--bg-layer-1)]">
-              <th className="w-10 px-4 py-3.5">
-                <input type="checkbox" className="rounded border-[var(--border-subtle)]" aria-label="Select all" />
-              </th>
               <th className="px-4 py-3.5 font-medium text-[var(--txt-secondary)]">
                 <span className="inline-flex items-center gap-1.5">
                   Work items
@@ -452,9 +493,6 @@ export function WorkspaceViewsPage() {
             ) : (
               filteredIssues.map((issue) => {
                 const project = getProject(issue.project_id);
-                const displayId = project
-                  ? `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`
-                  : issue.id.slice(-4);
                 const issueBaseUrl = project ? `${baseUrl}/projects/${project.id}` : baseUrl;
                 return (
                   <tr
@@ -462,15 +500,11 @@ export function WorkspaceViewsPage() {
                     className="border-b border-[var(--border-subtle)] last:border-b-0 transition-colors hover:bg-[var(--bg-layer-1-hover)]"
                   >
                     <td className="px-4 py-3.5">
-                      <input type="checkbox" className="rounded border-[var(--border-subtle)]" aria-label={`Select ${displayId}`} />
-                    </td>
-                    <td className="px-4 py-3.5">
                       <Link
                         to={`${issueBaseUrl}/issues/${issue.id}`}
                         className="block font-medium text-[var(--txt-primary)] no-underline hover:text-[var(--txt-accent-primary)]"
                       >
-                        <span className="text-[var(--txt-secondary)]">{displayId}</span>
-                        <span className="ml-1.5">{issue.name}</span>
+                        {issue.name}
                       </Link>
                     </td>
                     <td className="px-4 py-3.5 text-[var(--txt-secondary)]">{formatDate(issue.created_at)}</td>

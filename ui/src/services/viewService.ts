@@ -23,6 +23,13 @@ export const viewService = {
     return data;
   },
 
+  async get(workspaceSlug: string, viewId: string): Promise<IssueViewApiResponse> {
+    const { data } = await apiClient.get<IssueViewApiResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/`,
+    );
+    return data;
+  },
+
   async create(
     workspaceSlug: string,
     payload: CreateViewRequest,
