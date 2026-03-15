@@ -128,7 +128,11 @@ export function CreateViewModal({
           <Dropdown
             id="create-view-filters"
             openId={openPanel}
-            onOpen={(id) => setOpenPanel(id)}
+            onOpen={(id) =>
+              setOpenPanel(
+                id as "create-view-filters" | "create-view-display" | null,
+              )
+            }
             label="Filters"
             icon={null}
             displayValue=""
@@ -150,7 +154,11 @@ export function CreateViewModal({
           <Dropdown
             id="create-view-display"
             openId={openPanel}
-            onOpen={(id) => setOpenPanel(id)}
+            onOpen={(id) =>
+              setOpenPanel(
+                id as "create-view-filters" | "create-view-display" | null,
+              )
+            }
             label="Display"
             icon={null}
             displayValue=""

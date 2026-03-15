@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { Dropdown } from "../work-item";
 import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
-import { FILTER_ICONS } from "./WorkspaceViewsFiltersShared";
+import { FILTER_ICONS } from "./WorkspaceViewsFiltersData";
 import { WorkspaceViewsFiltersPanel } from "./WorkspaceViewsFiltersPanel";
 
 export interface WorkspaceViewsFiltersDropdownProps {

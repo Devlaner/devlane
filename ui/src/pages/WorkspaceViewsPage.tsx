@@ -1,4 +1,11 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useWorkspaceViewsState } from "../contexts/WorkspaceViewsStateContext";
@@ -534,9 +541,7 @@ export function WorkspaceViewsPage() {
           patch as never,
         );
         setIssues((prev) =>
-          prev.map((i) =>
-            i.id === issue.id ? { ...i, ...patch } : i,
-          ),
+          prev.map((i) => (i.id === issue.id ? { ...i, ...patch } : i)),
         );
       } catch {
         // Optionally show toast; for now silent
@@ -694,9 +699,7 @@ export function WorkspaceViewsPage() {
           </span>
         );
       case "link":
-        return (
-          <span className="text-[var(--txt-tertiary)]">0 links</span>
-        );
+        return <span className="text-[var(--txt-tertiary)]">0 links</span>;
       case "attachment_count":
         return (
           <span className="text-[var(--txt-tertiary)]">0 attachments</span>
@@ -706,25 +709,19 @@ export function WorkspaceViewsPage() {
           <span className="text-[var(--txt-tertiary)]">0 sub-work items</span>
         );
       case "estimate":
-        return (
-          <span className="text-[var(--txt-tertiary)]">Estimate</span>
-        );
+        return <span className="text-[var(--txt-tertiary)]">Estimate</span>;
       case "module":
         return (
           <span className="text-[var(--txt-tertiary)]">Select modules</span>
         );
       case "cycle":
-        return (
-          <span className="text-[var(--txt-tertiary)]">Select cycle</span>
-        );
+        return <span className="text-[var(--txt-tertiary)]">Select cycle</span>;
       default:
         return null;
     }
   };
 
-  const headerLabel = (
-    key: (typeof scrollableColumns)[number],
-  ): string => {
+  const headerLabel = (key: (typeof scrollableColumns)[number]): string => {
     if (key === "created_at") return "Created on";
     if (key === "updated_at") return "Updated on";
     return DISPLAY_PROPERTY_LABELS[key as DisplayPropertyKey];
@@ -903,7 +900,13 @@ export function WorkspaceViewsPage() {
     return renderCell(issue, key as DisplayPropertyKey);
   };
 
-  const editableKeys = ["priority", "assignee", "labels", "start_date", "due_date"];
+  const editableKeys = [
+    "priority",
+    "assignee",
+    "labels",
+    "start_date",
+    "due_date",
+  ];
   const isEditableColumn = (key: string) => editableKeys.includes(key);
 
   const renderTableCell = (
@@ -934,26 +937,26 @@ export function WorkspaceViewsPage() {
           align="right"
           panelClassName="max-h-60 min-w-[160px] overflow-auto rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-[var(--shadow-raised)]"
         >
-          {(
-            ["urgent", "high", "medium", "low", "none"] as Priority[]
-          ).map((p) => (
-            <button
-              key={p}
-              type="button"
-              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--bg-layer-1-hover)]"
-              onClick={() => {
-                setOpenCellId(null);
-                updateIssue(issue, { priority: p });
-              }}
-            >
-              <span className="truncate capitalize text-[var(--txt-primary)]">
-                {p}
-              </span>
-              <Badge variant={priorityVariant[p]} className="text-[10px]">
-                {p}
-              </Badge>
-            </button>
-          ))}
+          {(["urgent", "high", "medium", "low", "none"] as Priority[]).map(
+            (p) => (
+              <button
+                key={p}
+                type="button"
+                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--bg-layer-1-hover)]"
+                onClick={() => {
+                  setOpenCellId(null);
+                  updateIssue(issue, { priority: p });
+                }}
+              >
+                <span className="truncate capitalize text-[var(--txt-primary)]">
+                  {p}
+                </span>
+                <Badge variant={priorityVariant[p]} className="text-[10px]">
+                  {p}
+                </Badge>
+              </button>
+            ),
+          )}
         </Dropdown>
       );
     }
@@ -962,9 +965,7 @@ export function WorkspaceViewsPage() {
         ? getMember(issue.assignee_ids[0])
         : undefined;
       const assigneeIds = issue.assignee_ids ?? [];
-      const displayValue = assignee
-        ? getMemberLabel(assignee.member_id)
-        : "—";
+      const displayValue = assignee ? getMemberLabel(assignee.member_id) : "—";
       const assigneeTriggerContent = assignee ? (
         <span className="inline-flex min-w-0 items-center gap-2 text-[var(--txt-secondary)]">
           {getImageUrl(assignee.member_avatar) ? (
@@ -995,7 +996,9 @@ export function WorkspaceViewsPage() {
           openId={openCellId}
           onOpen={setOpenCellId}
           label="Assignees"
-          icon={<IconUser className="size-3.5 text-[var(--txt-icon-tertiary)]" />}
+          icon={
+            <IconUser className="size-3.5 text-[var(--txt-icon-tertiary)]" />
+          }
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
           triggerContent={assigneeTriggerContent}
@@ -1064,7 +1067,9 @@ export function WorkspaceViewsPage() {
                     {m.member_display_name ?? m.member_email ?? m.member_id}
                   </span>
                   {checked && (
-                    <span className="ml-auto text-[var(--txt-tertiary)]">✓</span>
+                    <span className="ml-auto text-[var(--txt-tertiary)]">
+                      ✓
+                    </span>
                   )}
                 </button>
               );
@@ -1099,7 +1104,9 @@ export function WorkspaceViewsPage() {
           openId={openCellId}
           onOpen={setOpenCellId}
           label="Labels"
-          icon={<IconTag className="size-3.5 text-[var(--txt-icon-tertiary)]" />}
+          icon={
+            <IconTag className="size-3.5 text-[var(--txt-icon-tertiary)]" />
+          }
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
           triggerContent={labelsTriggerContent}
@@ -1128,15 +1135,16 @@ export function WorkspaceViewsPage() {
                   <span
                     className="size-3 shrink-0 rounded-full"
                     style={{
-                      backgroundColor:
-                        l.color ?? "var(--txt-icon-tertiary)",
+                      backgroundColor: l.color ?? "var(--txt-icon-tertiary)",
                     }}
                   />
                   <span className="truncate text-[var(--txt-primary)]">
                     {l.name}
                   </span>
                   {checked && (
-                    <span className="ml-auto text-[var(--txt-tertiary)]">✓</span>
+                    <span className="ml-auto text-[var(--txt-tertiary)]">
+                      ✓
+                    </span>
                   )}
                 </button>
               );
@@ -1155,7 +1163,9 @@ export function WorkspaceViewsPage() {
           openId={openCellId}
           onOpen={setOpenCellId}
           label="Start date"
-          icon={<IconCalendar className="size-3.5 text-[var(--txt-icon-tertiary)]" />}
+          icon={
+            <IconCalendar className="size-3.5 text-[var(--txt-icon-tertiary)]" />
+          }
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
           align="right"
@@ -1184,7 +1194,9 @@ export function WorkspaceViewsPage() {
           openId={openCellId}
           onOpen={setOpenCellId}
           label="Due date"
-          icon={<IconCalendar className="size-3.5 text-[var(--txt-icon-tertiary)]" />}
+          icon={
+            <IconCalendar className="size-3.5 text-[var(--txt-icon-tertiary)]" />
+          }
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
           align="right"
@@ -1203,11 +1215,7 @@ export function WorkspaceViewsPage() {
         </Dropdown>
       );
     }
-    return (
-      <span className="block px-4 py-2">
-        {scrollableTd(issue, key)}
-      </span>
-    );
+    return <span className="block px-4 py-2">{scrollableTd(issue, key)}</span>;
   };
 
   return (

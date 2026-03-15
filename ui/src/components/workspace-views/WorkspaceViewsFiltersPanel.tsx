@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { DateRangeModal } from "./DateRangeModal";
+import { CollapsibleSection } from "./WorkspaceViewsFiltersShared";
 import {
-  CollapsibleSection,
   PRIORITY_ICONS,
   PRIORITY_LABELS,
   STATE_GROUP_ICONS,
   STATE_GROUP_LABELS,
   DATE_PRESET_LABELS,
   FILTER_ICONS,
-} from "./WorkspaceViewsFiltersShared";
+} from "./WorkspaceViewsFiltersData";
 import { getImageUrl } from "../../lib/utils";
 import { workspaceService } from "../../services/workspaceService";
 import { projectService } from "../../services/projectService";
@@ -150,32 +150,30 @@ export function WorkspaceViewsFiltersPanel({
         open={sectionOpen.priority}
         onToggle={() => toggleSection("priority")}
       >
-        {PRIORITIES.filter((p) => filterSearch(PRIORITY_LABELS[p])).map(
-          (p) => (
-            <label
-              key={p}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
-            >
-              <input
-                type="checkbox"
-                checked={filters.priority.includes(p)}
-                onChange={() => {
-                  onFiltersChange((prev) => ({
-                    ...prev,
-                    priority: prev.priority.includes(p)
-                      ? prev.priority.filter((x) => x !== p)
-                      : [...prev.priority, p],
-                  }));
-                }}
-                className="rounded border-[var(--border-subtle)]"
-              />
-              <span className="flex size-4 shrink-0 items-center justify-center">
-                {PRIORITY_ICONS[p]}
-              </span>
-              <span>{PRIORITY_LABELS[p]}</span>
-            </label>
-          ),
-        )}
+        {PRIORITIES.filter((p) => filterSearch(PRIORITY_LABELS[p])).map((p) => (
+          <label
+            key={p}
+            className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+          >
+            <input
+              type="checkbox"
+              checked={filters.priority.includes(p)}
+              onChange={() => {
+                onFiltersChange((prev) => ({
+                  ...prev,
+                  priority: prev.priority.includes(p)
+                    ? prev.priority.filter((x) => x !== p)
+                    : [...prev.priority, p],
+                }));
+              }}
+              className="rounded border-[var(--border-subtle)]"
+            />
+            <span className="flex size-4 shrink-0 items-center justify-center">
+              {PRIORITY_ICONS[p]}
+            </span>
+            <span>{PRIORITY_LABELS[p]}</span>
+          </label>
+        ))}
       </CollapsibleSection>
 
       <CollapsibleSection
@@ -183,32 +181,32 @@ export function WorkspaceViewsFiltersPanel({
         open={sectionOpen.state_group}
         onToggle={() => toggleSection("state_group")}
       >
-        {STATE_GROUPS.filter((g) =>
-          filterSearch(STATE_GROUP_LABELS[g]),
-        ).map((g) => (
-          <label
-            key={g}
-            className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
-          >
-            <input
-              type="checkbox"
-              checked={filters.stateGroup.includes(g)}
-              onChange={() => {
-                onFiltersChange((prev) => ({
-                  ...prev,
-                  stateGroup: prev.stateGroup.includes(g)
-                    ? prev.stateGroup.filter((x) => x !== g)
-                    : [...prev.stateGroup, g],
-                }));
-              }}
-              className="rounded border-[var(--border-subtle)]"
-            />
-            <span className="flex size-4 shrink-0 items-center justify-center">
-              {STATE_GROUP_ICONS[g]}
-            </span>
-            <span>{STATE_GROUP_LABELS[g]}</span>
-          </label>
-        ))}
+        {STATE_GROUPS.filter((g) => filterSearch(STATE_GROUP_LABELS[g])).map(
+          (g) => (
+            <label
+              key={g}
+              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+            >
+              <input
+                type="checkbox"
+                checked={filters.stateGroup.includes(g)}
+                onChange={() => {
+                  onFiltersChange((prev) => ({
+                    ...prev,
+                    stateGroup: prev.stateGroup.includes(g)
+                      ? prev.stateGroup.filter((x) => x !== g)
+                      : [...prev.stateGroup, g],
+                  }));
+                }}
+                className="rounded border-[var(--border-subtle)]"
+              />
+              <span className="flex size-4 shrink-0 items-center justify-center">
+                {STATE_GROUP_ICONS[g]}
+              </span>
+              <span>{STATE_GROUP_LABELS[g]}</span>
+            </label>
+          ),
+        )}
       </CollapsibleSection>
 
       <CollapsibleSection
@@ -477,48 +475,47 @@ export function WorkspaceViewsFiltersPanel({
         open={sectionOpen.start_date}
         onToggle={() => toggleSection("start_date")}
       >
-        {DATE_PRESETS.filter((d) =>
-          filterSearch(DATE_PRESET_LABELS[d]),
-        ).map((d) =>
-          d === "custom" ? (
-            <label
-              key={d}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
-              onClick={(e) => {
-                e.preventDefault();
-                openDateModal("start");
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={filters.startDate.includes("custom")}
-                readOnly
-                tabIndex={-1}
-                className="rounded border-[var(--border-subtle)]"
-              />
-              <span>{DATE_PRESET_LABELS[d]}</span>
-            </label>
-          ) : (
-            <label
-              key={d}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
-            >
-              <input
-                type="checkbox"
-                checked={filters.startDate.includes(d)}
-                onChange={() => {
-                  onFiltersChange((prev) => ({
-                    ...prev,
-                    startDate: prev.startDate.includes(d)
-                      ? prev.startDate.filter((x) => x !== d)
-                      : [...prev.startDate, d],
-                  }));
+        {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map(
+          (d) =>
+            d === "custom" ? (
+              <label
+                key={d}
+                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openDateModal("start");
                 }}
-                className="rounded border-[var(--border-subtle)]"
-              />
-              <span>{DATE_PRESET_LABELS[d]}</span>
-            </label>
-          ),
+              >
+                <input
+                  type="checkbox"
+                  checked={filters.startDate.includes("custom")}
+                  readOnly
+                  tabIndex={-1}
+                  className="rounded border-[var(--border-subtle)]"
+                />
+                <span>{DATE_PRESET_LABELS[d]}</span>
+              </label>
+            ) : (
+              <label
+                key={d}
+                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+              >
+                <input
+                  type="checkbox"
+                  checked={filters.startDate.includes(d)}
+                  onChange={() => {
+                    onFiltersChange((prev) => ({
+                      ...prev,
+                      startDate: prev.startDate.includes(d)
+                        ? prev.startDate.filter((x) => x !== d)
+                        : [...prev.startDate, d],
+                    }));
+                  }}
+                  className="rounded border-[var(--border-subtle)]"
+                />
+                <span>{DATE_PRESET_LABELS[d]}</span>
+              </label>
+            ),
         )}
       </CollapsibleSection>
 
@@ -527,48 +524,47 @@ export function WorkspaceViewsFiltersPanel({
         open={sectionOpen.due_date}
         onToggle={() => toggleSection("due_date")}
       >
-        {DATE_PRESETS.filter((d) =>
-          filterSearch(DATE_PRESET_LABELS[d]),
-        ).map((d) =>
-          d === "custom" ? (
-            <label
-              key={d}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
-              onClick={(e) => {
-                e.preventDefault();
-                openDateModal("due");
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={filters.dueDate.includes("custom")}
-                readOnly
-                tabIndex={-1}
-                className="rounded border-[var(--border-subtle)]"
-              />
-              <span>{DATE_PRESET_LABELS[d]}</span>
-            </label>
-          ) : (
-            <label
-              key={d}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
-            >
-              <input
-                type="checkbox"
-                checked={filters.dueDate.includes(d)}
-                onChange={() => {
-                  onFiltersChange((prev) => ({
-                    ...prev,
-                    dueDate: prev.dueDate.includes(d)
-                      ? prev.dueDate.filter((x) => x !== d)
-                      : [...prev.dueDate, d],
-                  }));
+        {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map(
+          (d) =>
+            d === "custom" ? (
+              <label
+                key={d}
+                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openDateModal("due");
                 }}
-                className="rounded border-[var(--border-subtle)]"
-              />
-              <span>{DATE_PRESET_LABELS[d]}</span>
-            </label>
-          ),
+              >
+                <input
+                  type="checkbox"
+                  checked={filters.dueDate.includes("custom")}
+                  readOnly
+                  tabIndex={-1}
+                  className="rounded border-[var(--border-subtle)]"
+                />
+                <span>{DATE_PRESET_LABELS[d]}</span>
+              </label>
+            ) : (
+              <label
+                key={d}
+                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+              >
+                <input
+                  type="checkbox"
+                  checked={filters.dueDate.includes(d)}
+                  onChange={() => {
+                    onFiltersChange((prev) => ({
+                      ...prev,
+                      dueDate: prev.dueDate.includes(d)
+                        ? prev.dueDate.filter((x) => x !== d)
+                        : [...prev.dueDate, d],
+                    }));
+                  }}
+                  className="rounded border-[var(--border-subtle)]"
+                />
+                <span>{DATE_PRESET_LABELS[d]}</span>
+              </label>
+            ),
         )}
       </CollapsibleSection>
     </div>

@@ -40,5 +40,6 @@
 
 /* Table: subtle vertical divider between columns (lighter than Work items | Priority border) */
 .border-r-column-subtle {
-  border-right: 1px solid color-mix(in srgb, var(--border-subtle) 45%, transparent);
+  border-right: 1px solid
+    color-mix(in srgb, var(--border-subtle) 45%, transparent);
 }
