@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { Dropdown } from "../work-item";
 import { DateRangeModal } from "./DateRangeModal";
+import { getImageUrl } from "../../lib/utils";
 import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
 import { workspaceService } from "../../services/workspaceService";
 import { projectService } from "../../services/projectService";
@@ -431,17 +432,27 @@ export function WorkspaceViewsFiltersDropdown({
                   }}
                   className="rounded border-[var(--border-subtle)]"
                 />
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-200)] text-[10px] font-medium text-[var(--brand-default)]">
-                  {currentUser.name?.charAt(0) ?? "?"}
-                </span>
+                {getImageUrl(currentUser.avatarUrl) ? (
+                  <img
+                    src={getImageUrl(currentUser.avatarUrl)!}
+                    alt=""
+                    className="size-5 shrink-0 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-200)] text-[10px] font-medium text-[var(--brand-default)]">
+                    {currentUser.name?.charAt(0) ?? "?"}
+                  </span>
+                )}
                 <span>You</span>
               </label>
             )}
             {members
-              .filter((m) =>
-                filterSearch(
-                  m.member_display_name ?? m.member_email ?? m.member_id,
-                ),
+              .filter(
+                (m) =>
+                  m.member_id !== currentUser?.id &&
+                  filterSearch(
+                    m.member_display_name ?? m.member_email ?? m.member_id,
+                  ),
               )
               .map((m) => (
                 <label
@@ -461,9 +472,9 @@ export function WorkspaceViewsFiltersDropdown({
                     }}
                     className="rounded border-[var(--border-subtle)]"
                   />
-                  {m.member_avatar ? (
+                  {getImageUrl(m.member_avatar) ? (
                     <img
-                      src={m.member_avatar}
+                      src={getImageUrl(m.member_avatar)!}
                       alt=""
                       className="size-5 shrink-0 rounded-full object-cover"
                     />
@@ -509,17 +520,27 @@ export function WorkspaceViewsFiltersDropdown({
                   }}
                   className="rounded border-[var(--border-subtle)]"
                 />
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-200)] text-[10px] font-medium text-[var(--brand-default)]">
-                  {currentUser.name?.charAt(0) ?? "?"}
-                </span>
+                {getImageUrl(currentUser.avatarUrl) ? (
+                  <img
+                    src={getImageUrl(currentUser.avatarUrl)!}
+                    alt=""
+                    className="size-5 shrink-0 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-200)] text-[10px] font-medium text-[var(--brand-default)]">
+                    {currentUser.name?.charAt(0) ?? "?"}
+                  </span>
+                )}
                 <span>You</span>
               </label>
             )}
             {members
-              .filter((m) =>
-                filterSearch(
-                  m.member_display_name ?? m.member_email ?? m.member_id,
-                ),
+              .filter(
+                (m) =>
+                  m.member_id !== currentUser?.id &&
+                  filterSearch(
+                    m.member_display_name ?? m.member_email ?? m.member_id,
+                  ),
               )
               .map((m) => (
                 <label
@@ -539,9 +560,9 @@ export function WorkspaceViewsFiltersDropdown({
                     }}
                     className="rounded border-[var(--border-subtle)]"
                   />
-                  {m.member_avatar ? (
+                  {getImageUrl(m.member_avatar) ? (
                     <img
-                      src={m.member_avatar}
+                      src={getImageUrl(m.member_avatar)!}
                       alt=""
                       className="size-5 shrink-0 rounded-full object-cover"
                     />
