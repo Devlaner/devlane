@@ -17,6 +17,7 @@ import type {
   WorkspaceMemberApiResponse,
 } from "../api/types";
 import type { Priority } from "../types";
+import { getImageUrl } from "../lib/utils";
 import {
   parseWorkspaceViewFiltersFromSearchParams,
   type StateGroup,
@@ -549,9 +550,9 @@ export function WorkspaceViewsPage() {
       case "assignee":
         return assignee ? (
           <span className="inline-flex items-center gap-2 text-[var(--txt-secondary)]">
-            {assignee.member_avatar ? (
+            {getImageUrl(assignee.member_avatar) ? (
               <img
-                src={assignee.member_avatar}
+                src={getImageUrl(assignee.member_avatar)!}
                 alt=""
                 className="size-6 shrink-0 rounded-full object-cover"
               />
@@ -801,7 +802,7 @@ export function WorkspaceViewsPage() {
 
   return (
     <div className="-m-[var(--padding-page)] flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-x-auto">
+      <div className="flex-1">
         <table className="w-full min-w-max text-left text-sm">
           <thead>
             <tr className="border-b border-[var(--border-subtle)] bg-[var(--bg-layer-1)]">

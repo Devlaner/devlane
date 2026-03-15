@@ -12,7 +12,6 @@ import {
   WorkspaceViewsFiltersDropdown,
   WorkspaceViewsDisplayDropdown,
   WorkspaceViewsEllipsisMenu,
-  WorkspaceViewsLayoutSelector,
   CreateViewModal,
 } from "../workspace-views";
 import { workspaceService } from "../../services/workspaceService";
@@ -1096,7 +1095,6 @@ function WorkspaceViewsHeader() {
         </Dropdown>
       </div>
       <div className="flex items-center gap-1">
-        <WorkspaceViewsLayoutSelector />
         <WorkspaceViewsFiltersDropdown
           openId={filtersDropdownOpen}
           onOpen={setFiltersDropdownOpen}
