@@ -653,7 +653,7 @@ export function WorkspaceViewsPage() {
     return (
       <th
         key={column}
-        className="px-4 py-3.5 font-medium text-[var(--txt-secondary)]"
+        className="whitespace-nowrap px-4 py-3.5 font-medium text-[var(--txt-secondary)]"
       >
         <button
           type="button"
@@ -681,11 +681,8 @@ export function WorkspaceViewsPage() {
     display.layout === "gantt_chart"
   ) {
     return (
-      <div className="flex h-full flex-col">
-        <h1 className="mb-4 text-lg font-semibold text-[var(--txt-primary)]">
-          Work items
-        </h1>
-        <div className="flex flex-1 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-8">
+      <div className="-m-[var(--padding-page)] flex min-h-0 flex-1 flex-col">
+        <div className="flex flex-1 items-center justify-center p-8">
           <p className="text-sm text-[var(--txt-tertiary)]">
             {display.layout === "kanban" && "Kanban view is coming soon."}
             {display.layout === "calendar" && "Calendar view is coming soon."}
@@ -699,11 +696,8 @@ export function WorkspaceViewsPage() {
 
   if (display.layout === "list") {
     return (
-      <div className="flex h-full flex-col">
-        <h1 className="mb-4 text-lg font-semibold text-[var(--txt-primary)]">
-          Work items
-        </h1>
-        <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]">
+      <div className="-m-[var(--padding-page)] flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {sortedIssues.length === 0 ? (
             <div className="px-4 py-16 text-center text-sm text-[var(--txt-tertiary)]">
               No work items yet. Create one from a project&apos;s Work items
@@ -763,7 +757,7 @@ export function WorkspaceViewsPage() {
     return (
       <th
         key={key}
-        className="px-4 py-3.5 font-medium text-[var(--txt-secondary)]"
+        className="whitespace-nowrap px-4 py-3.5 font-medium text-[var(--txt-secondary)]"
       >
         <span className="inline-flex items-center gap-1.5">
           {key === "state" && (
@@ -806,15 +800,12 @@ export function WorkspaceViewsPage() {
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <h1 className="mb-4 text-lg font-semibold text-[var(--txt-primary)]">
-        Work items
-      </h1>
-      <div className="min-h-0 flex-1 overflow-x-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]">
-        <table className="w-full text-left text-sm">
+    <div className="-m-[var(--padding-page)] flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-x-auto">
+        <table className="w-full min-w-max text-left text-sm">
           <thead>
             <tr className="border-b border-[var(--border-subtle)] bg-[var(--bg-layer-1)]">
-              <th className="sticky left-0 z-10 min-w-[200px] border-r border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-4 py-3.5">
+              <th className="sticky left-0 z-10 min-w-[200px] whitespace-nowrap border-r border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-4 py-3.5">
                 {(() => {
                   const isActive = display.sortBy === "name";
                   return (
@@ -866,6 +857,13 @@ export function WorkspaceViewsPage() {
                         to={`${issueBaseUrl}/issues/${issue.id}`}
                         className="block font-medium text-[var(--txt-primary)] no-underline hover:text-[var(--txt-accent-primary)]"
                       >
+                        {display.properties.includes("id") && (
+                          <span className="mr-2 text-[var(--txt-secondary)]">
+                            {project
+                              ? `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`
+                              : issue.id.slice(-4)}
+                          </span>
+                        )}
                         {issue.name}
                       </Link>
                     </td>
