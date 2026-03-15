@@ -332,6 +332,18 @@ export function WorkspaceViewsPage() {
     return list;
   }, [issues, filters, states, viewId, currentUser]);
 
+  const stateMap = useMemo(() => {
+    const m = new Map<string, StateApiResponse>();
+    states.forEach((s) => m.set(s.id, s));
+    return m;
+  }, [states]);
+
+  const memberMap = useMemo(() => {
+    const m = new Map<string, WorkspaceMemberApiResponse>();
+    members.forEach((mem) => m.set(mem.member_id, mem));
+    return m;
+  }, [members]);
+
   const sortedIssues = useMemo(() => {
     const list = [...filteredIssues];
     const prioOrder: Record<string, number> = {
@@ -351,12 +363,10 @@ export function WorkspaceViewsPage() {
           return i.updated_at ? new Date(i.updated_at).getTime() : 0;
         case "priority":
           return prioOrder[i.priority ?? "none"] ?? 5;
-        case "state": {
-          const s = states.find((x) => x.id === i.state_id);
-          return s?.name ?? "—";
-        }
+        case "state":
+          return stateMap.get(i.state_id ?? "")?.name ?? "—";
         case "assignee": {
-          const m = members.find((x) => x.member_id === i.assignee_ids?.[0]);
+          const m = memberMap.get(i.assignee_ids?.[0] ?? "");
           return m?.member_display_name ?? m?.member_email ?? "—";
         }
         case "start_date":
@@ -377,7 +387,7 @@ export function WorkspaceViewsPage() {
       return display.sortOrder === "asc" ? cmp : -cmp;
     });
     return list;
-  }, [filteredIssues, display.sortBy, display.sortOrder, states, members]);
+  }, [filteredIssues, display.sortBy, display.sortOrder, stateMap, memberMap]);
 
   const handleSort = (column: SortableColumn) => {
     setSearchParams(
