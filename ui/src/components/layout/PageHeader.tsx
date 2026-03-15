@@ -1115,7 +1115,15 @@ function WorkspaceViewsHeader() {
         <CreateViewModal
           open={createViewModalOpen}
           onClose={() => setCreateViewModalOpen(false)}
-          onCreated={() => setCreateViewModalOpen(false)}
+          onCreated={() => {
+            setCreateViewModalOpen(false);
+            if (workspaceSlug) {
+              viewService
+                .list(workspaceSlug)
+                .then((list) => setCustomViews(list ?? []))
+                .catch(() => {});
+            }
+          }}
         />
         <WorkspaceViewsEllipsisMenu />
       </div>

@@ -184,7 +184,10 @@ export function WorkspaceViewsPage() {
         if (df?.sub_issue === true) params.set("show_sub", "1");
         setViewLoading(false);
         navigate(
-          { pathname: location.pathname, search: params.toString() },
+          {
+            pathname: `/${workspaceSlug}/views/${viewId}`,
+            search: params.toString(),
+          },
           { replace: true },
         );
       })
@@ -192,7 +195,7 @@ export function WorkspaceViewsPage() {
         setViewLoading(false);
         setViewNotFound(true);
       });
-  }, [workspaceSlug, viewId, navigate, location.pathname]);
+  }, [workspaceSlug, viewId, navigate]);
 
   const filteredIssues = useMemo(() => {
     const stateGroupMap: Record<string, StateGroup> = {
