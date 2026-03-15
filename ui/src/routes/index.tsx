@@ -39,11 +39,6 @@ const WorkspaceViewsPage = lazy(() =>
     page({ WorkspaceViewsPage: m.WorkspaceViewsPage }),
   ),
 );
-const WorkspaceViewsListPage = lazy(() =>
-  import("../pages/WorkspaceViewsListPage").then((m) =>
-    page({ WorkspaceViewsListPage: m.WorkspaceViewsListPage }),
-  ),
-);
 const DraftsPage = lazy(() =>
   import("../pages/DraftsPage").then((m) => page({ DraftsPage: m.DraftsPage })),
 );
@@ -468,11 +463,7 @@ const router = createBrowserRouter([
               },
               {
                 path: "views",
-                element: (
-                  <Suspense fallback={<PageFallback />}>
-                    <WorkspaceViewsListPage />
-                  </Suspense>
-                ),
+                element: <Navigate to="all-issues" replace />,
               },
               {
                 path: "views/:viewId",

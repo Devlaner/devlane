@@ -50,6 +50,7 @@ export function CreateViewModal({
       });
       const display_filters: Record<string, unknown> = {
         sub_issue: display.showSubWorkItems,
+        layout: display.layout,
       };
       const created = await viewService.create(workspaceSlug, {
         name: title.trim(),

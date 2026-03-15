@@ -1017,7 +1017,7 @@ function WorkspaceViewsHeader() {
     <>
       <div className="flex items-center gap-2 text-sm font-medium text-[var(--txt-secondary)]">
         <Link
-          to={workspaceSlug ? `/${workspaceSlug}/views` : "/"}
+          to={workspaceSlug ? `/${workspaceSlug}/views/all-issues` : "/"}
           className="flex items-center gap-1.5 text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]"
         >
           <span className="flex size-5 items-center justify-center text-[var(--txt-icon-tertiary)]">
@@ -1075,7 +1075,7 @@ function WorkspaceViewsHeader() {
         </Dropdown>
       </div>
       <div className="flex items-center gap-1">
-        {urlViewId && <WorkspaceViewsLayoutSelector />}
+        <WorkspaceViewsLayoutSelector />
         <WorkspaceViewsFiltersDropdown
           openId={filtersDropdownOpen}
           onOpen={setFiltersDropdownOpen}

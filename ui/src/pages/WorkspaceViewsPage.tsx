@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "../components/ui";
@@ -280,7 +280,59 @@ export function WorkspaceViewsPage() {
     }
     // "subscribed" would filter by issue subscribers when API supports it; for now show all
     return list;
-  }, [issues, filters, states, viewId, currentUser?.id]);
+  }, [issues, filters, states, viewId, currentUser]);
+
+  const sortedIssues = useMemo(() => {
+    const list = [...filteredIssues];
+    const prioOrder: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 };
+    const getVal = (i: IssueApiResponse): string | number => {
+      switch (display.sortBy) {
+        case "name":
+          return i.name ?? "";
+        case "created_at":
+          return i.created_at ? new Date(i.created_at).getTime() : 0;
+        case "updated_at":
+          return i.updated_at ? new Date(i.updated_at).getTime() : 0;
+        case "priority":
+          return prioOrder[i.priority ?? "none"] ?? 5;
+        case "state": {
+          const s = states.find((x) => x.id === i.state_id);
+          return s?.name ?? "—";
+        }
+        case "assignee": {
+          const m = members.find((x) => x.member_id === i.assignee_ids?.[0]);
+          return m?.member_display_name ?? m?.member_email ?? "—";
+        }
+        case "start_date":
+          return i.start_date ? new Date(i.start_date).getTime() : 0;
+        case "due_date":
+          return i.target_date ? new Date(i.target_date).getTime() : 0;
+        default:
+          return 0;
+      }
+    };
+    list.sort((a, b) => {
+      const va = getVal(a);
+      const vb = getVal(b);
+      const cmp =
+        typeof va === "string" && typeof vb === "string"
+          ? va.localeCompare(vb, undefined, { sensitivity: "base" })
+          : Number(va) - Number(vb);
+      return display.sortOrder === "asc" ? cmp : -cmp;
+    });
+    return list;
+  }, [filteredIssues, display.sortBy, display.sortOrder, states, members]);
+
+  const handleSort = (column: SortableColumn) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      const nextOrder: SortOrder =
+        display.sortBy === column && display.sortOrder === "desc" ? "asc" : "desc";
+      next.set("sort_by", column);
+      next.set("order", nextOrder);
+      return next;
+    }, { replace: true });
+  };
 
   useEffect(() => {
     if (!workspaceSlug) {
@@ -484,6 +536,101 @@ export function WorkspaceViewsPage() {
     cycle: "Cycle",
   };
   const totalCols = 3 + optionalColumns.length;
+  const sortableColumnMap: Partial<Record<DisplayPropertyKey, SortableColumn>> = {
+    priority: "priority",
+    state: "state",
+    assignee: "assignee",
+    start_date: "start_date",
+    due_date: "due_date",
+  };
+  const renderSortableTh = (column: SortableColumn, label: string, icon?: React.ReactNode) => {
+    const isActive = display.sortBy === column;
+    return (
+      <th key={column} className="px-4 py-3.5 font-medium text-[var(--txt-secondary)]">
+        <button
+          type="button"
+          onClick={() => handleSort(column)}
+          className="inline-flex items-center gap-1.5 hover:text-[var(--txt-primary)]"
+        >
+          {icon}
+          {label}
+          <IconChevronDown
+            className={`size-4 shrink-0 opacity-60 ${isActive ? "opacity-100" : ""}`}
+            style={isActive && display.sortOrder === "asc" ? { transform: "rotate(180deg)" } : undefined}
+          />
+        </button>
+      </th>
+    );
+  };
+
+  if (display.layout === "kanban" || display.layout === "calendar" || display.layout === "gantt_chart") {
+    return (
+      <div className="flex h-full flex-col">
+        <h1 className="mb-4 text-lg font-semibold text-[var(--txt-primary)]">Work items</h1>
+        <div className="flex flex-1 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-8">
+          <p className="text-sm text-[var(--txt-tertiary)]">
+            {display.layout === "kanban" && "Kanban view is coming soon."}
+            {display.layout === "calendar" && "Calendar view is coming soon."}
+            {display.layout === "gantt_chart" && "Gantt chart view is coming soon."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (display.layout === "list") {
+    return (
+      <div className="flex h-full flex-col">
+        <h1 className="mb-4 text-lg font-semibold text-[var(--txt-primary)]">Work items</h1>
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]">
+          {sortedIssues.length === 0 ? (
+            <div className="px-4 py-16 text-center text-sm text-[var(--txt-tertiary)]">
+              No work items yet. Create one from a project&apos;s Work items section or add a view to get started.
+            </div>
+          ) : (
+            <ul className="divide-y divide-[var(--border-subtle)]">
+              {sortedIssues.map((issue) => {
+                const project = getProject(issue.project_id);
+                const issueBaseUrl = project ? `${baseUrl}/projects/${project.id}` : baseUrl;
+                return (
+                  <li key={issue.id} className="transition-colors hover:bg-[var(--bg-layer-1-hover)]">
+                    <Link
+                      to={`${issueBaseUrl}/issues/${issue.id}`}
+                      className="flex items-center justify-between px-4 py-3 text-[var(--txt-primary)] no-underline hover:text-[var(--txt-accent-primary)]"
+                    >
+                      <span className="font-medium">{issue.name}</span>
+                      <span className="text-sm text-[var(--txt-secondary)]">
+                        {formatDate(issue.created_at)}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+        {sortedIssues.length > 0 && (
+          <div className="mt-4 flex justify-start">
+            <Button
+              size="sm"
+              variant="secondary"
+              className="gap-1.5 border-dashed text-[13px] font-medium"
+              onClick={() => setCreateOpen(true)}
+            >
+              New work item
+            </Button>
+          </div>
+        )}
+        <CreateWorkItemModal
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          workspaceSlug={workspace.slug}
+          projects={projects}
+          defaultProjectId={projects[0]?.id}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -492,47 +639,42 @@ export function WorkspaceViewsPage() {
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
             <tr className="border-b border-[var(--border-subtle)] bg-[var(--bg-layer-1)]">
-              <th className="px-4 py-3.5 font-medium text-[var(--txt-secondary)]">
-                <span className="inline-flex items-center gap-1.5">
-                  Work items
-                  <IconChevronDown className="size-4 shrink-0 opacity-60" />
-                </span>
-              </th>
-              <th className="px-4 py-3.5 font-medium text-[var(--txt-secondary)]">
-                <span className="inline-flex items-center gap-1.5">
-                  Created on
-                  <IconChevronDown className="size-4 shrink-0 opacity-60" />
-                </span>
-              </th>
-              <th className="px-4 py-3.5 font-medium text-[var(--txt-secondary)]">
-                <span className="inline-flex items-center gap-1.5">
-                  Updated on
-                  <IconChevronDown className="size-4 shrink-0 opacity-60" />
-                </span>
-              </th>
-              {optionalColumns.map((key) => (
-                <th key={key} className="px-4 py-3.5 font-medium text-[var(--txt-secondary)]">
-                  <span className="inline-flex items-center gap-1.5">
-                    {key === "state" && <IconRadio className="size-4 shrink-0 opacity-70" />}
-                    {key === "priority" && <IconBarChart className="size-4 shrink-0 opacity-70" />}
-                    {key === "assignee" && <IconUser className="size-4 shrink-0 opacity-70" />}
-                    {key === "labels" && <IconTag className="size-4 shrink-0 opacity-70" />}
-                    {headerLabels[key]}
-                    <IconChevronDown className="size-4 shrink-0 opacity-60" />
-                  </span>
-                </th>
-              ))}
+              {renderSortableTh("name", "Work items")}
+              {renderSortableTh("created_at", "Created on")}
+              {renderSortableTh("updated_at", "Updated on")}
+              {optionalColumns.map((key) => {
+                const sortCol = sortableColumnMap[key];
+                if (sortCol) {
+                  const icon =
+                    key === "state" ? <IconRadio className="size-4 shrink-0 opacity-70" /> :
+                    key === "priority" ? <IconBarChart className="size-4 shrink-0 opacity-70" /> :
+                    key === "assignee" ? <IconUser className="size-4 shrink-0 opacity-70" /> :
+                    key === "labels" ? <IconTag className="size-4 shrink-0 opacity-70" /> : undefined;
+                  return <Fragment key={key}>{renderSortableTh(sortCol, headerLabels[key], icon)}</Fragment>;
+                }
+                return (
+                  <th key={key} className="px-4 py-3.5 font-medium text-[var(--txt-secondary)]">
+                    <span className="inline-flex items-center gap-1.5">
+                      {key === "state" && <IconRadio className="size-4 shrink-0 opacity-70" />}
+                      {key === "priority" && <IconBarChart className="size-4 shrink-0 opacity-70" />}
+                      {key === "assignee" && <IconUser className="size-4 shrink-0 opacity-70" />}
+                      {key === "labels" && <IconTag className="size-4 shrink-0 opacity-70" />}
+                      {headerLabels[key]}
+                    </span>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
-            {filteredIssues.length === 0 ? (
+            {sortedIssues.length === 0 ? (
               <tr>
                 <td colSpan={totalCols} className="px-4 py-16 text-center text-sm text-[var(--txt-tertiary)]">
                   No work items yet. Create one from a project&apos;s Work items section or add a view to get started.
                 </td>
               </tr>
             ) : (
-              filteredIssues.map((issue) => {
+              sortedIssues.map((issue) => {
                 const project = getProject(issue.project_id);
                 const issueBaseUrl = project ? `${baseUrl}/projects/${project.id}` : baseUrl;
                 return (
@@ -563,7 +705,7 @@ export function WorkspaceViewsPage() {
         </table>
       </div>
 
-      {filteredIssues.length > 0 && (
+      {sortedIssues.length > 0 && (
         <div className="mt-4 flex justify-start">
           <Button
             size="sm"
