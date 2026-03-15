@@ -99,9 +99,9 @@ const LAYOUT_PARAM = "layout";
 const SORT_BY_PARAM = "sort_by";
 const SORT_ORDER_PARAM = "order";
 
-/** All display properties except ID (ID is shown in the Work items column). */
+/** All display properties; ID is shown in the Work items column when enabled. */
 export const DEFAULT_WORKSPACE_VIEW_DISPLAY: WorkspaceViewDisplay = {
-  properties: DISPLAY_PROPERTY_KEYS.filter((k) => k !== "id") as DisplayPropertyKey[],
+  properties: [...DISPLAY_PROPERTY_KEYS],
   showSubWorkItems: false,
   layout: "spreadsheet",
   sortBy: "created_at",

@@ -1,11 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Modal } from "../ui";
 import { Button, Input } from "../ui";
+import { Dropdown } from "../work-item";
 import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
 import { viewService } from "../../services/viewService";
 import { workspaceViewFiltersToSearchParams } from "../../types/workspaceViewFilters";
 import type { DisplayPropertyKey } from "../../types/workspaceViewDisplay";
+import type { WorkspaceViewFilters } from "../../types/workspaceViewFilters";
+import type { WorkspaceViewDisplay } from "../../types/workspaceViewDisplay";
+import { WorkspaceViewsFiltersPanel } from "./WorkspaceViewsFiltersPanel";
+import { WorkspaceViewsDisplayPanel } from "./WorkspaceViewsDisplayPanel";
 
 export interface CreateViewModalProps {
   open: boolean;
@@ -20,12 +25,26 @@ export function CreateViewModal({
 }: CreateViewModalProps) {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const navigate = useNavigate();
-  const { filters, display } = useWorkspaceViewsState();
-  const [activeTab, setActiveTab] = useState<"filters" | "display">("filters");
+  const { filters: contextFilters, display: contextDisplay } =
+    useWorkspaceViewsState();
+  const [openPanel, setOpenPanel] = useState<
+    "create-view-filters" | "create-view-display" | null
+  >(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [localFilters, setLocalFilters] =
+    useState<WorkspaceViewFilters>(contextFilters);
+  const [localDisplay, setLocalDisplay] =
+    useState<WorkspaceViewDisplay>(contextDisplay);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setLocalFilters(contextFilters);
+      setLocalDisplay(contextDisplay);
+    }
+  }, [open, contextFilters, contextDisplay]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,14 +55,14 @@ export function CreateViewModal({
     setError(null);
     setSubmitting(true);
     try {
-      const filterParams = workspaceViewFiltersToSearchParams(filters);
+      const filterParams = workspaceViewFiltersToSearchParams(localFilters);
       const display_properties: Record<string, boolean> = {};
-      display.properties.forEach((k: DisplayPropertyKey) => {
+      localDisplay.properties.forEach((k: DisplayPropertyKey) => {
         display_properties[k] = true;
       });
       const display_filters: Record<string, unknown> = {
-        sub_issue: display.showSubWorkItems,
-        layout: display.layout,
+        sub_issue: localDisplay.showSubWorkItems,
+        layout: localDisplay.layout,
       };
       const created = await viewService.create(workspaceSlug, {
         name: title.trim(),
@@ -105,40 +124,47 @@ export function CreateViewModal({
             className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
           />
         </div>
-        <div className="flex gap-1 border-b border-[var(--border-subtle)]">
-          <button
-            type="button"
-            onClick={() => setActiveTab("filters")}
-            className={`px-3 py-2 text-sm font-medium ${
-              activeTab === "filters"
-                ? "border-b-2 border-[var(--brand-default)] text-[var(--txt-primary)]"
-                : "text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]"
-            }`}
+        <div className="flex flex-wrap items-center gap-2">
+          <Dropdown
+            id="create-view-filters"
+            openId={openPanel}
+            onOpen={(id) => setOpenPanel(id)}
+            label="Filters"
+            icon={null}
+            displayValue=""
+            triggerContent={<span>Filters</span>}
+            triggerClassName="inline-flex items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+            panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)] overflow-hidden"
+            align="left"
           >
-            Filters
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("display")}
-            className={`px-3 py-2 text-sm font-medium ${
-              activeTab === "display"
-                ? "border-b-2 border-[var(--brand-default)] text-[var(--txt-primary)]"
-                : "text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]"
-            }`}
+            {workspaceSlug && (
+              <WorkspaceViewsFiltersPanel
+                filters={localFilters}
+                onFiltersChange={setLocalFilters}
+                workspaceSlug={workspaceSlug}
+                onCloseParent={() => setOpenPanel(null)}
+                compact
+              />
+            )}
+          </Dropdown>
+          <Dropdown
+            id="create-view-display"
+            openId={openPanel}
+            onOpen={(id) => setOpenPanel(id)}
+            label="Display"
+            icon={null}
+            displayValue=""
+            triggerContent={<span>Display</span>}
+            triggerClassName="inline-flex items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+            panelClassName="flex min-w-[280px] max-w-[320px] flex-col rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)] overflow-hidden"
+            align="left"
           >
-            Display
-          </button>
+            <WorkspaceViewsDisplayPanel
+              display={localDisplay}
+              onDisplayChange={setLocalDisplay}
+            />
+          </Dropdown>
         </div>
-        {activeTab === "filters" && (
-          <p className="text-sm text-[var(--txt-secondary)]">
-            Current filters from the Views page will be saved with this view.
-          </p>
-        )}
-        {activeTab === "display" && (
-          <p className="text-sm text-[var(--txt-secondary)]">
-            Display options can be configured after creating the view.
-          </p>
-        )}
         {error && (
           <p className="text-sm text-[var(--txt-danger-primary)]">{error}</p>
         )}

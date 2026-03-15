@@ -779,7 +779,7 @@ export function WorkspaceViewsPage() {
     display.layout === "gantt_chart"
   ) {
     return (
-      <div className="-m-[var(--padding-page)] flex min-h-0 flex-1 flex-col">
+      <div className="-mt-[var(--padding-page)] -mr-[var(--padding-page)] -mb-[var(--padding-page)] flex min-h-0 flex-1 flex-col">
         <div className="flex flex-1 items-center justify-center p-8">
           <p className="text-sm text-[var(--txt-tertiary)]">
             {display.layout === "kanban" && "Kanban view is coming soon."}
@@ -794,7 +794,7 @@ export function WorkspaceViewsPage() {
 
   if (display.layout === "list") {
     return (
-      <div className="-m-[var(--padding-page)] flex min-h-0 flex-1 flex-col">
+      <div className="-mt-[var(--padding-page)] -mr-[var(--padding-page)] -mb-[var(--padding-page)] flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto">
           {sortedIssues.length === 0 ? (
             <div className="px-4 py-16 text-center text-sm text-[var(--txt-tertiary)]">
@@ -1211,7 +1211,7 @@ export function WorkspaceViewsPage() {
   };
 
   return (
-    <div className="-m-[var(--padding-page)] flex min-h-0 flex-1 flex-col">
+    <div className="-mt-[var(--padding-page)] -mr-[var(--padding-page)] -mb-[var(--padding-page)] flex min-h-0 flex-1 flex-col">
       <div className="flex-1">
         <table className="w-full min-w-max border-collapse text-left text-sm">
           <thead>
@@ -1269,7 +1269,7 @@ export function WorkspaceViewsPage() {
                         className="block font-medium text-[var(--txt-primary)] no-underline hover:text-[var(--txt-accent-primary)]"
                       >
                         {display.properties.includes("id") && (
-                          <span className="mr-2 text-[var(--txt-secondary)]">
+                          <span className="mr-3 text-[var(--txt-secondary)]">
                             {project
                               ? `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`
                               : issue.id.slice(-4)}

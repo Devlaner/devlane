@@ -1,7 +1,11 @@
 export { WorkspaceViewsFiltersDropdown } from "./WorkspaceViewsFiltersDropdown";
 export type { WorkspaceViewsFiltersDropdownProps } from "./WorkspaceViewsFiltersDropdown";
+export { WorkspaceViewsFiltersPanel } from "./WorkspaceViewsFiltersPanel";
+export type { WorkspaceViewsFiltersPanelProps } from "./WorkspaceViewsFiltersPanel";
 export { WorkspaceViewsDisplayDropdown } from "./WorkspaceViewsDisplayDropdown";
 export type { WorkspaceViewsDisplayDropdownProps } from "./WorkspaceViewsDisplayDropdown";
+export { WorkspaceViewsDisplayPanel } from "./WorkspaceViewsDisplayPanel";
+export type { WorkspaceViewsDisplayPanelProps } from "./WorkspaceViewsDisplayPanel";
 export { WorkspaceViewsEllipsisMenu } from "./WorkspaceViewsEllipsisMenu";
 export { WorkspaceViewsLayoutSelector } from "./WorkspaceViewsLayoutSelector";
 export { CreateViewModal } from "./CreateViewModal";

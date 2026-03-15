@@ -1,9 +1,12 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { WorkspaceViewsStateProvider } from "../../contexts/WorkspaceViewsStateContext";
 import { PageHeader } from "./PageHeader";
 import { Sidebar } from "./Sidebar";
 
 export function AppShell() {
+  const { pathname } = useLocation();
+  const isViewsRoute = pathname.includes("/views");
+
   return (
     <WorkspaceViewsStateProvider>
       <div className="flex h-screen flex-col overflow-hidden bg-[var(--bg-screen)] p-3">
@@ -11,7 +14,9 @@ export function AppShell() {
           <Sidebar />
           <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--bg-canvas)]">
             <PageHeader />
-            <div className="main-content-scroll min-h-0 flex-1 overflow-auto p-[var(--padding-page)]">
+            <div
+              className={`main-content-scroll min-h-0 flex-1 overflow-auto p-[var(--padding-page)] ${isViewsRoute ? "pl-0" : ""}`}
+            >
               <Outlet />
             </div>
           </main>
