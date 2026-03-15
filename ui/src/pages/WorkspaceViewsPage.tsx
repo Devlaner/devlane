@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import { Button } from "../components/ui";
 import { CreateWorkItemModal } from "../components/CreateWorkItemModal";
 import { workspaceService } from "../services/workspaceService";
@@ -25,6 +26,8 @@ import {
   parseWorkspaceViewDisplayFromSearchParams,
   DISPLAY_PROPERTY_KEYS,
   type DisplayPropertyKey,
+  type SortableColumn,
+  type SortOrder,
 } from "../types/workspaceViewDisplay";
 
 const IconChevronDown = (props: React.SVGAttributes<SVGSVGElement>) => (
@@ -125,9 +128,10 @@ export function WorkspaceViewsPage() {
   const [labels, setLabels] = useState<LabelApiResponse[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const filters = parseWorkspaceViewFiltersFromSearchParams(searchParams);
   const display = parseWorkspaceViewDisplayFromSearchParams(searchParams);
+  const { user: currentUser } = useAuth();
 
   // When viewing a saved view, fetch it and apply its filters/display to URL once (Plane-style).
   useEffect(() => {
@@ -268,8 +272,15 @@ export function WorkspaceViewsPage() {
         });
       });
     }
+    // Static view filters (Plane-style: assigned to me, created by me, subscribed)
+    if (viewId === "assigned" && currentUser?.id) {
+      list = list.filter((i) => i.assignee_ids?.includes(currentUser.id));
+    } else if (viewId === "created" && currentUser?.id) {
+      list = list.filter((i) => i.created_by_id === currentUser.id);
+    }
+    // "subscribed" would filter by issue subscribers when API supports it; for now show all
     return list;
-  }, [issues, filters, states]);
+  }, [issues, filters, states, viewId, currentUser?.id]);
 
   useEffect(() => {
     if (!workspaceSlug) {
