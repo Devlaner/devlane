@@ -879,12 +879,12 @@ export function Sidebar() {
                     Projects
                   </NavLink>
                   <NavLink
-                    to={baseUrl ? `${baseUrl}/views` : "/"}
-                    end
+                    to={baseUrl ? `${baseUrl}/views/all-issues` : "/"}
                     className={({ isActive }) =>
                       cn(
                         "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
-                        isActive
+                        isActive ||
+                          location.pathname.startsWith(`${baseUrl}/views`)
                           ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
                           : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
                       )

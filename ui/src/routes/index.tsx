@@ -463,6 +463,10 @@ const router = createBrowserRouter([
               },
               {
                 path: "views",
+                element: <Navigate to="all-issues" replace />,
+              },
+              {
+                path: "views/:viewId",
                 element: (
                   <Suspense fallback={<PageFallback />}>
                     <WorkspaceViewsPage />
