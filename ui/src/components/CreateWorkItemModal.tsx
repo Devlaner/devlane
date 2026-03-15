@@ -477,7 +477,9 @@ export function CreateWorkItemModal({
       setLabelSearch("");
       setOpenDropdown(null);
     } catch (err) {
-      setCreateLabelError(err instanceof Error ? err.message : "Failed to create label.");
+      setCreateLabelError(
+        err instanceof Error ? err.message : "Failed to create label.",
+      );
     } finally {
       setCreateLabelLoading(false);
     }
@@ -713,27 +715,29 @@ export function CreateWorkItemModal({
                   ))}
                   {labelSearch.trim() &&
                     !labels.some(
-                      (l) => l.name.toLowerCase() === labelSearch.trim().toLowerCase()
+                      (l) =>
+                        l.name.toLowerCase() ===
+                        labelSearch.trim().toLowerCase(),
                     ) && (
-                    <>
-                      <div className="my-1 border-t border-[var(--border-subtle)]" />
-                      <button
-                        type="button"
-                        onClick={handleCreateLabel}
-                        disabled={createLabelLoading}
-                        className="w-full text-left text-[var(--brand-default)] hover:bg-[var(--bg-layer-1-hover)] disabled:opacity-50"
-                      >
-                        {createLabelLoading
-                          ? "Creating…"
-                          : `Create label "${labelSearch.trim()}"`}
-                      </button>
-                      {createLabelError && (
-                        <p className="px-2 py-1 text-xs text-red-600">
-                          {createLabelError}
-                        </p>
-                      )}
-                    </>
-                  )}
+                      <>
+                        <div className="my-1 border-t border-[var(--border-subtle)]" />
+                        <button
+                          type="button"
+                          onClick={handleCreateLabel}
+                          disabled={createLabelLoading}
+                          className="w-full text-left text-[var(--brand-default)] hover:bg-[var(--bg-layer-1-hover)] disabled:opacity-50"
+                        >
+                          {createLabelLoading
+                            ? "Creating…"
+                            : `Create label "${labelSearch.trim()}"`}
+                        </button>
+                        {createLabelError && (
+                          <p className="px-2 py-1 text-xs text-red-600">
+                            {createLabelError}
+                          </p>
+                        )}
+                      </>
+                    )}
                 </div>
               </Dropdown>
               <DatePickerTrigger

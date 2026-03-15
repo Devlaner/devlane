@@ -8,12 +8,22 @@ import {
 } from "react-router-dom";
 import { Button } from "../ui";
 import { Dropdown } from "../work-item";
-import { WorkspaceViewsFiltersDropdown, WorkspaceViewsDisplayDropdown, WorkspaceViewsEllipsisMenu, WorkspaceViewsLayoutSelector, CreateViewModal } from "../workspace-views";
+import {
+  WorkspaceViewsFiltersDropdown,
+  WorkspaceViewsDisplayDropdown,
+  WorkspaceViewsEllipsisMenu,
+  WorkspaceViewsLayoutSelector,
+  CreateViewModal,
+} from "../workspace-views";
 import { workspaceService } from "../../services/workspaceService";
 import { projectService } from "../../services/projectService";
 import { issueService } from "../../services/issueService";
 import { viewService } from "../../services/viewService";
-import type { WorkspaceApiResponse, ProjectApiResponse, IssueViewApiResponse } from "../../api/types";
+import type {
+  WorkspaceApiResponse,
+  ProjectApiResponse,
+  IssueViewApiResponse,
+} from "../../api/types";
 
 export type ProjectSection =
   | "issues"
@@ -21,7 +31,6 @@ export type ProjectSection =
   | "modules"
   | "views"
   | "pages";
-
 
 const IconHome = () => (
   <svg
@@ -968,11 +977,18 @@ const DEFAULT_WORKSPACE_VIEWS = [
 const LONG_LIST_PANEL_STYLE = { maxHeight: "min(70vh, 28rem)" };
 
 function WorkspaceViewsHeader() {
-  const { workspaceSlug, viewId: urlViewId } = useParams<{ workspaceSlug?: string; viewId?: string }>();
+  const { workspaceSlug, viewId: urlViewId } = useParams<{
+    workspaceSlug?: string;
+    viewId?: string;
+  }>();
   const navigate = useNavigate();
   const [viewDropdownOpen, setViewDropdownOpen] = useState<string | null>(null);
-  const [filtersDropdownOpen, setFiltersDropdownOpen] = useState<string | null>(null);
-  const [displayDropdownOpen, setDisplayDropdownOpen] = useState<string | null>(null);
+  const [filtersDropdownOpen, setFiltersDropdownOpen] = useState<string | null>(
+    null,
+  );
+  const [displayDropdownOpen, setDisplayDropdownOpen] = useState<string | null>(
+    null,
+  );
   const [createViewModalOpen, setCreateViewModalOpen] = useState(false);
   const [viewSearch, setViewSearch] = useState("");
   const [customViews, setCustomViews] = useState<IssueViewApiResponse[]>([]);
@@ -1005,7 +1021,9 @@ function WorkspaceViewsHeader() {
     DEFAULT_WORKSPACE_VIEWS[0];
   const displayName = selectedView?.name ?? "All work items";
   const q = (s: string) => s.trim().toLowerCase();
-  const filteredViews = allOptions.filter((v) => q(v.name).includes(q(viewSearch)));
+  const filteredViews = allOptions.filter((v) =>
+    q(v.name).includes(q(viewSearch)),
+  );
 
   const handleSelectView = (id: string) => {
     setViewDropdownOpen(null);
@@ -1052,7 +1070,10 @@ function WorkspaceViewsHeader() {
               />
             </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto py-1" style={LONG_LIST_PANEL_STYLE}>
+          <div
+            className="min-h-0 flex-1 overflow-y-auto py-1"
+            style={LONG_LIST_PANEL_STYLE}
+          >
             {filteredViews.map((view) => (
               <button
                 key={view.id}
@@ -1309,7 +1330,9 @@ export function PageHeader() {
     (pathname === `/${workspaceSlug}/analytics` ||
       pathname.startsWith(`/${workspaceSlug}/analytics/`));
   const isWorkspaceViewsPage =
-    workspaceSlug && (pathname === `/${workspaceSlug}/views` || pathname.startsWith(`/${workspaceSlug}/views/`));
+    workspaceSlug &&
+    (pathname === `/${workspaceSlug}/views` ||
+      pathname.startsWith(`/${workspaceSlug}/views/`));
 
   const projectSection: ProjectSection | null = isIssuesPage
     ? "issues"

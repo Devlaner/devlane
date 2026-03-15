@@ -23,7 +23,10 @@ export const viewService = {
     return data;
   },
 
-  async get(workspaceSlug: string, viewId: string): Promise<IssueViewApiResponse> {
+  async get(
+    workspaceSlug: string,
+    viewId: string,
+  ): Promise<IssueViewApiResponse> {
     const { data } = await apiClient.get<IssueViewApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/`,
     );

@@ -10,7 +10,15 @@ import {
 } from "../../types/workspaceViewDisplay";
 
 const IconLayoutGrid = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <rect width="7" height="7" x="3" y="3" rx="1" />
     <rect width="7" height="7" x="14" y="3" rx="1" />
     <rect width="7" height="7" x="14" y="14" rx="1" />
@@ -31,10 +39,16 @@ export function WorkspaceViewsDisplayDropdown({
   const display = parseWorkspaceViewDisplayFromSearchParams(searchParams);
 
   const updateDisplay = useCallback(
-    (updater: (prev: ReturnType<typeof parseWorkspaceViewDisplayFromSearchParams>) => ReturnType<typeof parseWorkspaceViewDisplayFromSearchParams>) => {
+    (
+      updater: (
+        prev: ReturnType<typeof parseWorkspaceViewDisplayFromSearchParams>,
+      ) => ReturnType<typeof parseWorkspaceViewDisplayFromSearchParams>,
+    ) => {
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
-        const nextDisplay = updater(parseWorkspaceViewDisplayFromSearchParams(prev));
+        const nextDisplay = updater(
+          parseWorkspaceViewDisplayFromSearchParams(prev),
+        );
         const params = workspaceViewDisplayToSearchParams(nextDisplay);
         ["display", "show_sub", "layout"].forEach((k) => {
           if (params[k]) next.set(k, params[k]);
@@ -43,7 +57,7 @@ export function WorkspaceViewsDisplayDropdown({
         return next;
       });
     },
-    [setSearchParams]
+    [setSearchParams],
   );
 
   const toggleProperty = (key: DisplayPropertyKey) => {
@@ -67,7 +81,9 @@ export function WorkspaceViewsDisplayDropdown({
       align="right"
     >
       <div className="border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3">
-        <p className="text-xs font-medium text-[var(--txt-secondary)]">Display Properties</p>
+        <p className="text-xs font-medium text-[var(--txt-secondary)]">
+          Display Properties
+        </p>
       </div>
       <div className="flex flex-1 flex-wrap gap-2 p-3">
         {DISPLAY_PROPERTY_KEYS.map((key) => {
@@ -94,7 +110,10 @@ export function WorkspaceViewsDisplayDropdown({
             type="checkbox"
             checked={display.showSubWorkItems}
             onChange={(e) =>
-              updateDisplay((prev) => ({ ...prev, showSubWorkItems: e.target.checked }))
+              updateDisplay((prev) => ({
+                ...prev,
+                showSubWorkItems: e.target.checked,
+              }))
             }
             className="rounded border-[var(--border-subtle)]"
           />

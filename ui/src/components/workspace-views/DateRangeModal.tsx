@@ -2,8 +2,18 @@ import { useState, useEffect } from "react";
 import { Modal } from "../ui";
 
 const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 function toISO(date: Date): string {
@@ -36,8 +46,12 @@ export function DateRangeModal({
   onApply,
 }: DateRangeModalProps) {
   const now = new Date();
-  const defaultStart = after ? new Date(after) : new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const defaultEnd = before ? new Date(before) : new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  const defaultStart = after
+    ? new Date(after)
+    : new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const defaultEnd = before
+    ? new Date(before)
+    : new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
 
   const [startDate, setStartDate] = useState<Date>(defaultStart);
   const [endDate, setEndDate] = useState<Date>(defaultEnd);
@@ -46,22 +60,36 @@ export function DateRangeModal({
   const [leftYear, setLeftYear] = useState(now.getFullYear());
 
   useEffect(() => {
-    if (open) {
-      const start = after ? new Date(after) : new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const end = before ? new Date(before) : new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+    if (!open) return;
+    const now = new Date();
+    const start = after
+      ? new Date(after)
+      : new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const end = before
+      ? new Date(before)
+      : new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+    queueMicrotask(() => {
       setStartDate(start);
       setEndDate(end);
       setLeftMonth(start.getMonth());
       setLeftYear(start.getFullYear());
-    }
+    });
   }, [open, after, before]);
 
   const rightMonth = leftMonth === 11 ? 0 : leftMonth + 1;
   const rightYear = leftMonth === 11 ? leftYear + 1 : leftYear;
 
   const handleApply = () => {
-    const a = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-    const b = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    const a = new Date(
+      startDate.getFullYear(),
+      startDate.getMonth(),
+      startDate.getDate(),
+    );
+    const b = new Date(
+      endDate.getFullYear(),
+      endDate.getMonth(),
+      endDate.getDate(),
+    );
     if (a.getTime() > b.getTime()) {
       setStartDate(b);
       setEndDate(a);
@@ -72,14 +100,22 @@ export function DateRangeModal({
     onClose();
   };
 
-  const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
-  const firstDay = (year: number, month: number) => new Date(year, month, 1).getDay();
+  const daysInMonth = (year: number, month: number) =>
+    new Date(year, month + 1, 0).getDate();
+  const firstDay = (year: number, month: number) =>
+    new Date(year, month, 1).getDay();
 
   const renderCalendar = (year: number, month: number, isStart: boolean) => {
     const days = daysInMonth(year, month);
     const first = firstDay(year, month);
     const cells: React.ReactNode[] = [];
-    for (let i = 0; i < first; i++) cells.push(<td key={`empty-${i}`} className="w-[2rem] min-w-[2rem] max-w-[2rem] p-0.5" />);
+    for (let i = 0; i < first; i++)
+      cells.push(
+        <td
+          key={`empty-${i}`}
+          className="w-[2rem] min-w-[2rem] max-w-[2rem] p-0.5"
+        />,
+      );
     for (let d = 1; d <= days; d++) {
       const date = new Date(year, month, d);
       const iso = toISO(date);
@@ -87,10 +123,23 @@ export function DateRangeModal({
         ? toISO(startDate) === iso
         : toISO(endDate) === iso;
       const inRange =
-        date >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) &&
-        date <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        date >=
+          new Date(
+            startDate.getFullYear(),
+            startDate.getMonth(),
+            startDate.getDate(),
+          ) &&
+        date <=
+          new Date(
+            endDate.getFullYear(),
+            endDate.getMonth(),
+            endDate.getDate(),
+          );
       cells.push(
-        <td key={d} className="w-[2rem] min-w-[2rem] max-w-[2rem] p-0.5 align-middle">
+        <td
+          key={d}
+          className="w-[2rem] min-w-[2rem] max-w-[2rem] p-0.5 align-middle"
+        >
           <button
             type="button"
             onClick={() => (isStart ? setStartDate(date) : setEndDate(date))}
@@ -104,12 +153,12 @@ export function DateRangeModal({
           >
             <span className="truncate">{d}</span>
           </button>
-        </td>
+        </td>,
       );
     }
     const rows: React.ReactNode[] = [];
     let row: React.ReactNode[] = [];
-    cells.forEach((c, i) => {
+    cells.forEach((c) => {
       row.push(c);
       if (row.length === 7) {
         rows.push(<tr key={rows.length}>{row}</tr>);
@@ -153,7 +202,10 @@ export function DateRangeModal({
           <thead>
             <tr className="text-[var(--txt-tertiary)]">
               {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-                <th key={day} className="w-[2rem] min-w-[2rem] max-w-[2rem] p-0.5 text-center font-normal text-xs">
+                <th
+                  key={day}
+                  className="w-[2rem] min-w-[2rem] max-w-[2rem] p-0.5 text-center font-normal text-xs"
+                >
                   {day}
                 </th>
               ))}

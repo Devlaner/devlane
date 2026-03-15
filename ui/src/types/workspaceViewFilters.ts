@@ -1,7 +1,19 @@
 export const PRIORITIES = ["urgent", "high", "medium", "low", "none"] as const;
-export const STATE_GROUPS = ["backlog", "unstarted", "started", "completed", "canceled"] as const;
+export const STATE_GROUPS = [
+  "backlog",
+  "unstarted",
+  "started",
+  "completed",
+  "canceled",
+] as const;
 export const GROUPING_OPTIONS = ["all", "active", "backlog"] as const;
-export const DATE_PRESETS = ["1_week", "2_weeks", "1_month", "2_months", "custom"] as const;
+export const DATE_PRESETS = [
+  "1_week",
+  "2_weeks",
+  "1_month",
+  "2_months",
+  "custom",
+] as const;
 
 export type Priority = (typeof PRIORITIES)[number];
 export type StateGroup = (typeof STATE_GROUPS)[number];
@@ -58,30 +70,37 @@ const PARAM_KEYS = {
 
 function parseList(value: string | null): string[] {
   if (!value?.trim()) return [];
-  return value.split(",").map((s) => s.trim()).filter(Boolean);
+  return value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
-function parseSingle<T extends string>(value: string | null, allowed: readonly T[]): T | undefined {
+function parseSingle<T extends string>(
+  value: string | null,
+  allowed: readonly T[],
+): T | undefined {
   if (!value?.trim()) return undefined;
   const v = value.trim().toLowerCase();
   return allowed.includes(v as T) ? (v as T) : undefined;
 }
 
 export function parseWorkspaceViewFiltersFromSearchParams(
-  params: URLSearchParams
+  params: URLSearchParams,
 ): WorkspaceViewFilters {
   const priority = parseList(params.get(PARAM_KEYS.priority)).filter((p) =>
-    PRIORITIES.includes(p as Priority)
+    PRIORITIES.includes(p as Priority),
   ) as Priority[];
   const stateGroup = parseList(params.get(PARAM_KEYS.state_group)).filter((g) =>
-    STATE_GROUPS.includes(g as StateGroup)
+    STATE_GROUPS.includes(g as StateGroup),
   ) as StateGroup[];
-  const grouping = parseSingle(params.get(PARAM_KEYS.grouping), GROUPING_OPTIONS) ?? "all";
+  const grouping =
+    parseSingle(params.get(PARAM_KEYS.grouping), GROUPING_OPTIONS) ?? "all";
   const startDate = parseList(params.get(PARAM_KEYS.start_date)).filter((d) =>
-    DATE_PRESETS.includes(d as DatePreset)
+    DATE_PRESETS.includes(d as DatePreset),
   ) as DatePreset[];
   const dueDate = parseList(params.get(PARAM_KEYS.due_date)).filter((d) =>
-    DATE_PRESETS.includes(d as DatePreset)
+    DATE_PRESETS.includes(d as DatePreset),
   ) as DatePreset[];
 
   const startAfter = params.get(PARAM_KEYS.start_after)?.trim() || null;
@@ -107,13 +126,14 @@ export function parseWorkspaceViewFiltersFromSearchParams(
 }
 
 export function workspaceViewFiltersToSearchParams(
-  f: WorkspaceViewFilters
+  f: WorkspaceViewFilters,
 ): Record<string, string> {
   const out: Record<string, string> = {};
   if (f.priority.length) out[PARAM_KEYS.priority] = f.priority.join(",");
   if (f.stateGroup.length) out[PARAM_KEYS.state_group] = f.stateGroup.join(",");
   if (f.assigneeIds.length) out[PARAM_KEYS.assignee] = f.assigneeIds.join(",");
-  if (f.createdByIds.length) out[PARAM_KEYS.created_by] = f.createdByIds.join(",");
+  if (f.createdByIds.length)
+    out[PARAM_KEYS.created_by] = f.createdByIds.join(",");
   if (f.labelIds.length) out[PARAM_KEYS.label] = f.labelIds.join(",");
   if (f.projectIds.length) out[PARAM_KEYS.project] = f.projectIds.join(",");
   if (f.grouping !== "all") out[PARAM_KEYS.grouping] = f.grouping;

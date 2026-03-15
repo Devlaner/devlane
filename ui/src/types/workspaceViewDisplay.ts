@@ -33,7 +33,13 @@ export const DISPLAY_PROPERTY_LABELS: Record<DisplayPropertyKey, string> = {
 };
 
 /** Plane-style layout options for workspace views. */
-export const VIEW_LAYOUTS = ["list", "kanban", "calendar", "spreadsheet", "gantt_chart"] as const;
+export const VIEW_LAYOUTS = [
+  "list",
+  "kanban",
+  "calendar",
+  "spreadsheet",
+  "gantt_chart",
+] as const;
 export type ViewLayout = (typeof VIEW_LAYOUTS)[number];
 
 export const VIEW_LAYOUT_LABELS: Record<ViewLayout, string> = {
@@ -53,7 +59,16 @@ export interface WorkspaceViewDisplay {
 }
 
 /** Sortable columns for workspace view table (Plane-style). */
-export const SORTABLE_COLUMNS = ["name", "created_at", "updated_at", "priority", "state", "assignee", "start_date", "due_date"] as const;
+export const SORTABLE_COLUMNS = [
+  "name",
+  "created_at",
+  "updated_at",
+  "priority",
+  "state",
+  "assignee",
+  "start_date",
+  "due_date",
+] as const;
 export type SortableColumn = (typeof SORTABLE_COLUMNS)[number];
 export type SortOrder = "asc" | "desc";
 
@@ -77,20 +92,24 @@ function parseDisplayList(value: string | null): DisplayPropertyKey[] {
     .split(",")
     .map((s) => s.trim().toLowerCase())
     .filter((k): k is DisplayPropertyKey =>
-      DISPLAY_PROPERTY_KEYS.includes(k as DisplayPropertyKey)
+      DISPLAY_PROPERTY_KEYS.includes(k as DisplayPropertyKey),
     );
 }
 
 function parseLayout(value: string | null): ViewLayout {
   if (!value?.trim()) return "spreadsheet";
   const v = value.trim().toLowerCase();
-  return VIEW_LAYOUTS.includes(v as ViewLayout) ? (v as ViewLayout) : "spreadsheet";
+  return VIEW_LAYOUTS.includes(v as ViewLayout)
+    ? (v as ViewLayout)
+    : "spreadsheet";
 }
 
 function parseSortBy(value: string | null): SortableColumn {
   if (!value?.trim()) return "created_at";
   const v = value.trim().toLowerCase();
-  return SORTABLE_COLUMNS.includes(v as SortableColumn) ? (v as SortableColumn) : "created_at";
+  return SORTABLE_COLUMNS.includes(v as SortableColumn)
+    ? (v as SortableColumn)
+    : "created_at";
 }
 
 function parseSortOrder(value: string | null): SortOrder {
@@ -100,7 +119,7 @@ function parseSortOrder(value: string | null): SortOrder {
 }
 
 export function parseWorkspaceViewDisplayFromSearchParams(
-  params: URLSearchParams
+  params: URLSearchParams,
 ): WorkspaceViewDisplay {
   const properties = parseDisplayList(params.get(DISPLAY_PARAM));
   const showSub = params.get(SHOW_SUB_PARAM)?.toLowerCase();
@@ -117,14 +136,14 @@ export function parseWorkspaceViewDisplayFromSearchParams(
 }
 
 export function workspaceViewDisplayToSearchParams(
-  d: WorkspaceViewDisplay
+  d: WorkspaceViewDisplay,
 ): Record<string, string> {
   const out: Record<string, string> = {};
-  if (d.properties.length)
-    out[DISPLAY_PARAM] = d.properties.join(",");
+  if (d.properties.length) out[DISPLAY_PARAM] = d.properties.join(",");
   if (d.showSubWorkItems) out[SHOW_SUB_PARAM] = "1";
   if (d.layout && d.layout !== "spreadsheet") out[LAYOUT_PARAM] = d.layout;
   if (d.sortBy && d.sortBy !== "created_at") out[SORT_BY_PARAM] = d.sortBy;
-  if (d.sortOrder && d.sortOrder !== "desc") out[SORT_ORDER_PARAM] = d.sortOrder;
+  if (d.sortOrder && d.sortOrder !== "desc")
+    out[SORT_ORDER_PARAM] = d.sortOrder;
   return out;
 }

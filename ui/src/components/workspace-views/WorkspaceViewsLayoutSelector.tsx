@@ -8,7 +8,16 @@ import {
 } from "../../types/workspaceViewDisplay";
 
 const IconList = (props: React.SVGAttributes<SVGSVGElement>) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden {...props}>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+    {...props}
+  >
     <line x1="8" y1="6" x2="21" y2="6" />
     <line x1="8" y1="12" x2="21" y2="12" />
     <line x1="8" y1="18" x2="21" y2="18" />
@@ -18,7 +27,16 @@ const IconList = (props: React.SVGAttributes<SVGSVGElement>) => (
   </svg>
 );
 const IconLayoutGrid = (props: React.SVGAttributes<SVGSVGElement>) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden {...props}>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+    {...props}
+  >
     <rect width="7" height="7" x="3" y="3" rx="1" />
     <rect width="7" height="7" x="14" y="3" rx="1" />
     <rect width="7" height="7" x="14" y="14" rx="1" />
@@ -26,7 +44,16 @@ const IconLayoutGrid = (props: React.SVGAttributes<SVGSVGElement>) => (
   </svg>
 );
 const IconColumns = (props: React.SVGAttributes<SVGSVGElement>) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden {...props}>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+    {...props}
+  >
     <rect width="18" height="18" x="3" y="3" rx="2" />
     <path d="M3 9h18" />
     <path d="M3 15h18" />
@@ -35,7 +62,16 @@ const IconColumns = (props: React.SVGAttributes<SVGSVGElement>) => (
   </svg>
 );
 const IconCalendar = (props: React.SVGAttributes<SVGSVGElement>) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden {...props}>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+    {...props}
+  >
     <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
     <line x1="16" y1="2" x2="16" y2="6" />
     <line x1="8" y1="2" x2="8" y2="6" />
@@ -43,7 +79,16 @@ const IconCalendar = (props: React.SVGAttributes<SVGSVGElement>) => (
   </svg>
 );
 const IconGantt = (props: React.SVGAttributes<SVGSVGElement>) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden {...props}>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+    {...props}
+  >
     <path d="M3 6v12" />
     <path d="M3 12h6" />
     <path d="M3 18h4" />
@@ -53,7 +98,10 @@ const IconGantt = (props: React.SVGAttributes<SVGSVGElement>) => (
   </svg>
 );
 
-const LAYOUT_ICONS: Record<ViewLayout, React.ComponentType<React.SVGAttributes<SVGSVGElement>>> = {
+const LAYOUT_ICONS: Record<
+  ViewLayout,
+  React.ComponentType<React.SVGAttributes<SVGSVGElement>>
+> = {
   list: IconList,
   kanban: IconColumns,
   calendar: IconCalendar,
@@ -67,14 +115,20 @@ export function WorkspaceViewsLayoutSelector() {
   const layout = display.layout;
 
   const setLayout = (newLayout: ViewLayout) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      const nextDisplay = { ...parseWorkspaceViewDisplayFromSearchParams(prev), layout: newLayout };
-      const params = workspaceViewDisplayToSearchParams(nextDisplay);
-      if (params.layout) next.set("layout", params.layout);
-      else next.delete("layout");
-      return next;
-    }, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        const nextDisplay = {
+          ...parseWorkspaceViewDisplayFromSearchParams(prev),
+          layout: newLayout,
+        };
+        const params = workspaceViewDisplayToSearchParams(nextDisplay);
+        if (params.layout) next.set("layout", params.layout);
+        else next.delete("layout");
+        return next;
+      },
+      { replace: true },
+    );
   };
 
   return (
