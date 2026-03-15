@@ -1,12 +1,11 @@
 import { useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
 import { Dropdown } from "../work-item";
+import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
 import {
   type DisplayPropertyKey,
+  type WorkspaceViewDisplay,
   DISPLAY_PROPERTY_KEYS,
   DISPLAY_PROPERTY_LABELS,
-  parseWorkspaceViewDisplayFromSearchParams,
-  workspaceViewDisplayToSearchParams,
 } from "../../types/workspaceViewDisplay";
 
 const IconLayoutGrid = () => (
@@ -35,29 +34,13 @@ export function WorkspaceViewsDisplayDropdown({
   openId,
   onOpen,
 }: WorkspaceViewsDisplayDropdownProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const display = parseWorkspaceViewDisplayFromSearchParams(searchParams);
+  const { display, setDisplay } = useWorkspaceViewsState();
 
   const updateDisplay = useCallback(
-    (
-      updater: (
-        prev: ReturnType<typeof parseWorkspaceViewDisplayFromSearchParams>,
-      ) => ReturnType<typeof parseWorkspaceViewDisplayFromSearchParams>,
-    ) => {
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        const nextDisplay = updater(
-          parseWorkspaceViewDisplayFromSearchParams(prev),
-        );
-        const params = workspaceViewDisplayToSearchParams(nextDisplay);
-        ["display", "show_sub", "layout"].forEach((k) => {
-          if (params[k]) next.set(k, params[k]);
-          else next.delete(k);
-        });
-        return next;
-      });
+    (updater: (prev: WorkspaceViewDisplay) => WorkspaceViewDisplay) => {
+      setDisplay(updater);
     },
-    [setSearchParams],
+    [setDisplay],
   );
 
   const toggleProperty = (key: DisplayPropertyKey) => {

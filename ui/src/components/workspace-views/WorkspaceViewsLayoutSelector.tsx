@@ -1,7 +1,5 @@
-import { useSearchParams } from "react-router-dom";
+import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
 import {
-  parseWorkspaceViewDisplayFromSearchParams,
-  workspaceViewDisplayToSearchParams,
   VIEW_LAYOUTS,
   VIEW_LAYOUT_LABELS,
   type ViewLayout,
@@ -110,25 +108,11 @@ const LAYOUT_ICONS: Record<
 };
 
 export function WorkspaceViewsLayoutSelector() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const display = parseWorkspaceViewDisplayFromSearchParams(searchParams);
+  const { display, setDisplay } = useWorkspaceViewsState();
   const layout = display.layout;
 
   const setLayout = (newLayout: ViewLayout) => {
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        const nextDisplay = {
-          ...parseWorkspaceViewDisplayFromSearchParams(prev),
-          layout: newLayout,
-        };
-        const params = workspaceViewDisplayToSearchParams(nextDisplay);
-        if (params.layout) next.set("layout", params.layout);
-        else next.delete("layout");
-        return next;
-      },
-      { replace: true },
-    );
+    setDisplay((prev) => ({ ...prev, layout: newLayout }));
   };
 
   return (

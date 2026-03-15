@@ -1,16 +1,11 @@
 import { useState } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Modal } from "../ui";
 import { Button, Input } from "../ui";
+import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
 import { viewService } from "../../services/viewService";
-import {
-  parseWorkspaceViewFiltersFromSearchParams,
-  workspaceViewFiltersToSearchParams,
-} from "../../types/workspaceViewFilters";
-import {
-  parseWorkspaceViewDisplayFromSearchParams,
-  type DisplayPropertyKey,
-} from "../../types/workspaceViewDisplay";
+import { workspaceViewFiltersToSearchParams } from "../../types/workspaceViewFilters";
+import type { DisplayPropertyKey } from "../../types/workspaceViewDisplay";
 
 export interface CreateViewModalProps {
   open: boolean;
@@ -25,7 +20,7 @@ export function CreateViewModal({
 }: CreateViewModalProps) {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const { filters, display } = useWorkspaceViewsState();
   const [activeTab, setActiveTab] = useState<"filters" | "display">("filters");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -41,9 +36,7 @@ export function CreateViewModal({
     setError(null);
     setSubmitting(true);
     try {
-      const filters = parseWorkspaceViewFiltersFromSearchParams(searchParams);
       const filterParams = workspaceViewFiltersToSearchParams(filters);
-      const display = parseWorkspaceViewDisplayFromSearchParams(searchParams);
       const display_properties: Record<string, boolean> = {};
       display.properties.forEach((k: DisplayPropertyKey) => {
         display_properties[k] = true;

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Dropdown } from "../work-item";
 import { DateRangeModal } from "./DateRangeModal";
+import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
 import { workspaceService } from "../../services/workspaceService";
 import { projectService } from "../../services/projectService";
 import { stateService } from "../../services/stateService";
@@ -12,8 +13,6 @@ import {
   type Priority,
   type StateGroup,
   type DatePreset,
-  parseWorkspaceViewFiltersFromSearchParams,
-  workspaceViewFiltersToSearchParams,
   PRIORITIES,
   STATE_GROUPS,
   GROUPING_OPTIONS,
@@ -222,7 +221,7 @@ export function WorkspaceViewsFiltersDropdown({
   onOpen,
 }: WorkspaceViewsFiltersDropdownProps) {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { filters, setFilters } = useWorkspaceViewsState();
   const { user: currentUser } = useAuth();
 
   const [search, setSearch] = useState("");
@@ -248,8 +247,6 @@ export function WorkspaceViewsFiltersDropdown({
   const [dateRangeModal, setDateRangeModal] = useState<"start" | "due" | null>(
     null,
   );
-
-  const filters = parseWorkspaceViewFiltersFromSearchParams(searchParams);
 
   useEffect(() => {
     if (!workspaceSlug) return;
@@ -305,35 +302,9 @@ export function WorkspaceViewsFiltersDropdown({
 
   const updateFilters = useCallback(
     (updater: (prev: WorkspaceViewFilters) => WorkspaceViewFilters) => {
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        const nextFilters = updater(
-          parseWorkspaceViewFiltersFromSearchParams(prev),
-        );
-        const params = workspaceViewFiltersToSearchParams(nextFilters);
-        const filterKeys = [
-          "priority",
-          "state_group",
-          "assignee",
-          "created_by",
-          "label",
-          "project",
-          "grouping",
-          "start_date",
-          "due_date",
-          "start_after",
-          "start_before",
-          "due_after",
-          "due_before",
-        ];
-        filterKeys.forEach((k) => {
-          if (params[k]) next.set(k, params[k]);
-          else next.delete(k);
-        });
-        return next;
-      });
+      setFilters(updater);
     },
-    [setSearchParams],
+    [setFilters],
   );
 
   const toggleSection = (key: string) => {

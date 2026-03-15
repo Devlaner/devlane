@@ -18,19 +18,40 @@ export type DisplayPropertyKey = (typeof DISPLAY_PROPERTY_KEYS)[number];
 
 export const DISPLAY_PROPERTY_LABELS: Record<DisplayPropertyKey, string> = {
   id: "ID",
-  assignee: "Assignee",
+  assignee: "Assignees",
   start_date: "Start date",
   due_date: "Due date",
   labels: "Labels",
   priority: "Priority",
   state: "State",
-  sub_work_item_count: "Sub-work item count",
-  attachment_count: "Attachment count",
+  sub_work_item_count: "Sub-work item",
+  attachment_count: "Attachment",
   link: "Link",
   estimate: "Estimate",
   module: "Module",
   cycle: "Cycle",
 };
+
+/** Plane-style column order for spreadsheet view: Work items (sticky) then these (horizontal scroll). */
+export const SPREADSHEET_COLUMN_ORDER: (
+  | DisplayPropertyKey
+  | "created_at"
+  | "updated_at"
+)[] = [
+  "priority",
+  "assignee",
+  "labels",
+  "module",
+  "cycle",
+  "start_date",
+  "due_date",
+  "estimate",
+  "created_at",
+  "updated_at",
+  "link",
+  "attachment_count",
+  "sub_work_item_count",
+];
 
 /** Plane-style layout options for workspace views. */
 export const VIEW_LAYOUTS = [

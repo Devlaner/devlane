@@ -1,13 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Link,
-  useNavigate,
-  useParams,
-  useSearchParams,
-} from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { Button } from "../components/ui";
-import { CreateWorkItemModal } from "../components/CreateWorkItemModal";
+import { useWorkspaceViewsState } from "../contexts/WorkspaceViewsStateContext";
 import { workspaceService } from "../services/workspaceService";
 import { projectService } from "../services/projectService";
 import { issueService } from "../services/issueService";
@@ -28,11 +22,14 @@ import {
   type StateGroup,
 } from "../types/workspaceViewFilters";
 import {
-  parseWorkspaceViewDisplayFromSearchParams,
   DISPLAY_PROPERTY_KEYS,
+  SPREADSHEET_COLUMN_ORDER,
+  VIEW_LAYOUTS,
+  DISPLAY_PROPERTY_LABELS,
   type DisplayPropertyKey,
   type SortableColumn,
   type SortOrder,
+  type ViewLayout,
 } from "../types/workspaceViewDisplay";
 
 const IconChevronDown = (props: React.SVGAttributes<SVGSVGElement>) => (
@@ -122,8 +119,7 @@ export function WorkspaceViewsPage() {
     workspaceSlug?: string;
     viewId?: string;
   }>();
-  const navigate = useNavigate();
-  const [createOpen, setCreateOpen] = useState(false);
+  const { filters, setFilters, display, setDisplay } = useWorkspaceViewsState();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [viewNotFound, setViewNotFound] = useState(false);
   const [viewLoading, setViewLoading] = useState(false);
@@ -135,12 +131,9 @@ export function WorkspaceViewsPage() {
   const [labels, setLabels] = useState<LabelApiResponse[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const filters = parseWorkspaceViewFiltersFromSearchParams(searchParams);
-  const display = parseWorkspaceViewDisplayFromSearchParams(searchParams);
   const { user: currentUser } = useAuth();
 
-  // When viewing a saved view, fetch it and apply its filters/display to URL once (Plane-style).
+  // When viewing a saved view, fetch it and apply its filters/display to state once (Plane-style; not in URL).
   useEffect(() => {
     if (prevViewIdRef.current !== viewId) {
       prevViewIdRef.current = viewId;
@@ -159,12 +152,12 @@ export function WorkspaceViewsPage() {
       .get(workspaceSlug, viewId)
       .then((view) => {
         setViewNotFound(false);
-        const params = new URLSearchParams();
         const f = view.filters as Record<string, string> | undefined;
         if (f && typeof f === "object") {
-          Object.entries(f).forEach(([k, v]) => {
-            if (v != null && v !== "") params.set(k, String(v));
-          });
+          const nextFilters = parseWorkspaceViewFiltersFromSearchParams(
+            new URLSearchParams(f as Record<string, string>),
+          );
+          setFilters(nextFilters);
         }
         const dp = view.display_properties as
           | Record<string, boolean>
@@ -176,24 +169,28 @@ export function WorkspaceViewsPage() {
             .filter((k): k is DisplayPropertyKey =>
               DISPLAY_PROPERTY_KEYS.includes(k as DisplayPropertyKey),
             );
-          if (keys.length) params.set("display", keys.join(","));
+          setDisplay((prev) => ({ ...prev, properties: keys }));
         }
         const df = view.display_filters as Record<string, unknown> | undefined;
-        if (df?.sub_issue === true) params.set("show_sub", "1");
+        if (df && typeof df === "object") {
+          setDisplay((prev) => {
+            const next = { ...prev, showSubWorkItems: df.sub_issue === true };
+            if (
+              typeof df.layout === "string" &&
+              VIEW_LAYOUTS.includes(df.layout as ViewLayout)
+            ) {
+              next.layout = df.layout as ViewLayout;
+            }
+            return next;
+          });
+        }
         setViewLoading(false);
-        navigate(
-          {
-            pathname: `/${workspaceSlug}/views/${viewId}`,
-            search: params.toString(),
-          },
-          { replace: true },
-        );
       })
       .catch(() => {
         setViewLoading(false);
         setViewNotFound(true);
       });
-  }, [workspaceSlug, viewId, navigate]);
+  }, [workspaceSlug, viewId, setFilters, setDisplay]);
 
   const filteredIssues = useMemo(() => {
     const stateGroupMap: Record<string, StateGroup> = {
@@ -391,19 +388,11 @@ export function WorkspaceViewsPage() {
   }, [filteredIssues, display.sortBy, display.sortOrder, stateMap, memberMap]);
 
   const handleSort = (column: SortableColumn) => {
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        const nextOrder: SortOrder =
-          display.sortBy === column && display.sortOrder === "desc"
-            ? "asc"
-            : "desc";
-        next.set("sort_by", column);
-        next.set("order", nextOrder);
-        return next;
-      },
-      { replace: true },
-    );
+    const nextOrder: SortOrder =
+      display.sortBy === column && display.sortOrder === "desc"
+        ? "asc"
+        : "desc";
+    setDisplay((prev) => ({ ...prev, sortBy: column, sortOrder: nextOrder }));
   };
 
   useEffect(() => {
@@ -528,7 +517,13 @@ export function WorkspaceViewsPage() {
 
   const baseUrl = `/${workspace.slug}`;
 
-  const optionalColumns = display.properties;
+  // Plane-style: fixed column order, scrollable from Priority onward
+  const scrollableColumns = SPREADSHEET_COLUMN_ORDER.filter(
+    (k) =>
+      k === "created_at" ||
+      k === "updated_at" ||
+      display.properties.includes(k as DisplayPropertyKey),
+  );
   const formatDate = (s: string | undefined | null) =>
     s
       ? new Date(s).toLocaleDateString("en-US", {
@@ -630,30 +625,25 @@ export function WorkspaceViewsPage() {
     }
   };
 
-  const headerLabels: Record<DisplayPropertyKey, string> = {
-    id: "ID",
-    assignee: "Assignees",
-    start_date: "Start date",
-    due_date: "Due date",
-    labels: "Labels",
-    priority: "Priority",
-    state: "State",
-    sub_work_item_count: "Sub-work item count",
-    attachment_count: "Attachment count",
-    link: "Link",
-    estimate: "Estimate",
-    module: "Module",
-    cycle: "Cycle",
+  const headerLabel = (
+    key: (typeof scrollableColumns)[number],
+  ): string => {
+    if (key === "created_at") return "Created on";
+    if (key === "updated_at") return "Updated on";
+    return DISPLAY_PROPERTY_LABELS[key as DisplayPropertyKey];
   };
-  const totalCols = 3 + optionalColumns.length;
-  const sortableColumnMap: Partial<Record<DisplayPropertyKey, SortableColumn>> =
-    {
-      priority: "priority",
-      state: "state",
-      assignee: "assignee",
-      start_date: "start_date",
-      due_date: "due_date",
-    };
+  const totalCols = 1 + scrollableColumns.length;
+  const sortableColumnMap: Partial<
+    Record<DisplayPropertyKey | "created_at" | "updated_at", SortableColumn>
+  > = {
+    priority: "priority",
+    state: "state",
+    assignee: "assignee",
+    start_date: "start_date",
+    due_date: "due_date",
+    created_at: "created_at",
+    updated_at: "updated_at",
+  };
   const renderSortableTh = (
     column: SortableColumn,
     label: string,
@@ -746,28 +736,74 @@ export function WorkspaceViewsPage() {
             </ul>
           )}
         </div>
-        {sortedIssues.length > 0 && (
-          <div className="mt-4 flex justify-start">
-            <Button
-              size="sm"
-              variant="secondary"
-              className="gap-1.5 border-dashed text-[13px] font-medium"
-              onClick={() => setCreateOpen(true)}
-            >
-              New work item
-            </Button>
-          </div>
-        )}
-        <CreateWorkItemModal
-          open={createOpen}
-          onClose={() => setCreateOpen(false)}
-          workspaceSlug={workspace.slug}
-          projects={projects}
-          defaultProjectId={projects[0]?.id}
-        />
       </div>
     );
   }
+
+  const scrollableTh = (key: (typeof scrollableColumns)[number]) => {
+    const sortCol = sortableColumnMap[key];
+    const label = headerLabel(key);
+    if (sortCol) {
+      const icon =
+        key === "state" ? (
+          <IconRadio className="size-4 shrink-0 opacity-70" />
+        ) : key === "priority" ? (
+          <IconBarChart className="size-4 shrink-0 opacity-70" />
+        ) : key === "assignee" ? (
+          <IconUser className="size-4 shrink-0 opacity-70" />
+        ) : key === "labels" ? (
+          <IconTag className="size-4 shrink-0 opacity-70" />
+        ) : undefined;
+      return (
+        <Fragment key={key}>
+          {renderSortableTh(sortCol, label, icon)}
+        </Fragment>
+      );
+    }
+    return (
+      <th
+        key={key}
+        className="px-4 py-3.5 font-medium text-[var(--txt-secondary)]"
+      >
+        <span className="inline-flex items-center gap-1.5">
+          {key === "state" && (
+            <IconRadio className="size-4 shrink-0 opacity-70" />
+          )}
+          {key === "priority" && (
+            <IconBarChart className="size-4 shrink-0 opacity-70" />
+          )}
+          {key === "assignee" && (
+            <IconUser className="size-4 shrink-0 opacity-70" />
+          )}
+          {key === "labels" && (
+            <IconTag className="size-4 shrink-0 opacity-70" />
+          )}
+          {label}
+        </span>
+      </th>
+    );
+  };
+
+  const scrollableTd = (
+    issue: IssueApiResponse,
+    key: (typeof scrollableColumns)[number],
+  ) => {
+    if (key === "created_at") {
+      return (
+        <span className="text-[var(--txt-secondary)]">
+          {formatDate(issue.created_at)}
+        </span>
+      );
+    }
+    if (key === "updated_at") {
+      return (
+        <span className="text-[var(--txt-secondary)]">
+          {formatDate(issue.updated_at)}
+        </span>
+      );
+    }
+    return renderCell(issue, key as DisplayPropertyKey);
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -775,54 +811,32 @@ export function WorkspaceViewsPage() {
         Work items
       </h1>
       <div className="min-h-0 flex-1 overflow-x-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]">
-        <table className="w-full min-w-[640px] text-left text-sm">
+        <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-[var(--border-subtle)] bg-[var(--bg-layer-1)]">
-              {renderSortableTh("name", "Work items")}
-              {renderSortableTh("created_at", "Created on")}
-              {renderSortableTh("updated_at", "Updated on")}
-              {optionalColumns.map((key) => {
-                const sortCol = sortableColumnMap[key];
-                if (sortCol) {
-                  const icon =
-                    key === "state" ? (
-                      <IconRadio className="size-4 shrink-0 opacity-70" />
-                    ) : key === "priority" ? (
-                      <IconBarChart className="size-4 shrink-0 opacity-70" />
-                    ) : key === "assignee" ? (
-                      <IconUser className="size-4 shrink-0 opacity-70" />
-                    ) : key === "labels" ? (
-                      <IconTag className="size-4 shrink-0 opacity-70" />
-                    ) : undefined;
+              <th className="sticky left-0 z-10 min-w-[200px] border-r border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-4 py-3.5">
+                {(() => {
+                  const isActive = display.sortBy === "name";
                   return (
-                    <Fragment key={key}>
-                      {renderSortableTh(sortCol, headerLabels[key], icon)}
-                    </Fragment>
+                    <button
+                      type="button"
+                      onClick={() => handleSort("name")}
+                      className="inline-flex items-center gap-1.5 hover:text-[var(--txt-primary)] font-medium text-[var(--txt-secondary)]"
+                    >
+                      Work items
+                      <IconChevronDown
+                        className={`size-4 shrink-0 opacity-60 ${isActive ? "opacity-100" : ""}`}
+                        style={
+                          isActive && display.sortOrder === "asc"
+                            ? { transform: "rotate(180deg)" }
+                            : undefined
+                        }
+                      />
+                    </button>
                   );
-                }
-                return (
-                  <th
-                    key={key}
-                    className="px-4 py-3.5 font-medium text-[var(--txt-secondary)]"
-                  >
-                    <span className="inline-flex items-center gap-1.5">
-                      {key === "state" && (
-                        <IconRadio className="size-4 shrink-0 opacity-70" />
-                      )}
-                      {key === "priority" && (
-                        <IconBarChart className="size-4 shrink-0 opacity-70" />
-                      )}
-                      {key === "assignee" && (
-                        <IconUser className="size-4 shrink-0 opacity-70" />
-                      )}
-                      {key === "labels" && (
-                        <IconTag className="size-4 shrink-0 opacity-70" />
-                      )}
-                      {headerLabels[key]}
-                    </span>
-                  </th>
-                );
-              })}
+                })()}
+              </th>
+              {scrollableColumns.map(scrollableTh)}
             </tr>
           </thead>
           <tbody>
@@ -847,7 +861,7 @@ export function WorkspaceViewsPage() {
                     key={issue.id}
                     className="border-b border-[var(--border-subtle)] last:border-b-0 transition-colors hover:bg-[var(--bg-layer-1-hover)]"
                   >
-                    <td className="px-4 py-3.5">
+                    <td className="sticky left-0 z-10 min-w-[200px] border-r border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-3.5 hover:bg-[var(--bg-layer-1-hover)]">
                       <Link
                         to={`${issueBaseUrl}/issues/${issue.id}`}
                         className="block font-medium text-[var(--txt-primary)] no-underline hover:text-[var(--txt-accent-primary)]"
@@ -855,15 +869,9 @@ export function WorkspaceViewsPage() {
                         {issue.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-3.5 text-[var(--txt-secondary)]">
-                      {formatDate(issue.created_at)}
-                    </td>
-                    <td className="px-4 py-3.5 text-[var(--txt-secondary)]">
-                      {formatDate(issue.updated_at)}
-                    </td>
-                    {optionalColumns.map((key) => (
-                      <td key={key} className="px-4 py-3.5">
-                        {renderCell(issue, key)}
+                    {scrollableColumns.map((key) => (
+                      <td key={key} className="px-4 py-3.5 whitespace-nowrap">
+                        {scrollableTd(issue, key)}
                       </td>
                     ))}
                   </tr>
@@ -873,27 +881,6 @@ export function WorkspaceViewsPage() {
           </tbody>
         </table>
       </div>
-
-      {sortedIssues.length > 0 && (
-        <div className="mt-4 flex justify-start">
-          <Button
-            size="sm"
-            variant="secondary"
-            className="gap-1.5 border-dashed text-[13px] font-medium"
-            onClick={() => setCreateOpen(true)}
-          >
-            New work item
-          </Button>
-        </div>
-      )}
-
-      <CreateWorkItemModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        workspaceSlug={workspace.slug}
-        projects={projects}
-        defaultProjectId={projects[0]?.id}
-      />
     </div>
   );
 }
