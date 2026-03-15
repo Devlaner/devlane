@@ -36,7 +36,7 @@ export function WorkspaceViewsDisplayDropdown({
         const next = new URLSearchParams(prev);
         const nextDisplay = updater(parseWorkspaceViewDisplayFromSearchParams(prev));
         const params = workspaceViewDisplayToSearchParams(nextDisplay);
-        ["display", "show_sub"].forEach((k) => {
+        ["display", "show_sub", "layout"].forEach((k) => {
           if (params[k]) next.set(k, params[k]);
           else next.delete(k);
         });

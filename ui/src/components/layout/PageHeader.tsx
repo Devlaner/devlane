@@ -8,7 +8,7 @@ import {
 } from "react-router-dom";
 import { Button } from "../ui";
 import { Dropdown } from "../work-item";
-import { WorkspaceViewsFiltersDropdown, WorkspaceViewsDisplayDropdown, WorkspaceViewsEllipsisMenu, CreateViewModal } from "../workspace-views";
+import { WorkspaceViewsFiltersDropdown, WorkspaceViewsDisplayDropdown, WorkspaceViewsEllipsisMenu, WorkspaceViewsLayoutSelector, CreateViewModal } from "../workspace-views";
 import { workspaceService } from "../../services/workspaceService";
 import { projectService } from "../../services/projectService";
 import { issueService } from "../../services/issueService";
@@ -1010,11 +1010,7 @@ function WorkspaceViewsHeader() {
   const handleSelectView = (id: string) => {
     setViewDropdownOpen(null);
     if (!workspaceSlug) return;
-    if (id === "all-issues") {
-      navigate(`/${workspaceSlug}/views`);
-    } else {
-      navigate(`/${workspaceSlug}/views/${id}`);
-    }
+    navigate(`/${workspaceSlug}/views/${id}`);
   };
 
   return (
@@ -1079,6 +1075,7 @@ function WorkspaceViewsHeader() {
         </Dropdown>
       </div>
       <div className="flex items-center gap-1">
+        {urlViewId && <WorkspaceViewsLayoutSelector />}
         <WorkspaceViewsFiltersDropdown
           openId={filtersDropdownOpen}
           onOpen={setFiltersDropdownOpen}
@@ -1312,7 +1309,7 @@ export function PageHeader() {
     (pathname === `/${workspaceSlug}/analytics` ||
       pathname.startsWith(`/${workspaceSlug}/analytics/`));
   const isWorkspaceViewsPage =
-    workspaceSlug && pathname === `/${workspaceSlug}/views`;
+    workspaceSlug && (pathname === `/${workspaceSlug}/views` || pathname.startsWith(`/${workspaceSlug}/views/`));
 
   const projectSection: ProjectSection | null = isIssuesPage
     ? "issues"
