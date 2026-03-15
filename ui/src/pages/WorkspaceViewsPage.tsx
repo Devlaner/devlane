@@ -111,7 +111,9 @@ export function WorkspaceViewsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [viewNotFound, setViewNotFound] = useState(false);
+  const [viewLoading, setViewLoading] = useState(false);
   const viewAppliedRef = useRef(false);
+  const prevViewIdRef = useRef<string | undefined>(undefined);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
   const [states, setStates] = useState<StateApiResponse[]>([]);
@@ -124,12 +126,17 @@ export function WorkspaceViewsPage() {
 
   // When viewing a saved view, fetch it and apply its filters/display to URL once (Plane-style).
   useEffect(() => {
+    if (prevViewIdRef.current !== viewId) {
+      prevViewIdRef.current = viewId;
+      viewAppliedRef.current = false;
+    }
     if (!workspaceSlug || !viewId || !isCustomViewId(viewId) || viewAppliedRef.current) return;
     viewAppliedRef.current = true;
-    setViewNotFound(false);
+    setViewLoading(true);
     viewService
       .get(workspaceSlug, viewId)
       .then((view) => {
+        setViewNotFound(false);
         const params = new URLSearchParams();
         const f = view.filters as Record<string, string> | undefined;
         if (f && typeof f === "object") {
@@ -147,9 +154,13 @@ export function WorkspaceViewsPage() {
         }
         const df = view.display_filters as Record<string, unknown> | undefined;
         if (df?.sub_issue === true) params.set("show_sub", "1");
+        setViewLoading(false);
         navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
       })
-      .catch(() => setViewNotFound(true));
+      .catch(() => {
+        setViewLoading(false);
+        setViewNotFound(true);
+      });
   }, [workspaceSlug, viewId, navigate, location.pathname]);
 
   const filteredIssues = useMemo(() => {
@@ -352,7 +363,38 @@ export function WorkspaceViewsPage() {
   }
   if (!workspace) {
     return (
-      <div className="text-[var(--txt-secondary)]">Workspace not found.</div>
+      <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
+        <p className="text-[var(--txt-secondary)]">Workspace not found.</p>
+        <Link
+          to="/"
+          className="text-sm font-medium text-[var(--txt-accent-primary)] hover:underline"
+        >
+          Go to home
+        </Link>
+      </div>
+    );
+  }
+  if (viewLoading) {
+    return (
+      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+        Loading view…
+      </div>
+    );
+  }
+  if (viewNotFound && workspaceSlug) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
+        <p className="text-lg font-medium text-[var(--txt-primary)]">View does not exist</p>
+        <p className="text-sm text-[var(--txt-secondary)]">
+          The view you are looking for does not exist or you don&apos;t have permission to view it.
+        </p>
+        <Link
+          to={`/${workspace.slug}/views`}
+          className="inline-flex items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+        >
+          All work items
+        </Link>
+      </div>
     );
   }
 
