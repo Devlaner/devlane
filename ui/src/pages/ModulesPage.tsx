@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Avatar } from "../components/ui";
 import { workspaceService } from "../services/workspaceService";
 import { projectService } from "../services/projectService";
@@ -128,6 +128,7 @@ export function ModulesPage() {
     workspaceSlug: string;
     projectId: string;
   }>();
+  const [searchParams] = useSearchParams();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [modules, setModules] = useState<ModuleApiResponse[]>([]);
@@ -188,66 +189,145 @@ export function ModulesPage() {
   }
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
+  const layout =
+    (searchParams.get("layout") as "list" | "gallery" | "timeline") || "list";
 
-  return (
+  const renderListLayout = () => (
     <div className="space-y-2">
-      {modules.length === 0 ? (
-        <p className="py-8 text-center text-sm text-[var(--txt-tertiary)]">
-          No modules yet.
-        </p>
-      ) : (
-        modules.map((mod) => {
-          const progress = getProgress(mod);
-          const dateRange = formatModuleDateRange(mod);
-          return (
-            <Link
-              key={mod.id}
-              to={`${baseUrl}/modules/${mod.id}`}
-              className="flex items-center gap-4 px-4 py-3 no-underline transition-colors hover:bg-[var(--bg-layer-1-hover)]"
+      {modules.map((mod) => {
+        const progress = getProgress(mod);
+        const dateRange = formatModuleDateRange(mod);
+        return (
+          <Link
+            key={mod.id}
+            to={`${baseUrl}/modules/${mod.id}`}
+            className="flex items-center gap-4 px-4 py-3 no-underline transition-colors hover:bg-[var(--bg-layer-1-hover)]"
+          >
+            <ModuleProgressCircle progress={progress} />
+            <p className="min-w-0 flex-1 font-medium text-[var(--txt-primary)]">
+              {mod.name}
+            </p>
+            {dateRange !== null && (
+              <span className="shrink-0 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1 text-[13px] text-[var(--txt-secondary)]">
+                {dateRange}
+              </span>
+            )}
+            <span className="shrink-0 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1 text-[13px] text-[var(--txt-secondary)]">
+              {mod.status}
+            </span>
+            <Avatar name={workspace.name} size="sm" className="ml-1" />
+            <button
+              type="button"
+              className="flex size-8 shrink-0 items-center justify-center rounded text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+              aria-label="Favorite"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
             >
-              <ModuleProgressCircle progress={progress} />
-              <p className="min-w-0 flex-1 font-medium text-[var(--txt-primary)]">
+              <IconStar />
+            </button>
+            <button
+              type="button"
+              className="flex size-8 shrink-0 items-center justify-center rounded text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+              aria-label="More options"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              <IconMoreVertical />
+            </button>
+          </Link>
+        );
+      })}
+    </div>
+  );
+
+  const renderGalleryLayout = () => (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {modules.map((mod) => {
+        const progress = getProgress(mod);
+        const dateRange = formatModuleDateRange(mod);
+        return (
+          <Link
+            key={mod.id}
+            to={`${baseUrl}/modules/${mod.id}`}
+            className="flex flex-col gap-3 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-4 no-underline transition-colors hover:bg-[var(--bg-layer-1-hover)]"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="min-w-0 flex-1 truncate font-medium text-[var(--txt-primary)]">
                 {mod.name}
               </p>
+              <ModuleProgressCircle progress={progress} />
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px]">
               {dateRange !== null && (
-                <span className="shrink-0 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1 text-[13px] text-[var(--txt-secondary)]">
+                <span className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1 text-[var(--txt-secondary)]">
                   {dateRange}
                 </span>
               )}
-              <span className="shrink-0 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1 text-[13px] text-[var(--txt-secondary)]">
+              <span className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1 text-[var(--txt-secondary)]">
                 {mod.status}
               </span>
-              <Avatar
-                name={workspace.name}
-                size="sm"
-                className="ml-1"
-              />
-              <button
-                type="button"
-                className="flex size-8 shrink-0 items-center justify-center rounded text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
-                aria-label="Favorite"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-              >
-                <IconStar />
-              </button>
-              <button
-                type="button"
-                className="flex size-8 shrink-0 items-center justify-center rounded text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
-                aria-label="More options"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-              >
-                <IconMoreVertical />
-              </button>
-            </Link>
-          );
-        })
-      )}
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
+
+  const renderTimelineLayout = () => {
+    const withDates = modules
+      .map((m) => ({
+        mod: m,
+        start: m.start_date ? new Date(m.start_date) : null,
+        end: m.target_date ? new Date(m.target_date) : null,
+      }))
+      .sort((a, b) => {
+        const aTime = a.start?.getTime() ?? a.end?.getTime() ?? 0;
+        const bTime = b.start?.getTime() ?? b.end?.getTime() ?? 0;
+        return aTime - bTime;
+      });
+
+    return (
+      <div className="space-y-3 border-l border-[var(--border-subtle)] pl-4">
+        {withDates.map(({ mod, start, end }) => {
+          const progress = getProgress(mod);
+          const dateRange = formatModuleDateRange(mod);
+          return (
+            <div key={mod.id} className="relative pl-4">
+              <div className="absolute left-0 top-3 h-2 w-2 -translate-x-1/2 rounded-full bg-[var(--brand-default)]" />
+              <Link
+                to={`${baseUrl}/modules/${mod.id}`}
+                className="flex items-center gap-3 rounded-md px-3 py-2 no-underline transition-colors hover:bg-[var(--bg-layer-1-hover)]"
+              >
+                <ModuleProgressCircle progress={progress} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-[var(--txt-primary)]">
+                    {mod.name}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[var(--txt-secondary)]">
+                    {dateRange ?? "No dates"}
+                  </p>
+                </div>
+              </Link>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  if (modules.length === 0) {
+    return (
+      <p className="py-8 text-center text-sm text-[var(--txt-tertiary)]">
+        No modules yet.
+      </p>
+    );
+  }
+
+  if (layout === "gallery") return renderGalleryLayout();
+  if (layout === "timeline") return renderTimelineLayout();
+  return renderListLayout();
 }

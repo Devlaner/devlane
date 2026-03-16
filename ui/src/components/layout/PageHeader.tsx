@@ -800,6 +800,7 @@ function ProjectSectionHeader({
   issueCount: number;
 }) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
   const issuesUrl = `${baseUrl}/issues`;
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
@@ -858,6 +859,15 @@ function ProjectSectionHeader({
               : `${targetBase}/pages`;
     setProjectDropdownOpen(false);
     navigate(targetPath);
+  };
+
+  const currentLayout =
+    (searchParams.get("layout") as "list" | "gallery" | "timeline") || "list";
+
+  const handleLayoutChange = (layout: "list" | "gallery" | "timeline") => {
+    const next = new URLSearchParams(searchParams);
+    next.set("layout", layout);
+    setSearchParams(next);
   };
 
   const rightActions = () => {
@@ -954,6 +964,9 @@ function ProjectSectionHeader({
       );
     }
     if (section === "modules") {
+      const listActive = currentLayout === "list";
+      const galleryActive = currentLayout === "gallery";
+      const timelineActive = currentLayout === "timeline";
       return (
         <>
           <button
@@ -967,7 +980,7 @@ function ProjectSectionHeader({
             type="button"
             className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
           >
-            <IconArrowUpDown /> Name <IconChevronDown />
+            <IconArrowUpDown /> Progress <IconChevronDown />
           </button>
           <button
             type="button"
@@ -975,30 +988,47 @@ function ProjectSectionHeader({
           >
             <IconFilter /> Filters <IconChevronDown />
           </button>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent bg-[var(--bg-accent-subtle)] text-[var(--brand-default)] hover:bg-[var(--bg-accent-subtle-hover)]"
-            aria-label="List view"
-            title="List view"
-          >
-            <IconList />
-          </button>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
-            aria-label="Grid view"
-            title="Grid view"
-          >
-            <IconLayoutGrid />
-          </button>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
-            aria-label="Stack view"
-            title="Stack view"
-          >
-            <IconStack />
-          </button>
+          <div className="flex items-center gap-0.5 rounded-md bg-[var(--bg-layer-2)] p-0.5">
+            <button
+              type="button"
+              onClick={() => handleLayoutChange("list")}
+              className={`flex size-8 items-center justify-center rounded-md text-[var(--txt-icon-secondary)] transition-colors ${
+                listActive
+                  ? "bg-[var(--bg-canvas)] shadow-sm"
+                  : "text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
+              }`}
+              aria-pressed={listActive}
+              title="List layout"
+            >
+              <IconList />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleLayoutChange("gallery")}
+              className={`flex size-8 items-center justify-center rounded-md text-[var(--txt-icon-secondary)] transition-colors ${
+                galleryActive
+                  ? "bg-[var(--bg-canvas)] shadow-sm"
+                  : "text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
+              }`}
+              aria-pressed={galleryActive}
+              title="Gallery layout"
+            >
+              <IconLayoutGrid />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleLayoutChange("timeline")}
+              className={`flex size-8 items-center justify-center rounded-md text-[var(--txt-icon-secondary)] transition-colors ${
+                timelineActive
+                  ? "bg-[var(--bg-canvas)] shadow-sm"
+                  : "text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
+              }`}
+              aria-pressed={timelineActive}
+              title="Timeline layout"
+            >
+              <IconStack />
+            </button>
+          </div>
           <Button size="sm" className="gap-1.5 text-[13px] font-medium">
             <IconPlus /> Add Module
           </Button>
@@ -1098,9 +1128,6 @@ function ProjectSectionHeader({
             </div>
           </div>
         )}
-        <span className="text-[var(--txt-icon-tertiary)]" aria-hidden>
-          &gt;
-        </span>
         <ProjectSectionDropdown
           baseUrl={baseUrl}
           currentSection={section}
