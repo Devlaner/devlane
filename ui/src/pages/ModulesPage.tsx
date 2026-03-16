@@ -9,49 +9,26 @@ import type {
   ModuleApiResponse,
 } from "../api/types";
 
-const IconSearch = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <circle cx="11" cy="11" r="8" />
-    <path d="m21 21-4.3-4.3" />
-  </svg>
-);
-const IconFilter = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-  </svg>
-);
-const IconCalendar = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-    <line x1="16" y1="2" x2="16" y2="6" />
-    <line x1="8" y1="2" x2="8" y2="6" />
-    <line x1="3" y1="10" x2="21" y2="10" />
-  </svg>
-);
+/** Format ISO date to "Mon DD, YYYY" */
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+/** Format module date range from API (start_date, target_date). Returns null if neither set. */
+function formatModuleDateRange(mod: ModuleApiResponse): string | null {
+  const start = mod.start_date?.trim();
+  const end = mod.target_date?.trim();
+  if (start && end) return `${formatDate(start)} - ${formatDate(end)}`;
+  if (start) return `From ${formatDate(start)}`;
+  if (end) return `Until ${formatDate(end)}`;
+  return null;
+}
+
 const IconUser = () => (
   <svg
     width="14"
@@ -92,33 +69,47 @@ const IconMoreVertical = () => (
     <circle cx="12" cy="19" r="1.5" />
   </svg>
 );
-const IconChevronDown = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <path d="m6 9 6 6 6-6" />
-  </svg>
-);
-const IconLuggage = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <path d="M6 20h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z" />
-    <path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-  </svg>
-);
+
+/** Circular progress indicator (0–100). */
+function ModuleProgressCircle({ progress }: { progress: number }) {
+  const r = 18;
+  const c = 2 * Math.PI * r;
+  const stroke = Math.max(0, Math.min(100, progress)) / 100;
+  return (
+    <div className="relative flex size-10 shrink-0 items-center justify-center">
+      <svg
+        width="40"
+        height="40"
+        viewBox="0 0 40 40"
+        className="-rotate-90"
+        aria-hidden
+      >
+        <circle
+          cx="20"
+          cy="20"
+          r={r}
+          fill="none"
+          stroke="var(--border-subtle)"
+          strokeWidth="3"
+        />
+        <circle
+          cx="20"
+          cy="20"
+          r={r}
+          fill="none"
+          stroke="var(--brand-default)"
+          strokeWidth="3"
+          strokeDasharray={c}
+          strokeDashoffset={c - stroke * c}
+          strokeLinecap="round"
+        />
+      </svg>
+      <span className="absolute text-[10px] font-medium text-[var(--txt-secondary)]">
+        {progress}%
+      </span>
+    </div>
+  );
+}
 
 export function ModulesPage() {
   const { workspaceSlug, projectId } = useParams<{
@@ -132,7 +123,6 @@ export function ModulesPage() {
 
   useEffect(() => {
     if (!workspaceSlug || !projectId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset loading when no slug/project (kept for future use)
       setLoading(false);
       return;
     }
@@ -165,11 +155,8 @@ export function ModulesPage() {
     };
   }, [workspaceSlug, projectId]);
 
-  const getIssueCount = (moduleId: string) =>
-    modules.find((m) => m.id === moduleId)?.issue_count ?? 0;
-  const getTotalIssues = (moduleId: string) => getIssueCount(moduleId);
-  const getProgress = (moduleId: string) => {
-    const total = getTotalIssues(moduleId);
+  const getProgress = (mod: ModuleApiResponse) => {
+    const total = mod.issue_count ?? 0;
     const done = 0;
     return total === 0 ? 0 : Math.round((done / total) * 100);
   };
@@ -190,170 +177,70 @@ export function ModulesPage() {
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
 
   return (
-    <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
-          aria-label="Search"
-        >
-          <IconSearch />
-        </button>
-        <button
-          type="button"
-          className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
-        >
-          ↑ Name <IconChevronDown />
-        </button>
-        <button
-          type="button"
-          className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
-        >
-          <IconFilter /> Filters <IconChevronDown />
-        </button>
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-[var(--brand-default)] hover:bg-[var(--bg-layer-2-hover)]"
-          aria-label="List view"
-          title="List view"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <line x1="8" y1="6" x2="21" y2="6" />
-            <line x1="8" y1="12" x2="21" y2="12" />
-            <line x1="8" y1="18" x2="21" y2="18" />
-            <line x1="3" y1="6" x2="3.01" y2="6" />
-            <line x1="3" y1="12" x2="3.01" y2="12" />
-            <line x1="3" y1="18" x2="3.01" y2="18" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
-          aria-label="Grid view"
-          title="Grid view"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <rect width="7" height="7" x="3" y="3" rx="1" />
-            <rect width="7" height="7" x="14" y="3" rx="1" />
-            <rect width="7" height="7" x="14" y="14" rx="1" />
-            <rect width="7" height="7" x="3" y="14" rx="1" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
-        >
-          <IconCalendar /> Start date → End date
-        </button>
-        <button
-          type="button"
-          className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
-        >
-          <IconLuggage /> Backlog
-        </button>
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
-          aria-label="Assignees"
-        >
-          <IconUser />
-        </button>
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
-          aria-label="Favorite"
-        >
-          <IconStar />
-        </button>
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
-          aria-label="More"
-        >
-          <IconMoreVertical />
-        </button>
-      </div>
-
-      {/* Module list */}
-      <div className="space-y-2">
-        {modules.length === 0 ? (
-          <p className="py-8 text-center text-sm text-[var(--txt-tertiary)]">
-            No modules yet.
-          </p>
-        ) : (
-          modules.map((mod) => {
-            const progress = getProgress(mod.id);
-            return (
-              <Link
-                key={mod.id}
-                to={`${baseUrl}/modules/${mod.id}`}
-                className="flex items-center gap-4 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-3 no-underline transition-colors hover:bg-[var(--bg-layer-1-hover)]"
+    <div className="space-y-2">
+      {modules.length === 0 ? (
+        <p className="py-8 text-center text-sm text-[var(--txt-tertiary)]">
+          No modules yet.
+        </p>
+      ) : (
+        modules.map((mod) => {
+          const progress = getProgress(mod);
+          const dateRange = formatModuleDateRange(mod);
+          return (
+            <Link
+              key={mod.id}
+              to={`${baseUrl}/modules/${mod.id}`}
+              className="flex items-center gap-4 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-3 no-underline transition-colors hover:bg-[var(--bg-layer-1-hover)]"
+            >
+              <ModuleProgressCircle progress={progress} />
+              <p className="min-w-0 flex-1 font-medium text-[var(--txt-primary)]">
+                {mod.name}
+              </p>
+              {dateRange !== null && (
+                <span className="shrink-0 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1 text-[13px] text-[var(--txt-secondary)]">
+                  {dateRange}
+                </span>
+              )}
+              <span className="shrink-0 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1 text-[13px] text-[var(--txt-secondary)]">
+                {mod.status}
+              </span>
+              <button
+                type="button"
+                className="flex size-8 shrink-0 items-center justify-center rounded text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                aria-label="Assignees"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
               >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-sm font-medium text-[var(--txt-secondary)]">
-                  {progress}%
-                </div>
-                <div className="min-w-0 flex-1 border-l border-[var(--border-subtle)] pl-4">
-                  <p className="font-medium text-[var(--txt-primary)]">
-                    {mod.name}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1 text-[var(--txt-icon-tertiary)]">
-                  <span
-                    className="flex size-8 items-center justify-center rounded hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
-                    title="Start date → End date"
-                  >
-                    <IconCalendar />
-                  </span>
-                  <span
-                    className="flex size-8 items-center justify-center rounded hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
-                    title="Backlog"
-                  >
-                    <IconLuggage />
-                  </span>
-                  <span
-                    className="flex size-8 items-center justify-center rounded hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
-                    title="Assignees"
-                  >
-                    <IconUser />
-                  </span>
-                  <span
-                    className="flex size-8 items-center justify-center rounded hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
-                    title="Favorite"
-                  >
-                    <IconStar />
-                  </span>
-                  <button
-                    type="button"
-                    className="flex size-8 items-center justify-center rounded hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
-                    aria-label="More options"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                  >
-                    <IconMoreVertical />
-                  </button>
-                </div>
-              </Link>
-            );
-          })
-        )}
-      </div>
+                <IconUser />
+              </button>
+              <button
+                type="button"
+                className="flex size-8 shrink-0 items-center justify-center rounded text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                aria-label="Favorite"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                <IconStar />
+              </button>
+              <button
+                type="button"
+                className="flex size-8 shrink-0 items-center justify-center rounded text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                aria-label="More options"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                <IconMoreVertical />
+              </button>
+            </Link>
+          );
+        })
+      )}
     </div>
   );
 }

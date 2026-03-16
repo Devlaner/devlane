@@ -158,6 +158,24 @@ const IconCalendar = () => (
     <line x1="3" y1="10" x2="21" y2="10" />
   </svg>
 );
+const IconArrowUpDown = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="m21 16-4 4-4-4" />
+    <path d="M17 20V4" />
+    <path d="m3 8 4-4 4 4" />
+    <path d="M7 4v16" />
+  </svg>
+);
 const IconFilter = () => (
   <svg
     width="16"
@@ -891,7 +909,7 @@ function ProjectSectionHeader({
             type="button"
             className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
           >
-            Name <IconChevronDown />
+            <IconArrowUpDown /> Name <IconChevronDown />
           </button>
           <button
             type="button"
