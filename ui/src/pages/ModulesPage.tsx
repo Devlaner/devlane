@@ -9,27 +9,51 @@ import type {
   ModuleApiResponse,
 } from "../api/types";
 
-/** Format ISO date to "Mon DD, YYYY" */
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+/** Zero-pad a number to 2 digits. */
+function pad2(n: number): string {
+  return n < 10 ? `0${n}` : String(n);
 }
 
-/** Format module date range from API (start_date, target_date). Returns null if neither set. */
+const MONTH_ABBR = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/**
+ * Format module date range in compact form matching the Plane design:
+ *  - Same month+year: "Mar 03 - 27, 2026"
+ *  - Same year:       "Mar 03 - Apr 12, 2026"
+ *  - Different year:  "Dec 20, 2025 - Jan 05, 2026"
+ *  - Single date:     "Mar 03, 2026"
+ *  Returns null when neither date is set.
+ */
 function formatModuleDateRange(mod: ModuleApiResponse): string | null {
-  const start = mod.start_date?.trim();
-  const end = mod.target_date?.trim();
-  if (start && end) return `${formatDate(start)} - ${formatDate(end)}`;
-  if (start) return `From ${formatDate(start)}`;
-  if (end) return `Until ${formatDate(end)}`;
-  return null;
+  const startRaw = mod.start_date?.trim();
+  const endRaw = mod.target_date?.trim();
+  if (!startRaw && !endRaw) return null;
+
+  const parse = (iso: string) => {
+    const d = new Date(iso);
+    return { m: d.getMonth(), d: d.getDate(), y: d.getFullYear() };
+  };
+
+  if (startRaw && endRaw) {
+    const s = parse(startRaw);
+    const e = parse(endRaw);
+    if (s.y === e.y && s.m === e.m) {
+      return `${MONTH_ABBR[s.m]} ${pad2(s.d)} - ${pad2(e.d)}, ${s.y}`;
+    }
+    if (s.y === e.y) {
+      return `${MONTH_ABBR[s.m]} ${pad2(s.d)} - ${MONTH_ABBR[e.m]} ${pad2(e.d)}, ${s.y}`;
+    }
+    return `${MONTH_ABBR[s.m]} ${pad2(s.d)}, ${s.y} - ${MONTH_ABBR[e.m]} ${pad2(e.d)}, ${e.y}`;
+  }
+
+  const single = parse((startRaw ?? endRaw)!);
+  return `${MONTH_ABBR[single.m]} ${pad2(single.d)}, ${single.y}`;
 }
 
-const IconUser = () => (
+const IconSave = () => (
   <svg
     width="14"
     height="14"
@@ -37,10 +61,13 @@ const IconUser = () => (
     fill="none"
     stroke="currentColor"
     strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
     aria-hidden
   >
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
+    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+    <polyline points="17 21 17 13 7 13 7 21" />
+    <polyline points="7 3 7 8 15 8" />
   </svg>
 );
 const IconStar = () => (
@@ -207,13 +234,13 @@ export function ModulesPage() {
               <button
                 type="button"
                 className="flex size-8 shrink-0 items-center justify-center rounded text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
-                aria-label="Assignees"
+                aria-label="Save"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                 }}
               >
-                <IconUser />
+                <IconSave />
               </button>
               <button
                 type="button"
