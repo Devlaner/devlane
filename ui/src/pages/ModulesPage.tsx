@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { Avatar } from "../components/ui";
 import { workspaceService } from "../services/workspaceService";
 import { projectService } from "../services/projectService";
 import { moduleService } from "../services/moduleService";
@@ -15,18 +16,20 @@ function pad2(n: number): string {
 }
 
 const MONTH_ABBR = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
-/**
- * Format module date range in compact form matching the Plane design:
- *  - Same month+year: "Mar 03 - 27, 2026"
- *  - Same year:       "Mar 03 - Apr 12, 2026"
- *  - Different year:  "Dec 20, 2025 - Jan 05, 2026"
- *  - Single date:     "Mar 03, 2026"
- *  Returns null when neither date is set.
- */
 function formatModuleDateRange(mod: ModuleApiResponse): string | null {
   const startRaw = mod.start_date?.trim();
   const endRaw = mod.target_date?.trim();
@@ -53,23 +56,6 @@ function formatModuleDateRange(mod: ModuleApiResponse): string | null {
   return `${MONTH_ABBR[single.m]} ${pad2(single.d)}, ${single.y}`;
 }
 
-const IconSave = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-    <polyline points="17 21 17 13 7 13 7 21" />
-    <polyline points="7 3 7 8 15 8" />
-  </svg>
-);
 const IconStar = () => (
   <svg
     width="14"
@@ -97,7 +83,6 @@ const IconMoreVertical = () => (
   </svg>
 );
 
-/** Circular progress indicator (0–100). */
 function ModuleProgressCircle({ progress }: { progress: number }) {
   const r = 18;
   const c = 2 * Math.PI * r;
@@ -150,6 +135,7 @@ export function ModulesPage() {
 
   useEffect(() => {
     if (!workspaceSlug || !projectId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset loading when no slug/project (kept for future use)
       setLoading(false);
       return;
     }
@@ -217,7 +203,7 @@ export function ModulesPage() {
             <Link
               key={mod.id}
               to={`${baseUrl}/modules/${mod.id}`}
-              className="flex items-center gap-4 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-3 no-underline transition-colors hover:bg-[var(--bg-layer-1-hover)]"
+              className="flex items-center gap-4 px-4 py-3 no-underline transition-colors hover:bg-[var(--bg-layer-1-hover)]"
             >
               <ModuleProgressCircle progress={progress} />
               <p className="min-w-0 flex-1 font-medium text-[var(--txt-primary)]">
@@ -231,17 +217,11 @@ export function ModulesPage() {
               <span className="shrink-0 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1 text-[13px] text-[var(--txt-secondary)]">
                 {mod.status}
               </span>
-              <button
-                type="button"
-                className="flex size-8 shrink-0 items-center justify-center rounded text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
-                aria-label="Save"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-              >
-                <IconSave />
-              </button>
+              <Avatar
+                name={workspace.name}
+                size="sm"
+                className="ml-1"
+              />
               <button
                 type="button"
                 className="flex size-8 shrink-0 items-center justify-center rounded text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"

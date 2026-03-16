@@ -799,8 +799,66 @@ function ProjectSectionHeader({
   section: ProjectSection;
   issueCount: number;
 }) {
+  const navigate = useNavigate();
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
   const issuesUrl = `${baseUrl}/issues`;
+  const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
+  const [projectSearch, setProjectSearch] = useState("");
+  const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
+  const projectDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    projectService
+      .list(workspaceSlug)
+      .then((list) => {
+        if (!cancelled) setProjects(list ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setProjects([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        projectDropdownRef.current &&
+        !projectDropdownRef.current.contains(e.target as Node)
+      ) {
+        setProjectDropdownOpen(false);
+      }
+    };
+    if (projectDropdownOpen) {
+      document.addEventListener("mousedown", handler);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handler);
+    };
+  }, [projectDropdownOpen]);
+
+  const q = (s: string) => s.trim().toLowerCase();
+  const filteredProjects = projects.filter((p) =>
+    q(p.name).includes(q(projectSearch)),
+  );
+
+  const handleSelectProject = (targetProjectId: string) => {
+    const targetBase = `/${workspaceSlug}/projects/${targetProjectId}`;
+    const targetPath =
+      section === "issues"
+        ? `${targetBase}/issues`
+        : section === "cycles"
+          ? `${targetBase}/cycles`
+          : section === "modules"
+            ? `${targetBase}/modules`
+            : section === "views"
+              ? `${targetBase}/views`
+              : `${targetBase}/pages`;
+    setProjectDropdownOpen(false);
+    navigate(targetPath);
+  };
 
   const rightActions = () => {
     if (section === "issues") {
@@ -989,13 +1047,57 @@ function ProjectSectionHeader({
 
   return (
     <>
-      <div className="flex items-center gap-2 text-sm">
+      <div
+        className="relative flex items-center gap-2 text-sm"
+        ref={projectDropdownRef}
+      >
         <Link
-          to={baseUrl}
-          className="font-medium text-[var(--txt-secondary)] no-underline hover:text-[var(--txt-primary)]"
+          to={issuesUrl}
+          className="flex items-center gap-1.5 rounded-l-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-3 py-1.5 font-medium text-[var(--txt-secondary)] no-underline hover:bg-[var(--bg-layer-2-hover)]"
         >
           {projectName}
         </Link>
+        <button
+          type="button"
+          onClick={() => setProjectDropdownOpen((o) => !o)}
+          className="flex h-[34px] w-8 items-center justify-center rounded-r-md border border-l-0 border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
+          aria-label="Select project"
+        >
+          <IconChevronDown />
+        </button>
+        {projectDropdownOpen && (
+          <div className="absolute left-0 top-full z-20 mt-1.5 w-64 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-1.5 shadow-[var(--shadow-raised)]">
+            <div className="mb-1.5 flex items-center gap-2 rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-2 py-1.5">
+              <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+                <IconSearch />
+              </span>
+              <input
+                type="text"
+                placeholder="Search"
+                value={projectSearch}
+                onChange={(e) => setProjectSearch(e.target.value)}
+                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+              />
+            </div>
+            <div className="max-h-64 overflow-y-auto py-0.5">
+              {filteredProjects.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => handleSelectProject(p.id)}
+                  className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                >
+                  <span className="truncate">{p.name}</span>
+                  {p.id === projectId && (
+                    <span className="shrink-0 text-[var(--txt-primary)]">
+                      <IconCheck />
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <span className="text-[var(--txt-icon-tertiary)]" aria-hidden>
           &gt;
         </span>
