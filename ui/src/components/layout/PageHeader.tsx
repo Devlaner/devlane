@@ -348,6 +348,23 @@ const IconLayoutGrid = () => (
     <rect width="7" height="7" x="3" y="14" rx="1" />
   </svg>
 );
+const IconStack = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <rect width="16" height="12" x="4" y="2" rx="1" />
+    <rect width="16" height="12" x="6" y="6" rx="1" />
+    <rect width="16" height="12" x="8" y="10" rx="1" />
+  </svg>
+);
 const IconColumns = () => (
   <svg
     width="16"
@@ -874,7 +891,7 @@ function ProjectSectionHeader({
             type="button"
             className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
           >
-            ↑ Name <IconChevronDown />
+            Name <IconChevronDown />
           </button>
           <button
             type="button"
@@ -884,8 +901,9 @@ function ProjectSectionHeader({
           </button>
           <button
             type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-[var(--brand-default)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex size-8 items-center justify-center rounded-md border border-transparent bg-[var(--bg-accent-subtle)] text-[var(--brand-default)] hover:bg-[var(--bg-accent-subtle-hover)]"
             aria-label="List view"
+            title="List view"
           >
             <IconList />
           </button>
@@ -893,8 +911,17 @@ function ProjectSectionHeader({
             type="button"
             className="flex size-8 items-center justify-center rounded-md border border-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
             aria-label="Grid view"
+            title="Grid view"
           >
             <IconLayoutGrid />
+          </button>
+          <button
+            type="button"
+            className="flex size-8 items-center justify-center rounded-md border border-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
+            aria-label="Stack view"
+            title="Stack view"
+          >
+            <IconStack />
           </button>
           <Button size="sm" className="gap-1.5 text-[13px] font-medium">
             <IconPlus /> Add Module
