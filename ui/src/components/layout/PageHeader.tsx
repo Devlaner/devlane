@@ -13,7 +13,10 @@ import {
   WorkspaceViewsDisplayDropdown,
   WorkspaceViewsEllipsisMenu,
   CreateViewModal,
+  ModuleFiltersPanel,
+  MODULE_FILTER_PARAM,
 } from "../workspace-views";
+import { DateRangeModal } from "../workspace-views/DateRangeModal";
 import { CreateModuleModal } from "../CreateModuleModal";
 import { workspaceService } from "../../services/workspaceService";
 import { projectService } from "../../services/projectService";
@@ -808,7 +811,16 @@ function ProjectSectionHeader({
   const [projectSearch, setProjectSearch] = useState("");
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [createModuleOpen, setCreateModuleOpen] = useState(false);
+  const [modulesSearchExpanded, setModulesSearchExpanded] = useState(false);
+  const [modulesFiltersOpen, setModulesFiltersOpen] = useState<string | null>(
+    null,
+  );
+  const [modulesSortOpen, setModulesSortOpen] = useState<string | null>(null);
+  const [modulesDateRangeModal, setModulesDateRangeModal] = useState<
+    "start" | "due" | null
+  >(null);
   const projectDropdownRef = useRef<HTMLDivElement | null>(null);
+  const modulesSearchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -841,6 +853,12 @@ function ProjectSectionHeader({
       document.removeEventListener("mousedown", handler);
     };
   }, [projectDropdownOpen]);
+
+  useEffect(() => {
+    if (modulesSearchExpanded) {
+      modulesSearchInputRef.current?.focus();
+    }
+  }, [modulesSearchExpanded]);
 
   const q = (s: string) => s.trim().toLowerCase();
   const filteredProjects = projects.filter((p) =>
@@ -970,60 +988,206 @@ function ProjectSectionHeader({
       const galleryActive = currentLayout === "gallery";
       const timelineActive = currentLayout === "timeline";
       const modulesSearch = searchParams.get("search") ?? "";
+      const showSearchInput = modulesSearchExpanded || modulesSearch.length > 0;
       return (
         <>
-          <div className="flex min-w-[140px] max-w-[200px] items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2 py-1.5">
-            <span className="shrink-0 text-[var(--txt-icon-tertiary)]" aria-hidden>
-              <IconSearch />
-            </span>
-            <input
-              type="text"
-              value={modulesSearch}
-              onChange={(e) => {
-                const next = new URLSearchParams(searchParams);
-                const v = e.target.value;
-                if (v.trim()) next.set("search", v); else next.delete("search");
-                setSearchParams(next);
-              }}
-              placeholder="Search"
-              className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
-              aria-label="Search modules"
-            />
-            {modulesSearch.length > 0 && (
-              <button
-                type="button"
-                onClick={() => {
+          {showSearchInput ? (
+            <div className="flex h-8 min-w-[140px] max-w-[200px] items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2">
+              <span
+                className="shrink-0 text-[var(--txt-icon-tertiary)]"
+                aria-hidden
+              >
+                <IconSearch />
+              </span>
+              <input
+                ref={modulesSearchInputRef}
+                type="text"
+                value={modulesSearch}
+                onChange={(e) => {
                   const next = new URLSearchParams(searchParams);
-                  next.delete("search");
+                  const v = e.target.value;
+                  if (v.trim()) next.set("search", v);
+                  else next.delete("search");
                   setSearchParams(next);
                 }}
-                className="shrink-0 rounded p-0.5 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)] hover:text-[var(--txt-icon-secondary)]"
-                aria-label="Clear search"
-              >
-                <IconX />
-              </button>
-            )}
-          </div>
-          <button
-            type="button"
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+                onBlur={() => {
+                  if (modulesSearch.length === 0)
+                    setModulesSearchExpanded(false);
+                }}
+                placeholder="Search"
+                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+                aria-label="Search modules"
+              />
+              {modulesSearch.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = new URLSearchParams(searchParams);
+                    next.delete("search");
+                    setSearchParams(next);
+                  }}
+                  className="shrink-0 rounded p-0.5 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)] hover:text-[var(--txt-icon-secondary)]"
+                  aria-label="Clear search"
+                >
+                  <IconX />
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setModulesSearchExpanded(true)}
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)] hover:text-[var(--txt-icon-secondary)]"
+              aria-label="Search modules"
+            >
+              <IconSearch />
+            </button>
+          )}
+          <Dropdown
+            id="modules-sort"
+            openId={modulesSortOpen}
+            onOpen={setModulesSortOpen}
+            label="Sort by"
+            icon={<IconArrowUpDown />}
+            displayValue={(() => {
+              const sort = searchParams.get("sort") || "progress";
+              const labels: Record<string, string> = {
+                name: "Name",
+                progress: "Progress",
+                work_items: "Number of work items",
+                due_date: "Due date",
+                created_date: "Created date",
+                manual: "Manual",
+              };
+              return labels[sort] ?? "Progress";
+            })()}
+            panelClassName="min-w-[200px] rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-[var(--shadow-raised)]"
+            align="left"
+            triggerContent={
+              <>
+                <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+                  <IconArrowUpDown />
+                </span>
+                <span className="truncate">
+                  {(() => {
+                    const sort = searchParams.get("sort") || "progress";
+                    const labels: Record<string, string> = {
+                      name: "Name",
+                      progress: "Progress",
+                      work_items: "Number of work items",
+                      due_date: "Due date",
+                      created_date: "Created date",
+                      manual: "Manual",
+                    };
+                    return labels[sort] ?? "Progress";
+                  })()}
+                </span>
+                <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+                  <IconChevronDown />
+                </span>
+              </>
+            }
+            triggerClassName="flex h-8 items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
           >
-            <IconArrowUpDown /> Progress <IconChevronDown />
-          </button>
-          <button
-            type="button"
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            {[
+              { value: "name", label: "Name" },
+              { value: "progress", label: "Progress" },
+              { value: "work_items", label: "Number of work items" },
+              { value: "due_date", label: "Due date" },
+              { value: "created_date", label: "Created date" },
+              { value: "manual", label: "Manual" },
+            ].map((opt) => {
+              const current = searchParams.get("sort") || "progress";
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    setSearchParams((prev) => {
+                      const next = new URLSearchParams(prev);
+                      next.set("sort", opt.value);
+                      if (!prev.get("order")) next.set("order", "asc");
+                      return next;
+                    });
+                    setModulesSortOpen(null);
+                  }}
+                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                >
+                  {opt.label}
+                  {current === opt.value && (
+                    <span className="shrink-0 text-[var(--txt-primary)]">
+                      <IconCheck />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+            <div className="my-1 border-t border-[var(--border-subtle)]" />
+            {["asc", "desc"].map((orderValue) => {
+              const currentOrder = searchParams.get("order") || "asc";
+              const label = orderValue === "asc" ? "Ascending" : "Descending";
+              return (
+                <button
+                  key={orderValue}
+                  type="button"
+                  onClick={() => {
+                    setSearchParams((prev) => {
+                      const next = new URLSearchParams(prev);
+                      next.set("order", orderValue);
+                      return next;
+                    });
+                    setModulesSortOpen(null);
+                  }}
+                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                >
+                  {label}
+                  {currentOrder === orderValue && (
+                    <span className="shrink-0 text-[var(--txt-primary)]">
+                      <IconCheck />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </Dropdown>
+          <Dropdown
+            id="modules-filters"
+            openId={modulesFiltersOpen}
+            onOpen={setModulesFiltersOpen}
+            label="Filters"
+            icon={<IconFilter />}
+            displayValue="Filters"
+            panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)] overflow-hidden"
+            align="right"
+            triggerContent={
+              <>
+                <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+                  <IconFilter />
+                </span>
+                <span className="truncate">Filters</span>
+                <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+                  <IconChevronDown />
+                </span>
+              </>
+            }
+            triggerClassName="flex h-8 items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
           >
-            <IconFilter /> Filters <IconChevronDown />
-          </button>
-          <div className="flex items-center gap-0.5 rounded-md bg-[var(--bg-layer-2)] p-0.5">
+            <ModuleFiltersPanel
+              workspaceSlug={workspaceSlug}
+              onOpenDateModal={(which) => {
+                setModulesFiltersOpen(null);
+                setModulesDateRangeModal(which);
+              }}
+            />
+          </Dropdown>
+          <div className="flex h-8 overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] p-0.5">
             <button
               type="button"
               onClick={() => handleLayoutChange("list")}
-              className={`flex size-8 items-center justify-center rounded-md text-[var(--txt-icon-secondary)] transition-colors ${
+              className={`flex size-7 items-center justify-center rounded-l-md text-[var(--txt-icon-secondary)] transition-colors ${
                 listActive
-                  ? "bg-[var(--bg-canvas)] shadow-sm"
-                  : "text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
+                  ? "bg-white shadow-sm text-[var(--txt-primary)]"
+                  : "bg-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
               }`}
               aria-pressed={listActive}
               title="List layout"
@@ -1033,10 +1197,10 @@ function ProjectSectionHeader({
             <button
               type="button"
               onClick={() => handleLayoutChange("gallery")}
-              className={`flex size-8 items-center justify-center rounded-md text-[var(--txt-icon-secondary)] transition-colors ${
+              className={`flex size-7 items-center justify-center text-[var(--txt-icon-secondary)] transition-colors ${
                 galleryActive
-                  ? "bg-[var(--bg-canvas)] shadow-sm"
-                  : "text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
+                  ? "bg-white shadow-sm text-[var(--txt-primary)]"
+                  : "bg-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
               }`}
               aria-pressed={galleryActive}
               title="Gallery layout"
@@ -1046,10 +1210,10 @@ function ProjectSectionHeader({
             <button
               type="button"
               onClick={() => handleLayoutChange("timeline")}
-              className={`flex size-8 items-center justify-center rounded-md text-[var(--txt-icon-secondary)] transition-colors ${
+              className={`flex size-7 items-center justify-center rounded-r-md text-[var(--txt-icon-secondary)] transition-colors ${
                 timelineActive
-                  ? "bg-[var(--bg-canvas)] shadow-sm"
-                  : "text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
+                  ? "bg-white shadow-sm text-[var(--txt-primary)]"
+                  : "bg-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
               }`}
               aria-pressed={timelineActive}
               title="Timeline layout"
@@ -1059,7 +1223,7 @@ function ProjectSectionHeader({
           </div>
           <Button
             size="sm"
-            className="gap-1.5 text-[13px] font-medium"
+            className="ml-1 gap-1.5 h-8 text-[13px] font-medium"
             type="button"
             onClick={() => setCreateModuleOpen(true)}
           >
@@ -1169,17 +1333,58 @@ function ProjectSectionHeader({
       </div>
       <div className="flex items-center gap-1">{rightActions()}</div>
       {section === "modules" && (
-        <CreateModuleModal
-          open={createModuleOpen}
-          onClose={() => setCreateModuleOpen(false)}
-          workspaceSlug={workspaceSlug}
-          projectId={projectId}
-          projectName={projectName}
-          onCreated={() => {
-            setCreateModuleOpen(false);
-            window.dispatchEvent(new CustomEvent("modules-refresh"));
-          }}
-        />
+        <>
+          <CreateModuleModal
+            open={createModuleOpen}
+            onClose={() => setCreateModuleOpen(false)}
+            workspaceSlug={workspaceSlug}
+            projectId={projectId}
+            projectName={projectName}
+            onCreated={() => {
+              setCreateModuleOpen(false);
+              window.dispatchEvent(new CustomEvent("modules-refresh"));
+            }}
+          />
+          <DateRangeModal
+            open={modulesDateRangeModal !== null}
+            onClose={() => setModulesDateRangeModal(null)}
+            title={
+              modulesDateRangeModal === "start"
+                ? "Start date range"
+                : "Due date range"
+            }
+            after={
+              modulesDateRangeModal === "start"
+                ? (searchParams.get(MODULE_FILTER_PARAM.start_after)?.trim() ??
+                  null)
+                : (searchParams.get(MODULE_FILTER_PARAM.due_after)?.trim() ??
+                  null)
+            }
+            before={
+              modulesDateRangeModal === "start"
+                ? (searchParams.get(MODULE_FILTER_PARAM.start_before)?.trim() ??
+                  null)
+                : (searchParams.get(MODULE_FILTER_PARAM.due_before)?.trim() ??
+                  null)
+            }
+            onApply={(after, before) => {
+              setSearchParams((prev) => {
+                const next = new URLSearchParams(prev);
+                if (modulesDateRangeModal === "start") {
+                  next.set(MODULE_FILTER_PARAM.start_date, "custom");
+                  next.set(MODULE_FILTER_PARAM.start_after, after);
+                  next.set(MODULE_FILTER_PARAM.start_before, before);
+                } else {
+                  next.set(MODULE_FILTER_PARAM.due_date, "custom");
+                  next.set(MODULE_FILTER_PARAM.due_after, after);
+                  next.set(MODULE_FILTER_PARAM.due_before, before);
+                }
+                return next;
+              });
+              setModulesDateRangeModal(null);
+            }}
+          />
+        </>
       )}
     </>
   );

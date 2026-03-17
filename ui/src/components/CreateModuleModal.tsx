@@ -16,7 +16,10 @@ const MODULE_STATUSES = [
   { id: "cancelled", label: "Cancelled" },
 ] as const;
 
-function formatDateRangeDisplay(start: string | null, end: string | null): string {
+function formatDateRangeDisplay(
+  start: string | null,
+  end: string | null,
+): string {
   if (!start && !end) return "Start date → End date";
   const fmt = (s: string) =>
     new Date(s).toLocaleDateString("en-US", {
@@ -107,10 +110,14 @@ export function CreateModuleModal({
 
   const q = (s: string) => s.trim().toLowerCase();
   const filteredLead = members.filter((m) =>
-    q(m.member_display_name ?? m.member_email ?? m.member_id).includes(q(leadSearch)),
+    q(m.member_display_name ?? m.member_email ?? m.member_id).includes(
+      q(leadSearch),
+    ),
   );
   const filteredMembers = members.filter((m) =>
-    q(m.member_display_name ?? m.member_email ?? m.member_id).includes(q(membersSearch)),
+    q(m.member_display_name ?? m.member_email ?? m.member_id).includes(
+      q(membersSearch),
+    ),
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -138,8 +145,11 @@ export function CreateModuleModal({
     }
   };
 
-  const statusLabel = MODULE_STATUSES.find((s) => s.id === status)?.label ?? status;
-  const leadMember = leadId ? members.find((m) => m.member_id === leadId) : null;
+  const statusLabel =
+    MODULE_STATUSES.find((s) => s.id === status)?.label ?? status;
+  const leadMember = leadId
+    ? members.find((m) => m.member_id === leadId)
+    : null;
   const selectedMembers = memberIds
     .map((id) => members.find((m) => m.member_id === id))
     .filter(Boolean) as WorkspaceMemberApiResponse[];
@@ -209,9 +219,7 @@ export function CreateModuleModal({
             <div className="relative" ref={statusRef}>
               <button
                 type="button"
-                onClick={() =>
-                  setStatusDropdownOpen((o) => !o)
-                }
+                onClick={() => setStatusDropdownOpen((o) => !o)}
                 className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
               >
                 <span className="text-[var(--txt-icon-tertiary)]" aria-hidden>
@@ -252,7 +260,11 @@ export function CreateModuleModal({
               >
                 {leadMember ? (
                   <Avatar
-                    name={leadMember.member_display_name ?? leadMember.member_email ?? leadMember.member_id}
+                    name={
+                      leadMember.member_display_name ??
+                      leadMember.member_email ??
+                      leadMember.member_id
+                    }
                     src={getImageUrl(leadMember.member_avatar) ?? undefined}
                     size="sm"
                     className="h-6 w-6 text-xs"
@@ -281,19 +293,27 @@ export function CreateModuleModal({
                         key={m.member_id}
                         type="button"
                         onClick={() => {
-                          setLeadId(leadId === m.member_id ? null : m.member_id);
+                          setLeadId(
+                            leadId === m.member_id ? null : m.member_id,
+                          );
                           setLeadDropdownOpen(false);
                         }}
                         className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
                       >
                         <span className="flex items-center gap-2 truncate">
                           <Avatar
-                            name={m.member_display_name ?? m.member_email ?? m.member_id}
+                            name={
+                              m.member_display_name ??
+                              m.member_email ??
+                              m.member_id
+                            }
                             src={getImageUrl(m.member_avatar) ?? undefined}
                             size="sm"
                             className="h-6 w-6 text-xs"
                           />
-                          {m.member_display_name?.trim() ?? m.member_email ?? m.member_id.slice(0, 8)}
+                          {m.member_display_name?.trim() ??
+                            m.member_email ??
+                            m.member_id.slice(0, 8)}
                         </span>
                         {leadId === m.member_id && <CheckIcon />}
                       </button>
@@ -316,7 +336,9 @@ export function CreateModuleModal({
                     {selectedMembers.map((m) => (
                       <Avatar
                         key={m.member_id}
-                        name={m.member_display_name ?? m.member_email ?? m.member_id}
+                        name={
+                          m.member_display_name ?? m.member_email ?? m.member_id
+                        }
                         src={getImageUrl(m.member_avatar) ?? undefined}
                         size="sm"
                         className="h-6 w-6 border-2 border-[var(--bg-layer-2)] text-xs"
@@ -356,12 +378,18 @@ export function CreateModuleModal({
                         >
                           <span className="flex items-center gap-2 truncate">
                             <Avatar
-                              name={m.member_display_name ?? m.member_email ?? m.member_id}
+                              name={
+                                m.member_display_name ??
+                                m.member_email ??
+                                m.member_id
+                              }
                               src={getImageUrl(m.member_avatar) ?? undefined}
                               size="sm"
                               className="h-6 w-6 text-xs"
                             />
-                            {m.member_display_name?.trim() ?? m.member_email ?? m.member_id.slice(0, 8)}
+                            {m.member_display_name?.trim() ??
+                              m.member_email ??
+                              m.member_id.slice(0, 8)}
                           </span>
                           {selected && <CheckIcon />}
                         </button>
@@ -397,7 +425,15 @@ export function CreateModuleModal({
 
 function CalendarIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden
+    >
       <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
       <line x1="16" y1="2" x2="16" y2="6" />
       <line x1="8" y1="2" x2="8" y2="6" />
@@ -407,28 +443,62 @@ function CalendarIcon() {
 }
 function BacklogIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="2 2" aria-hidden>
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeDasharray="2 2"
+      aria-hidden
+    >
       <rect width="18" height="18" x="3" y="3" rx="2" />
     </svg>
   );
 }
 function ChevronDownIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden
+    >
       <path d="m6 9 6 6 6-6" />
     </svg>
   );
 }
 function CheckIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden
+    >
       <polyline points="20 6 9 17 4 12" />
     </svg>
   );
 }
 function SearchIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-[var(--txt-icon-tertiary)]" aria-hidden>
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="shrink-0 text-[var(--txt-icon-tertiary)]"
+      aria-hidden
+    >
       <circle cx="11" cy="11" r="8" />
       <path d="m21 21-4.35-4.35" />
     </svg>
@@ -436,7 +506,16 @@ function SearchIcon() {
 }
 function LeadIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--txt-icon-tertiary)]" aria-hidden>
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="text-[var(--txt-icon-tertiary)]"
+      aria-hidden
+    >
       <circle cx="9" cy="7" r="4" />
       <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
       <line x1="16" y1="11" x2="22" y2="11" />
@@ -446,7 +525,16 @@ function LeadIcon() {
 }
 function MembersIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--txt-icon-tertiary)]" aria-hidden>
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="text-[var(--txt-icon-tertiary)]"
+      aria-hidden
+    >
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
       <circle cx="9" cy="7" r="4" />
       <path d="M23 21v-2a4 4 0 0 0-3-3.87" />

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Avatar } from "../components/ui";
+import { MODULE_FILTER_PARAM } from "../components/workspace-views";
 import { workspaceService } from "../services/workspaceService";
 import { projectService } from "../services/projectService";
 import { moduleService } from "../services/moduleService";
@@ -9,6 +10,14 @@ import type {
   ProjectApiResponse,
   ModuleApiResponse,
 } from "../api/types";
+
+function parseList(value: string | null): string[] {
+  if (!value?.trim()) return [];
+  return value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 
 /** Zero-pad a number to 2 digits. */
 function pad2(n: number): string {
@@ -135,10 +144,126 @@ export function ModulesPage() {
   const [loading, setLoading] = useState(true);
 
   const searchQuery = (searchParams.get("search") ?? "").trim().toLowerCase();
-  const filteredModules =
-    searchQuery === ""
-      ? modules
-      : modules.filter((m) => m.name.toLowerCase().includes(searchQuery));
+  const statusFilter = parseList(searchParams.get(MODULE_FILTER_PARAM.status));
+  const startDateValue =
+    searchParams.get(MODULE_FILTER_PARAM.start_date)?.trim() ?? "";
+  const dueDateValue =
+    searchParams.get(MODULE_FILTER_PARAM.due_date)?.trim() ?? "";
+  const startAfter =
+    searchParams.get(MODULE_FILTER_PARAM.start_after)?.trim() ?? null;
+  const startBefore =
+    searchParams.get(MODULE_FILTER_PARAM.start_before)?.trim() ?? null;
+  const dueAfter =
+    searchParams.get(MODULE_FILTER_PARAM.due_after)?.trim() ?? null;
+  const dueBefore =
+    searchParams.get(MODULE_FILTER_PARAM.due_before)?.trim() ?? null;
+
+  const filteredModules = useMemo(() => {
+    let list = modules;
+    if (searchQuery !== "") {
+      list = list.filter((m) => m.name.toLowerCase().includes(searchQuery));
+    }
+    if (statusFilter.length > 0) {
+      const allowed = new Set(statusFilter.map((s) => s.toLowerCase()));
+      list = list.filter((m) => allowed.has((m.status ?? "").toLowerCase()));
+    }
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const addDays = (d: Date, n: number) =>
+      new Date(d.getTime() + n * 24 * 60 * 60 * 1000);
+    const toDate = (iso: string) => new Date(iso.slice(0, 10));
+    const inRange = (value: Date, min: Date, max: Date) =>
+      value.getTime() >= min.getTime() && value.getTime() <= max.getTime();
+    if (startDateValue !== "") {
+      list = list.filter((m) => {
+        const sd = m.start_date?.trim();
+        if (!sd) return false;
+        const d = toDate(sd);
+        if (
+          startDateValue === "custom" &&
+          startAfter !== null &&
+          startBefore !== null
+        )
+          return inRange(d, toDate(startAfter), toDate(startBefore));
+        if (startDateValue === "1_week")
+          return inRange(d, today, addDays(today, 7));
+        if (startDateValue === "2_weeks")
+          return inRange(d, today, addDays(today, 14));
+        if (startDateValue === "1_month")
+          return inRange(d, today, addDays(today, 30));
+        if (startDateValue === "2_months")
+          return inRange(d, today, addDays(today, 60));
+        return false;
+      });
+    }
+    if (dueDateValue !== "") {
+      list = list.filter((m) => {
+        const td = m.target_date?.trim();
+        if (!td) return false;
+        const d = toDate(td);
+        if (
+          dueDateValue === "custom" &&
+          dueAfter !== null &&
+          dueBefore !== null
+        )
+          return inRange(d, toDate(dueAfter), toDate(dueBefore));
+        if (dueDateValue === "1_week")
+          return inRange(d, today, addDays(today, 7));
+        if (dueDateValue === "2_weeks")
+          return inRange(d, today, addDays(today, 14));
+        if (dueDateValue === "1_month")
+          return inRange(d, today, addDays(today, 30));
+        if (dueDateValue === "2_months")
+          return inRange(d, today, addDays(today, 60));
+        return false;
+      });
+    }
+    return list;
+  }, [
+    modules,
+    searchQuery,
+    statusFilter,
+    startDateValue,
+    dueDateValue,
+    startAfter,
+    startBefore,
+    dueAfter,
+    dueBefore,
+  ]);
+
+  const sortBy = searchParams.get("sort") || "progress";
+  const order = searchParams.get("order") || "asc";
+  const sortedModules = [...filteredModules].sort((a, b) => {
+    const getProgress = (mod: ModuleApiResponse) => {
+      const total = mod.issue_count ?? 0;
+      const done = 0;
+      return total === 0 ? 0 : Math.round((done / total) * 100);
+    };
+    let cmp = 0;
+    switch (sortBy) {
+      case "name":
+        cmp = (a.name ?? "").localeCompare(b.name ?? "");
+        break;
+      case "progress":
+        cmp = getProgress(a) - getProgress(b);
+        break;
+      case "work_items":
+        cmp = (a.issue_count ?? 0) - (b.issue_count ?? 0);
+        break;
+      case "due_date":
+        cmp = (a.target_date ?? "").localeCompare(b.target_date ?? "");
+        break;
+      case "created_date":
+        cmp = (a.created_at ?? "").localeCompare(b.created_at ?? "");
+        break;
+      case "manual":
+        cmp = (a.sort_order ?? 0) - (b.sort_order ?? 0);
+        break;
+      default:
+        cmp = getProgress(a) - getProgress(b);
+    }
+    return order === "desc" ? -cmp : cmp;
+  });
 
   useEffect(() => {
     const handler = () => {
@@ -212,7 +337,7 @@ export function ModulesPage() {
 
   const renderListLayout = () => (
     <div className="space-y-2">
-      {filteredModules.map((mod) => {
+      {sortedModules.map((mod) => {
         const progress = getProgress(mod);
         const dateRange = formatModuleDateRange(mod);
         return (
@@ -264,7 +389,7 @@ export function ModulesPage() {
 
   const renderGalleryLayout = () => (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {filteredModules.map((mod) => {
+      {sortedModules.map((mod) => {
         const progress = getProgress(mod);
         const dateRange = formatModuleDateRange(mod);
         return (
@@ -296,7 +421,7 @@ export function ModulesPage() {
   );
 
   const renderTimelineLayout = () => {
-    const withDates = filteredModules
+    const withDates = sortedModules
       .map((m) => ({
         mod: m,
         start: m.start_date ? new Date(m.start_date) : null,
