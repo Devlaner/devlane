@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   Badge,
@@ -260,13 +260,13 @@ export function IssueDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading…
       </div>
     );
   }
   if (!workspace || !project || !issue) {
-    return <div className="text-[var(--txt-secondary)]">Issue not found.</div>;
+    return <div className="text-(--txt-secondary)">Issue not found.</div>;
   }
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
@@ -445,33 +445,33 @@ export function IssueDetailPage() {
   return (
     <div className="space-y-6">
       {errorMessage && (
-        <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-xs text-[var(--txt-danger-primary)]">
+        <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-xs text-(--txt-danger-primary)">
           {errorMessage}
         </div>
       )}
-      <div className="flex items-center gap-2 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center gap-2 text-sm text-(--txt-tertiary)">
         <Link
           to={baseUrl}
-          className="text-[var(--txt-accent-primary)] hover:underline"
+          className="text-(--txt-accent-primary) hover:underline"
         >
           {project.name}
         </Link>
         <span>/</span>
         <Link
           to={`${baseUrl}/issues`}
-          className="text-[var(--txt-accent-primary)] hover:underline"
+          className="text-(--txt-accent-primary) hover:underline"
         >
           Issues
         </Link>
         <span>/</span>
-        <span className="text-[var(--txt-secondary)]">{displayId}</span>
+        <span className="text-(--txt-secondary)">{displayId}</span>
       </div>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-semibold text-[var(--txt-primary)]">
+          <h1 className="truncate text-2xl font-semibold text-(--txt-primary)">
             {issue.name}
           </h1>
-          <p className="mt-1 text-xs text-[var(--txt-tertiary)]">
+          <p className="mt-1 text-xs text-(--txt-tertiary)">
             Last edited {new Date(issue.updated_at).toLocaleDateString()}
           </p>
         </div>
@@ -490,17 +490,17 @@ export function IssueDetailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card>
-            <CardHeader className="text-sm font-medium text-[var(--txt-secondary)]">
+            <CardHeader className="text-sm font-medium text-(--txt-secondary)">
               Description
             </CardHeader>
             <CardContent>
               {descriptionHtml ? (
                 <div
-                  className="prose prose-sm max-w-none text-[var(--txt-primary)]"
+                  className="prose prose-sm max-w-none text-(--txt-primary)"
                   dangerouslySetInnerHTML={{ __html: descriptionHtml }}
                 />
               ) : (
-                <p className="text-sm text-[var(--txt-tertiary)]">
+                <p className="text-sm text-(--txt-tertiary)">
                   Click to add description.
                 </p>
               )}
@@ -509,10 +509,10 @@ export function IssueDetailPage() {
 
           <Card>
             <CardHeader className="flex items-center justify-between">
-              <span className="text-sm font-medium text-[var(--txt-secondary)]">
+              <span className="text-sm font-medium text-(--txt-secondary)">
                 Activity
               </span>
-              <span className="text-xs text-[var(--txt-tertiary)]">
+              <span className="text-xs text-(--txt-tertiary)">
                 Comments {comments.length}
               </span>
             </CardHeader>
@@ -526,12 +526,12 @@ export function IssueDetailPage() {
                     className="mt-0.5 h-7 w-7 text-[10px]"
                   />
                   <div className="min-w-0">
-                    <p className="text-[var(--txt-secondary)]">
-                      <span className="font-medium text-[var(--txt-primary)]">
+                    <p className="text-(--txt-secondary)">
+                      <span className="font-medium text-(--txt-primary)">
                         {getMemberLabel(issue.created_by_id)}
                       </span>{" "}
                       created this work item.
-                      <span className="ml-2 text-xs text-[var(--txt-tertiary)]">
+                      <span className="ml-2 text-xs text-(--txt-tertiary)">
                         {new Date(issue.created_at).toLocaleDateString()}
                       </span>
                     </p>
@@ -539,7 +539,7 @@ export function IssueDetailPage() {
                 </div>
 
                 {comments.length === 0 ? (
-                  <p className="text-sm text-[var(--txt-tertiary)]">
+                  <p className="text-sm text-(--txt-tertiary)">
                     No comments yet.
                   </p>
                 ) : (
@@ -554,16 +554,16 @@ export function IssueDetailPage() {
                             size="sm"
                             className="mt-0.5 h-7 w-7 text-[10px]"
                           />
-                          <div className="min-w-0 flex-1 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] p-3">
+                          <div className="min-w-0 flex-1 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) p-3">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs font-medium text-[var(--txt-secondary)]">
+                              <span className="text-xs font-medium text-(--txt-secondary)">
                                 {getMemberLabel(c.created_by_id)}
                               </span>
-                              <div className="flex items-center gap-2 text-[11px] text-[var(--txt-tertiary)]">
+                              <div className="flex items-center gap-2 text-[11px] text-(--txt-tertiary)">
                                 <span>{formatRelativeTime(c.created_at)}</span>
                                 <button
                                   type="button"
-                                  className="hover:text-[var(--txt-secondary)]"
+                                  className="hover:text-(--txt-secondary)"
                                   onClick={() => setEditingCommentId(c.id)}
                                   disabled={
                                     updatingCommentId === c.id ||
@@ -574,7 +574,7 @@ export function IssueDetailPage() {
                                 </button>
                                 <button
                                   type="button"
-                                  className="hover:text-[var(--txt-secondary)]"
+                                  className="hover:text-(--txt-secondary)"
                                   onClick={() => void deleteComment(c.id)}
                                   disabled={
                                     deletingCommentId === c.id ||
@@ -602,7 +602,7 @@ export function IssueDetailPage() {
                               </div>
                             ) : (
                               <div
-                                className="mt-1 prose prose-sm max-w-none text-[var(--txt-primary)]"
+                                className="mt-1 prose prose-sm max-w-none text-(--txt-primary)"
                                 dangerouslySetInnerHTML={{ __html: c.comment }}
                               />
                             )}
@@ -623,7 +623,7 @@ export function IssueDetailPage() {
 
           {children.length > 0 && (
             <Card>
-              <CardHeader className="text-sm font-medium text-[var(--txt-secondary)]">
+              <CardHeader className="text-sm font-medium text-(--txt-secondary)">
                 Sub-work items
               </CardHeader>
               <CardContent>
@@ -632,7 +632,7 @@ export function IssueDetailPage() {
                     <li key={ch.id}>
                       <Link
                         to={`${baseUrl}/issues/${ch.id}`}
-                        className="text-sm text-[var(--txt-accent-primary)] hover:underline"
+                        className="text-sm text-(--txt-accent-primary) hover:underline"
                       >
                         {ch.name}
                       </Link>
@@ -646,12 +646,12 @@ export function IssueDetailPage() {
 
         <div className="space-y-4">
           <Card>
-            <CardHeader className="text-sm font-medium text-[var(--txt-secondary)]">
+            <CardHeader className="text-sm font-medium text-(--txt-secondary)">
               Properties
             </CardHeader>
             <CardContent className="space-y-3 pt-4 text-sm">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[var(--txt-secondary)]">State</span>
+                <span className="text-(--txt-secondary)">State</span>
                 <Dropdown
                   id="state"
                   openId={openDropdown}
@@ -666,17 +666,17 @@ export function IssueDetailPage() {
                     <button
                       key={s.id}
                       type="button"
-                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--bg-layer-1-hover)]"
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
                       onClick={() => {
                         setOpenDropdown(null);
                         updateIssue({ state_id: s.id });
                       }}
                     >
-                      <span className="truncate text-[var(--txt-primary)]">
+                      <span className="truncate text-(--txt-primary)">
                         {s.name}
                       </span>
                       {issue.state_id === s.id && (
-                        <span className="text-xs text-[var(--txt-tertiary)]">
+                        <span className="text-xs text-(--txt-tertiary)">
                           Selected
                         </span>
                       )}
@@ -686,7 +686,7 @@ export function IssueDetailPage() {
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[var(--txt-secondary)]">Assignees</span>
+                <span className="text-(--txt-secondary)">Assignees</span>
                 <Dropdown
                   id="assignees"
                   openId={openDropdown}
@@ -700,10 +700,10 @@ export function IssueDetailPage() {
                   }
                   compact
                   align="right"
-                  panelClassName="max-h-72 min-w-[220px] overflow-auto rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-[var(--shadow-raised)]"
+                  panelClassName="max-h-72 min-w-[220px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
                 >
                   {members.length === 0 ? (
-                    <div className="px-3 py-2 text-sm text-[var(--txt-tertiary)]">
+                    <div className="px-3 py-2 text-sm text-(--txt-tertiary)">
                       No members.
                     </div>
                   ) : (
@@ -713,7 +713,7 @@ export function IssueDetailPage() {
                         <button
                           key={m.id}
                           type="button"
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--bg-layer-1-hover)]"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
                           onClick={() => {
                             const next = checked
                               ? assigneeIds.filter((x) => x !== m.member_id)
@@ -721,10 +721,10 @@ export function IssueDetailPage() {
                             updateIssue({ assignee_ids: next });
                           }}
                         >
-                          <span className="inline-flex size-4 items-center justify-center rounded border border-[var(--border-subtle)] text-[10px] text-[var(--txt-tertiary)]">
+                          <span className="inline-flex size-4 items-center justify-center rounded border border-(--border-subtle) text-[10px] text-(--txt-tertiary)">
                             {checked ? "✓" : ""}
                           </span>
-                          <span className="truncate text-[var(--txt-primary)]">
+                          <span className="truncate text-(--txt-primary)">
                             {getMemberLabel(m.member_id)}
                           </span>
                         </button>
@@ -735,7 +735,7 @@ export function IssueDetailPage() {
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[var(--txt-secondary)]">Priority</span>
+                <span className="text-(--txt-secondary)">Priority</span>
                 <Dropdown
                   id="priority"
                   openId={openDropdown}
@@ -752,13 +752,13 @@ export function IssueDetailPage() {
                     <button
                       key={p}
                       type="button"
-                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--bg-layer-1-hover)]"
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
                       onClick={() => {
                         setOpenDropdown(null);
                         updateIssue({ priority: p });
                       }}
                     >
-                      <span className="truncate text-[var(--txt-primary)]">
+                      <span className="truncate text-(--txt-primary)">
                         {p}
                       </span>
                       <Badge
@@ -773,14 +773,14 @@ export function IssueDetailPage() {
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[var(--txt-secondary)]">Created by</span>
-                <span className="text-[var(--txt-tertiary)]">
+                <span className="text-(--txt-secondary)">Created by</span>
+                <span className="text-(--txt-tertiary)">
                   {getMemberLabel(issue.created_by_id)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[var(--txt-secondary)]">Start date</span>
+                <span className="text-(--txt-secondary)">Start date</span>
                 <DatePickerTrigger
                   label="Start date"
                   icon={<IconCalendar />}
@@ -790,7 +790,7 @@ export function IssueDetailPage() {
                 />
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[var(--txt-secondary)]">Due date</span>
+                <span className="text-(--txt-secondary)">Due date</span>
                 <DatePickerTrigger
                   label="Due date"
                   icon={<IconCalendar />}
@@ -801,7 +801,7 @@ export function IssueDetailPage() {
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[var(--txt-secondary)]">Modules</span>
+                <span className="text-(--txt-secondary)">Modules</span>
                 <Dropdown
                   id="module"
                   openId={openDropdown}
@@ -814,7 +814,7 @@ export function IssueDetailPage() {
                 >
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--bg-layer-1-hover)]"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
                     onClick={() => {
                       setOpenDropdown(null);
                       handleSetModule(null);
@@ -826,7 +826,7 @@ export function IssueDetailPage() {
                     <button
                       key={m.id}
                       type="button"
-                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--bg-layer-1-hover)]"
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
                       onClick={() => {
                         setOpenDropdown(null);
                         handleSetModule(m.id);
@@ -834,7 +834,7 @@ export function IssueDetailPage() {
                     >
                       <span className="truncate">{m.name}</span>
                       {moduleIds.includes(m.id) && (
-                        <span className="text-xs text-[var(--txt-tertiary)]">
+                        <span className="text-xs text-(--txt-tertiary)">
                           Selected
                         </span>
                       )}
@@ -844,7 +844,7 @@ export function IssueDetailPage() {
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[var(--txt-secondary)]">Cycle</span>
+                <span className="text-(--txt-secondary)">Cycle</span>
                 <Dropdown
                   id="cycle"
                   openId={openDropdown}
@@ -857,7 +857,7 @@ export function IssueDetailPage() {
                 >
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--bg-layer-1-hover)]"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
                     onClick={() => {
                       setOpenDropdown(null);
                       handleSetCycle(null);
@@ -869,7 +869,7 @@ export function IssueDetailPage() {
                     <button
                       key={c.id}
                       type="button"
-                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--bg-layer-1-hover)]"
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
                       onClick={() => {
                         setOpenDropdown(null);
                         handleSetCycle(c.id);
@@ -877,7 +877,7 @@ export function IssueDetailPage() {
                     >
                       <span className="truncate">{c.name}</span>
                       {cycleIds.includes(c.id) && (
-                        <span className="text-xs text-[var(--txt-tertiary)]">
+                        <span className="text-xs text-(--txt-tertiary)">
                           Selected
                         </span>
                       )}
@@ -887,7 +887,7 @@ export function IssueDetailPage() {
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[var(--txt-secondary)]">Parent</span>
+                <span className="text-(--txt-secondary)">Parent</span>
                 <Dropdown
                   id="parent"
                   openId={openDropdown}
@@ -899,19 +899,19 @@ export function IssueDetailPage() {
                   }
                   compact
                   align="right"
-                  panelClassName="max-h-72 min-w-[260px] overflow-auto rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-[var(--shadow-raised)]"
+                  panelClassName="max-h-72 min-w-[260px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
                 >
                   {filteredParentOptions.slice(0, 200).map((pi) => (
                     <button
                       key={pi.id}
                       type="button"
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--bg-layer-1-hover)]"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
                       onClick={() => {
                         setOpenDropdown(null);
                         updateIssue({ parent_id: pi.id });
                       }}
                     >
-                      <span className="truncate text-[var(--txt-primary)]">
+                      <span className="truncate text-(--txt-primary)">
                         {pi.name}
                       </span>
                     </button>
@@ -920,7 +920,7 @@ export function IssueDetailPage() {
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[var(--txt-secondary)]">Labels</span>
+                <span className="text-(--txt-secondary)">Labels</span>
                 <Dropdown
                   id="labels"
                   openId={openDropdown}
@@ -934,10 +934,10 @@ export function IssueDetailPage() {
                   }
                   compact
                   align="right"
-                  panelClassName="max-h-72 min-w-[220px] overflow-auto rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-[var(--shadow-raised)]"
+                  panelClassName="max-h-72 min-w-[220px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
                 >
                   {labels.length === 0 ? (
-                    <div className="px-3 py-2 text-sm text-[var(--txt-tertiary)]">
+                    <div className="px-3 py-2 text-sm text-(--txt-tertiary)">
                       No labels.
                     </div>
                   ) : (
@@ -947,7 +947,7 @@ export function IssueDetailPage() {
                         <button
                           key={l.id}
                           type="button"
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--bg-layer-1-hover)]"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
                           onClick={() => {
                             const next = checked
                               ? labelIds.filter((x) => x !== l.id)
@@ -955,10 +955,10 @@ export function IssueDetailPage() {
                             updateIssue({ label_ids: next });
                           }}
                         >
-                          <span className="inline-flex size-4 items-center justify-center rounded border border-[var(--border-subtle)] text-[10px] text-[var(--txt-tertiary)]">
+                          <span className="inline-flex size-4 items-center justify-center rounded border border-(--border-subtle) text-[10px] text-(--txt-tertiary)">
                             {checked ? "✓" : ""}
                           </span>
-                          <span className="truncate text-[var(--txt-primary)]">
+                          <span className="truncate text-(--txt-primary)">
                             {l.name}
                           </span>
                         </button>

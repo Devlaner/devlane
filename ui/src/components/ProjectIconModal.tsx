@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+﻿import { useState, useMemo, useEffect } from "react";
 import { Modal } from "./ui";
 
 const EMOJI_LIST = [
@@ -218,7 +218,7 @@ export function ProjectIconModal({
     <button
       type="button"
       onClick={onClose}
-      className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-3 py-1.5 text-sm font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-2-hover)]"
+      className="rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
     >
       Cancel
     </button>
@@ -232,14 +232,14 @@ export function ProjectIconModal({
       footer={footer}
       className="max-w-md"
     >
-      <div className="flex gap-2 border-b border-[var(--border-subtle)] pb-3 mb-3">
+      <div className="flex gap-2 border-b border-(--border-subtle) pb-3 mb-3">
         <button
           type="button"
           onClick={() => setTab(TAB_EMOJI)}
-          className={`rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium transition-colors ${
+          className={`rounded-(--radius-md) px-3 py-1.5 text-sm font-medium transition-colors ${
             tab === TAB_EMOJI
-              ? "bg-[var(--brand-default)] text-white"
-              : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+              ? "bg-(--brand-default) text-white"
+              : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover)"
           }`}
         >
           Emoji
@@ -247,10 +247,10 @@ export function ProjectIconModal({
         <button
           type="button"
           onClick={() => setTab(TAB_ICON)}
-          className={`rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium transition-colors ${
+          className={`rounded-(--radius-md) px-3 py-1.5 text-sm font-medium transition-colors ${
             tab === TAB_ICON
-              ? "bg-[var(--brand-default)] text-white"
-              : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+              ? "bg-(--brand-default) text-white"
+              : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover)"
           }`}
         >
           Icon
@@ -264,7 +264,7 @@ export function ProjectIconModal({
             value={emojiSearch}
             onChange={(e) => setEmojiSearch(e.target.value)}
             placeholder="Search"
-            className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+            className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
           />
           <div className="grid grid-cols-8 gap-1.5 max-h-48 overflow-y-auto">
             {filteredEmojis.map((emoji) => (
@@ -272,7 +272,7 @@ export function ProjectIconModal({
                 type="button"
                 key={emoji}
                 onClick={() => handleEmojiSelect(emoji)}
-                className="flex size-9 items-center justify-center rounded-[var(--radius-md)] text-xl hover:bg-[var(--bg-layer-transparent-hover)]"
+                className="flex size-9 items-center justify-center rounded-(--radius-md) text-xl hover:bg-(--bg-layer-transparent-hover)"
                 title={emoji}
               >
                 {emoji}
@@ -284,7 +284,7 @@ export function ProjectIconModal({
 
       {tab === TAB_ICON && (
         <div className="space-y-3">
-          <p className="text-xs text-[var(--txt-tertiary)]">Color</p>
+          <p className="text-xs text-(--txt-tertiary)">Color</p>
           <div className="flex flex-wrap gap-2">
             {ICON_COLORS.map((c) => (
               <button
@@ -305,14 +305,14 @@ export function ProjectIconModal({
               />
             ))}
           </div>
-          <p className="text-xs text-[var(--txt-tertiary)]">Choose an icon</p>
+          <p className="text-xs text-(--txt-tertiary)">Choose an icon</p>
           <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto">
             {ICON_NAMES.map((name) => (
               <button
                 type="button"
                 key={name}
                 onClick={() => handleIconSelect(name)}
-                className="flex size-10 items-center justify-center rounded-[var(--radius-md)] hover:bg-[var(--bg-layer-transparent-hover)]"
+                className="flex size-10 items-center justify-center rounded-(--radius-md) hover:bg-(--bg-layer-transparent-hover)"
                 title={name}
               >
                 <IconSvg name={name} color={iconColor} size={20} />

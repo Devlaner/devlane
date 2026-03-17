@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button, Input } from "./ui";
 import { CoverImageModal } from "./CoverImageModal";
@@ -183,12 +183,12 @@ export function CreateProjectModal({
         Create project
       </h2>
       <div
-        className="absolute inset-0 bg-[var(--bg-backdrop)]"
+        className="absolute inset-0 bg-(--bg-backdrop)"
         onClick={handleClose}
         aria-hidden
       />
       <div
-        className="relative z-10 w-full max-w-2xl overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-overlay)]"
+        className="relative z-10 w-full max-w-2xl overflow-hidden rounded-(--radius-lg) border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-overlay)"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Cover + Close */}
@@ -215,7 +215,7 @@ export function CreateProjectModal({
           <button
             type="button"
             onClick={() => setIconModalOpen(true)}
-            className="flex size-12 items-center justify-center rounded-lg border-2 border-[var(--bg-surface-1)] bg-[var(--bg-layer-2)] text-2xl shadow-sm hover:bg-[var(--bg-layer-transparent-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--border-strong)]"
+            className="flex size-12 items-center justify-center rounded-lg border-2 border-(--bg-surface-1) bg-(--bg-layer-2) text-2xl shadow-sm hover:bg-(--bg-layer-transparent-hover) focus:outline-none focus:ring-2 focus:ring-(--border-strong)"
             aria-label="Change project icon"
           >
             <ProjectIconDisplay
@@ -253,7 +253,7 @@ export function CreateProjectModal({
                 className="w-full pr-9"
               />
               <span
-                className="absolute right-3 top-9 text-[var(--txt-icon-tertiary)]"
+                className="absolute right-3 top-9 text-(--txt-icon-tertiary)"
                 title="Short identifier used in issue IDs (e.g. PROJ-123)"
               >
                 <IconInfo />
@@ -267,7 +267,7 @@ export function CreateProjectModal({
               placeholder="Description"
               rows={3}
               disabled={submitting}
-              className="min-h-[72px] w-full resize-y rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:ring-2 focus:ring-[var(--border-strong)]"
+              className="min-h-[72px] w-full resize-y rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:ring-2 focus:ring-(--border-strong)"
             />
           </div>
 
@@ -287,13 +287,13 @@ export function CreateProjectModal({
           </div>
 
           {error && (
-            <p className="mt-3 text-sm text-[var(--txt-danger-primary)]">
+            <p className="mt-3 text-sm text-(--txt-danger-primary)">
               {error}
             </p>
           )}
 
           {/* Actions */}
-          <div className="mt-6 flex justify-end gap-2 border-t border-[var(--border-subtle)] pt-4">
+          <div className="mt-6 flex justify-end gap-2 border-t border-(--border-subtle) pt-4">
             <Button
               type="button"
               variant="secondary"

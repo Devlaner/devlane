@@ -1,4 +1,4 @@
-import { type HTMLAttributes } from "react";
+﻿import { type HTMLAttributes } from "react";
 import { cn } from "../../lib/utils";
 
 export type BadgeVariant =
@@ -13,11 +13,11 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  default: "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]",
-  success: "bg-[var(--bg-success-subtle)] text-[var(--txt-success-primary)]",
-  warning: "bg-[var(--bg-warning-subtle)] text-[var(--txt-warning-primary)]",
-  danger: "bg-[var(--bg-danger-subtle)] text-[var(--txt-danger-primary)]",
-  neutral: "bg-[var(--bg-layer-1)] text-[var(--txt-secondary)]",
+  default: "bg-(--bg-accent-subtle) text-(--txt-accent-primary)",
+  success: "bg-(--bg-success-subtle) text-(--txt-success-primary)",
+  warning: "bg-(--bg-warning-subtle) text-(--txt-warning-primary)",
+  danger: "bg-(--bg-danger-subtle) text-(--txt-danger-primary)",
+  neutral: "bg-(--bg-layer-1) text-(--txt-secondary)",
 };
 
 export function Badge({

@@ -1,4 +1,4 @@
-import { type HTMLAttributes } from "react";
+﻿import { type HTMLAttributes } from "react";
 import { cn } from "../../lib/utils";
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
@@ -14,10 +14,10 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-[var(--radius-lg)] bg-[var(--bg-layer-2)]",
+        "rounded-(--radius-lg) bg-(--bg-layer-2)",
         variant === "elevated" &&
-          "border border-[var(--border-subtle)] shadow-[var(--shadow-raised)]",
-        variant === "outlined" && "border border-[var(--border-subtle)]",
+          "border border-(--border-subtle) shadow-(--shadow-raised)",
+        variant === "outlined" && "border border-(--border-subtle)",
         className,
       )}
       {...props}
@@ -34,7 +34,7 @@ export function CardHeader({ className, children, ...props }: CardHeaderProps) {
   return (
     <div
       className={cn(
-        "border-b border-[var(--border-subtle)] px-4 py-3",
+        "border-b border-(--border-subtle) px-4 py-3",
         className,
       )}
       {...props}

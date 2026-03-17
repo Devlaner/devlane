@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+﻿import { useState, useRef, useEffect } from "react";
 import {
   Link,
   useLocation,
@@ -528,23 +528,23 @@ function ProjectSectionDropdown({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-sm font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-2-hover)]"
+        className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
       >
-        <span className="flex size-5 items-center justify-center text-[var(--txt-icon-secondary)]">
+        <span className="flex size-5 items-center justify-center text-(--txt-icon-secondary)">
           {currentIcon}
         </span>
         {currentLabel}
         {currentSection === "issues" && (
-          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-200)] px-1.5 text-xs font-medium text-[var(--brand-default)]">
+          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-(--brand-200) px-1.5 text-xs font-medium text-(--brand-default)">
             {issueCount}
           </span>
         )}
-        <span className="ml-0.5 flex size-4 items-center justify-center text-[var(--txt-icon-tertiary)]">
+        <span className="ml-0.5 flex size-4 items-center justify-center text-(--txt-icon-tertiary)">
           <IconChevronDown />
         </span>
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-[var(--shadow-raised)]">
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)">
           {sections.map((section) => {
             const href =
               section === "issues"
@@ -558,16 +558,16 @@ function ProjectSectionDropdown({
                 onClick={() => setOpen(false)}
                 className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm no-underline ${
                   isActive
-                    ? "bg-[var(--brand-200)] text-[var(--txt-primary)]"
-                    : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-primary)]"
+                    ? "bg-(--brand-200) text-(--txt-primary)"
+                    : "text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
                 }`}
               >
-                <span className="flex size-5 items-center justify-center text-[var(--txt-icon-secondary)]">
+                <span className="flex size-5 items-center justify-center text-(--txt-icon-secondary)">
                   {SECTION_ICONS[section]}
                 </span>
                 {SECTION_LABELS[section]}
                 {isActive && (
-                  <span className="ml-auto text-[var(--brand-default)]">
+                  <span className="ml-auto text-(--brand-default)">
                     <IconCheck />
                   </span>
                 )}
@@ -582,8 +582,8 @@ function ProjectSectionDropdown({
 
 function YourWorkHeader() {
   return (
-    <div className="flex items-center gap-2 text-sm font-medium text-[var(--txt-secondary)]">
-      <span className="flex size-5 items-center justify-center text-[var(--txt-icon-tertiary)]">
+    <div className="flex items-center gap-2 text-sm font-medium text-(--txt-secondary)">
+      <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
         <IconUser />
       </span>
       Your work
@@ -594,8 +594,8 @@ function YourWorkHeader() {
 function InboxHeader() {
   return (
     <>
-      <div className="flex items-center gap-2 text-sm font-medium text-[var(--txt-secondary)]">
-        <span className="flex size-5 items-center justify-center text-[var(--txt-icon-tertiary)]">
+      <div className="flex items-center gap-2 text-sm font-medium text-(--txt-secondary)">
+        <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
           <IconInbox />
         </span>
         Inbox
@@ -603,28 +603,28 @@ function InboxHeader() {
       <div className="flex items-center gap-1">
         <button
           type="button"
-          className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
+          className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
           aria-label="Mark as read"
         >
           <IconCheck />
         </button>
         <button
           type="button"
-          className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
+          className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
           aria-label="Archive"
         >
           <IconArchive />
         </button>
         <button
           type="button"
-          className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
+          className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
           aria-label="Filters"
         >
           <IconFilter />
         </button>
         <button
           type="button"
-          className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
+          className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
           aria-label="More options"
         >
           <IconMoreVertical />
@@ -637,8 +637,8 @@ function InboxHeader() {
 function SettingsHeader() {
   return (
     <>
-      <div className="flex items-center gap-2 text-sm font-medium text-[var(--txt-secondary)]">
-        <span className="flex size-5 items-center justify-center text-[var(--txt-icon-tertiary)]">
+      <div className="flex items-center gap-2 text-sm font-medium text-(--txt-secondary)">
+        <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
           <IconSettings />
         </span>
         Settings
@@ -651,8 +651,8 @@ function SettingsHeader() {
 function HomeHeader() {
   return (
     <>
-      <div className="flex items-center gap-2 text-sm font-medium text-[var(--txt-secondary)]">
-        <span className="flex size-5 items-center justify-center text-[var(--txt-icon-tertiary)]">
+      <div className="flex items-center gap-2 text-sm font-medium text-(--txt-secondary)">
+        <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
           <IconHome />
         </span>
         Home
@@ -661,7 +661,7 @@ function HomeHeader() {
         <Button
           variant="ghost"
           size="sm"
-          className="gap-1.5 text-[13px] font-medium text-[var(--txt-secondary)]"
+          className="gap-1.5 text-[13px] font-medium text-(--txt-secondary)"
         >
           <IconGrid />
           Manage widgets
@@ -669,7 +669,7 @@ function HomeHeader() {
         <Button
           variant="ghost"
           size="sm"
-          className="gap-1.5 text-[13px] font-medium text-[var(--txt-secondary)]"
+          className="gap-1.5 text-[13px] font-medium text-(--txt-secondary)"
         >
           <IconGitHub />
           Star us on GitHub
@@ -688,8 +688,8 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
 
   return (
     <>
-      <div className="flex items-center gap-2 text-sm font-medium text-[var(--txt-secondary)]">
-        <span className="flex size-5 items-center justify-center text-[var(--txt-icon-tertiary)]">
+      <div className="flex items-center gap-2 text-sm font-medium text-(--txt-secondary)">
+        <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
           <IconBriefcase />
         </span>
         Projects
@@ -698,8 +698,8 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
         <div
           className={`overflow-hidden transition-[width] duration-200 ease-out ${searchOpen ? "w-56" : "w-0"}`}
         >
-          <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2 py-1.5">
-            <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+          <div className="flex items-center gap-2 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-2 py-1.5">
+            <span className="shrink-0 text-(--txt-icon-tertiary)">
               <IconSearch />
             </span>
             <input
@@ -709,7 +709,7 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                 setSearchParams({ q: e.target.value }, { replace: true })
               }
               placeholder="Search projects"
-              className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
               aria-label="Search projects"
             />
             <button
@@ -718,7 +718,7 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                 setSearchParams({}, { replace: true });
                 setSearchOpen(false);
               }}
-              className="shrink-0 rounded p-0.5 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-secondary)]"
+              className="shrink-0 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-secondary)"
               aria-label="Clear search"
             >
               <IconX />
@@ -729,7 +729,7 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex size-8 shrink-0 items-center justify-center rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
             aria-label="Search projects"
           >
             <IconSearch />
@@ -737,7 +737,7 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
         )}
         <button
           type="button"
-          className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+          className="flex items-center gap-1.5 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
         >
           <IconCalendar />
           Created date
@@ -745,7 +745,7 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
         </button>
         <button
           type="button"
-          className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+          className="flex items-center gap-1.5 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
         >
           <IconFilter />
           Filters
@@ -771,8 +771,8 @@ function ProjectDetailHeader({
 }) {
   return (
     <>
-      <div className="flex items-center gap-2 text-sm font-semibold text-[var(--txt-primary)]">
-        <span className="flex size-5 items-center justify-center text-[var(--txt-icon-tertiary)]">
+      <div className="flex items-center gap-2 text-sm font-semibold text-(--txt-primary)">
+        <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
           <IconBriefcase />
         </span>
         {title}
@@ -780,7 +780,7 @@ function ProjectDetailHeader({
       <div className="flex items-center gap-2">
         <button
           type="button"
-          className="flex size-8 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
+          className="flex size-8 items-center justify-center rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
           aria-label="Search"
         >
           <IconSearch />
@@ -896,7 +896,7 @@ function ProjectSectionHeader({
         <>
           <button
             type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-[var(--brand-default)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--brand-default) hover:bg-(--bg-layer-2-hover)"
             aria-label="List view"
             title="List view"
           >
@@ -904,7 +904,7 @@ function ProjectSectionHeader({
           </button>
           <button
             type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
+            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
             aria-label="Kanban"
             title="Kanban"
           >
@@ -912,7 +912,7 @@ function ProjectSectionHeader({
           </button>
           <Link
             to={`${baseUrl}/board`}
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
+            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
             aria-label="Board"
             title="Board"
           >
@@ -920,7 +920,7 @@ function ProjectSectionHeader({
           </Link>
           <button
             type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
+            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
             aria-label="Calendar"
             title="Calendar"
           >
@@ -928,28 +928,28 @@ function ProjectSectionHeader({
           </button>
           <button
             type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
+            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
             aria-label="Gallery"
             title="Gallery"
           >
             <IconGrid />
           </button>
-          <div className="mx-1 w-px self-stretch bg-[var(--border-subtle)]" />
+          <div className="mx-1 w-px self-stretch bg-(--border-subtle)" />
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             <IconFilter /> Filters <IconChevronDown />
           </button>
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             Display <IconChevronDown />
           </button>
           <Link
             to={`/${workspaceSlug}/analytics/work-items`}
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] no-underline hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
           >
             <IconBarChart /> Analytics
           </Link>
@@ -966,14 +966,14 @@ function ProjectSectionHeader({
         <>
           <button
             type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
             aria-label="Search"
           >
             <IconSearch />
           </button>
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             <IconFilter /> Filters <IconChevronDown />
           </button>
@@ -992,9 +992,9 @@ function ProjectSectionHeader({
       return (
         <>
           {showSearchInput ? (
-            <div className="flex h-8 min-w-[140px] max-w-[200px] items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2">
+            <div className="flex h-8 min-w-[140px] max-w-[200px] items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2">
               <span
-                className="shrink-0 text-[var(--txt-icon-tertiary)]"
+                className="shrink-0 text-(--txt-icon-tertiary)"
                 aria-hidden
               >
                 <IconSearch />
@@ -1015,7 +1015,7 @@ function ProjectSectionHeader({
                     setModulesSearchExpanded(false);
                 }}
                 placeholder="Search"
-                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+                className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
                 aria-label="Search modules"
               />
               {modulesSearch.length > 0 && (
@@ -1026,7 +1026,7 @@ function ProjectSectionHeader({
                     next.delete("search");
                     setSearchParams(next);
                   }}
-                  className="shrink-0 rounded p-0.5 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)] hover:text-[var(--txt-icon-secondary)]"
+                  className="shrink-0 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
                   aria-label="Clear search"
                 >
                   <IconX />
@@ -1037,7 +1037,7 @@ function ProjectSectionHeader({
             <button
               type="button"
               onClick={() => setModulesSearchExpanded(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)] hover:text-[var(--txt-icon-secondary)]"
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
               aria-label="Search modules"
             >
               <IconSearch />
@@ -1061,11 +1061,11 @@ function ProjectSectionHeader({
               };
               return labels[sort] ?? "Progress";
             })()}
-            panelClassName="min-w-[200px] rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-[var(--shadow-raised)]"
+            panelClassName="min-w-[200px] rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
             align="left"
             triggerContent={
               <>
-                <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
                   <IconArrowUpDown />
                 </span>
                 <span className="truncate">
@@ -1082,12 +1082,12 @@ function ProjectSectionHeader({
                     return labels[sort] ?? "Progress";
                   })()}
                 </span>
-                <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
                   <IconChevronDown />
                 </span>
               </>
             }
-            triggerClassName="flex h-8 items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            triggerClassName="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             {[
               { value: "name", label: "Name" },
@@ -1111,18 +1111,18 @@ function ProjectSectionHeader({
                     });
                     setModulesSortOpen(null);
                   }}
-                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                 >
                   {opt.label}
                   {current === opt.value && (
-                    <span className="shrink-0 text-[var(--txt-primary)]">
+                    <span className="shrink-0 text-(--txt-primary)">
                       <IconCheck />
                     </span>
                   )}
                 </button>
               );
             })}
-            <div className="my-1 border-t border-[var(--border-subtle)]" />
+            <div className="my-1 border-t border-(--border-subtle)" />
             {["asc", "desc"].map((orderValue) => {
               const currentOrder = searchParams.get("order") || "asc";
               const label = orderValue === "asc" ? "Ascending" : "Descending";
@@ -1138,11 +1138,11 @@ function ProjectSectionHeader({
                     });
                     setModulesSortOpen(null);
                   }}
-                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                 >
                   {label}
                   {currentOrder === orderValue && (
-                    <span className="shrink-0 text-[var(--txt-primary)]">
+                    <span className="shrink-0 text-(--txt-primary)">
                       <IconCheck />
                     </span>
                   )}
@@ -1157,20 +1157,20 @@ function ProjectSectionHeader({
             label="Filters"
             icon={<IconFilter />}
             displayValue="Filters"
-            panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)] overflow-hidden"
+            panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
             align="right"
             triggerContent={
               <>
-                <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
                   <IconFilter />
                 </span>
                 <span className="truncate">Filters</span>
-                <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
                   <IconChevronDown />
                 </span>
               </>
             }
-            triggerClassName="flex h-8 items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            triggerClassName="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             <ModuleFiltersPanel
               workspaceSlug={workspaceSlug}
@@ -1180,14 +1180,14 @@ function ProjectSectionHeader({
               }}
             />
           </Dropdown>
-          <div className="flex h-8 overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] p-0.5">
+          <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
             <button
               type="button"
               onClick={() => handleLayoutChange("list")}
-              className={`flex size-7 items-center justify-center rounded-l-md text-[var(--txt-icon-secondary)] transition-colors ${
+              className={`flex size-7 items-center justify-center rounded-l-md text-(--txt-icon-secondary) transition-colors ${
                 listActive
-                  ? "bg-white shadow-sm text-[var(--txt-primary)]"
-                  : "bg-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
+                  ? "bg-white shadow-sm text-(--txt-primary)"
+                  : "bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
               }`}
               aria-pressed={listActive}
               title="List layout"
@@ -1197,10 +1197,10 @@ function ProjectSectionHeader({
             <button
               type="button"
               onClick={() => handleLayoutChange("gallery")}
-              className={`flex size-7 items-center justify-center text-[var(--txt-icon-secondary)] transition-colors ${
+              className={`flex size-7 items-center justify-center text-(--txt-icon-secondary) transition-colors ${
                 galleryActive
-                  ? "bg-white shadow-sm text-[var(--txt-primary)]"
-                  : "bg-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
+                  ? "bg-white shadow-sm text-(--txt-primary)"
+                  : "bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
               }`}
               aria-pressed={galleryActive}
               title="Gallery layout"
@@ -1210,10 +1210,10 @@ function ProjectSectionHeader({
             <button
               type="button"
               onClick={() => handleLayoutChange("timeline")}
-              className={`flex size-7 items-center justify-center rounded-r-md text-[var(--txt-icon-secondary)] transition-colors ${
+              className={`flex size-7 items-center justify-center rounded-r-md text-(--txt-icon-secondary) transition-colors ${
                 timelineActive
-                  ? "bg-white shadow-sm text-[var(--txt-primary)]"
-                  : "bg-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
+                  ? "bg-white shadow-sm text-(--txt-primary)"
+                  : "bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
               }`}
               aria-pressed={timelineActive}
               title="Timeline layout"
@@ -1246,13 +1246,13 @@ function ProjectSectionHeader({
         <>
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             <IconFilter /> Filters <IconChevronDown />
           </button>
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             Display <IconChevronDown />
           </button>
@@ -1261,7 +1261,7 @@ function ProjectSectionHeader({
           </Button>
           <button
             type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
+            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
             aria-label="More options"
           >
             <IconMoreVertical />
@@ -1280,22 +1280,22 @@ function ProjectSectionHeader({
       >
         <Link
           to={issuesUrl}
-          className="flex items-center gap-1.5 rounded-l-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-3 py-1.5 font-medium text-[var(--txt-secondary)] no-underline hover:bg-[var(--bg-layer-2-hover)]"
+          className="flex items-center gap-1.5 rounded-l-md border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
         >
           {projectName}
         </Link>
         <button
           type="button"
           onClick={() => setProjectDropdownOpen((o) => !o)}
-          className="flex h-[34px] w-8 items-center justify-center rounded-r-md border border-l-0 border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
+          className="flex h-[34px] w-8 items-center justify-center rounded-r-md border border-l-0 border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
           aria-label="Select project"
         >
           <IconChevronDown />
         </button>
         {projectDropdownOpen && (
-          <div className="absolute left-0 top-full z-20 mt-1.5 w-64 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-1.5 shadow-[var(--shadow-raised)]">
-            <div className="mb-1.5 flex items-center gap-2 rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-2 py-1.5">
-              <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+          <div className="absolute left-0 top-full z-20 mt-1.5 w-64 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-1.5 shadow-(--shadow-raised)">
+            <div className="mb-1.5 flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
+              <span className="shrink-0 text-(--txt-icon-tertiary)">
                 <IconSearch />
               </span>
               <input
@@ -1303,7 +1303,7 @@ function ProjectSectionHeader({
                 placeholder="Search"
                 value={projectSearch}
                 onChange={(e) => setProjectSearch(e.target.value)}
-                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+                className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
               />
             </div>
             <div className="max-h-64 overflow-y-auto py-0.5">
@@ -1312,11 +1312,11 @@ function ProjectSectionHeader({
                   key={p.id}
                   type="button"
                   onClick={() => handleSelectProject(p.id)}
-                  className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                  className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                 >
                   <span className="truncate">{p.name}</span>
                   {p.id === projectId && (
-                    <span className="shrink-0 text-[var(--txt-primary)]">
+                    <span className="shrink-0 text-(--txt-primary)">
                       <IconCheck />
                     </span>
                   )}
@@ -1457,17 +1457,17 @@ function WorkspaceViewsHeader() {
 
   return (
     <>
-      <div className="flex items-center gap-2 text-sm font-medium text-[var(--txt-secondary)]">
+      <div className="flex items-center gap-2 text-sm font-medium text-(--txt-secondary)">
         <Link
           to={workspaceSlug ? `/${workspaceSlug}/views/all-issues` : "/"}
-          className="flex items-center gap-1.5 text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]"
+          className="flex items-center gap-1.5 text-(--txt-secondary) hover:text-(--txt-primary)"
         >
-          <span className="flex size-5 items-center justify-center text-[var(--txt-icon-tertiary)]">
+          <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
             <IconViewsPlane />
           </span>
           <span>Views</span>
         </Link>
-        <span className="text-[var(--txt-icon-tertiary)]" aria-hidden>
+        <span className="text-(--txt-icon-tertiary)" aria-hidden>
           &gt;
         </span>
         <Dropdown
@@ -1477,12 +1477,12 @@ function WorkspaceViewsHeader() {
           label="All work items"
           icon={<IconViewsPlane />}
           displayValue={displayName}
-          panelClassName="flex min-w-[220px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)] overflow-hidden"
+          panelClassName="flex min-w-[220px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
           align="left"
         >
-          <div className="sticky top-0 shrink-0 border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-2">
-            <div className="flex items-center gap-2 rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-2 py-1.5">
-              <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+          <div className="sticky top-0 shrink-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-2">
+            <div className="flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
+              <span className="shrink-0 text-(--txt-icon-tertiary)">
                 <IconSearch />
               </span>
               <input
@@ -1490,7 +1490,7 @@ function WorkspaceViewsHeader() {
                 placeholder="Search"
                 value={viewSearch}
                 onChange={(e) => setViewSearch(e.target.value)}
-                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+                className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
               />
             </div>
           </div>
@@ -1503,14 +1503,14 @@ function WorkspaceViewsHeader() {
                 key={view.id}
                 type="button"
                 onClick={() => handleSelectView(view.id)}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
               >
-                <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
                   <IconLayers />
                 </span>
                 <span className="min-w-0 flex-1 truncate">{view.name}</span>
                 {selectedViewId === view.id && (
-                  <span className="shrink-0 text-[var(--txt-primary)]">
+                  <span className="shrink-0 text-(--txt-primary)">
                     <IconCheck />
                   </span>
                 )}
@@ -1596,8 +1596,8 @@ function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
 
   return (
     <>
-      <div className="flex items-center gap-2 text-sm font-medium text-[var(--txt-secondary)]">
-        <span className="flex size-5 items-center justify-center text-[var(--txt-icon-tertiary)]">
+      <div className="flex items-center gap-2 text-sm font-medium text-(--txt-secondary)">
+        <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
           <IconBarChart />
         </span>
         Analytics
@@ -1610,16 +1610,16 @@ function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
           label="All projects"
           icon={<IconBriefcase />}
           displayValue={selectedProject?.name ?? "All projects"}
-          panelClassName="flex min-w-[200px] max-h-52 flex-col rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)]"
+          panelClassName="flex min-w-[200px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
           align="right"
         >
-          <div className="sticky top-0 border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-1.5">
+          <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
             <input
               type="text"
               placeholder="Search..."
               value={projectSearch}
               onChange={(e) => setProjectSearch(e.target.value)}
-              className="w-full rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-2 py-1 text-xs placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+              className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
             />
           </div>
           <div className="overflow-auto py-0.5 [&_button]:px-2 [&_button]:py-1 [&_button]:text-xs">
@@ -1629,7 +1629,7 @@ function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                 setSelectedProjectId(null);
                 setOpenDropdown(null);
               }}
-              className="w-full text-left text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+              className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             >
               All projects
             </button>
@@ -1641,7 +1641,7 @@ function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                   setSelectedProjectId(p.id);
                   setOpenDropdown(null);
                 }}
-                className="w-full text-left text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
               >
                 {p.name}
               </button>
@@ -1832,7 +1832,7 @@ export function PageHeader() {
 
   return (
     <header
-      className="flex min-h-[52px] shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-[var(--padding-page)] py-3"
+      className="flex min-h-[52px] shrink-0 items-center justify-between border-b border-(--border-subtle) bg-(--bg-canvas) px-(--padding-page) py-3"
       role="banner"
     >
       {content}

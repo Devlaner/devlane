@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button, Skeleton } from "../../components/ui";
 import { workspaceService } from "../../services/workspaceService";
@@ -81,7 +81,7 @@ export function InstanceAdminWorkspacePage() {
           <Skeleton className="h-4 w-56" />
           <Skeleton className="mt-1.5 h-3 w-full max-w-md" />
         </div>
-        <section className="flex items-start justify-between gap-3 rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3">
+        <section className="flex items-start justify-between gap-3 rounded border border-(--border-subtle) bg-(--bg-surface-1) p-3">
           <div className="min-w-0 flex-1 space-y-1">
             <Skeleton className="h-3 w-72" />
             <Skeleton className="h-3 w-full max-w-lg" />
@@ -99,7 +99,7 @@ export function InstanceAdminWorkspacePage() {
             {[1, 2, 3].map((i) => (
               <li
                 key={i}
-                className="flex items-center justify-between gap-3 rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3"
+                className="flex items-center justify-between gap-3 rounded border border-(--border-subtle) bg-(--bg-surface-1) p-3"
               >
                 <div className="min-w-0 flex-1">
                   <Skeleton className="h-4 w-32" />
@@ -117,29 +117,29 @@ export function InstanceAdminWorkspacePage() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h1 className="text-base font-semibold text-[var(--txt-primary)]">
+        <h1 className="text-base font-semibold text-(--txt-primary)">
           Workspaces on this instance
         </h1>
-        <p className="mt-0.5 text-xs text-[var(--txt-secondary)]">
+        <p className="mt-0.5 text-xs text-(--txt-secondary)">
           See all workspaces and control who can create them.
         </p>
       </div>
 
       {error && (
-        <p className="text-sm text-[var(--txt-danger-primary)]">{error}</p>
+        <p className="text-sm text-(--txt-danger-primary)">{error}</p>
       )}
 
-      <section className="flex items-start justify-between gap-3 rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3">
+      <section className="flex items-start justify-between gap-3 rounded border border-(--border-subtle) bg-(--bg-surface-1) p-3">
         <div>
-          <p className="text-xs font-medium text-[var(--txt-primary)]">
+          <p className="text-xs font-medium text-(--txt-primary)">
             Prevent anyone else from creating a workspace.
           </p>
-          <p className="mt-0.5 text-xs text-[var(--txt-secondary)]">
+          <p className="mt-0.5 text-xs text-(--txt-secondary)">
             Toggling this on will let only you (the instance admin) create
             workspaces. You will have to invite users to new workspaces.
           </p>
         </div>
-        <label className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full bg-[var(--neutral-400)] has-[:checked]:bg-[var(--brand-default)]">
+        <label className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full bg-(--neutral-400) has-[:checked]:bg-(--brand-default)">
           <input
             type="checkbox"
             className="peer sr-only"
@@ -154,10 +154,10 @@ export function InstanceAdminWorkspacePage() {
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--txt-secondary)]">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-(--txt-secondary)">
               All workspaces on this instance • {workspaces.length}
             </h2>
-            <p className="mt-0.5 text-xs text-[var(--txt-secondary)]">
+            <p className="mt-0.5 text-xs text-(--txt-secondary)">
               You can&apos;t yet delete workspaces and you can only go to the
               workspace if you are an Admin or a Member.
             </p>
@@ -172,7 +172,7 @@ export function InstanceAdminWorkspacePage() {
           </Button>
         </div>
         {error && (
-          <p className="mb-3 text-sm text-[var(--txt-danger-primary)]">
+          <p className="mb-3 text-sm text-(--txt-danger-primary)">
             {error}
           </p>
         )}
@@ -180,24 +180,24 @@ export function InstanceAdminWorkspacePage() {
           {workspaces.map((w) => (
             <li
               key={w.id}
-              className="flex items-center justify-between gap-3 rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3"
+              className="flex items-center justify-between gap-3 rounded border border-(--border-subtle) bg-(--bg-surface-1) p-3"
             >
               <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded bg-[var(--bg-layer-2)] text-sm font-semibold text-[var(--txt-icon-secondary)]">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded bg-(--bg-layer-2) text-sm font-semibold text-(--txt-icon-secondary)">
                   {w.name.charAt(0)}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-[var(--txt-primary)]">
+                  <p className="text-sm font-medium text-(--txt-primary)">
                     {w.name}
                   </p>
-                  <p className="text-xs text-[var(--txt-tertiary)]">
+                  <p className="text-xs text-(--txt-tertiary)">
                     [{w.slug}]
                   </p>
                 </div>
               </div>
               <Link
                 to={`/${w.slug}`}
-                className="flex size-8 shrink-0 items-center justify-center rounded text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                className="flex size-8 shrink-0 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
                 aria-label="Go to workspace"
               >
                 <svg

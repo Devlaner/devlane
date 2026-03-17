@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Modal } from "../ui";
 
 const MONTHS = [
@@ -145,10 +145,10 @@ export function DateRangeModal({
             onClick={() => (isStart ? setStartDate(date) : setEndDate(date))}
             className={`flex h-8 w-8 min-h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-sm leading-none overflow-hidden ${
               selected
-                ? "bg-[var(--brand-default)] text-white"
+                ? "bg-(--brand-default) text-white"
                 : inRange
-                  ? "bg-[var(--brand-200)] text-[var(--brand-default)]"
-                  : "text-[var(--txt-primary)] hover:bg-[var(--bg-layer-2)]"
+                  ? "bg-(--brand-200) text-(--brand-default)"
+                  : "text-(--txt-primary) hover:bg-(--bg-layer-2)"
             }`}
           >
             <span className="truncate">{d}</span>
@@ -170,7 +170,7 @@ export function DateRangeModal({
     return (
       <div className="flex flex-col">
         <div className="flex items-center justify-between pb-2">
-          <span className="text-sm font-medium text-[var(--txt-primary)]">
+          <span className="text-sm font-medium text-(--txt-primary)">
             {MONTHS[month]} ▾ {year}
           </span>
           <div className="flex gap-1">
@@ -180,7 +180,7 @@ export function DateRangeModal({
                 if (month === 0) setLeftYear((y) => y - 1);
                 setLeftMonth((m) => (m === 0 ? 11 : m - 1));
               }}
-              className="rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)]"
+              className="rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2)"
               aria-label="Previous month"
             >
               ←
@@ -191,7 +191,7 @@ export function DateRangeModal({
                 if (month === 11) setLeftYear((y) => y + 1);
                 setLeftMonth((m) => (m === 11 ? 0 : m + 1));
               }}
-              className="rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)]"
+              className="rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2)"
               aria-label="Next month"
             >
               →
@@ -200,7 +200,7 @@ export function DateRangeModal({
         </div>
         <table className="table-fixed w-full min-w-[14rem] text-left text-sm">
           <thead>
-            <tr className="text-[var(--txt-tertiary)]">
+            <tr className="text-(--txt-tertiary)">
               {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
                 <th
                   key={day}
@@ -224,18 +224,18 @@ export function DateRangeModal({
       title={title}
       className="max-w-[520px]"
       footer={
-        <div className="flex justify-end gap-2 border-t border-[var(--border-subtle)] px-5 py-4">
+        <div className="flex justify-end gap-2 border-t border-(--border-subtle) px-5 py-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-3 py-1.5 text-sm font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleApply}
-            className="rounded-md bg-[var(--brand-default)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+            className="rounded-md bg-(--brand-default) px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
           >
             Apply
           </button>
@@ -251,7 +251,7 @@ export function DateRangeModal({
             {renderCalendar(rightYear, rightMonth, false)}
           </div>
         </div>
-        <p className="mt-4 text-sm text-[var(--txt-secondary)]">
+        <p className="mt-4 text-sm text-(--txt-secondary)">
           After: {formatDisplay(startDate)} Before: {formatDisplay(endDate)}
         </p>
       </div>

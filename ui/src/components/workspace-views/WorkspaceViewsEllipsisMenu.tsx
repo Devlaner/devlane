@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+﻿import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
 
@@ -113,7 +113,7 @@ export function WorkspaceViewsEllipsisMenu() {
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex size-8 items-center justify-center rounded-md border border-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-icon-secondary)]"
+        className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
         aria-label="More options"
       >
         <IconMoreVertical />
@@ -123,7 +123,7 @@ export function WorkspaceViewsEllipsisMenu() {
         createPortal(
           <div
             ref={panelRef}
-            className="min-w-[180px] rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-[var(--shadow-raised)]"
+            className="min-w-[180px] rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
             style={{
               position: "fixed",
               top: position.top,
@@ -134,9 +134,9 @@ export function WorkspaceViewsEllipsisMenu() {
             <button
               type="button"
               onClick={handleOpenInNewTab}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             >
-              <span className="text-[var(--txt-icon-tertiary)]">
+              <span className="text-(--txt-icon-tertiary)">
                 <IconExternal />
               </span>
               Open in new tab
@@ -144,9 +144,9 @@ export function WorkspaceViewsEllipsisMenu() {
             <button
               type="button"
               onClick={handleCopyLink}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             >
-              <span className="text-[var(--txt-icon-tertiary)]">
+              <span className="text-(--txt-icon-tertiary)">
                 <IconLink />
               </span>
               Copy link

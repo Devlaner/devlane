@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, IconEye, IconEyeOff, Input } from "../../components/ui";
 
@@ -41,11 +41,11 @@ export function InstanceAdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--bg-canvas)]">
+    <div className="flex min-h-screen flex-col bg-(--bg-canvas)">
       {/* Top-left branding */}
       <header className="shrink-0 px-6 py-4">
-        <div className="flex items-center gap-2 text-lg font-semibold text-[var(--txt-primary)]">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-[var(--bg-layer-2)] text-[var(--txt-icon-secondary)]">
+        <div className="flex items-center gap-2 text-lg font-semibold text-(--txt-primary)">
+          <span className="flex size-9 items-center justify-center rounded-lg bg-(--bg-layer-2) text-(--txt-icon-secondary)">
             <IconGlobe />
           </span>
           Devlane
@@ -55,10 +55,10 @@ export function InstanceAdminLoginPage() {
       {/* Centered form */}
       <main className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-8">
         <div className="w-full max-w-sm">
-          <h1 className="text-center text-xl font-semibold text-[var(--txt-primary)]">
+          <h1 className="text-center text-xl font-semibold text-(--txt-primary)">
             Manage your Devlane instance
           </h1>
-          <p className="mt-2 text-center text-sm text-[var(--txt-secondary)]">
+          <p className="mt-2 text-center text-sm text-(--txt-secondary)">
             Configure instance-wide settings to secure your instance.
           </p>
           <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
@@ -75,7 +75,7 @@ export function InstanceAdminLoginPage() {
             <div className="flex flex-col gap-1">
               <label
                 htmlFor="instance-admin-password"
-                className="text-sm font-medium text-[var(--txt-secondary)]"
+                className="text-sm font-medium text-(--txt-secondary)"
               >
                 Password *
               </label>
@@ -88,19 +88,19 @@ export function InstanceAdminLoginPage() {
                   placeholder="Enter your password"
                   required
                   autoComplete="current-password"
-                  className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-2 pl-3 pr-10 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+                  className="h-9 w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-2 pl-3 pr-10 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((p) => !p)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <IconEyeOff /> : <IconEye />}
                 </button>
               </div>
               {error && (
-                <span className="text-xs text-[var(--txt-danger-primary)]">
+                <span className="text-xs text-(--txt-danger-primary)">
                   {error}
                 </span>
               )}

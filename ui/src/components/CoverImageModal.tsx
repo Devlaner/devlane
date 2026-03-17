@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
 import { Button, Modal } from "./ui";
 import {
   instanceSettingsService,
@@ -164,14 +164,14 @@ export function CoverImageModal({
       footer={footer}
       className="max-w-2xl"
     >
-      <div className="flex gap-2 border-b border-[var(--border-subtle)] pb-3 mb-3">
+      <div className="flex gap-2 border-b border-(--border-subtle) pb-3 mb-3">
         <button
           type="button"
           onClick={() => setTab(TAB_UNSPLASH)}
-          className={`rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium transition-colors ${
+          className={`rounded-(--radius-md) px-3 py-1.5 text-sm font-medium transition-colors ${
             tab === TAB_UNSPLASH
-              ? "bg-[var(--brand-default)] text-white"
-              : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+              ? "bg-(--brand-default) text-white"
+              : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover)"
           }`}
         >
           Unsplash
@@ -179,10 +179,10 @@ export function CoverImageModal({
         <button
           type="button"
           onClick={() => setTab(TAB_UPLOAD)}
-          className={`rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium transition-colors ${
+          className={`rounded-(--radius-md) px-3 py-1.5 text-sm font-medium transition-colors ${
             tab === TAB_UPLOAD
-              ? "bg-[var(--brand-default)] text-white"
-              : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+              ? "bg-(--brand-default) text-white"
+              : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover)"
           }`}
         >
           Upload
@@ -198,7 +198,7 @@ export function CoverImageModal({
               onChange={(e) => setUnsplashQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="Search for images"
-              className="min-w-0 flex-1 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+              className="min-w-0 flex-1 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
             />
             <Button
               variant="secondary"
@@ -209,7 +209,7 @@ export function CoverImageModal({
             </Button>
           </div>
           {unsplashError && (
-            <p className="text-sm text-[var(--txt-danger-primary)]">
+            <p className="text-sm text-(--txt-danger-primary)">
               {unsplashError}
             </p>
           )}
@@ -219,10 +219,10 @@ export function CoverImageModal({
                 type="button"
                 key={r.id}
                 onClick={() => setSelectedUrl(r.url)}
-                className={`relative aspect-video rounded-[var(--radius-md)] overflow-hidden border-2 transition-colors ${
+                className={`relative aspect-video rounded-(--radius-md) overflow-hidden border-2 transition-colors ${
                   selectedUrl === r.url
-                    ? "border-[var(--brand-default)] ring-2 ring-[var(--brand-200)]"
-                    : "border-transparent hover:border-[var(--border-strong)]"
+                    ? "border-(--brand-default) ring-2 ring-(--brand-200)"
+                    : "border-transparent hover:border-(--border-strong)"
                 }`}
               >
                 <img
@@ -242,13 +242,13 @@ export function CoverImageModal({
             <div
               onDrop={handleDrop}
               onDragOver={handleDragOver}
-              className="flex flex-col items-center justify-center rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border-subtle)] bg-[var(--bg-layer-2)] py-12 px-4"
+              className="flex flex-col items-center justify-center rounded-(--radius-md) border-2 border-dashed border-(--border-subtle) bg-(--bg-layer-2) py-12 px-4"
             >
-              <p className="text-sm text-[var(--txt-secondary)] mb-2">
+              <p className="text-sm text-(--txt-secondary) mb-2">
                 Drag & drop image here
               </p>
               <label className="cursor-pointer">
-                <span className="text-sm font-medium text-[var(--txt-accent-primary)] hover:underline">
+                <span className="text-sm font-medium text-(--txt-accent-primary) hover:underline">
                   Browse
                 </span>
                 <input
@@ -260,7 +260,7 @@ export function CoverImageModal({
               </label>
             </div>
           ) : (
-            <div className="relative rounded-[var(--radius-md)] border border-[var(--border-subtle)] overflow-hidden bg-[var(--bg-layer-2)]">
+            <div className="relative rounded-(--radius-md) border border-(--border-subtle) overflow-hidden bg-(--bg-layer-2)">
               <img
                 src={uploadPreview}
                 alt="Preview"
@@ -270,18 +270,18 @@ export function CoverImageModal({
                 <button
                   type="button"
                   onClick={handleRemoveUpload}
-                  className="text-xs font-medium text-[var(--txt-accent-primary)] hover:underline"
+                  className="text-xs font-medium text-(--txt-accent-primary) hover:underline"
                 >
                   Edit
                 </button>
               </div>
             </div>
           )}
-          <p className="text-xs text-[var(--txt-tertiary)]">
+          <p className="text-xs text-(--txt-tertiary)">
             File formats supported: .jpeg, .jpg, .png, .webp
           </p>
           {uploadError && (
-            <p className="text-sm text-[var(--txt-danger-primary)]">
+            <p className="text-sm text-(--txt-danger-primary)">
               {uploadError}
             </p>
           )}

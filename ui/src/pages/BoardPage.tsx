@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Card, CardContent, Badge } from "../components/ui";
 import { workspaceService } from "../services/workspaceService";
@@ -75,14 +75,14 @@ export function BoardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading…
       </div>
     );
   }
   if (!workspace || !project) {
     return (
-      <div className="text-[var(--txt-secondary)]">Project not found.</div>
+      <div className="text-(--txt-secondary)">Project not found.</div>
     );
   }
 
@@ -94,26 +94,26 @@ export function BoardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-[var(--txt-primary)]">
+      <h1 className="text-2xl font-semibold text-(--txt-primary)">
         Board
       </h1>
       <div className="flex gap-4 overflow-x-auto pb-4">
         {issuesByState.map(({ state, issues: stateIssues }) => (
           <div
             key={state.id}
-            className="flex w-72 shrink-0 flex-col rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-layer-1)]"
+            className="flex w-72 shrink-0 flex-col rounded-(--radius-lg) border border-(--border-subtle) bg-(--bg-layer-1)"
           >
             <div
-              className="border-b border-[var(--border-subtle)] px-4 py-3"
+              className="border-b border-(--border-subtle) px-4 py-3"
               style={{
                 borderLeftWidth: "4px",
                 borderLeftColor: state.color ?? "var(--border-subtle)",
               }}
             >
-              <h2 className="font-medium text-[var(--txt-primary)]">
+              <h2 className="font-medium text-(--txt-primary)">
                 {state.name}
               </h2>
-              <p className="text-xs text-[var(--txt-tertiary)]">
+              <p className="text-xs text-(--txt-tertiary)">
                 {stateIssues.length} issue{stateIssues.length !== 1 ? "s" : ""}
               </p>
             </div>
@@ -126,10 +126,10 @@ export function BoardPage() {
                 >
                   <Card
                     variant="elevated"
-                    className="cursor-pointer transition-shadow hover:shadow-[var(--shadow-overlay)]"
+                    className="cursor-pointer transition-shadow hover:shadow-(--shadow-overlay)"
                   >
                     <CardContent className="p-3">
-                      <p className="font-medium text-[var(--txt-primary)]">
+                      <p className="font-medium text-(--txt-primary)">
                         {issue.name}
                       </p>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -148,7 +148,7 @@ export function BoardPage() {
                 </Link>
               ))}
               {stateIssues.length === 0 && (
-                <p className="py-4 text-center text-sm text-[var(--txt-tertiary)]">
+                <p className="py-4 text-center text-sm text-(--txt-tertiary)">
                   No issues
                 </p>
               )}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
 import { Button, Modal } from "./ui";
 import { uploadImage } from "../services/uploadService";
 
@@ -93,7 +93,7 @@ export function UploadImageModal({
       {preview && (
         <Button
           variant="secondary"
-          className="text-[var(--txt-danger-primary)]"
+          className="text-(--txt-danger-primary)"
           onClick={handleRemove}
         >
           Remove
@@ -121,13 +121,13 @@ export function UploadImageModal({
           <div
             onDrop={handleDrop}
             onDragOver={handleDragOver}
-            className="flex flex-col items-center justify-center rounded-[var(--radius-md)] border-2 border-dashed border-[var(--border-subtle)] bg-[var(--bg-layer-2)] py-12 px-4"
+            className="flex flex-col items-center justify-center rounded-(--radius-md) border-2 border-dashed border-(--border-subtle) bg-(--bg-layer-2) py-12 px-4"
           >
-            <p className="text-sm text-[var(--txt-secondary)] mb-2">
+            <p className="text-sm text-(--txt-secondary) mb-2">
               Drag & drop image here
             </p>
             <label className="cursor-pointer">
-              <span className="text-sm font-medium text-[var(--txt-accent-primary)] hover:underline">
+              <span className="text-sm font-medium text-(--txt-accent-primary) hover:underline">
                 Browse
               </span>
               <input
@@ -139,7 +139,7 @@ export function UploadImageModal({
             </label>
           </div>
         ) : (
-          <div className="relative rounded-[var(--radius-md)] border border-[var(--border-subtle)] overflow-hidden bg-[var(--bg-layer-2)]">
+          <div className="relative rounded-(--radius-md) border border-(--border-subtle) overflow-hidden bg-(--bg-layer-2)">
             <img
               src={preview}
               alt="Preview"
@@ -149,18 +149,18 @@ export function UploadImageModal({
               <button
                 type="button"
                 onClick={handleRemove}
-                className="text-xs font-medium text-[var(--txt-accent-primary)] hover:underline"
+                className="text-xs font-medium text-(--txt-accent-primary) hover:underline"
               >
                 Edit
               </button>
             </div>
           </div>
         )}
-        <p className="text-xs text-[var(--txt-tertiary)]">
+        <p className="text-xs text-(--txt-tertiary)">
           File formats supported: .jpeg, .jpg, .png, .webp
         </p>
         {error && (
-          <p className="text-sm text-[var(--txt-danger-primary)]">{error}</p>
+          <p className="text-sm text-(--txt-danger-primary)">{error}</p>
         )}
       </div>
     </Modal>

@@ -1,4 +1,4 @@
-import type { ChangeEvent } from "react";
+﻿import type { ChangeEvent } from "react";
 
 interface ProjectNetworkSelectProps {
   value: string;
@@ -18,7 +18,7 @@ export function ProjectNetworkSelect({
 
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+      <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
         Network
       </label>
       <div className="relative">
@@ -26,7 +26,7 @@ export function ProjectNetworkSelect({
           value={value}
           onChange={handleChange}
           disabled={disabled}
-          className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+          className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
         >
           <option value="public">Public</option>
           <option value="private">Private</option>

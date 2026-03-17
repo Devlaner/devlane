@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button, Input, Card, CardContent } from "../components/ui";
 import { useAuth } from "../contexts/AuthContext";
@@ -40,13 +40,13 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--bg-canvas)] p-4">
+    <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
       <Card className="w-full max-w-md">
         <CardContent className="p-6">
-          <h1 className="mb-2 text-2xl font-semibold text-[var(--txt-primary)]">
+          <h1 className="mb-2 text-2xl font-semibold text-(--txt-primary)">
             Sign in to Devlane
           </h1>
-          <p className="mb-6 text-sm text-[var(--txt-secondary)]">
+          <p className="mb-6 text-sm text-(--txt-secondary)">
             Enter your email and password to continue.
           </p>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">

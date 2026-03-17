@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+﻿import { useParams, Link } from "react-router-dom";
 import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Avatar, Card, CardContent } from "../components/ui";
@@ -265,14 +265,14 @@ export function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading…
       </div>
     );
   }
   if (!workspace) {
     return (
-      <div className="p-4 text-[var(--txt-secondary)]">
+      <div className="p-4 text-(--txt-secondary)">
         Workspace not found.
       </div>
     );
@@ -292,7 +292,7 @@ export function ProfilePage() {
       {/* Main content */}
       <div className="min-w-0 flex-1 space-y-6 pb-8">
         {/* Tabs */}
-        <div className="border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)]">
+        <div className="border-b border-(--border-subtle) bg-(--bg-surface-1)">
           <div className="flex gap-1">
             {tabs.map((tab) => (
               <button
@@ -301,8 +301,8 @@ export function ProfilePage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                   activeTab === tab.id
-                    ? "border-[var(--brand-default)] text-[var(--txt-primary)]"
-                    : "border-transparent text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]"
+                    ? "border-(--brand-default) text-(--txt-primary)"
+                    : "border-transparent text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                 }`}
               >
                 {tab.label}
@@ -315,21 +315,21 @@ export function ProfilePage() {
           <>
             {/* Overview */}
             <section>
-              <h2 className="mb-3 text-sm font-semibold text-[var(--txt-primary)]">
+              <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">
                 Overview
               </h2>
               <div className="grid gap-4 sm:grid-cols-3">
                 <button
                   type="button"
                   onClick={() => setActiveTab("created")}
-                  className="w-full cursor-pointer rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] text-left transition-colors hover:bg-[var(--bg-layer-1-hover)] focus:outline-none"
+                  className="w-full cursor-pointer rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) text-left transition-colors hover:bg-(--bg-layer-1-hover) focus:outline-none"
                 >
                   <Card
                     variant="outlined"
                     className="border-0 bg-transparent shadow-none"
                   >
                     <CardContent className="flex items-center gap-3 p-4">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--bg-layer-1)] text-[var(--txt-icon-secondary)]">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-(--bg-layer-1) text-(--txt-icon-secondary)">
                         <svg
                           width="20"
                           height="20"
@@ -345,10 +345,10 @@ export function ProfilePage() {
                         </svg>
                       </span>
                       <div>
-                        <p className="text-2xl font-semibold text-[var(--txt-primary)]">
+                        <p className="text-2xl font-semibold text-(--txt-primary)">
                           {issuesCreated.length}
                         </p>
-                        <p className="text-sm text-[var(--txt-secondary)]">
+                        <p className="text-sm text-(--txt-secondary)">
                           Work items created
                         </p>
                       </div>
@@ -358,14 +358,14 @@ export function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("assigned")}
-                  className="w-full cursor-pointer rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] text-left transition-colors hover:bg-[var(--bg-layer-1-hover)] focus:outline-none"
+                  className="w-full cursor-pointer rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) text-left transition-colors hover:bg-(--bg-layer-1-hover) focus:outline-none"
                 >
                   <Card
                     variant="outlined"
                     className="border-0 bg-transparent shadow-none"
                   >
                     <CardContent className="flex items-center gap-3 p-4">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--bg-layer-1)] text-[var(--txt-icon-secondary)]">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-(--bg-layer-1) text-(--txt-icon-secondary)">
                         <svg
                           width="20"
                           height="20"
@@ -381,10 +381,10 @@ export function ProfilePage() {
                         </svg>
                       </span>
                       <div>
-                        <p className="text-2xl font-semibold text-[var(--txt-primary)]">
+                        <p className="text-2xl font-semibold text-(--txt-primary)">
                           {issuesAssigned.length}
                         </p>
-                        <p className="text-sm text-[var(--txt-secondary)]">
+                        <p className="text-sm text-(--txt-secondary)">
                           Work items assigned
                         </p>
                       </div>
@@ -394,14 +394,14 @@ export function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("subscribed")}
-                  className="w-full cursor-pointer rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] text-left transition-colors hover:bg-[var(--bg-layer-1-hover)] focus:outline-none"
+                  className="w-full cursor-pointer rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) text-left transition-colors hover:bg-(--bg-layer-1-hover) focus:outline-none"
                 >
                   <Card
                     variant="outlined"
                     className="border-0 bg-transparent shadow-none"
                   >
                     <CardContent className="flex items-center gap-3 p-4">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--bg-layer-1)] text-[var(--txt-icon-secondary)]">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-(--bg-layer-1) text-(--txt-icon-secondary)">
                         <svg
                           width="20"
                           height="20"
@@ -415,10 +415,10 @@ export function ProfilePage() {
                         </svg>
                       </span>
                       <div>
-                        <p className="text-2xl font-semibold text-[var(--txt-primary)]">
+                        <p className="text-2xl font-semibold text-(--txt-primary)">
                           {issuesSubscribed}
                         </p>
-                        <p className="text-sm text-[var(--txt-secondary)]">
+                        <p className="text-sm text-(--txt-secondary)">
                           Work items subscribed
                         </p>
                       </div>
@@ -430,7 +430,7 @@ export function ProfilePage() {
 
             {/* Workload */}
             <section>
-              <h2 className="mb-3 text-sm font-semibold text-[var(--txt-primary)]">
+              <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">
                 Workload
               </h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -443,7 +443,7 @@ export function ProfilePage() {
                     <Card
                       key={cat.id}
                       variant="outlined"
-                      className="border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
+                      className="border border-(--border-subtle) bg-(--bg-surface-1)"
                     >
                       <CardContent className="flex items-center gap-3 p-4">
                         <span
@@ -452,10 +452,10 @@ export function ProfilePage() {
                           aria-hidden
                         />
                         <div>
-                          <p className="text-2xl font-semibold text-[var(--txt-primary)]">
+                          <p className="text-2xl font-semibold text-(--txt-primary)">
                             {count}
                           </p>
-                          <p className="text-sm text-[var(--txt-secondary)]">
+                          <p className="text-sm text-(--txt-secondary)">
                             {cat.label}
                           </p>
                         </div>
@@ -469,12 +469,12 @@ export function ProfilePage() {
             {/* Charts */}
             <div className="grid gap-6 lg:grid-cols-2">
               <section>
-                <h2 className="mb-3 text-sm font-semibold text-[var(--txt-primary)]">
+                <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">
                   Work items by Priority
                 </h2>
                 <Card
                   variant="outlined"
-                  className="border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
+                  className="border border-(--border-subtle) bg-(--bg-surface-1)"
                 >
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-2">
@@ -499,11 +499,11 @@ export function ProfilePage() {
                                   : "#94a3b8";
                         return (
                           <div key={p} className="flex items-center gap-3">
-                            <span className="w-16 shrink-0 capitalize text-sm text-[var(--txt-secondary)]">
+                            <span className="w-16 shrink-0 capitalize text-sm text-(--txt-secondary)">
                               {p}
                             </span>
                             <div className="min-w-0 flex-1">
-                              <div className="h-6 overflow-hidden rounded bg-[var(--bg-layer-1)]">
+                              <div className="h-6 overflow-hidden rounded bg-(--bg-layer-1)">
                                 <div
                                   className="h-full rounded"
                                   style={{
@@ -515,7 +515,7 @@ export function ProfilePage() {
                                 />
                               </div>
                             </div>
-                            <span className="w-6 text-right text-sm text-[var(--txt-secondary)]">
+                            <span className="w-6 text-right text-sm text-(--txt-secondary)">
                               {count}
                             </span>
                           </div>
@@ -526,12 +526,12 @@ export function ProfilePage() {
                 </Card>
               </section>
               <section>
-                <h2 className="mb-3 text-sm font-semibold text-[var(--txt-primary)]">
+                <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">
                   Work items by state
                 </h2>
                 <Card
                   variant="outlined"
-                  className="border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
+                  className="border border-(--border-subtle) bg-(--bg-surface-1)"
                 >
                   <CardContent className="flex flex-wrap items-center gap-6 p-4">
                     <div className="relative h-32 w-32 shrink-0">
@@ -547,10 +547,10 @@ export function ProfilePage() {
                             className="h-3 w-3 shrink-0 rounded-sm"
                             style={{ backgroundColor: item.color }}
                           />
-                          <span className="text-[var(--txt-secondary)]">
+                          <span className="text-(--txt-secondary)">
                             {item.label}
                           </span>
-                          <span className="text-[var(--txt-primary)]">
+                          <span className="text-(--txt-primary)">
                             ({item.count})
                           </span>
                         </div>
@@ -563,17 +563,17 @@ export function ProfilePage() {
 
             {/* Recent activity */}
             <section>
-              <h2 className="mb-3 text-sm font-semibold text-[var(--txt-primary)]">
+              <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">
                 Recent activity
               </h2>
               <Card
                 variant="outlined"
-                className="border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
+                className="border border-(--border-subtle) bg-(--bg-surface-1)"
               >
                 <CardContent className="p-0">
-                  <ul className="divide-y divide-[var(--border-subtle)]">
+                  <ul className="divide-y divide-(--border-subtle)">
                     {recentActivity.length === 0 ? (
-                      <li className="px-4 py-6 text-center text-sm text-[var(--txt-tertiary)]">
+                      <li className="px-4 py-6 text-center text-sm text-(--txt-tertiary)">
                         No recent activity
                       </li>
                     ) : (
@@ -596,7 +596,7 @@ export function ProfilePage() {
                           text = (
                             <>
                               You added a new label{" "}
-                              <span className="rounded bg-[var(--bg-warning-subtle)] px-1.5 py-0.5 text-[var(--txt-warning-primary)]">
+                              <span className="rounded bg-(--bg-warning-subtle) px-1.5 py-0.5 text-(--txt-warning-primary)">
                                 {act.labelName}
                               </span>{" "}
                               to {issueRef} {issueTitle}{" "}
@@ -640,7 +640,7 @@ export function ProfilePage() {
                               size="sm"
                               className="shrink-0"
                             />
-                            <p className="min-w-0 text-sm text-[var(--txt-secondary)]">
+                            <p className="min-w-0 text-sm text-(--txt-secondary)">
                               {text}
                             </p>
                           </li>
@@ -699,10 +699,10 @@ export function ProfilePage() {
       <aside className="hidden w-72 shrink-0 lg:flex lg:flex-col">
         <Card
           variant="outlined"
-          className="flex min-h-0 flex-1 flex-col overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden border border-(--border-subtle) bg-(--bg-surface-1)"
         >
           <div
-            className="relative h-20 shrink-0 bg-gradient-to-br from-[var(--brand-default)] to-[#0ea5e9]"
+            className="relative h-20 shrink-0 bg-gradient-to-br from-(--brand-default) to-[#0ea5e9]"
             style={
               getImageUrl(profileUser?.coverImageUrl)
                 ? {
@@ -743,20 +743,20 @@ export function ProfilePage() {
                 className="h-14 w-14"
               />
             </div>
-            <h3 className="text-center text-base font-semibold text-[var(--txt-primary)] shrink-0">
+            <h3 className="text-center text-base font-semibold text-(--txt-primary) shrink-0">
               {profileUser?.name ?? "—"}
             </h3>
-            <p className="text-center text-sm text-[var(--txt-tertiary)] shrink-0">
+            <p className="text-center text-sm text-(--txt-tertiary) shrink-0">
               ({profileUser?.email?.split("@")[0] ?? "user"})
             </p>
-            <p className="mt-2 text-center text-xs text-[var(--txt-secondary)] shrink-0">
+            <p className="mt-2 text-center text-xs text-(--txt-secondary) shrink-0">
               Joined on {formatJoinedDate(joinedAt)}
             </p>
-            <p className="text-center text-xs text-[var(--txt-secondary)] shrink-0">
+            <p className="text-center text-xs text-(--txt-secondary) shrink-0">
               Timezone 23:10 UTC
             </p>
             <div className="mt-4 flex min-h-0 flex-1 flex-col pt-4">
-              <p className="mb-2 shrink-0 text-xs font-medium uppercase tracking-wide text-[var(--txt-tertiary)]">
+              <p className="mb-2 shrink-0 text-xs font-medium uppercase tracking-wide text-(--txt-tertiary)">
                 Projects
               </p>
               <ul className="min-h-0 flex-1 overflow-auto">
@@ -773,7 +773,7 @@ export function ProfilePage() {
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="2"
-                      className="shrink-0 text-[var(--txt-icon-tertiary)]"
+                      className="shrink-0 text-(--txt-icon-tertiary)"
                     >
                       <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" />
                       <path d="M15 18h2" />
@@ -787,7 +787,7 @@ export function ProfilePage() {
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="2"
-                      className="shrink-0 text-[var(--txt-icon-tertiary)]"
+                      className="shrink-0 text-(--txt-icon-tertiary)"
                     >
                       <rect width="16" height="20" x="4" y="2" rx="2" ry="2" />
                       <path d="M9 22v-4h6v4" />
@@ -807,7 +807,7 @@ export function ProfilePage() {
                       key={p.id}
                       className={
                         index > 0
-                          ? "border-t border-[var(--border-subtle)]"
+                          ? "border-t border-(--border-subtle)"
                           : undefined
                       }
                     >
@@ -815,7 +815,7 @@ export function ProfilePage() {
                         <button
                           type="button"
                           onClick={() => toggleProjectExpanded(p.id)}
-                          className="flex w-full items-center justify-between gap-2 py-1.5 pr-1 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                          className="flex w-full items-center justify-between gap-2 py-1.5 pr-1 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                         >
                           <span className="flex min-w-0 items-center gap-2">
                             {projectIcon}
@@ -828,11 +828,11 @@ export function ProfilePage() {
                             </Link>
                           </span>
                           {p.progress > 0 ? (
-                            <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-[var(--txt-secondary)] bg-[var(--bg-layer-2)]">
+                            <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-(--txt-secondary) bg-(--bg-layer-2)">
                               {p.progress}%
                             </span>
                           ) : (
-                            <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-[var(--txt-danger-primary)] bg-[var(--bg-danger-subtle)]">
+                            <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-(--txt-danger-primary) bg-(--bg-danger-subtle)">
                               0%
                             </span>
                           )}
@@ -843,14 +843,14 @@ export function ProfilePage() {
                             fill="none"
                             stroke="currentColor"
                             strokeWidth="2"
-                            className={`shrink-0 text-[var(--txt-icon-tertiary)] transition-transform ${expanded ? "rotate-0" : "-rotate-90"}`}
+                            className={`shrink-0 text-(--txt-icon-tertiary) transition-transform ${expanded ? "rotate-0" : "-rotate-90"}`}
                           >
                             <path d="m6 9 6 6 6-6" />
                           </svg>
                         </button>
                         {expanded && (
                           <div className="ml-6 mr-1 pb-3">
-                            <div className="mb-2 flex h-2 w-full overflow-hidden rounded-full bg-[var(--bg-layer-1)]">
+                            <div className="mb-2 flex h-2 w-full overflow-hidden rounded-full bg-(--bg-layer-1)">
                               {total > 0 ? (
                                 states.map((s) => (
                                   <span
@@ -865,7 +865,7 @@ export function ProfilePage() {
                                   />
                                 ))
                               ) : (
-                                <span className="h-full w-full bg-[var(--bg-layer-2)]" />
+                                <span className="h-full w-full bg-(--bg-layer-2)" />
                               )}
                             </div>
                             <ul className="space-y-1">
@@ -881,10 +881,10 @@ export function ProfilePage() {
                                     }}
                                     aria-hidden
                                   />
-                                  <span className="text-[var(--txt-secondary)]">
+                                  <span className="text-(--txt-secondary)">
                                     {s.name}
                                   </span>
-                                  <span className="text-[var(--txt-primary)]">
+                                  <span className="text-(--txt-primary)">
                                     — {s.count} Work item
                                     {s.count === 1 ? "" : "s"}
                                   </span>
@@ -957,14 +957,14 @@ function WorkItemsList({
 
   return (
     <div className="space-y-0">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-(--border-subtle) pb-3">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-[var(--txt-primary)]">
+          <span className="text-sm font-medium text-(--txt-primary)">
             All work items {issues.length}
           </span>
           <button
             type="button"
-            className="rounded p-1.5 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+            className="rounded p-1.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
             aria-label="Refresh"
           >
             <svg
@@ -985,7 +985,7 @@ function WorkItemsList({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="flex size-8 items-center justify-center rounded-md text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)]"
+            className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover)"
             aria-label="List view"
           >
             <svg
@@ -1006,7 +1006,7 @@ function WorkItemsList({
           </button>
           <button
             type="button"
-            className="flex size-8 items-center justify-center rounded-md text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)]"
+            className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover)"
             aria-label="Chart view"
           >
             <svg
@@ -1024,7 +1024,7 @@ function WorkItemsList({
           </button>
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-sm text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-sm text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             Filters
             <svg
@@ -1040,7 +1040,7 @@ function WorkItemsList({
           </button>
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-sm text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-sm text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             Display
             <svg
@@ -1058,15 +1058,15 @@ function WorkItemsList({
       </div>
       <Card
         variant="outlined"
-        className="overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
+        className="overflow-hidden border border-(--border-subtle) bg-(--bg-surface-1)"
       >
         <CardContent className="p-0">
           {issues.length === 0 ? (
-            <div className="py-12 text-center text-sm text-[var(--txt-tertiary)]">
+            <div className="py-12 text-center text-sm text-(--txt-tertiary)">
               No work items
             </div>
           ) : (
-            <ul className="divide-y divide-[var(--border-subtle)]">
+            <ul className="divide-y divide-(--border-subtle)">
               {issues.map((issue) => {
                 const apiIssue = issue as {
                   id: string;
@@ -1092,16 +1092,16 @@ function WorkItemsList({
                   <li key={issue.id}>
                     <Link
                       to={issueUrl}
-                      className="flex flex-wrap items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--bg-layer-1-hover)]"
+                      className="flex flex-wrap items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-(--bg-layer-1-hover)"
                     >
-                      <span className="min-w-0 flex-1 font-medium text-[var(--txt-primary)]">
+                      <span className="min-w-0 flex-1 font-medium text-(--txt-primary)">
                         {issueRef} {apiIssue.name}
                       </span>
-                      <span className="flex shrink-0 items-center gap-2 text-sm text-[var(--txt-secondary)]">
-                        <span className="flex h-4 w-4 items-center justify-center rounded-full border-2 border-[var(--border-strong)]" />
+                      <span className="flex shrink-0 items-center gap-2 text-sm text-(--txt-secondary)">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full border-2 border-(--border-strong)" />
                         {stateName}
                       </span>
-                      <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+                      <span className="shrink-0 text-(--txt-icon-tertiary)">
                         <svg
                           width="16"
                           height="16"
@@ -1115,7 +1115,7 @@ function WorkItemsList({
                           <line x1="6" y1="20" x2="6" y2="14" />
                         </svg>
                       </span>
-                      <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+                      <span className="shrink-0 text-(--txt-icon-tertiary)">
                         <svg
                           width="16"
                           height="16"
@@ -1128,7 +1128,7 @@ function WorkItemsList({
                           <path d="M21 3v5h-5" />
                         </svg>
                       </span>
-                      <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+                      <span className="shrink-0 text-(--txt-icon-tertiary)">
                         <svg
                           width="16"
                           height="16"
@@ -1159,17 +1159,17 @@ function WorkItemsList({
                         />
                       )}
                       {cycle && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-2 py-0.5 text-xs text-[var(--txt-secondary)]">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-default)]" />
+                        <span className="inline-flex items-center gap-1 rounded-full border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-0.5 text-xs text-(--txt-secondary)">
+                          <span className="h-1.5 w-1.5 rounded-full bg-(--brand-default)" />
                           {cycle.name}
                         </span>
                       )}
                       {labelNames.map((name) => (
                         <span
                           key={name}
-                          className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-warning-subtle)] px-2 py-0.5 text-xs text-[var(--txt-warning-primary)]"
+                          className="inline-flex items-center gap-1 rounded-full border border-(--border-subtle) bg-(--bg-warning-subtle) px-2 py-0.5 text-xs text-(--txt-warning-primary)"
                         >
-                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--txt-warning-primary)]" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-(--txt-warning-primary)" />
                           {name}
                         </span>
                       ))}
@@ -1179,7 +1179,7 @@ function WorkItemsList({
                           e.preventDefault();
                           e.stopPropagation();
                         }}
-                        className="shrink-0 rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)]"
+                        className="shrink-0 rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover)"
                         aria-label="More options"
                       >
                         <svg
@@ -1235,24 +1235,24 @@ function ActivityTab({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-[var(--txt-primary)]">
+        <h2 className="text-sm font-semibold text-(--txt-primary)">
           Recent activity
         </h2>
         <button
           type="button"
-          className="rounded-md bg-[var(--brand-default)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+          className="rounded-md bg-(--brand-default) px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
         >
           Download today&apos;s activity
         </button>
       </div>
       <Card
         variant="outlined"
-        className="border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]"
+        className="border border-(--border-subtle) bg-(--bg-surface-1)"
       >
         <CardContent className="p-0">
-          <ul className="divide-y divide-[var(--border-subtle)]">
+          <ul className="divide-y divide-(--border-subtle)">
             {activities.length === 0 ? (
-              <li className="px-4 py-8 text-center text-sm text-[var(--txt-tertiary)]">
+              <li className="px-4 py-8 text-center text-sm text-(--txt-tertiary)">
                 No recent activity
               </li>
             ) : (
@@ -1298,7 +1298,7 @@ function ActivityTab({
                   text = (
                     <>
                       You added a new label{" "}
-                      <span className="inline-flex rounded bg-[var(--bg-warning-subtle)] px-1.5 py-0.5 text-[var(--txt-warning-primary)]">
+                      <span className="inline-flex rounded bg-(--bg-warning-subtle) px-1.5 py-0.5 text-(--txt-warning-primary)">
                         {act.labelName}
                       </span>{" "}
                       to{" "}
@@ -1371,10 +1371,10 @@ function ActivityTab({
                 }
                 return (
                   <li key={act.id} className="flex gap-3 px-4 py-3">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--bg-layer-1)] text-[var(--txt-icon-tertiary)]">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-(--bg-layer-1) text-(--txt-icon-tertiary)">
                       {icon}
                     </span>
-                    <p className="min-w-0 text-sm text-[var(--txt-secondary)]">
+                    <p className="min-w-0 text-sm text-(--txt-secondary)">
                       {text}
                     </p>
                   </li>

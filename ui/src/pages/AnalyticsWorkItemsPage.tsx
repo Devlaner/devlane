@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   LineChart,
@@ -245,14 +245,14 @@ export function AnalyticsWorkItemsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading…
       </div>
     );
   }
   if (!workspace) {
     return (
-      <div className="text-[var(--txt-secondary)]">Workspace not found.</div>
+      <div className="text-(--txt-secondary)">Workspace not found.</div>
     );
   }
 
@@ -261,64 +261,64 @@ export function AnalyticsWorkItemsPage() {
   return (
     <div className="space-y-6 pb-8">
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-[var(--border-subtle)]">
+      <div className="flex gap-1 border-b border-(--border-subtle)">
         <Link
           to={`${baseUrl}/overview`}
-          className="border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-[var(--txt-secondary)] no-underline hover:text-[var(--txt-primary)]"
+          className="border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-(--txt-secondary) no-underline hover:text-(--txt-primary)"
         >
           Overview
         </Link>
         <Link
           to={`${baseUrl}/work-items`}
-          className="border-b-2 border-[var(--brand-default)] px-4 py-2.5 text-sm font-medium text-[var(--txt-primary)] no-underline"
+          className="border-b-2 border-(--brand-default) px-4 py-2.5 text-sm font-medium text-(--txt-primary) no-underline"
         >
           Work items
         </Link>
       </div>
 
-      <h2 className="text-lg font-semibold text-[var(--txt-primary)]">
+      <h2 className="text-lg font-semibold text-(--txt-primary)">
         Work items
       </h2>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-        <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-3">
-          <p className="text-xs font-medium text-[var(--txt-tertiary)]">
+        <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3">
+          <p className="text-xs font-medium text-(--txt-tertiary)">
             Total Work items
           </p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--txt-primary)]">
+          <p className="mt-1 text-2xl font-semibold text-(--txt-primary)">
             {issues.length}
           </p>
         </div>
-        <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-3">
-          <p className="text-xs font-medium text-[var(--txt-tertiary)]">
+        <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3">
+          <p className="text-xs font-medium text-(--txt-tertiary)">
             Started Work items
           </p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--txt-primary)]">
+          <p className="mt-1 text-2xl font-semibold text-(--txt-primary)">
             {startedCount}
           </p>
         </div>
-        <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-3">
-          <p className="text-xs font-medium text-[var(--txt-tertiary)]">
+        <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3">
+          <p className="text-xs font-medium text-(--txt-tertiary)">
             Backlog Work items
           </p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--txt-primary)]">
+          <p className="mt-1 text-2xl font-semibold text-(--txt-primary)">
             {backlogCount}
           </p>
         </div>
-        <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-3">
-          <p className="text-xs font-medium text-[var(--txt-tertiary)]">
+        <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3">
+          <p className="text-xs font-medium text-(--txt-tertiary)">
             Unstarted Work items
           </p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--txt-primary)]">
+          <p className="mt-1 text-2xl font-semibold text-(--txt-primary)">
             {unstartedCount}
           </p>
         </div>
-        <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-3">
-          <p className="text-xs font-medium text-[var(--txt-tertiary)]">
+        <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3">
+          <p className="text-xs font-medium text-(--txt-tertiary)">
             Completed Work items
           </p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--txt-primary)]">
+          <p className="mt-1 text-2xl font-semibold text-(--txt-primary)">
             {completedCount}
           </p>
         </div>
@@ -326,10 +326,10 @@ export function AnalyticsWorkItemsPage() {
 
       {/* Created vs Resolved */}
       <section>
-        <h3 className="mb-4 text-base font-semibold text-[var(--txt-primary)]">
+        <h3 className="mb-4 text-base font-semibold text-(--txt-primary)">
           Created vs Resolved
         </h3>
-        <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-6">
+        <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-6">
           <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
@@ -376,7 +376,7 @@ export function AnalyticsWorkItemsPage() {
                   iconType="square"
                   iconSize={10}
                   formatter={(value) => (
-                    <span className="text-xs text-[var(--txt-secondary)]">
+                    <span className="text-xs text-(--txt-secondary)">
                       {value}
                     </span>
                   )}
@@ -407,31 +407,31 @@ export function AnalyticsWorkItemsPage() {
 
       {/* Customized Insights */}
       <section>
-        <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-[var(--txt-primary)]">
+        <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-(--txt-primary)">
           <IconBriefcase />
           Customized Insights
         </h3>
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             <IconBriefcase /> Work item <span className="opacity-60">∨</span>
           </button>
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             <IconCalendar /> Priority <span className="opacity-60">∨</span>
           </button>
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             <IconSettings /> Add Property <span className="opacity-60">∨</span>
           </button>
         </div>
-        <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-6">
+        <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-6">
           <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -485,29 +485,29 @@ export function AnalyticsWorkItemsPage() {
       <section>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-[var(--txt-primary)]">
+            <h3 className="text-base font-semibold text-(--txt-primary)">
               {priorityRows.length} Priority
               {priorityRows.length !== 1 ? "ies" : ""}
             </h3>
-            <span className="flex size-8 items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-[var(--txt-icon-tertiary)]">
+            <span className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary)">
               <IconSearch />
             </span>
           </div>
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             <IconDownload /> Export as csv
           </button>
         </div>
-        <div className="overflow-x-auto rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]">
+        <div className="overflow-x-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-[var(--border-subtle)]">
-                <th className="py-3 pr-4 font-medium text-[var(--txt-secondary)]">
+              <tr className="border-b border-(--border-subtle)">
+                <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
                   Priority
                 </th>
-                <th className="py-3 font-medium text-[var(--txt-secondary)]">
+                <th className="py-3 font-medium text-(--txt-secondary)">
                   Count
                 </th>
               </tr>
@@ -516,12 +516,12 @@ export function AnalyticsWorkItemsPage() {
               {priorityRows.map(({ priority, count }) => (
                 <tr
                   key={priority}
-                  className="border-b border-[var(--border-subtle)] last:border-0"
+                  className="border-b border-(--border-subtle) last:border-0"
                 >
-                  <td className="py-3 pr-4 text-[var(--txt-primary)]">
+                  <td className="py-3 pr-4 text-(--txt-primary)">
                     {priority}
                   </td>
-                  <td className="py-3 text-[var(--txt-secondary)]">{count}</td>
+                  <td className="py-3 text-(--txt-secondary)">{count}</td>
                 </tr>
               ))}
             </tbody>
@@ -533,40 +533,40 @@ export function AnalyticsWorkItemsPage() {
       <section>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-[var(--txt-primary)]">
+            <h3 className="text-base font-semibold text-(--txt-primary)">
               {projects.length} Projects
             </h3>
-            <span className="flex size-8 items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-[var(--txt-icon-tertiary)]">
+            <span className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary)">
               <IconSearch />
             </span>
           </div>
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             <IconDownload /> Export as csv
           </button>
         </div>
-        <div className="overflow-x-auto rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]">
+        <div className="overflow-x-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-[var(--border-subtle)]">
-                <th className="py-3 pr-4 font-medium text-[var(--txt-secondary)]">
+              <tr className="border-b border-(--border-subtle)">
+                <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
                   Project
                 </th>
-                <th className="py-3 pr-4 font-medium text-[var(--txt-secondary)]">
+                <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
                   Backlog
                 </th>
-                <th className="py-3 pr-4 font-medium text-[var(--txt-secondary)]">
+                <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
                   Started
                 </th>
-                <th className="py-3 pr-4 font-medium text-[var(--txt-secondary)]">
+                <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
                   Unstarted
                 </th>
-                <th className="py-3 pr-4 font-medium text-[var(--txt-secondary)]">
+                <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
                   Completed
                 </th>
-                <th className="py-3 font-medium text-[var(--txt-secondary)]">
+                <th className="py-3 font-medium text-(--txt-secondary)">
                   Cancelled
                 </th>
               </tr>
@@ -583,31 +583,31 @@ export function AnalyticsWorkItemsPage() {
                 }) => (
                   <tr
                     key={project.id}
-                    className="border-b border-[var(--border-subtle)] last:border-0"
+                    className="border-b border-(--border-subtle) last:border-0"
                   >
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-2">
-                        <span className="flex size-6 items-center justify-center rounded bg-[var(--bg-layer-2)] text-[10px] font-medium text-[var(--txt-icon-secondary)]">
+                        <span className="flex size-6 items-center justify-center rounded bg-(--bg-layer-2) text-[10px] font-medium text-(--txt-icon-secondary)">
                           <IconBriefcase />
                         </span>
-                        <span className="text-[var(--txt-primary)]">
+                        <span className="text-(--txt-primary)">
                           {project.name}
                         </span>
                       </div>
                     </td>
-                    <td className="py-3 pr-4 text-[var(--txt-secondary)]">
+                    <td className="py-3 pr-4 text-(--txt-secondary)">
                       {backlog}
                     </td>
-                    <td className="py-3 pr-4 text-[var(--txt-secondary)]">
+                    <td className="py-3 pr-4 text-(--txt-secondary)">
                       {started}
                     </td>
-                    <td className="py-3 pr-4 text-[var(--txt-secondary)]">
+                    <td className="py-3 pr-4 text-(--txt-secondary)">
                       {unstarted}
                     </td>
-                    <td className="py-3 pr-4 text-[var(--txt-secondary)]">
+                    <td className="py-3 pr-4 text-(--txt-secondary)">
                       {completed}
                     </td>
-                    <td className="py-3 text-[var(--txt-secondary)]">
+                    <td className="py-3 text-(--txt-secondary)">
                       {cancelled}
                     </td>
                   </tr>

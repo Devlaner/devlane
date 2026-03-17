@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { DateRangeModal } from "./DateRangeModal";
 import { CollapsibleSection } from "./WorkspaceViewsFiltersShared";
 import { DATE_PRESET_LABELS, FILTER_ICONS } from "./WorkspaceViewsFiltersData";
 import { DATE_PRESETS } from "../../types/workspaceViewFilters";
-import type { DatePreset } from "../../types/workspaceViewFilters";
 import { Avatar } from "../ui";
 import { getImageUrl } from "../../lib/utils";
 import { workspaceService } from "../../services/workspaceService";
@@ -44,7 +42,7 @@ function ModuleStatusIcon({ statusId }: { statusId: string }) {
   if (statusId === "backlog" || statusId === "planned") {
     return (
       <span
-        className="flex size-4 shrink-0 items-center justify-center rounded border border-[var(--border-subtle)] border-dashed text-[var(--txt-icon-tertiary)]"
+        className="flex size-4 shrink-0 items-center justify-center rounded border border-(--border-subtle) border-dashed text-(--txt-icon-tertiary)"
         aria-hidden
       >
         <span className="size-2 rounded-full border border-current border-dashed" />
@@ -74,7 +72,7 @@ function ModuleStatusIcon({ statusId }: { statusId: string }) {
   if (statusId === "paused") {
     return (
       <span
-        className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]"
+        className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)"
         aria-hidden
       >
         <svg
@@ -176,28 +174,12 @@ export function ModuleFiltersPanel({
   const statusList = parseList(searchParams.get(MODULE_FILTER_PARAM.status));
   const leadIds = parseList(searchParams.get(MODULE_FILTER_PARAM.lead));
   const memberIds = parseList(searchParams.get(MODULE_FILTER_PARAM.members));
-  const startDateRaw =
-    searchParams.get(MODULE_FILTER_PARAM.start_date)?.trim() ?? "";
-  const startDateSelected: DatePreset | "" = DATE_PRESETS.includes(
-    startDateRaw as DatePreset,
-  )
-    ? (startDateRaw as DatePreset)
-    : "";
-  const dueDateRaw =
-    searchParams.get(MODULE_FILTER_PARAM.due_date)?.trim() ?? "";
-  const dueDateSelected: DatePreset | "" = DATE_PRESETS.includes(
-    dueDateRaw as DatePreset,
-  )
-    ? (dueDateRaw as DatePreset)
-    : "";
-  const startAfter =
-    searchParams.get(MODULE_FILTER_PARAM.start_after)?.trim() ?? null;
-  const startBefore =
-    searchParams.get(MODULE_FILTER_PARAM.start_before)?.trim() ?? null;
-  const dueAfter =
-    searchParams.get(MODULE_FILTER_PARAM.due_after)?.trim() ?? null;
-  const dueBefore =
-    searchParams.get(MODULE_FILTER_PARAM.due_before)?.trim() ?? null;
+  const startDateList = parseList(
+    searchParams.get(MODULE_FILTER_PARAM.start_date),
+  );
+  const dueDateList = parseList(searchParams.get(MODULE_FILTER_PARAM.due_date));
+  const hasCustomStart = startDateList.includes("custom");
+  const hasCustomDue = dueDateList.includes("custom");
 
   const toggleSection = (key: keyof typeof sectionOpen) => {
     setSectionOpen((s) => ({ ...s, [key]: !s[key] }));
@@ -231,9 +213,9 @@ export function ModuleFiltersPanel({
 
   return (
     <>
-      <div className="sticky top-0 shrink-0 border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-2">
-        <div className="flex items-center gap-2 rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-2 py-1.5">
-          <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+      <div className="sticky top-0 shrink-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-2">
+        <div className="flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
+          <span className="shrink-0 text-(--txt-icon-tertiary)">
             <FILTER_ICONS.search />
           </span>
           <input
@@ -241,7 +223,7 @@ export function ModuleFiltersPanel({
             placeholder="Search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+            className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
           />
         </div>
       </div>
@@ -254,7 +236,7 @@ export function ModuleFiltersPanel({
           open={sectionOpen.favorites}
           onToggle={() => toggleSection("favorites")}
         >
-          <label className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]">
+          <label className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
             <input
               type="checkbox"
               checked={favorites}
@@ -265,7 +247,7 @@ export function ModuleFiltersPanel({
                   else next.set(MODULE_FILTER_PARAM.favorites, "1");
                 });
               }}
-              className="rounded border-[var(--border-subtle)]"
+              className="rounded border-(--border-subtle)"
             />
             <span>Favorites</span>
           </label>
@@ -279,7 +261,7 @@ export function ModuleFiltersPanel({
           {MODULE_STATUSES.filter((s) => filterSearch(s.label)).map((s) => (
             <label
               key={s.id}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             >
               <input
                 type="checkbox"
@@ -294,7 +276,7 @@ export function ModuleFiltersPanel({
                     else next.delete(MODULE_FILTER_PARAM.status);
                   });
                 }}
-                className="rounded border-[var(--border-subtle)]"
+                className="rounded border-(--border-subtle)"
               />
               <ModuleStatusIcon statusId={s.id} />
               <span>{s.label}</span>
@@ -310,7 +292,7 @@ export function ModuleFiltersPanel({
           {filteredMembers.slice(0, 8).map((m) => (
             <label
               key={m.member_id}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             >
               <input
                 type="checkbox"
@@ -325,7 +307,7 @@ export function ModuleFiltersPanel({
                     else next.delete(MODULE_FILTER_PARAM.lead);
                   });
                 }}
-                className="rounded border-[var(--border-subtle)]"
+                className="rounded border-(--border-subtle)"
               />
               <Avatar
                 name={displayName(m)}
@@ -339,7 +321,7 @@ export function ModuleFiltersPanel({
           {filteredMembers.length > 8 && (
             <button
               type="button"
-              className="px-3 py-1.5 text-left text-sm text-[var(--brand-default)] hover:underline"
+              className="px-3 py-1.5 text-left text-sm text-(--brand-default) hover:underline"
             >
               View all
             </button>
@@ -354,7 +336,7 @@ export function ModuleFiltersPanel({
           {filteredMembers.slice(0, 8).map((m) => (
             <label
               key={m.member_id}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             >
               <input
                 type="checkbox"
@@ -369,7 +351,7 @@ export function ModuleFiltersPanel({
                     else next.delete(MODULE_FILTER_PARAM.members);
                   });
                 }}
-                className="rounded border-[var(--border-subtle)]"
+                className="rounded border-(--border-subtle)"
               />
               <Avatar
                 name={displayName(m)}
@@ -383,7 +365,7 @@ export function ModuleFiltersPanel({
           {filteredMembers.length > 8 && (
             <button
               type="button"
-              className="px-3 py-1.5 text-left text-sm text-[var(--brand-default)] hover:underline"
+              className="px-3 py-1.5 text-left text-sm text-(--brand-default) hover:underline"
             >
               View all
             </button>
@@ -400,11 +382,11 @@ export function ModuleFiltersPanel({
               d === "custom" ? (
                 <label
                   key={d}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                  className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (startDateSelected === "custom") {
+                    if (hasCustomStart) {
                       updateParams((next) => {
                         next.delete(MODULE_FILTER_PARAM.start_date);
                         next.delete(MODULE_FILTER_PARAM.start_after);
@@ -416,38 +398,49 @@ export function ModuleFiltersPanel({
                   }}
                 >
                   <input
-                    type="radio"
-                    name="start_date_filter"
-                    checked={startDateSelected === "custom"}
+                    type="checkbox"
+                    checked={hasCustomStart}
                     readOnly
                     tabIndex={-1}
-                    className="border-[var(--border-subtle)]"
+                    className="rounded border-(--border-subtle)"
                   />
                   <span>{DATE_PRESET_LABELS[d]}</span>
                 </label>
               ) : (
                 <label
                   key={d}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                  className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                 >
                   <input
-                    type="radio"
-                    name="start_date_filter"
-                    checked={startDateSelected === d}
+                    type="checkbox"
+                    checked={!hasCustomStart && startDateList.includes(d)}
                     onChange={() => {
                       updateParams((next) => {
-                        if (startDateSelected === d) {
-                          next.delete(MODULE_FILTER_PARAM.start_date);
-                          next.delete(MODULE_FILTER_PARAM.start_after);
-                          next.delete(MODULE_FILTER_PARAM.start_before);
-                        } else {
+                        if (hasCustomStart) {
                           next.set(MODULE_FILTER_PARAM.start_date, d);
                           next.delete(MODULE_FILTER_PARAM.start_after);
                           next.delete(MODULE_FILTER_PARAM.start_before);
+                        } else {
+                          const presets = startDateList.filter(
+                            (x) => x !== "custom",
+                          );
+                          const nextList = presets.includes(d)
+                            ? presets.filter((x) => x !== d)
+                            : [...presets, d];
+                          if (nextList.length)
+                            next.set(
+                              MODULE_FILTER_PARAM.start_date,
+                              nextList.join(","),
+                            );
+                          else {
+                            next.delete(MODULE_FILTER_PARAM.start_date);
+                            next.delete(MODULE_FILTER_PARAM.start_after);
+                            next.delete(MODULE_FILTER_PARAM.start_before);
+                          }
                         }
                       });
                     }}
-                    className="border-[var(--border-subtle)]"
+                    className="rounded border-(--border-subtle)"
                   />
                   <span>{DATE_PRESET_LABELS[d]}</span>
                 </label>
@@ -465,11 +458,11 @@ export function ModuleFiltersPanel({
               d === "custom" ? (
                 <label
                   key={d}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                  className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (dueDateSelected === "custom") {
+                    if (hasCustomDue) {
                       updateParams((next) => {
                         next.delete(MODULE_FILTER_PARAM.due_date);
                         next.delete(MODULE_FILTER_PARAM.due_after);
@@ -481,38 +474,49 @@ export function ModuleFiltersPanel({
                   }}
                 >
                   <input
-                    type="radio"
-                    name="due_date_filter"
-                    checked={dueDateSelected === "custom"}
+                    type="checkbox"
+                    checked={hasCustomDue}
                     readOnly
                     tabIndex={-1}
-                    className="border-[var(--border-subtle)]"
+                    className="rounded border-(--border-subtle)"
                   />
                   <span>{DATE_PRESET_LABELS[d]}</span>
                 </label>
               ) : (
                 <label
                   key={d}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                  className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                 >
                   <input
-                    type="radio"
-                    name="due_date_filter"
-                    checked={dueDateSelected === d}
+                    type="checkbox"
+                    checked={!hasCustomDue && dueDateList.includes(d)}
                     onChange={() => {
                       updateParams((next) => {
-                        if (dueDateSelected === d) {
-                          next.delete(MODULE_FILTER_PARAM.due_date);
-                          next.delete(MODULE_FILTER_PARAM.due_after);
-                          next.delete(MODULE_FILTER_PARAM.due_before);
-                        } else {
+                        if (hasCustomDue) {
                           next.set(MODULE_FILTER_PARAM.due_date, d);
                           next.delete(MODULE_FILTER_PARAM.due_after);
                           next.delete(MODULE_FILTER_PARAM.due_before);
+                        } else {
+                          const presets = dueDateList.filter(
+                            (x) => x !== "custom",
+                          );
+                          const nextList = presets.includes(d)
+                            ? presets.filter((x) => x !== d)
+                            : [...presets, d];
+                          if (nextList.length)
+                            next.set(
+                              MODULE_FILTER_PARAM.due_date,
+                              nextList.join(","),
+                            );
+                          else {
+                            next.delete(MODULE_FILTER_PARAM.due_date);
+                            next.delete(MODULE_FILTER_PARAM.due_after);
+                            next.delete(MODULE_FILTER_PARAM.due_before);
+                          }
                         }
                       });
                     }}
-                    className="border-[var(--border-subtle)]"
+                    className="rounded border-(--border-subtle)"
                   />
                   <span>{DATE_PRESET_LABELS[d]}</span>
                 </label>

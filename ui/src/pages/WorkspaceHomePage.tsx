@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Card, CardContent, Button, Modal, Input } from "../components/ui";
 import { useAuth } from "../contexts/AuthContext";
@@ -457,14 +457,14 @@ export function WorkspaceHomePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading…
       </div>
     );
   }
   if (!workspace) {
     return (
-      <div className="text-[var(--txt-secondary)]">Workspace not found.</div>
+      <div className="text-(--txt-secondary)">Workspace not found.</div>
     );
   }
 
@@ -488,11 +488,11 @@ export function WorkspaceHomePage() {
     <div className="mx-auto max-w-4xl space-y-8 pb-8">
       {/* Welcome */}
       <section className="text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--txt-primary)]">
+        <h1 className="text-2xl font-bold tracking-tight text-(--txt-primary)">
           {getGreeting()}, {user?.name ?? "User"}
         </h1>
-        <p className="mt-1 flex items-center justify-center gap-2 text-sm text-[var(--txt-tertiary)]">
-          <span className="text-[var(--txt-icon-tertiary)]">
+        <p className="mt-1 flex items-center justify-center gap-2 text-sm text-(--txt-tertiary)">
+          <span className="text-(--txt-icon-tertiary)">
             <IconMoon />
           </span>
           {formatDateTime(new Date())}
@@ -502,13 +502,13 @@ export function WorkspaceHomePage() {
       {/* Quicklinks */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+          <h2 className="text-base font-semibold text-(--txt-primary)">
             Quicklinks
           </h2>
           <Button
             variant="ghost"
             size="sm"
-            className="gap-1.5 text-[13px] font-medium text-[var(--txt-accent-primary)]"
+            className="gap-1.5 text-[13px] font-medium text-(--txt-accent-primary)"
             onClick={() => setAddQuicklinkOpen(true)}
           >
             <IconPlus />
@@ -535,8 +535,8 @@ export function WorkspaceHomePage() {
         >
           <div className="flex flex-col gap-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
-                URL <span className="text-[var(--txt-tertiary)]">Required</span>
+              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
+                URL <span className="text-(--txt-tertiary)">Required</span>
               </label>
               <Input
                 value={quicklinkUrl}
@@ -546,9 +546,9 @@ export function WorkspaceHomePage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                 Display title{" "}
-                <span className="text-[var(--txt-tertiary)]">Optional</span>
+                <span className="text-(--txt-tertiary)">Optional</span>
               </label>
               <Input
                 value={quicklinkTitle}
@@ -569,17 +569,17 @@ export function WorkspaceHomePage() {
             const content = (
               <Card
                 variant="outlined"
-                className="transition-colors hover:bg-[var(--bg-layer-transparent-hover)]"
+                className="transition-colors hover:bg-(--bg-layer-transparent-hover)"
               >
                 <CardContent className="flex items-center gap-3 p-3">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-layer-1)] text-[var(--txt-icon-tertiary)]">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-(--radius-md) bg-(--bg-layer-1) text-(--txt-icon-tertiary)">
                     <IconTarget />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-[var(--txt-primary)]">
+                    <p className="truncate font-medium text-(--txt-primary)">
                       {label}
                     </p>
-                    <p className="text-xs text-[var(--txt-tertiary)]">
+                    <p className="text-xs text-(--txt-tertiary)">
                       {formatRelativeTime(ql.updated_at)}
                     </p>
                   </div>
@@ -606,10 +606,10 @@ export function WorkspaceHomePage() {
         {quicklinks.length === 0 && (
           <Card variant="outlined">
             <CardContent className="flex items-center gap-3 p-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-layer-1)] text-[var(--txt-icon-tertiary)]">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-(--radius-md) bg-(--bg-layer-1) text-(--txt-icon-tertiary)">
                 <IconTarget />
               </div>
-              <p className="text-sm text-[var(--txt-tertiary)]">
+              <p className="text-sm text-(--txt-tertiary)">
                 No quicklinks yet. Add one to jump back to a project.
               </p>
             </CardContent>
@@ -620,7 +620,7 @@ export function WorkspaceHomePage() {
       {/* Recents */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+          <h2 className="text-base font-semibold text-(--txt-primary)">
             Recents
           </h2>
           <div className="relative">
@@ -628,7 +628,7 @@ export function WorkspaceHomePage() {
               ref={recentsFilterTriggerRef}
               type="button"
               onClick={() => setRecentsFilterOpen((o) => !o)}
-              className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-2-hover)]"
+              className="flex items-center gap-1.5 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
               aria-expanded={recentsFilterOpen}
               aria-haspopup="listbox"
               aria-label="Filter recents"
@@ -639,7 +639,7 @@ export function WorkspaceHomePage() {
             {recentsFilterOpen && (
               <div
                 ref={recentsFilterDropdownRef}
-                className="absolute right-0 top-full z-10 mt-1 min-w-[10rem] rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-[var(--shadow-overlay)]"
+                className="absolute right-0 top-full z-10 mt-1 min-w-[10rem] rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-overlay)"
                 role="listbox"
               >
                 {recentsFilterOptions.map((option) => (
@@ -652,7 +652,7 @@ export function WorkspaceHomePage() {
                       setRecentsFilterValue(option);
                       setRecentsFilterOpen(false);
                     }}
-                    className="w-full px-3 py-2 text-left text-[13px] font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+                    className="w-full px-3 py-2 text-left text-[13px] font-medium text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover)"
                   >
                     {option}
                   </button>
@@ -662,7 +662,7 @@ export function WorkspaceHomePage() {
           </div>
         </div>
         <Card variant="outlined">
-          <CardContent className="divide-y divide-[var(--border-subtle)] p-0">
+          <CardContent className="divide-y divide-(--border-subtle) p-0">
             {filteredRecents.map((r) => {
               const recentsLink =
                 r.entity_name === "issue" && r.project_id && r.entity_identifier
@@ -677,19 +677,19 @@ export function WorkspaceHomePage() {
               const titleLabel = r.display_title || r.entity_name;
               const inner = (
                 <>
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-layer-1)] text-[var(--txt-icon-tertiary)]">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-(--radius-md) bg-(--bg-layer-1) text-(--txt-icon-tertiary)">
                     <IconFileText />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="flex items-baseline gap-2 text-[13px]">
-                      <span className="font-medium text-[var(--txt-primary)]">
+                      <span className="font-medium text-(--txt-primary)">
                         {idLabel}
                       </span>
-                      <span className="truncate text-[var(--txt-secondary)]">
+                      <span className="truncate text-(--txt-secondary)">
                         {titleLabel}
                       </span>
                     </p>
-                    <p className="mt-0.5 text-xs text-[var(--txt-tertiary)]">
+                    <p className="mt-0.5 text-xs text-(--txt-tertiary)">
                       {formatRelativeTime(r.last_visited_at)}
                     </p>
                   </div>
@@ -699,21 +699,21 @@ export function WorkspaceHomePage() {
                 <Link
                   key={r.id}
                   to={recentsLink}
-                  className="flex items-center gap-3 px-4 py-3 no-underline transition-colors hover:bg-[var(--bg-layer-transparent-hover)]"
+                  className="flex items-center gap-3 px-4 py-3 no-underline transition-colors hover:bg-(--bg-layer-transparent-hover)"
                 >
                   {inner}
                 </Link>
               ) : (
                 <div
                   key={r.id}
-                  className="flex items-center gap-3 px-4 py-3 text-[var(--txt-secondary)]"
+                  className="flex items-center gap-3 px-4 py-3 text-(--txt-secondary)"
                 >
                   {inner}
                 </div>
               );
             })}
             {filteredRecents.length === 0 && (
-              <div className="px-4 py-6 text-center text-sm text-[var(--txt-tertiary)]">
+              <div className="px-4 py-6 text-center text-sm text-(--txt-tertiary)">
                 No recent activity.
               </div>
             )}
@@ -724,15 +724,15 @@ export function WorkspaceHomePage() {
       {/* Your stickies */}
       <section>
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+          <h2 className="text-base font-semibold text-(--txt-primary)">
             Your stickies
           </h2>
           <div className="flex flex-1 items-center justify-end gap-1 min-w-0">
             <div
               className={`overflow-hidden transition-[width] duration-200 ease-out ${stickySearchOpen ? "w-56" : "w-0"}`}
             >
-              <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-2 py-1.5">
-                <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+              <div className="flex items-center gap-2 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1.5">
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
                   <IconSearch />
                 </span>
                 <input
@@ -740,7 +740,7 @@ export function WorkspaceHomePage() {
                   value={stickySearchQuery}
                   onChange={(e) => setStickySearchQuery(e.target.value)}
                   placeholder="Search by title"
-                  className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
                   aria-label="Search stickies by title"
                 />
                 <button
@@ -749,7 +749,7 @@ export function WorkspaceHomePage() {
                     setStickySearchQuery("");
                     setStickySearchOpen(false);
                   }}
-                  className="shrink-0 rounded p-0.5 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-secondary)]"
+                  className="shrink-0 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-secondary)"
                   aria-label="Clear search"
                 >
                   <IconX />
@@ -760,7 +760,7 @@ export function WorkspaceHomePage() {
               <button
                 type="button"
                 onClick={() => setStickySearchOpen(true)}
-                className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+                className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover)"
                 aria-label="Search stickies"
               >
                 <IconSearch />
@@ -769,7 +769,7 @@ export function WorkspaceHomePage() {
             <Button
               variant="ghost"
               size="sm"
-              className="gap-1.5 text-[13px] font-medium text-[var(--txt-accent-primary)]"
+              className="gap-1.5 text-[13px] font-medium text-(--txt-accent-primary)"
               onClick={() => setAddStickyOpen(true)}
             >
               <IconPlus />
@@ -794,16 +794,16 @@ export function WorkspaceHomePage() {
         >
           <div className="flex flex-col gap-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                 Content{" "}
-                <span className="text-[var(--txt-tertiary)]">Optional</span>
+                <span className="text-(--txt-tertiary)">Optional</span>
               </label>
               <textarea
                 value={stickyContent}
                 onChange={(e) => setStickyContent(e.target.value)}
                 placeholder="Jot down an idea, capture an aha..."
                 rows={4}
-                className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
               />
             </div>
           </div>
@@ -818,10 +818,10 @@ export function WorkspaceHomePage() {
             return (
               <Card variant="outlined" className="border-dashed">
                 <CardContent className="flex min-h-[180px] flex-col items-center justify-center gap-3 py-10">
-                  <span className="text-[var(--txt-icon-tertiary)]">
+                  <span className="text-(--txt-icon-tertiary)">
                     <IconClipboard />
                   </span>
-                  <p className="max-w-sm text-center text-sm italic text-[var(--txt-placeholder)]">
+                  <p className="max-w-sm text-center text-sm italic text-(--txt-placeholder)">
                     {stickySearchQuery.trim()
                       ? "No stickies match your search."
                       : "Jot down an idea, capture an aha, or record a brainwave. Add a sticky to get started."}
@@ -840,48 +840,48 @@ export function WorkspaceHomePage() {
                 return (
                   <div
                     key={sticky.id}
-                    className={`flex min-h-[120px] flex-col rounded-[var(--radius-md)] border border-[var(--border-subtle)] p-3 shadow-sm ${isDefaultDark ? "bg-[var(--bg-layer-2)]" : ""}`}
+                    className={`flex min-h-[120px] flex-col rounded-(--radius-md) border border-(--border-subtle) p-3 shadow-sm ${isDefaultDark ? "bg-(--bg-layer-2)" : ""}`}
                     style={
                       isDefaultDark
                         ? undefined
                         : { backgroundColor: sticky.color }
                     }
                   >
-                    <div className="min-h-0 flex-1 text-sm text-[var(--txt-primary)]">
+                    <div className="min-h-0 flex-1 text-sm text-(--txt-primary)">
                       <p className="whitespace-pre-wrap break-words">
                         {sticky.name}
                       </p>
                       {sticky.description && (
-                        <p className="mt-1 whitespace-pre-wrap break-words text-[var(--txt-secondary)]">
+                        <p className="mt-1 whitespace-pre-wrap break-words text-(--txt-secondary)">
                           {sticky.description}
                         </p>
                       )}
                     </div>
-                    <div className="mt-2 flex items-center gap-1 border-t border-[var(--border-subtle)] pt-2">
+                    <div className="mt-2 flex items-center gap-1 border-t border-(--border-subtle) pt-2">
                       <button
                         type="button"
-                        className="rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+                        className="rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover)"
                         aria-label="Change color"
                       >
                         <IconPalette />
                       </button>
                       <button
                         type="button"
-                        className="rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+                        className="rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover)"
                         aria-label="Bold"
                       >
                         <IconBold />
                       </button>
                       <button
                         type="button"
-                        className="rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+                        className="rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover)"
                         aria-label="Italic"
                       >
                         <IconItalic />
                       </button>
                       <button
                         type="button"
-                        className="rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+                        className="rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover)"
                         aria-label="List"
                       >
                         <IconList />
@@ -889,7 +889,7 @@ export function WorkspaceHomePage() {
                       <button
                         type="button"
                         onClick={() => handleDeleteSticky(sticky.id)}
-                        className="ml-auto rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-danger-primary)]"
+                        className="ml-auto rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-danger-primary)"
                         aria-label="Delete"
                       >
                         <IconTrash />

@@ -1,4 +1,4 @@
-import { forwardRef, type ButtonHTMLAttributes } from "react";
+﻿import { forwardRef, type ButtonHTMLAttributes } from "react";
 import { cn } from "../../lib/utils";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
@@ -12,19 +12,19 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-[var(--bg-accent-primary)] text-[var(--txt-on-color)] hover:bg-[var(--bg-accent-primary-hover)] active:bg-[var(--bg-accent-primary-active)] disabled:opacity-50",
+    "bg-(--bg-accent-primary) text-(--txt-on-color) hover:bg-(--bg-accent-primary-hover) active:bg-(--bg-accent-primary-active) disabled:opacity-50",
   secondary:
-    "bg-[var(--bg-layer-1)] text-[var(--txt-primary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-layer-1-hover)] active:bg-[var(--bg-layer-1-active)] disabled:opacity-50",
+    "bg-(--bg-layer-1) text-(--txt-primary) border border-(--border-subtle) hover:bg-(--bg-layer-1-hover) active:bg-(--bg-layer-1-active) disabled:opacity-50",
   ghost:
-    "bg-transparent text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1)] active:bg-[var(--bg-layer-1-hover)] disabled:opacity-50",
+    "bg-transparent text-(--txt-primary) hover:bg-(--bg-layer-1) active:bg-(--bg-layer-1-hover) disabled:opacity-50",
   danger:
-    "bg-[var(--bg-danger-primary)] text-[var(--txt-on-color)] hover:bg-[var(--bg-danger-primary-hover)] active:opacity-90 disabled:opacity-50",
+    "bg-(--bg-danger-primary) text-(--txt-on-color) hover:bg-(--bg-danger-primary-hover) active:opacity-90 disabled:opacity-50",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-sm rounded-[var(--radius-md)]",
-  md: "h-9 px-4 text-sm rounded-[var(--radius-md)]",
-  lg: "h-10 px-5 text-base rounded-[var(--radius-lg)]",
+  sm: "h-8 px-3 text-sm rounded-(--radius-md)",
+  md: "h-9 px-4 text-sm rounded-(--radius-md)",
+  lg: "h-10 px-5 text-base rounded-(--radius-lg)",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(

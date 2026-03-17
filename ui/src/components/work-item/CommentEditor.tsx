@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -61,11 +61,11 @@ export function CommentEditor({
   };
 
   const buttonBase =
-    "inline-flex h-8 w-8 items-center justify-center rounded border border-transparent text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)] disabled:opacity-40";
+    "inline-flex h-8 w-8 items-center justify-center rounded border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary) disabled:opacity-40";
 
   return (
-    <div className="rounded-md bg-[var(--bg-surface-1)]">
-      <div className="flex items-center gap-1 border-b border-[var(--border-subtle)] px-2 py-1">
+    <div className="rounded-md bg-(--bg-surface-1)">
+      <div className="flex items-center gap-1 border-b border-(--border-subtle) px-2 py-1">
         <button
           type="button"
           className={buttonBase}
@@ -114,7 +114,7 @@ export function CommentEditor({
         >
           {"</>"}
         </button>
-        <div className="ml-auto flex items-center gap-2 text-[11px] text-[var(--txt-tertiary)]">
+        <div className="ml-auto flex items-center gap-2 text-[11px] text-(--txt-tertiary)">
           {showShortcutHint && (
             <span className="hidden sm:inline">
               Ctrl / Cmd + Enter to comment
@@ -123,7 +123,7 @@ export function CommentEditor({
           {onCancel && (
             <button
               type="button"
-              className="rounded px-2 py-1 text-xs hover:bg-[var(--bg-layer-1-hover)]"
+              className="rounded px-2 py-1 text-xs hover:bg-(--bg-layer-1-hover)"
               onClick={onCancel}
               disabled={isSubmitting}
             >
@@ -132,7 +132,7 @@ export function CommentEditor({
           )}
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded-md bg-[var(--bg-accent-primary)] px-3 py-1 text-xs font-medium text-[var(--txt-on-color)] hover:bg-[var(--bg-accent-primary-hover)] disabled:opacity-50"
+            className="inline-flex items-center justify-center rounded-md bg-(--bg-accent-primary) px-3 py-1 text-xs font-medium text-(--txt-on-color) hover:bg-(--bg-accent-primary-hover) disabled:opacity-50"
             disabled={isSubmitting}
             onClick={handleSubmit}
           >

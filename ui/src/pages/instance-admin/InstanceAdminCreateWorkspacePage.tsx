@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button, Input } from "../../components/ui";
 import { CreateWorkspaceSetupHint } from "../../components/instance-admin/CreateWorkspaceSetupHint";
@@ -90,10 +90,10 @@ export function InstanceAdminCreateWorkspacePage() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h1 className="text-base font-semibold text-[var(--txt-primary)]">
+        <h1 className="text-base font-semibold text-(--txt-primary)">
           Create a new workspace on this instance.
         </h1>
-        <p className="mt-1 text-sm text-[var(--txt-secondary)]">
+        <p className="mt-1 text-sm text-(--txt-secondary)">
           You will need to invite users from Workspace Settings after you create
           this workspace.
         </p>
@@ -111,12 +111,12 @@ export function InstanceAdminCreateWorkspacePage() {
         <div className="flex flex-col gap-1">
           <label
             htmlFor="workspace-url"
-            className="text-sm font-medium text-[var(--txt-secondary)]"
+            className="text-sm font-medium text-(--txt-secondary)"
           >
             Set your workspace&apos;s URL
           </label>
-          <div className="flex flex-1 items-center gap-0 overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] text-sm">
-            <span className="shrink-0 truncate border-r border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-3 py-2 text-[var(--txt-tertiary)]">
+          <div className="flex flex-1 items-center gap-0 overflow-hidden rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) text-sm">
+            <span className="shrink-0 truncate border-r border-(--border-subtle) bg-(--bg-layer-1) px-3 py-2 text-(--txt-tertiary)">
               {baseUrl}
             </span>
             <input
@@ -127,7 +127,7 @@ export function InstanceAdminCreateWorkspacePage() {
                 setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
               }
               placeholder="workspace-name"
-              className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+              className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
             />
           </div>
         </div>
@@ -135,7 +135,7 @@ export function InstanceAdminCreateWorkspacePage() {
         <div className="flex flex-col gap-1">
           <label
             htmlFor="organization-size"
-            className="text-sm font-medium text-[var(--txt-secondary)]"
+            className="text-sm font-medium text-(--txt-secondary)"
           >
             How many people will use this workspace?
           </label>
@@ -144,7 +144,7 @@ export function InstanceAdminCreateWorkspacePage() {
               id="organization-size"
               value={organizationSize}
               onChange={(e) => setOrganizationSize(e.target.value)}
-              className="h-9 w-full max-w-md appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] pl-3 pr-9 text-sm text-[var(--txt-primary)] focus:outline-none"
+              className="h-9 w-full max-w-md appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) pl-3 pr-9 text-sm text-(--txt-primary) focus:outline-none"
             >
               {ORGANIZATION_SIZE_OPTIONS.map((opt) => (
                 <option key={opt.value || "empty"} value={opt.value}>
@@ -152,14 +152,14 @@ export function InstanceAdminCreateWorkspacePage() {
                 </option>
               ))}
             </select>
-            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
               <IconChevronDown />
             </span>
           </div>
         </div>
 
         {error && (
-          <p className="text-sm text-[var(--txt-danger-primary)]">{error}</p>
+          <p className="text-sm text-(--txt-danger-primary)">{error}</p>
         )}
 
         <div className="flex flex-wrap gap-3">

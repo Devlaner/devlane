@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { Modal, Button, Input, Avatar } from "./ui";
 import { DateRangeModal } from "./workspace-views/DateRangeModal";
 import { getImageUrl } from "../lib/utils";
@@ -176,7 +176,7 @@ export function CreateModuleModal({
           </>
         }
       >
-        <div className="mb-3 text-sm text-[var(--txt-secondary)]">
+        <div className="mb-3 text-sm text-(--txt-secondary)">
           {projectName}
         </div>
         <form
@@ -192,7 +192,7 @@ export function CreateModuleModal({
             autoFocus
           />
           <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+            <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
               Description
             </label>
             <textarea
@@ -200,7 +200,7 @@ export function CreateModuleModal({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Description"
               rows={3}
-              className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+              className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
             />
           </div>
 
@@ -208,9 +208,9 @@ export function CreateModuleModal({
             <button
               type="button"
               onClick={() => setDateModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+              className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
             >
-              <span className="text-[var(--txt-icon-tertiary)]" aria-hidden>
+              <span className="text-(--txt-icon-tertiary)" aria-hidden>
                 <CalendarIcon />
               </span>
               {formatDateRangeDisplay(startDate, endDate)}
@@ -220,16 +220,16 @@ export function CreateModuleModal({
               <button
                 type="button"
                 onClick={() => setStatusDropdownOpen((o) => !o)}
-                className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+                className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
               >
-                <span className="text-[var(--txt-icon-tertiary)]" aria-hidden>
+                <span className="text-(--txt-icon-tertiary)" aria-hidden>
                   <BacklogIcon />
                 </span>
                 {statusLabel}
                 <ChevronDownIcon />
               </button>
               {statusDropdownOpen && (
-                <div className="absolute left-0 top-full z-10 mt-1 min-w-[180px] rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-[var(--shadow-raised)]">
+                <div className="absolute left-0 top-full z-10 mt-1 min-w-[180px] rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)">
                   {MODULE_STATUSES.map((opt) => (
                     <button
                       key={opt.id}
@@ -238,11 +238,11 @@ export function CreateModuleModal({
                         setStatus(opt.id);
                         setStatusDropdownOpen(false);
                       }}
-                      className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                      className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                     >
                       {opt.label}
                       {status === opt.id && (
-                        <span className="text-[var(--txt-primary)]">
+                        <span className="text-(--txt-primary)">
                           <CheckIcon />
                         </span>
                       )}
@@ -256,7 +256,7 @@ export function CreateModuleModal({
               <button
                 type="button"
                 onClick={() => setLeadDropdownOpen((o) => !o)}
-                className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+                className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
               >
                 {leadMember ? (
                   <Avatar
@@ -276,15 +276,15 @@ export function CreateModuleModal({
                 <ChevronDownIcon />
               </button>
               {leadDropdownOpen && (
-                <div className="absolute left-0 top-full z-10 mt-1 w-64 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-1.5 shadow-[var(--shadow-raised)]">
-                  <div className="mb-1.5 flex items-center gap-2 rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-2 py-1.5">
+                <div className="absolute left-0 top-full z-10 mt-1 w-64 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-1.5 shadow-(--shadow-raised)">
+                  <div className="mb-1.5 flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
                     <SearchIcon />
                     <input
                       type="text"
                       placeholder="Search"
                       value={leadSearch}
                       onChange={(e) => setLeadSearch(e.target.value)}
-                      className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+                      className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
                     />
                   </div>
                   <div className="max-h-48 overflow-y-auto">
@@ -298,7 +298,7 @@ export function CreateModuleModal({
                           );
                           setLeadDropdownOpen(false);
                         }}
-                        className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                        className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                       >
                         <span className="flex items-center gap-2 truncate">
                           <Avatar
@@ -327,7 +327,7 @@ export function CreateModuleModal({
               <button
                 type="button"
                 onClick={() => setMembersDropdownOpen((o) => !o)}
-                className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+                className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
               >
                 <MembersIcon />
                 Members
@@ -341,7 +341,7 @@ export function CreateModuleModal({
                         }
                         src={getImageUrl(m.member_avatar) ?? undefined}
                         size="sm"
-                        className="h-6 w-6 border-2 border-[var(--bg-layer-2)] text-xs"
+                        className="h-6 w-6 border-2 border-(--bg-layer-2) text-xs"
                       />
                     ))}
                   </span>
@@ -349,15 +349,15 @@ export function CreateModuleModal({
                 <ChevronDownIcon />
               </button>
               {membersDropdownOpen && (
-                <div className="absolute left-0 top-full z-10 mt-1 w-64 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-1.5 shadow-[var(--shadow-raised)]">
-                  <div className="mb-1.5 flex items-center gap-2 rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-2 py-1.5">
+                <div className="absolute left-0 top-full z-10 mt-1 w-64 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-1.5 shadow-(--shadow-raised)">
+                  <div className="mb-1.5 flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
                     <SearchIcon />
                     <input
                       type="text"
                       placeholder="Search"
                       value={membersSearch}
                       onChange={(e) => setMembersSearch(e.target.value)}
-                      className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+                      className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
                     />
                   </div>
                   <div className="max-h-48 overflow-y-auto">
@@ -374,7 +374,7 @@ export function CreateModuleModal({
                                 : [...memberIds, m.member_id],
                             );
                           }}
-                          className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                          className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                         >
                           <span className="flex items-center gap-2 truncate">
                             <Avatar
@@ -402,7 +402,7 @@ export function CreateModuleModal({
           </div>
 
           {error && (
-            <p className="text-sm text-[var(--txt-danger-primary)]">{error}</p>
+            <p className="text-sm text-(--txt-danger-primary)">{error}</p>
           )}
         </form>
       </Modal>
@@ -496,7 +496,7 @@ function SearchIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
-      className="shrink-0 text-[var(--txt-icon-tertiary)]"
+      className="shrink-0 text-(--txt-icon-tertiary)"
       aria-hidden
     >
       <circle cx="11" cy="11" r="8" />
@@ -513,7 +513,7 @@ function LeadIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
-      className="text-[var(--txt-icon-tertiary)]"
+      className="text-(--txt-icon-tertiary)"
       aria-hidden
     >
       <circle cx="9" cy="7" r="4" />
@@ -532,7 +532,7 @@ function MembersIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
-      className="text-[var(--txt-icon-tertiary)]"
+      className="text-(--txt-icon-tertiary)"
       aria-hidden
     >
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />

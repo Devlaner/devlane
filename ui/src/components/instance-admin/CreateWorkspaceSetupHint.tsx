@@ -1,4 +1,4 @@
-import { Button } from "../ui";
+﻿import { Button } from "../ui";
 
 const IconWorkspace = () => (
   <svg
@@ -27,16 +27,16 @@ export function CreateWorkspaceSetupHint({
 }: CreateWorkspaceSetupHintProps) {
   return (
     <div
-      className="fixed bottom-6 right-6 z-50 w-full max-w-sm rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-4 shadow-[var(--shadow-overlay)]"
+      className="fixed bottom-6 right-6 z-50 w-full max-w-sm rounded-(--radius-lg) border border-(--border-subtle) bg-(--bg-surface-1) p-4 shadow-(--shadow-overlay)"
       role="dialog"
       aria-label="Create workspace"
     >
       <div className="flex gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-[var(--txt-primary)]">
+          <h3 className="text-sm font-semibold text-(--txt-primary)">
             Create workspace
           </h3>
-          <p className="mt-1 text-xs text-[var(--txt-secondary)]">
+          <p className="mt-1 text-xs text-(--txt-secondary)">
             Instance setup is complete. Welcome to your Devlane instance. Start
             your journey by creating your first workspace.
           </p>
@@ -54,7 +54,7 @@ export function CreateWorkspaceSetupHint({
             </Button>
           </div>
         </div>
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-(--bg-accent-subtle) text-(--txt-accent-primary)">
           <IconWorkspace />
         </span>
       </div>

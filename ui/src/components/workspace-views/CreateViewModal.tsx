@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Modal } from "../ui";
 import { Button, Input } from "../ui";
@@ -113,7 +113,7 @@ export function CreateViewModal({
           autoFocus
         />
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+          <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
             Description
           </label>
           <textarea
@@ -121,7 +121,7 @@ export function CreateViewModal({
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Optional description"
             rows={3}
-            className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+            className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -137,8 +137,8 @@ export function CreateViewModal({
             icon={null}
             displayValue=""
             triggerContent={<span>Filters</span>}
-            triggerClassName="inline-flex items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
-            panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)] overflow-hidden"
+            triggerClassName="inline-flex items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+            panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
             align="left"
           >
             {workspaceSlug && (
@@ -163,8 +163,8 @@ export function CreateViewModal({
             icon={null}
             displayValue=""
             triggerContent={<span>Display</span>}
-            triggerClassName="inline-flex items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
-            panelClassName="flex min-w-[280px] max-w-[320px] flex-col rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)] overflow-hidden"
+            triggerClassName="inline-flex items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+            panelClassName="flex min-w-[280px] max-w-[320px] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
             align="left"
           >
             <WorkspaceViewsDisplayPanel
@@ -174,7 +174,7 @@ export function CreateViewModal({
           </Dropdown>
         </div>
         {error && (
-          <p className="text-sm text-[var(--txt-danger-primary)]">{error}</p>
+          <p className="text-sm text-(--txt-danger-primary)">{error}</p>
         )}
       </form>
     </Modal>

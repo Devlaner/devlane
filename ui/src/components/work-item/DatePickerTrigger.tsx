@@ -1,4 +1,4 @@
-import { useRef } from "react";
+﻿import { useRef } from "react";
 
 /* eslint-disable react-refresh/only-export-components -- formatDateForDisplay shared util; keep in same file for future use */
 export function formatDateForDisplay(isoDate: string): string {
@@ -31,8 +31,8 @@ export function DatePickerTrigger({
   const displayValue = value ? formatDateForDisplay(value) : "";
 
   return (
-    <div className="relative inline-flex min-w-0 shrink-0 items-center gap-1 rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-1.5 py-1 text-xs text-[var(--txt-secondary)] [&_svg]:size-3">
-      <span className="shrink-0 text-[var(--txt-icon-tertiary)]">{icon}</span>
+    <div className="relative inline-flex min-w-0 shrink-0 items-center gap-1 rounded border border-(--border-subtle) bg-(--bg-layer-2) px-1.5 py-1 text-xs text-(--txt-secondary) [&_svg]:size-3">
+      <span className="shrink-0 text-(--txt-icon-tertiary)">{icon}</span>
       <span className="truncate">{displayValue || placeholder}</span>
       <input
         ref={inputRef}

@@ -1,4 +1,4 @@
-import { Dropdown } from "../work-item";
+﻿import { Dropdown } from "../work-item";
 import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
 import { WorkspaceViewsDisplayPanel } from "./WorkspaceViewsDisplayPanel";
 
@@ -38,7 +38,7 @@ export function WorkspaceViewsDisplayDropdown({
       label="Display"
       icon={<IconLayoutGrid />}
       displayValue="Display"
-      panelClassName="flex min-w-[280px] max-w-[320px] flex-col rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)] overflow-hidden"
+      panelClassName="flex min-w-[280px] max-w-[320px] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
       align="right"
     >
       <WorkspaceViewsDisplayPanel

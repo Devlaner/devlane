@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Card, CardContent, Badge, Button } from "../components/ui";
 import { workspaceService } from "../services/workspaceService";
@@ -76,14 +76,14 @@ export function ProjectHomePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading…
       </div>
     );
   }
   if (!workspace || !project) {
     return (
-      <div className="text-[var(--txt-secondary)]">Project not found.</div>
+      <div className="text-(--txt-secondary)">Project not found.</div>
     );
   }
 
@@ -92,18 +92,18 @@ export function ProjectHomePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-[var(--txt-primary)]">
+        <h1 className="text-2xl font-semibold text-(--txt-primary)">
           {project.name}
         </h1>
         {project.description && (
-          <p className="mt-1 text-sm text-[var(--txt-secondary)]">
+          <p className="mt-1 text-sm text-(--txt-secondary)">
             {project.description}
           </p>
         )}
       </div>
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-medium text-[var(--txt-secondary)]">
+          <h2 className="text-lg font-medium text-(--txt-secondary)">
             Recent issues
           </h2>
           <div className="flex items-center gap-2">
@@ -121,14 +121,14 @@ export function ProjectHomePage() {
         </div>
         <Card>
           <CardContent className="p-0">
-            <ul className="divide-y divide-[var(--border-subtle)]">
+            <ul className="divide-y divide-(--border-subtle)">
               {issues.slice(0, 5).map((issue) => (
                 <li key={issue.id}>
                   <Link
                     to={`${baseUrl}/issues/${issue.id}`}
-                    className="flex items-center justify-between gap-4 px-4 py-3 no-underline transition-colors hover:bg-[var(--bg-layer-1-hover)]"
+                    className="flex items-center justify-between gap-4 px-4 py-3 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
                   >
-                    <span className="font-medium text-[var(--txt-primary)]">
+                    <span className="font-medium text-(--txt-primary)">
                       {issue.name}
                     </span>
                     <Badge variant="neutral">
@@ -139,7 +139,7 @@ export function ProjectHomePage() {
               ))}
             </ul>
             {issues.length === 0 && (
-              <p className="px-4 py-6 text-sm text-[var(--txt-tertiary)]">
+              <p className="px-4 py-6 text-sm text-(--txt-tertiary)">
                 No issues yet.
               </p>
             )}

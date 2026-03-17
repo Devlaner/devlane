@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 const IconSearch = () => (
@@ -54,25 +54,25 @@ export function SelectParentModal({
       aria-labelledby="select-parent-title"
     >
       <div
-        className="absolute inset-0 bg-[var(--bg-backdrop)]"
+        className="absolute inset-0 bg-(--bg-backdrop)"
         onClick={onClose}
         aria-hidden
       />
       <div
-        className="relative z-10 w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-overlay)]"
+        className="relative z-10 w-full max-w-md rounded-(--radius-lg) border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-overlay)"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-[var(--border-subtle)] px-4 py-3">
+        <div className="border-b border-(--border-subtle) px-4 py-3">
           <h2
             id="select-parent-title"
-            className="text-sm font-semibold text-[var(--txt-primary)]"
+            className="text-sm font-semibold text-(--txt-primary)"
           >
             Select parent
           </h2>
         </div>
         <div className="flex flex-col p-3">
-          <div className="mb-3 flex items-center gap-2 rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-[var(--txt-secondary)] focus-within:border-[var(--border-strong)] focus-within:outline-none">
-            <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+          <div className="mb-3 flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-(--txt-secondary) focus-within:border-(--border-strong) focus-within:outline-none">
+            <span className="shrink-0 text-(--txt-icon-tertiary)">
               <IconSearch />
             </span>
             <input
@@ -80,19 +80,19 @@ export function SelectParentModal({
               placeholder="Type to search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="min-w-0 flex-1 bg-transparent text-sm placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent text-sm placeholder:text-(--txt-placeholder) focus:outline-none"
             />
           </div>
-          <div className="max-h-64 overflow-auto rounded border border-[var(--border-subtle)]">
+          <div className="max-h-64 overflow-auto rounded border border-(--border-subtle)">
             <button
               type="button"
               onClick={() => {
                 onChange(null);
                 onClose();
               }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--txt-tertiary)] hover:bg-[var(--bg-layer-1-hover)]"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
             >
-              <span className="text-[var(--txt-icon-tertiary)]">•</span>
+              <span className="text-(--txt-icon-tertiary)">•</span>
               No parent
             </button>
             {filteredIssues.map((i) => (
@@ -103,9 +103,9 @@ export function SelectParentModal({
                   onChange(i.id);
                   onClose();
                 }}
-                className="flex w-full items-center gap-2 truncate px-3 py-2 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                className="flex w-full items-center gap-2 truncate px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
               >
-                <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
                   •
                 </span>
                 <span className="truncate">{i.title}</span>

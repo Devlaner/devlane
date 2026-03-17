@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Button, Skeleton } from "../../components/ui";
 import { instanceSettingsService } from "../../services/instanceService";
 import { getApiErrorMessage } from "../../api/client";
@@ -77,54 +77,54 @@ export function InstanceAdminGeneralPage() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h1 className="text-base font-semibold text-[var(--txt-primary)]">
+        <h1 className="text-base font-semibold text-(--txt-primary)">
           General settings
         </h1>
-        <p className="mt-0.5 text-xs text-[var(--txt-secondary)]">
+        <p className="mt-0.5 text-xs text-(--txt-secondary)">
           Change the name of your instance. Admin email and instance ID are set
           at setup and cannot be changed here.
         </p>
       </div>
 
       {error && (
-        <p className="text-sm text-[var(--txt-danger-primary)]">{error}</p>
+        <p className="text-sm text-(--txt-danger-primary)">{error}</p>
       )}
 
       <section className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--txt-secondary)]">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-(--txt-secondary)">
           Instance details
         </h2>
         <div className="space-y-2.5">
-          <label className="block text-xs font-medium text-[var(--txt-secondary)]">
+          <label className="block text-xs font-medium text-(--txt-secondary)">
             Name of instance
             <input
               type="text"
               value={instanceName}
               onChange={(e) => setInstanceName(e.target.value)}
-              className="mt-0.5 block w-full rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-2.5 py-1.5 text-xs text-[var(--txt-primary)] focus:outline-none"
+              className="mt-0.5 block w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 text-xs text-(--txt-primary) focus:outline-none"
             />
           </label>
-          <label className="block text-xs font-medium text-[var(--txt-secondary)]">
+          <label className="block text-xs font-medium text-(--txt-secondary)">
             Email
             <input
               type="email"
               readOnly
               value={adminEmail}
-              className="mt-0.5 block w-full rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-2.5 py-1.5 text-xs text-[var(--txt-tertiary)] focus:outline-none"
+              className="mt-0.5 block w-full rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2.5 py-1.5 text-xs text-(--txt-tertiary) focus:outline-none"
             />
-            <p className="mt-0.5 text-[11px] text-[var(--txt-tertiary)]">
+            <p className="mt-0.5 text-[11px] text-(--txt-tertiary)">
               Set at initial setup.
             </p>
           </label>
-          <label className="block text-xs font-medium text-[var(--txt-secondary)]">
+          <label className="block text-xs font-medium text-(--txt-secondary)">
             Instance ID
             <input
               type="text"
               readOnly
               value={instanceId}
-              className="mt-0.5 block w-full rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-2.5 py-1.5 text-xs text-[var(--txt-tertiary)] focus:outline-none"
+              className="mt-0.5 block w-full rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2.5 py-1.5 text-xs text-(--txt-tertiary) focus:outline-none"
             />
-            <p className="mt-0.5 text-[11px] text-[var(--txt-tertiary)]">
+            <p className="mt-0.5 text-[11px] text-(--txt-tertiary)">
               Generated at setup.
             </p>
           </label>

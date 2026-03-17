@@ -125,7 +125,7 @@ function ModuleProgressCircle({ progress }: { progress: number }) {
           strokeLinecap="round"
         />
       </svg>
-      <span className="absolute text-[10px] font-medium text-[var(--txt-secondary)]">
+      <span className="absolute text-[10px] font-medium text-(--txt-secondary)">
         {progress}%
       </span>
     </div>
@@ -145,10 +145,10 @@ export function ModulesPage() {
 
   const searchQuery = (searchParams.get("search") ?? "").trim().toLowerCase();
   const statusFilter = parseList(searchParams.get(MODULE_FILTER_PARAM.status));
-  const startDateValue =
-    searchParams.get(MODULE_FILTER_PARAM.start_date)?.trim() ?? "";
-  const dueDateValue =
-    searchParams.get(MODULE_FILTER_PARAM.due_date)?.trim() ?? "";
+  const startDateList = parseList(
+    searchParams.get(MODULE_FILTER_PARAM.start_date),
+  );
+  const dueDateList = parseList(searchParams.get(MODULE_FILTER_PARAM.due_date));
   const startAfter =
     searchParams.get(MODULE_FILTER_PARAM.start_after)?.trim() ?? null;
   const startBefore =
@@ -174,48 +174,41 @@ export function ModulesPage() {
     const toDate = (iso: string) => new Date(iso.slice(0, 10));
     const inRange = (value: Date, min: Date, max: Date) =>
       value.getTime() >= min.getTime() && value.getTime() <= max.getTime();
-    if (startDateValue !== "") {
+    const matchStartPreset = (d: Date, preset: string) => {
+      if (preset === "1_week") return inRange(d, today, addDays(today, 7));
+      if (preset === "2_weeks") return inRange(d, today, addDays(today, 14));
+      if (preset === "1_month") return inRange(d, today, addDays(today, 30));
+      if (preset === "2_months") return inRange(d, today, addDays(today, 60));
+      return false;
+    };
+    if (startDateList.length > 0) {
+      const hasCustomStart = startDateList.includes("custom");
       list = list.filter((m) => {
         const sd = m.start_date?.trim();
         if (!sd) return false;
         const d = toDate(sd);
-        if (
-          startDateValue === "custom" &&
-          startAfter !== null &&
-          startBefore !== null
-        )
-          return inRange(d, toDate(startAfter), toDate(startBefore));
-        if (startDateValue === "1_week")
-          return inRange(d, today, addDays(today, 7));
-        if (startDateValue === "2_weeks")
-          return inRange(d, today, addDays(today, 14));
-        if (startDateValue === "1_month")
-          return inRange(d, today, addDays(today, 30));
-        if (startDateValue === "2_months")
-          return inRange(d, today, addDays(today, 60));
-        return false;
+        if (hasCustomStart)
+          return (
+            startAfter !== null &&
+            startBefore !== null &&
+            inRange(d, toDate(startAfter), toDate(startBefore))
+          );
+        return startDateList.some((p) => matchStartPreset(d, p));
       });
     }
-    if (dueDateValue !== "") {
+    if (dueDateList.length > 0) {
+      const hasCustomDue = dueDateList.includes("custom");
       list = list.filter((m) => {
         const td = m.target_date?.trim();
         if (!td) return false;
         const d = toDate(td);
-        if (
-          dueDateValue === "custom" &&
-          dueAfter !== null &&
-          dueBefore !== null
-        )
-          return inRange(d, toDate(dueAfter), toDate(dueBefore));
-        if (dueDateValue === "1_week")
-          return inRange(d, today, addDays(today, 7));
-        if (dueDateValue === "2_weeks")
-          return inRange(d, today, addDays(today, 14));
-        if (dueDateValue === "1_month")
-          return inRange(d, today, addDays(today, 30));
-        if (dueDateValue === "2_months")
-          return inRange(d, today, addDays(today, 60));
-        return false;
+        if (hasCustomDue)
+          return (
+            dueAfter !== null &&
+            dueBefore !== null &&
+            inRange(d, toDate(dueAfter), toDate(dueBefore))
+          );
+        return dueDateList.some((p) => matchStartPreset(d, p));
       });
     }
     return list;
@@ -223,8 +216,8 @@ export function ModulesPage() {
     modules,
     searchQuery,
     statusFilter,
-    startDateValue,
-    dueDateValue,
+    startDateList,
+    dueDateList,
     startAfter,
     startBefore,
     dueAfter,
@@ -320,14 +313,14 @@ export function ModulesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading…
       </div>
     );
   }
   if (!workspace || !project) {
     return (
-      <div className="text-[var(--txt-secondary)]">Project not found.</div>
+      <div className="text-(--txt-secondary)">Project not found.</div>
     );
   }
 
@@ -344,24 +337,24 @@ export function ModulesPage() {
           <Link
             key={mod.id}
             to={`${baseUrl}/modules/${mod.id}`}
-            className="flex items-center gap-4 px-4 py-3 no-underline transition-colors hover:bg-[var(--bg-layer-1-hover)]"
+            className="flex items-center gap-4 px-4 py-3 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
           >
             <ModuleProgressCircle progress={progress} />
-            <p className="min-w-0 flex-1 font-medium text-[var(--txt-primary)]">
+            <p className="min-w-0 flex-1 font-medium text-(--txt-primary)">
               {mod.name}
             </p>
             {dateRange !== null && (
-              <span className="shrink-0 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1 text-[13px] text-[var(--txt-secondary)]">
+              <span className="shrink-0 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1 text-[13px] text-(--txt-secondary)">
                 {dateRange}
               </span>
             )}
-            <span className="shrink-0 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1 text-[13px] text-[var(--txt-secondary)]">
+            <span className="shrink-0 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1 text-[13px] text-(--txt-secondary)">
               {mod.status}
             </span>
             <Avatar name={workspace.name} size="sm" className="ml-1" />
             <button
               type="button"
-              className="flex size-8 shrink-0 items-center justify-center rounded text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+              className="flex size-8 shrink-0 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
               aria-label="Favorite"
               onClick={(e) => {
                 e.preventDefault();
@@ -372,7 +365,7 @@ export function ModulesPage() {
             </button>
             <button
               type="button"
-              className="flex size-8 shrink-0 items-center justify-center rounded text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+              className="flex size-8 shrink-0 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
               aria-label="More options"
               onClick={(e) => {
                 e.preventDefault();
@@ -396,21 +389,21 @@ export function ModulesPage() {
           <Link
             key={mod.id}
             to={`${baseUrl}/modules/${mod.id}`}
-            className="flex flex-col gap-3 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-4 no-underline transition-colors hover:bg-[var(--bg-layer-1-hover)]"
+            className="flex flex-col gap-3 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-4 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
           >
             <div className="flex items-center justify-between gap-2">
-              <p className="min-w-0 flex-1 truncate font-medium text-[var(--txt-primary)]">
+              <p className="min-w-0 flex-1 truncate font-medium text-(--txt-primary)">
                 {mod.name}
               </p>
               <ModuleProgressCircle progress={progress} />
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px]">
               {dateRange !== null && (
-                <span className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1 text-[var(--txt-secondary)]">
+                <span className="rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1 text-(--txt-secondary)">
                   {dateRange}
                 </span>
               )}
-              <span className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1 text-[var(--txt-secondary)]">
+              <span className="rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1 text-(--txt-secondary)">
                 {mod.status}
               </span>
             </div>
@@ -434,23 +427,23 @@ export function ModulesPage() {
       });
 
     return (
-      <div className="space-y-3 border-l border-[var(--border-subtle)] pl-4">
-        {withDates.map(({ mod, start, end }) => {
+      <div className="space-y-3 border-l border-(--border-subtle) pl-4">
+        {withDates.map(({ mod }) => {
           const progress = getProgress(mod);
           const dateRange = formatModuleDateRange(mod);
           return (
             <div key={mod.id} className="relative pl-4">
-              <div className="absolute left-0 top-3 h-2 w-2 -translate-x-1/2 rounded-full bg-[var(--brand-default)]" />
+              <div className="absolute left-0 top-3 h-2 w-2 -translate-x-1/2 rounded-full bg-(--brand-default)" />
               <Link
                 to={`${baseUrl}/modules/${mod.id}`}
-                className="flex items-center gap-3 rounded-md px-3 py-2 no-underline transition-colors hover:bg-[var(--bg-layer-1-hover)]"
+                className="flex items-center gap-3 rounded-md px-3 py-2 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
               >
                 <ModuleProgressCircle progress={progress} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-[var(--txt-primary)]">
+                  <p className="truncate text-sm font-medium text-(--txt-primary)">
                     {mod.name}
                   </p>
-                  <p className="mt-0.5 text-xs text-[var(--txt-secondary)]">
+                  <p className="mt-0.5 text-xs text-(--txt-secondary)">
                     {dateRange ?? "No dates"}
                   </p>
                 </div>
@@ -464,7 +457,7 @@ export function ModulesPage() {
 
   if (filteredModules.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-[var(--txt-tertiary)]">
+      <p className="py-8 text-center text-sm text-(--txt-tertiary)">
         {searchQuery ? "No modules match your search." : "No modules yet."}
       </p>
     );

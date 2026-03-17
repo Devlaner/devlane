@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components -- Shared constants and icon maps for filter UI */
+﻿/* eslint-disable react-refresh/only-export-components -- Shared constants and icon maps for filter UI */
 import type { ReactNode } from "react";
 import type {
   Priority,
@@ -96,15 +96,15 @@ const IconLow = () => (
   </span>
 );
 const IconNone = () => (
-  <span className="flex size-4 items-center justify-center text-[10px] text-[var(--txt-icon-tertiary)]">
+  <span className="flex size-4 items-center justify-center text-[10px] text-(--txt-icon-tertiary)">
     —
   </span>
 );
 const IconBacklog = () => (
-  <span className="flex size-4 items-center justify-center rounded-full border border-[var(--border-subtle)]" />
+  <span className="flex size-4 items-center justify-center rounded-full border border-(--border-subtle)" />
 );
 const IconUnstarted = () => (
-  <span className="flex size-4 items-center justify-center rounded-full border-2 border-[var(--border-subtle)]" />
+  <span className="flex size-4 items-center justify-center rounded-full border-2 border-(--border-subtle)" />
 );
 const IconStarted = () => (
   <span className="flex size-4 items-center justify-center rounded-full border-2 border-amber-500 bg-amber-500/20" />
@@ -115,7 +115,7 @@ const IconCompleted = () => (
   </span>
 );
 const IconCanceled = () => (
-  <span className="flex size-4 items-center justify-center rounded-full border border-[var(--border-subtle)] text-[10px] text-[var(--txt-icon-tertiary)]">
+  <span className="flex size-4 items-center justify-center rounded-full border border-(--border-subtle) text-[10px] text-(--txt-icon-tertiary)">
     ✕
   </span>
 );
