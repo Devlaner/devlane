@@ -134,6 +134,24 @@ export function ModulesPage() {
   const [modules, setModules] = useState<ModuleApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const searchQuery = (searchParams.get("search") ?? "").trim().toLowerCase();
+  const filteredModules =
+    searchQuery === ""
+      ? modules
+      : modules.filter((m) => m.name.toLowerCase().includes(searchQuery));
+
+  useEffect(() => {
+    const handler = () => {
+      if (!workspaceSlug || !projectId) return;
+      moduleService
+        .list(workspaceSlug, projectId)
+        .then((list) => setModules(list ?? []))
+        .catch(() => {});
+    };
+    window.addEventListener("modules-refresh", handler);
+    return () => window.removeEventListener("modules-refresh", handler);
+  }, [workspaceSlug, projectId]);
+
   useEffect(() => {
     if (!workspaceSlug || !projectId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset loading when no slug/project (kept for future use)
@@ -194,7 +212,7 @@ export function ModulesPage() {
 
   const renderListLayout = () => (
     <div className="space-y-2">
-      {modules.map((mod) => {
+      {filteredModules.map((mod) => {
         const progress = getProgress(mod);
         const dateRange = formatModuleDateRange(mod);
         return (
@@ -246,7 +264,7 @@ export function ModulesPage() {
 
   const renderGalleryLayout = () => (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {modules.map((mod) => {
+      {filteredModules.map((mod) => {
         const progress = getProgress(mod);
         const dateRange = formatModuleDateRange(mod);
         return (
@@ -278,7 +296,7 @@ export function ModulesPage() {
   );
 
   const renderTimelineLayout = () => {
-    const withDates = modules
+    const withDates = filteredModules
       .map((m) => ({
         mod: m,
         start: m.start_date ? new Date(m.start_date) : null,
@@ -319,10 +337,10 @@ export function ModulesPage() {
     );
   };
 
-  if (modules.length === 0) {
+  if (filteredModules.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-[var(--txt-tertiary)]">
-        No modules yet.
+        {searchQuery ? "No modules match your search." : "No modules yet."}
       </p>
     );
   }

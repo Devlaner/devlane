@@ -14,6 +14,7 @@ import {
   WorkspaceViewsEllipsisMenu,
   CreateViewModal,
 } from "../workspace-views";
+import { CreateModuleModal } from "../CreateModuleModal";
 import { workspaceService } from "../../services/workspaceService";
 import { projectService } from "../../services/projectService";
 import { issueService } from "../../services/issueService";
@@ -806,6 +807,7 @@ function ProjectSectionHeader({
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
   const [projectSearch, setProjectSearch] = useState("");
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
+  const [createModuleOpen, setCreateModuleOpen] = useState(false);
   const projectDropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -967,15 +969,41 @@ function ProjectSectionHeader({
       const listActive = currentLayout === "list";
       const galleryActive = currentLayout === "gallery";
       const timelineActive = currentLayout === "timeline";
+      const modulesSearch = searchParams.get("search") ?? "";
       return (
         <>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
-            aria-label="Search"
-          >
-            <IconSearch />
-          </button>
+          <div className="flex min-w-[140px] max-w-[200px] items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2 py-1.5">
+            <span className="shrink-0 text-[var(--txt-icon-tertiary)]" aria-hidden>
+              <IconSearch />
+            </span>
+            <input
+              type="text"
+              value={modulesSearch}
+              onChange={(e) => {
+                const next = new URLSearchParams(searchParams);
+                const v = e.target.value;
+                if (v.trim()) next.set("search", v); else next.delete("search");
+                setSearchParams(next);
+              }}
+              placeholder="Search"
+              className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+              aria-label="Search modules"
+            />
+            {modulesSearch.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  const next = new URLSearchParams(searchParams);
+                  next.delete("search");
+                  setSearchParams(next);
+                }}
+                className="shrink-0 rounded p-0.5 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)] hover:text-[var(--txt-icon-secondary)]"
+                aria-label="Clear search"
+              >
+                <IconX />
+              </button>
+            )}
+          </div>
           <button
             type="button"
             className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
@@ -1029,7 +1057,12 @@ function ProjectSectionHeader({
               <IconStack />
             </button>
           </div>
-          <Button size="sm" className="gap-1.5 text-[13px] font-medium">
+          <Button
+            size="sm"
+            className="gap-1.5 text-[13px] font-medium"
+            type="button"
+            onClick={() => setCreateModuleOpen(true)}
+          >
             <IconPlus /> Add Module
           </Button>
         </>
@@ -1135,6 +1168,19 @@ function ProjectSectionHeader({
         />
       </div>
       <div className="flex items-center gap-1">{rightActions()}</div>
+      {section === "modules" && (
+        <CreateModuleModal
+          open={createModuleOpen}
+          onClose={() => setCreateModuleOpen(false)}
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
+          projectName={projectName}
+          onCreated={() => {
+            setCreateModuleOpen(false);
+            window.dispatchEvent(new CustomEvent("modules-refresh"));
+          }}
+        />
+      )}
     </>
   );
 }
