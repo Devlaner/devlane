@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button, Input } from "./ui";
 import { Dropdown, DatePickerTrigger, SelectParentModal } from "./work-item";
@@ -170,6 +170,7 @@ export interface CreateWorkItemModalProps {
   workspaceSlug: string;
   projects: ProjectApiResponse[];
   defaultProjectId?: string;
+  defaultModuleId?: string | null;
   createError?: string | null;
   onSave?: (data: {
     title: string;
@@ -194,6 +195,7 @@ export function CreateWorkItemModal({
   workspaceSlug,
   projects,
   defaultProjectId,
+  defaultModuleId,
   createError,
   onSave,
 }: CreateWorkItemModalProps) {
@@ -213,7 +215,7 @@ export function CreateWorkItemModal({
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [cycleId, setCycleId] = useState<string | null>(null);
-  const [moduleId, setModuleId] = useState<string | null>(null);
+  const [moduleId, setModuleId] = useState<string | null>(defaultModuleId ?? null);
   const [parentId, setParentId] = useState<string | null>(null);
   const [parentModalOpen, setParentModalOpen] = useState(false);
 
@@ -374,12 +376,12 @@ export function CreateWorkItemModal({
       setStartDate("");
       setDueDate("");
       setCycleId(null);
-      setModuleId(null);
+      setModuleId(defaultModuleId ?? null);
       setParentId(null);
       setOpenDropdown(null);
       setParentModalOpen(false);
     }
-  }, [open, defaultProjectId, projects]);
+  }, [open, defaultProjectId, defaultModuleId, projects]);
 
   useEffect(() => {
     if (!open) return;
