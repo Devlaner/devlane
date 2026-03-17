@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Avatar, Badge, Button } from "../components/ui";
 import { CreateWorkItemModal } from "../components/CreateWorkItemModal";
+import { AddExistingWorkItemModal } from "../components/AddExistingWorkItemModal";
 import { workspaceService } from "../services/workspaceService";
 import { projectService } from "../services/projectService";
 import { moduleService } from "../services/moduleService";
@@ -19,6 +20,7 @@ import type {
 } from "../api/types";
 import type { Priority } from "../types";
 import { getImageUrl } from "../lib/utils";
+import { slugify } from "../lib/slug";
 
 const priorityVariant: Record<
   Priority,
@@ -137,6 +139,7 @@ export function ModuleDetailPage() {
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [module, setModule] = useState<ModuleApiResponse | null>(null);
+  const [resolvedModuleId, setResolvedModuleId] = useState<string | null>(null);
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
   const [states, setStates] = useState<StateApiResponse[]>([]);
   const [labels, setLabels] = useState<LabelApiResponse[]>([]);
@@ -144,6 +147,7 @@ export function ModuleDetailPage() {
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const [addExistingOpen, setAddExistingOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
   const createParam = searchParams.get("create") === "1";
@@ -162,12 +166,13 @@ export function ModuleDetailPage() {
   };
 
   const refetchIssues = () => {
-    if (!workspaceSlug || !projectId) return;
+    if (!workspaceSlug || !projectId || !resolvedModuleId) return;
     issueService
       .list(workspaceSlug, projectId, { limit: 1000 })
       .then((list) => {
-        if (!moduleId) return;
-        setIssues((list ?? []).filter((i) => i.module_ids?.includes(moduleId)));
+        setIssues(
+          (list ?? []).filter((i) => i.module_ids?.includes(resolvedModuleId)),
+        );
       })
       .catch(() => {});
   };
@@ -182,19 +187,27 @@ export function ModuleDetailPage() {
     Promise.all([
       workspaceService.getBySlug(workspaceSlug),
       projectService.get(workspaceSlug, projectId),
-      moduleService.get(workspaceSlug, projectId, moduleId),
+      moduleService.list(workspaceSlug, projectId),
       issueService.list(workspaceSlug, projectId, { limit: 1000 }),
       stateService.list(workspaceSlug, projectId),
       labelService.list(workspaceSlug, projectId),
       workspaceService.listMembers(workspaceSlug),
       projectService.list(workspaceSlug),
     ])
-      .then(([w, p, mod, iss, st, lab, mem, proj]) => {
+      .then(([w, p, mods, iss, st, lab, mem, proj]) => {
         if (cancelled) return;
         setWorkspace(w ?? null);
         setProject(p ?? null);
-        setModule(mod ?? null);
-        setIssues((iss ?? []).filter((i) => i.module_ids?.includes(moduleId)));
+        const key = moduleId.trim().toLowerCase();
+        const found =
+          (mods ?? []).find((x) => x.id === moduleId) ??
+          (mods ?? []).find((x) => slugify(x.name) === key) ??
+          null;
+        setModule(found);
+        setResolvedModuleId(found?.id ?? null);
+        setIssues(
+          (iss ?? []).filter((i) => i.module_ids?.includes(found?.id ?? "")),
+        );
         setStates(st ?? []);
         setLabels(lab ?? []);
         setMembers(mem ?? []);
@@ -205,6 +218,7 @@ export function ModuleDetailPage() {
           setWorkspace(null);
           setProject(null);
           setModule(null);
+          setResolvedModuleId(null);
           setIssues([]);
           setStates([]);
           setLabels([]);
@@ -234,7 +248,7 @@ export function ModuleDetailPage() {
     moduleId?: string | null;
     parentId?: string | null;
   }) => {
-    if (!workspaceSlug || !data.title.trim() || !moduleId) return;
+    if (!workspaceSlug || !data.title.trim() || !resolvedModuleId) return;
     setCreateError(null);
     try {
       const created = await issueService.create(workspaceSlug, data.projectId, {
@@ -252,7 +266,7 @@ export function ModuleDetailPage() {
         await moduleService.addIssue(
           workspaceSlug,
           data.projectId,
-          moduleId,
+          resolvedModuleId,
           created.id,
         );
       }
@@ -346,11 +360,14 @@ export function ModuleDetailPage() {
               <IconPlus />
               Create new work items
             </Button>
-            <Link to={`${baseUrl}/issues`}>
-              <Button size="sm" variant="secondary" className="gap-1.5">
-                Add an existing work item
-              </Button>
-            </Link>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="gap-1.5"
+              onClick={() => setAddExistingOpen(true)}
+            >
+              Add an existing work item
+            </Button>
           </div>
         </div>
       )}
@@ -534,21 +551,33 @@ export function ModuleDetailPage() {
             <IconPlus />
             Create new work items
           </Button>
-          <Link to={`${baseUrl}/issues`}>
-            <Button size="sm" variant="secondary" className="gap-1.5">
-              Add an existing work item
-            </Button>
-          </Link>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="gap-1.5"
+            onClick={() => setAddExistingOpen(true)}
+          >
+            Add an existing work item
+          </Button>
         </div>
       )}
 
+      <AddExistingWorkItemModal
+        open={addExistingOpen}
+        onClose={() => setAddExistingOpen(false)}
+        workspaceSlug={workspace.slug}
+        projectId={project.id}
+        moduleId={resolvedModuleId ?? ""}
+        projectIdentifier={project.identifier ?? project.id.slice(0, 8)}
+        onAdded={refetchIssues}
+      />
       <CreateWorkItemModal
         open={createOpen}
         onClose={handleCloseCreate}
         workspaceSlug={workspace.slug}
         projects={projects}
         defaultProjectId={project.id}
-        defaultModuleId={moduleId}
+        defaultModuleId={resolvedModuleId}
         onSave={handleCreateSave}
         createError={createError}
       />
