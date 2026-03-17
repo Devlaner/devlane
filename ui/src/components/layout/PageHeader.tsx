@@ -546,7 +546,7 @@ function ProjectSectionDropdown({
         </span>
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)">
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-45 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)">
           {sections.map((section) => {
             const href =
               section === "issues"
@@ -605,28 +605,28 @@ function InboxHeader() {
       <div className="flex items-center gap-1">
         <button
           type="button"
-          className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+          className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
           aria-label="Mark as read"
         >
           <IconCheck />
         </button>
         <button
           type="button"
-          className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+          className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
           aria-label="Archive"
         >
           <IconArchive />
         </button>
         <button
           type="button"
-          className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+          className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
           aria-label="Filters"
         >
           <IconFilter />
         </button>
         <button
           type="button"
-          className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+          className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
           aria-label="More options"
         >
           <IconMoreVertical />
@@ -700,7 +700,7 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
         <div
           className={`overflow-hidden transition-[width] duration-200 ease-out ${searchOpen ? "w-56" : "w-0"}`}
         >
-          <div className="flex items-center gap-2 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-2 py-1.5">
+          <div className="flex items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2 py-1.5">
             <span className="shrink-0 text-(--txt-icon-tertiary)">
               <IconSearch />
             </span>
@@ -731,7 +731,7 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            className="flex size-8 shrink-0 items-center justify-center rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
+            className="flex size-8 shrink-0 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
             aria-label="Search projects"
           >
             <IconSearch />
@@ -739,7 +739,7 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
         )}
         <button
           type="button"
-          className="flex items-center gap-1.5 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+          className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
         >
           <IconCalendar />
           Created date
@@ -747,7 +747,7 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
         </button>
         <button
           type="button"
-          className="flex items-center gap-1.5 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+          className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
         >
           <IconFilter />
           Filters
@@ -782,7 +782,7 @@ function ProjectDetailHeader({
       <div className="flex items-center gap-2">
         <button
           type="button"
-          className="flex size-8 items-center justify-center rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
+          className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
           aria-label="Search"
         >
           <IconSearch />
@@ -925,7 +925,7 @@ function ModuleDetailHeader({
             </span>
           </button>
           {moduleDropdownOpen && (
-            <div className="absolute left-0 top-full z-50 mt-1 min-w-[160px] rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)">
+            <div className="absolute left-0 top-full z-50 mt-1 min-w-40 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)">
               <Link
                 to={`${baseUrl}/modules`}
                 className="block px-3 py-2 text-left text-sm text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
@@ -1196,7 +1196,7 @@ function ProjectSectionHeader({
       return (
         <>
           {showSearchInput ? (
-            <div className="flex h-8 min-w-[140px] max-w-[200px] items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2">
+            <div className="flex h-8 min-w-35 max-w-50 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2">
               <span className="shrink-0 text-(--txt-icon-tertiary)" aria-hidden>
                 <IconSearch />
               </span>
@@ -1504,7 +1504,7 @@ function ProjectSectionHeader({
         <button
           type="button"
           onClick={() => setProjectDropdownOpen((o) => !o)}
-          className="flex h-[34px] w-8 items-center justify-center rounded-r-md border border-l-0 border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
+          className="flex h-8.5 w-8 items-center justify-center rounded-r-md border border-l-0 border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
           aria-label="Select project"
         >
           <IconChevronDown />
@@ -1950,7 +1950,7 @@ export function PageHeader() {
 
   useEffect(() => {
     if (!workspaceSlug || !projectId || !moduleId) {
-      setModule(null);
+      queueMicrotask(() => setModule(null));
       return;
     }
     let cancelled = false;
@@ -2090,7 +2090,7 @@ export function PageHeader() {
 
   return (
     <header
-      className="flex min-h-[52px] shrink-0 items-center justify-between border-b border-(--border-subtle) bg-(--bg-canvas) px-(--padding-page) py-3"
+      className="flex min-h-13 shrink-0 items-center justify-between border-b border-(--border-subtle) bg-(--bg-canvas) px-(--padding-page) py-3"
       role="banner"
     >
       {content}

@@ -150,7 +150,7 @@ export function ModuleDetailPage() {
 
   useEffect(() => {
     if (createParam && projectId) {
-      setCreateOpen(true);
+      queueMicrotask(() => setCreateOpen(true));
     }
   }, [createParam, projectId]);
 
@@ -174,11 +174,11 @@ export function ModuleDetailPage() {
 
   useEffect(() => {
     if (!workspaceSlug || !projectId || !moduleId) {
-      setLoading(false);
+      queueMicrotask(() => setLoading(false));
       return;
     }
     let cancelled = false;
-    setLoading(true);
+    queueMicrotask(() => setLoading(true));
     Promise.all([
       workspaceService.getBySlug(workspaceSlug),
       projectService.get(workspaceSlug, projectId),
@@ -409,7 +409,7 @@ export function ModuleDetailPage() {
                                   (issue.priority as Priority) ?? "none"
                                 ]
                               }
-                              className="!px-1.5 !py-0 text-[10px]"
+                              className="px-1.5! py-0! text-[10px]"
                             >
                               {issue.priority ?? "—"}
                             </Badge>

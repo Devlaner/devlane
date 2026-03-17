@@ -320,11 +320,11 @@ export function ModulesPage() {
 
   useEffect(() => {
     if (!workspaceSlug || !projectId) {
-      setLoading(false);
+      queueMicrotask(() => setLoading(false));
       return;
     }
     let cancelled = false;
-    setLoading(true);
+    queueMicrotask(() => setLoading(true));
     Promise.all([
       workspaceService.getBySlug(workspaceSlug),
       projectService.get(workspaceSlug, projectId),

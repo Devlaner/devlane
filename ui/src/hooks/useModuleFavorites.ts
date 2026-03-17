@@ -26,11 +26,9 @@ export function useModuleFavorites(
   const [favoriteModuleIds, setFavoriteModuleIds] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!workspaceId || !projectId) {
-      setFavoriteModuleIds([]);
-      return;
-    }
-    setFavoriteModuleIds(loadFavorites(workspaceId, projectId));
+    const next =
+      workspaceId && projectId ? loadFavorites(workspaceId, projectId) : [];
+    queueMicrotask(() => setFavoriteModuleIds(next));
   }, [workspaceId, projectId]);
 
   const toggleFavorite = useCallback(
