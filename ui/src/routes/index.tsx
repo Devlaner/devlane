@@ -1,4 +1,4 @@
-﻿/* eslint-disable react-refresh/only-export-components -- routes file exports router + layout components; keep for future use */
+/* eslint-disable react-refresh/only-export-components -- routes file exports router + layout components; keep for future use */
 import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import { AppShell, InstanceAdminLayout } from "../components/layout";
@@ -81,6 +81,11 @@ const CyclesPage = lazy(() =>
 const ModulesPage = lazy(() =>
   import("../pages/ModulesPage").then((m) =>
     page({ ModulesPage: m.ModulesPage }),
+  ),
+);
+const ModuleDetailPage = lazy(() =>
+  import("../pages/ModuleDetailPage").then((m) =>
+    page({ ModuleDetailPage: m.ModuleDetailPage }),
   ),
 );
 const SettingsPage = lazy(() =>
@@ -407,6 +412,14 @@ const router = createBrowserRouter([
                         element: (
                           <Suspense fallback={<PageFallback />}>
                             <ModulesPage />
+                          </Suspense>
+                        ),
+                      },
+                      {
+                        path: "modules/:moduleId",
+                        element: (
+                          <Suspense fallback={<PageFallback />}>
+                            <ModuleDetailPage />
                           </Suspense>
                         ),
                       },

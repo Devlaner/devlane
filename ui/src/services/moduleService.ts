@@ -20,6 +20,17 @@ export const moduleService = {
     return data;
   },
 
+  async get(
+    workspaceSlug: string,
+    projectId: string,
+    moduleId: string,
+  ): Promise<ModuleApiResponse> {
+    const { data } = await apiClient.get<ModuleApiResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/modules/${encodeURIComponent(moduleId)}/`,
+    );
+    return data;
+  },
+
   async create(
     workspaceSlug: string,
     projectId: string,
@@ -30,6 +41,17 @@ export const moduleService = {
       payload,
     );
     return data;
+  },
+
+  async listIssueIds(
+    workspaceSlug: string,
+    projectId: string,
+    moduleId: string,
+  ): Promise<string[]> {
+    const { data } = await apiClient.get<string[]>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/modules/${encodeURIComponent(moduleId)}/issues/`,
+    );
+    return Array.isArray(data) ? data : [];
   },
 
   async addIssue(

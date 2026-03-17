@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Link,
   useLocation,
@@ -1147,36 +1147,52 @@ function ProjectSectionHeader({
               );
             })}
           </Dropdown>
-          <Dropdown
-            id="modules-filters"
-            openId={modulesFiltersOpen}
-            onOpen={setModulesFiltersOpen}
-            label="Filters"
-            icon={<IconFilter />}
-            displayValue="Filters"
-            panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
-            align="right"
-            triggerContent={
-              <>
-                <span className="shrink-0 text-(--txt-icon-tertiary)">
-                  <IconFilter />
-                </span>
-                <span className="truncate">Filters</span>
-                <span className="shrink-0 text-(--txt-icon-tertiary)">
-                  <IconChevronDown />
-                </span>
-              </>
-            }
-            triggerClassName="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
-          >
-            <ModuleFiltersPanel
-              workspaceSlug={workspaceSlug}
-              onOpenDateModal={(which) => {
-                setModulesFiltersOpen(null);
-                setModulesDateRangeModal(which);
-              }}
-            />
-          </Dropdown>
+          <div className="relative shrink-0">
+            <Dropdown
+              id="modules-filters"
+              openId={modulesFiltersOpen}
+              onOpen={setModulesFiltersOpen}
+              label="Filters"
+              icon={<IconFilter />}
+              displayValue="Filters"
+              panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
+              align="right"
+              triggerContent={
+                <>
+                  <span className="shrink-0 text-(--txt-icon-tertiary)">
+                    <IconFilter />
+                  </span>
+                  <span className="truncate">Filters</span>
+                  <span className="shrink-0 text-(--txt-icon-tertiary)">
+                    <IconChevronDown />
+                  </span>
+                </>
+              }
+              triggerClassName="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+            >
+              <ModuleFiltersPanel
+                workspaceSlug={workspaceSlug}
+                onOpenDateModal={(which) => {
+                  setModulesFiltersOpen(null);
+                  setModulesDateRangeModal(which);
+                }}
+              />
+            </Dropdown>
+            {[
+              searchParams.get("search")?.trim(),
+              searchParams.get(MODULE_FILTER_PARAM.favorites),
+              searchParams.get(MODULE_FILTER_PARAM.status)?.trim(),
+              searchParams.get(MODULE_FILTER_PARAM.lead)?.trim(),
+              searchParams.get(MODULE_FILTER_PARAM.members)?.trim(),
+              searchParams.get(MODULE_FILTER_PARAM.start_date)?.trim(),
+              searchParams.get(MODULE_FILTER_PARAM.due_date)?.trim(),
+            ].some(Boolean) && (
+              <span
+                className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-(--brand-default)"
+                aria-hidden
+              />
+            )}
+          </div>
           <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
             <button
               type="button"
