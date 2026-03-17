@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Avatar } from "../components/ui";
-import { MODULE_FILTER_PARAM } from "../components/workspace-views";
+import { useModulesFilter } from "../contexts/ModulesFilterContext";
 import { workspaceService } from "../services/workspaceService";
 import { projectService } from "../services/projectService";
 import { moduleService } from "../services/moduleService";
@@ -13,14 +13,7 @@ import type {
   WorkspaceMemberApiResponse,
 } from "../api/types";
 import { getImageUrl } from "../lib/utils";
-
-function parseList(value: string | null): string[] {
-  if (!value?.trim()) return [];
-  return value
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
+import { slugify } from "../lib/slug";
 
 /** Zero-pad a number to 2 digits. */
 function pad2(n: number): string {
@@ -169,7 +162,7 @@ export function ModulesPage() {
     workspaceSlug: string;
     projectId: string;
   }>();
-  const [searchParams] = useSearchParams();
+  const filter = useModulesFilter();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [modules, setModules] = useState<ModuleApiResponse[]>([]);
@@ -183,22 +176,15 @@ export function ModulesPage() {
     projectId,
   );
 
-  const searchQuery = (searchParams.get("search") ?? "").trim().toLowerCase();
-  const favoritesFilter =
-    searchParams.get(MODULE_FILTER_PARAM.favorites) === "1";
-  const statusFilter = parseList(searchParams.get(MODULE_FILTER_PARAM.status));
-  const startDateList = parseList(
-    searchParams.get(MODULE_FILTER_PARAM.start_date),
-  );
-  const dueDateList = parseList(searchParams.get(MODULE_FILTER_PARAM.due_date));
-  const startAfter =
-    searchParams.get(MODULE_FILTER_PARAM.start_after)?.trim() ?? null;
-  const startBefore =
-    searchParams.get(MODULE_FILTER_PARAM.start_before)?.trim() ?? null;
-  const dueAfter =
-    searchParams.get(MODULE_FILTER_PARAM.due_after)?.trim() ?? null;
-  const dueBefore =
-    searchParams.get(MODULE_FILTER_PARAM.due_before)?.trim() ?? null;
+  const searchQuery = (filter.search ?? "").trim().toLowerCase();
+  const favoritesFilter = filter.favorites;
+  const statusFilter = filter.status;
+  const startDateList = filter.startDateList;
+  const dueDateList = filter.dueDateList;
+  const startAfter = filter.startAfter;
+  const startBefore = filter.startBefore;
+  const dueAfter = filter.dueAfter;
+  const dueBefore = filter.dueBefore;
 
   const filteredModules = useMemo(() => {
     let list = modules;
@@ -272,8 +258,8 @@ export function ModulesPage() {
     dueBefore,
   ]);
 
-  const sortBy = searchParams.get("sort") || "progress";
-  const order = searchParams.get("order") || "asc";
+  const sortBy = filter.sort || "progress";
+  const order = filter.order || "asc";
   const sortedModules = [...filteredModules].sort((a, b) => {
     const getProgress = (mod: ModuleApiResponse) => {
       const total = mod.issue_count ?? 0;
@@ -373,8 +359,10 @@ export function ModulesPage() {
   }
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
-  const layout =
-    (searchParams.get("layout") as "list" | "gallery" | "timeline") || "list";
+
+  const modulePath = (m: ModuleApiResponse) =>
+    `${baseUrl}/modules/${slugify(m.name)}`;
+  const layout = filter.layout;
 
   const getLeadMember = (leadId: string | null | undefined) => {
     if (!leadId) return null;
@@ -399,7 +387,7 @@ export function ModulesPage() {
             className="flex items-center gap-3 border-b border-(--border-subtle) last:border-b-0 px-4 py-3 hover:bg-(--bg-layer-1-hover)"
           >
             <Link
-              to={`${baseUrl}/modules/${mod.id}`}
+              to={modulePath(mod)}
               className="flex min-w-0 flex-1 items-center gap-3 no-underline"
             >
               <ModuleProgressCircle progress={progress} />
@@ -492,7 +480,7 @@ export function ModulesPage() {
         return (
           <Link
             key={mod.id}
-            to={`${baseUrl}/modules/${mod.id}`}
+            to={modulePath(mod)}
             className="flex flex-col gap-3 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-4 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
           >
             <div className="flex items-center justify-between gap-2">
@@ -654,7 +642,7 @@ export function ModulesPage() {
                   >
                     <td className="px-3 py-2">
                       <Link
-                        to={`${baseUrl}/modules/${mod.id}`}
+                        to={modulePath(mod)}
                         className="flex items-center gap-2 text-sm text-(--txt-primary) no-underline hover:text-(--brand-default)"
                       >
                         <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
@@ -764,7 +752,7 @@ export function ModulesPage() {
                       style={{ width: totalDays * DAY_WIDTH }}
                     >
                       <Link
-                        to={`${baseUrl}/modules/${mod.id}`}
+                        to={modulePath(mod)}
                         className="absolute top-1/2 -translate-y-1/2 rounded bg-(--brand-200) px-2 py-1 text-xs font-medium text-(--brand-default) no-underline hover:bg-(--brand-default) hover:text-white"
                         style={{ left, width, minWidth: 40 }}
                       >

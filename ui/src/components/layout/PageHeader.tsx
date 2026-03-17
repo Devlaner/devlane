@@ -8,13 +8,13 @@ import {
 } from "react-router-dom";
 import { Button } from "../ui";
 import { Dropdown } from "../work-item";
+import { useModulesFilter } from "../../contexts/ModulesFilterContext";
 import {
   WorkspaceViewsFiltersDropdown,
   WorkspaceViewsDisplayDropdown,
   WorkspaceViewsEllipsisMenu,
   CreateViewModal,
   ModuleFiltersPanel,
-  MODULE_FILTER_PARAM,
 } from "../workspace-views";
 import { DateRangeModal } from "../workspace-views/DateRangeModal";
 import { CreateModuleModal } from "../CreateModuleModal";
@@ -1008,7 +1008,7 @@ function ProjectSectionHeader({
   issueCount: number;
 }) {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const modulesFilter = useModulesFilter();
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
   const issuesUrl = `${baseUrl}/issues`;
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
@@ -1085,14 +1085,7 @@ function ProjectSectionHeader({
     navigate(targetPath);
   };
 
-  const currentLayout =
-    (searchParams.get("layout") as "list" | "gallery" | "timeline") || "list";
-
-  const handleLayoutChange = (layout: "list" | "gallery" | "timeline") => {
-    const next = new URLSearchParams(searchParams);
-    next.set("layout", layout);
-    setSearchParams(next);
-  };
+  const currentLayout = modulesFilter.layout;
 
   const rightActions = () => {
     if (section === "issues") {
@@ -1191,7 +1184,7 @@ function ProjectSectionHeader({
       const listActive = currentLayout === "list";
       const galleryActive = currentLayout === "gallery";
       const timelineActive = currentLayout === "timeline";
-      const modulesSearch = searchParams.get("search") ?? "";
+      const modulesSearch = modulesFilter.search ?? "";
       const showSearchInput = modulesSearchExpanded || modulesSearch.length > 0;
       return (
         <>
@@ -1205,11 +1198,8 @@ function ProjectSectionHeader({
                 type="text"
                 value={modulesSearch}
                 onChange={(e) => {
-                  const next = new URLSearchParams(searchParams);
                   const v = e.target.value;
-                  if (v.trim()) next.set("search", v);
-                  else next.delete("search");
-                  setSearchParams(next);
+                  modulesFilter.setSearch(v);
                 }}
                 onBlur={() => {
                   if (modulesSearch.length === 0)
@@ -1223,9 +1213,7 @@ function ProjectSectionHeader({
                 <button
                   type="button"
                   onClick={() => {
-                    const next = new URLSearchParams(searchParams);
-                    next.delete("search");
-                    setSearchParams(next);
+                    modulesFilter.setSearch("");
                   }}
                   className="shrink-0 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
                   aria-label="Clear search"
@@ -1251,7 +1239,7 @@ function ProjectSectionHeader({
             label="Sort by"
             icon={<IconArrowUpDown />}
             displayValue={(() => {
-              const sort = searchParams.get("sort") || "progress";
+              const sort = modulesFilter.sort || "progress";
               const labels: Record<string, string> = {
                 name: "Name",
                 progress: "Progress",
@@ -1271,7 +1259,7 @@ function ProjectSectionHeader({
                 </span>
                 <span className="truncate">
                   {(() => {
-                    const sort = searchParams.get("sort") || "progress";
+                    const sort = modulesFilter.sort || "progress";
                     const labels: Record<string, string> = {
                       name: "Name",
                       progress: "Progress",
@@ -1298,18 +1286,14 @@ function ProjectSectionHeader({
               { value: "created_date", label: "Created date" },
               { value: "manual", label: "Manual" },
             ].map((opt) => {
-              const current = searchParams.get("sort") || "progress";
+              const current = modulesFilter.sort || "progress";
               return (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => {
-                    setSearchParams((prev) => {
-                      const next = new URLSearchParams(prev);
-                      next.set("sort", opt.value);
-                      if (!prev.get("order")) next.set("order", "asc");
-                      return next;
-                    });
+                    modulesFilter.setSort(opt.value);
+                    if (!modulesFilter.order) modulesFilter.setOrder("asc");
                     setModulesSortOpen(null);
                   }}
                   className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
@@ -1325,18 +1309,14 @@ function ProjectSectionHeader({
             })}
             <div className="my-1 border-t border-(--border-subtle)" />
             {["asc", "desc"].map((orderValue) => {
-              const currentOrder = searchParams.get("order") || "asc";
+              const currentOrder = modulesFilter.order || "asc";
               const label = orderValue === "asc" ? "Ascending" : "Descending";
               return (
                 <button
                   key={orderValue}
                   type="button"
                   onClick={() => {
-                    setSearchParams((prev) => {
-                      const next = new URLSearchParams(prev);
-                      next.set("order", orderValue);
-                      return next;
-                    });
+                    modulesFilter.setOrder(orderValue as "asc" | "desc");
                     setModulesSortOpen(null);
                   }}
                   className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
@@ -1383,13 +1363,13 @@ function ProjectSectionHeader({
               />
             </Dropdown>
             {[
-              searchParams.get("search")?.trim(),
-              searchParams.get(MODULE_FILTER_PARAM.favorites),
-              searchParams.get(MODULE_FILTER_PARAM.status)?.trim(),
-              searchParams.get(MODULE_FILTER_PARAM.lead)?.trim(),
-              searchParams.get(MODULE_FILTER_PARAM.members)?.trim(),
-              searchParams.get(MODULE_FILTER_PARAM.start_date)?.trim(),
-              searchParams.get(MODULE_FILTER_PARAM.due_date)?.trim(),
+              modulesFilter.search.trim(),
+              modulesFilter.favorites ? "1" : "",
+              modulesFilter.status.join(","),
+              modulesFilter.lead.join(","),
+              modulesFilter.members.join(","),
+              modulesFilter.startDateList.join(","),
+              modulesFilter.dueDateList.join(","),
             ].some(Boolean) && (
               <span
                 className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-(--brand-default)"
@@ -1400,7 +1380,7 @@ function ProjectSectionHeader({
           <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
             <button
               type="button"
-              onClick={() => handleLayoutChange("list")}
+              onClick={() => modulesFilter.setLayout("list")}
               className={`flex size-7 items-center justify-center rounded-l-md text-(--txt-icon-secondary) transition-colors ${
                 listActive
                   ? "bg-white shadow-sm text-(--txt-primary)"
@@ -1413,7 +1393,7 @@ function ProjectSectionHeader({
             </button>
             <button
               type="button"
-              onClick={() => handleLayoutChange("gallery")}
+              onClick={() => modulesFilter.setLayout("gallery")}
               className={`flex size-7 items-center justify-center text-(--txt-icon-secondary) transition-colors ${
                 galleryActive
                   ? "bg-white shadow-sm text-(--txt-primary)"
@@ -1426,7 +1406,7 @@ function ProjectSectionHeader({
             </button>
             <button
               type="button"
-              onClick={() => handleLayoutChange("timeline")}
+              onClick={() => modulesFilter.setLayout("timeline")}
               className={`flex size-7 items-center justify-center rounded-r-md text-(--txt-icon-secondary) transition-colors ${
                 timelineActive
                   ? "bg-white shadow-sm text-(--txt-primary)"
@@ -1572,32 +1552,24 @@ function ProjectSectionHeader({
             }
             after={
               modulesDateRangeModal === "start"
-                ? (searchParams.get(MODULE_FILTER_PARAM.start_after)?.trim() ??
-                  null)
-                : (searchParams.get(MODULE_FILTER_PARAM.due_after)?.trim() ??
-                  null)
+                ? (modulesFilter.startAfter ?? null)
+                : (modulesFilter.dueAfter ?? null)
             }
             before={
               modulesDateRangeModal === "start"
-                ? (searchParams.get(MODULE_FILTER_PARAM.start_before)?.trim() ??
-                  null)
-                : (searchParams.get(MODULE_FILTER_PARAM.due_before)?.trim() ??
-                  null)
+                ? (modulesFilter.startBefore ?? null)
+                : (modulesFilter.dueBefore ?? null)
             }
             onApply={(after, before) => {
-              setSearchParams((prev) => {
-                const next = new URLSearchParams(prev);
-                if (modulesDateRangeModal === "start") {
-                  next.set(MODULE_FILTER_PARAM.start_date, "custom");
-                  next.set(MODULE_FILTER_PARAM.start_after, after);
-                  next.set(MODULE_FILTER_PARAM.start_before, before);
-                } else {
-                  next.set(MODULE_FILTER_PARAM.due_date, "custom");
-                  next.set(MODULE_FILTER_PARAM.due_after, after);
-                  next.set(MODULE_FILTER_PARAM.due_before, before);
-                }
-                return next;
-              });
+              if (modulesDateRangeModal === "start") {
+                modulesFilter.setStartDateList(["custom"]);
+                modulesFilter.setStartAfter(after);
+                modulesFilter.setStartBefore(before);
+              } else {
+                modulesFilter.setDueDateList(["custom"]);
+                modulesFilter.setDueAfter(after);
+                modulesFilter.setDueBefore(before);
+              }
               setModulesDateRangeModal(null);
             }}
           />

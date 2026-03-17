@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useModulesFilter } from "../../contexts/ModulesFilterContext";
 import { CollapsibleSection } from "./WorkspaceViewsFiltersShared";
 import { DATE_PRESET_LABELS, FILTER_ICONS } from "./WorkspaceViewsFiltersData";
 import { DATE_PRESETS } from "../../types/workspaceViewFilters";
@@ -7,19 +7,6 @@ import { Avatar } from "../ui";
 import { getImageUrl } from "../../lib/utils";
 import { workspaceService } from "../../services/workspaceService";
 import type { WorkspaceMemberApiResponse } from "../../api/types";
-
-export const MODULE_FILTER_PARAM = {
-  favorites: "module_favorites",
-  status: "module_status",
-  lead: "module_lead",
-  members: "module_members",
-  start_date: "start_date",
-  due_date: "due_date",
-  start_after: "start_after",
-  start_before: "start_before",
-  due_after: "due_after",
-  due_before: "due_before",
-} as const;
 
 const MODULE_STATUSES = [
   { id: "backlog", label: "Backlog" },
@@ -29,14 +16,6 @@ const MODULE_STATUSES = [
   { id: "completed", label: "Completed" },
   { id: "cancelled", label: "Cancelled" },
 ] as const;
-
-function parseList(value: string | null): string[] {
-  if (!value?.trim()) return [];
-  return value
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
 
 function ModuleStatusIcon({ statusId }: { statusId: string }) {
   if (statusId === "backlog" || statusId === "planned") {
@@ -142,9 +121,11 @@ export function ModuleFiltersPanel({
   workspaceSlug,
   onOpenDateModal,
 }: ModuleFiltersPanelProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const filter = useModulesFilter();
   const [search, setSearch] = useState("");
-  const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
+  const [members, setWorkspaceMembers] = useState<WorkspaceMemberApiResponse[]>(
+    [],
+  );
   const [sectionOpen, setSectionOpen] = useState({
     favorites: true,
     status: true,
@@ -160,24 +141,34 @@ export function ModuleFiltersPanel({
     workspaceService
       .listMembers(workspaceSlug)
       .then((list) => {
-        if (!cancelled) setMembers(list ?? []);
+        if (!cancelled) setWorkspaceMembers(list ?? []);
       })
       .catch(() => {
-        if (!cancelled) setMembers([]);
+        if (!cancelled) setWorkspaceMembers([]);
       });
     return () => {
       cancelled = true;
     };
   }, [workspaceSlug]);
 
-  const favorites = searchParams.get(MODULE_FILTER_PARAM.favorites) === "1";
-  const statusList = parseList(searchParams.get(MODULE_FILTER_PARAM.status));
-  const leadIds = parseList(searchParams.get(MODULE_FILTER_PARAM.lead));
-  const memberIds = parseList(searchParams.get(MODULE_FILTER_PARAM.members));
-  const startDateList = parseList(
-    searchParams.get(MODULE_FILTER_PARAM.start_date),
-  );
-  const dueDateList = parseList(searchParams.get(MODULE_FILTER_PARAM.due_date));
+  const {
+    favorites,
+    status: statusList,
+    lead: leadIds,
+    members: memberIds,
+    startDateList,
+    dueDateList,
+    setFavorites,
+    setStatus,
+    setLead,
+    setMembers: setMemberIds,
+    setStartDateList,
+    setDueDateList,
+    setStartAfter,
+    setStartBefore,
+    setDueAfter,
+    setDueBefore,
+  } = filter;
   const hasCustomStart = startDateList.includes("custom");
   const hasCustomDue = dueDateList.includes("custom");
 
@@ -189,14 +180,6 @@ export function ModuleFiltersPanel({
     if (onOpenDateModal) {
       onOpenDateModal(which);
     }
-  };
-
-  const updateParams = (updater: (prev: URLSearchParams) => void) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      updater(next);
-      return next;
-    });
   };
 
   const filterSearch = (label: string) =>
@@ -240,13 +223,7 @@ export function ModuleFiltersPanel({
             <input
               type="checkbox"
               checked={favorites}
-              onChange={() => {
-                updateParams((next) => {
-                  if (next.get(MODULE_FILTER_PARAM.favorites) === "1")
-                    next.delete(MODULE_FILTER_PARAM.favorites);
-                  else next.set(MODULE_FILTER_PARAM.favorites, "1");
-                });
-              }}
+              onChange={() => setFavorites(!favorites)}
               className="rounded border-(--border-subtle)"
             />
             <span>Favorites</span>
@@ -267,14 +244,11 @@ export function ModuleFiltersPanel({
                 type="checkbox"
                 checked={statusList.includes(s.id)}
                 onChange={() => {
-                  updateParams((next) => {
-                    const nextList = statusList.includes(s.id)
+                  setStatus(
+                    statusList.includes(s.id)
                       ? statusList.filter((x) => x !== s.id)
-                      : [...statusList, s.id];
-                    if (nextList.length)
-                      next.set(MODULE_FILTER_PARAM.status, nextList.join(","));
-                    else next.delete(MODULE_FILTER_PARAM.status);
-                  });
+                      : [...statusList, s.id],
+                  );
                 }}
                 className="rounded border-(--border-subtle)"
               />
@@ -298,14 +272,11 @@ export function ModuleFiltersPanel({
                 type="checkbox"
                 checked={leadIds.includes(m.member_id)}
                 onChange={() => {
-                  updateParams((next) => {
-                    const nextList = leadIds.includes(m.member_id)
+                  setLead(
+                    leadIds.includes(m.member_id)
                       ? leadIds.filter((id) => id !== m.member_id)
-                      : [...leadIds, m.member_id];
-                    if (nextList.length)
-                      next.set(MODULE_FILTER_PARAM.lead, nextList.join(","));
-                    else next.delete(MODULE_FILTER_PARAM.lead);
-                  });
+                      : [...leadIds, m.member_id],
+                  );
                 }}
                 className="rounded border-(--border-subtle)"
               />
@@ -342,14 +313,11 @@ export function ModuleFiltersPanel({
                 type="checkbox"
                 checked={memberIds.includes(m.member_id)}
                 onChange={() => {
-                  updateParams((next) => {
-                    const nextList = memberIds.includes(m.member_id)
+                  setMemberIds(
+                    memberIds.includes(m.member_id)
                       ? memberIds.filter((id) => id !== m.member_id)
-                      : [...memberIds, m.member_id];
-                    if (nextList.length)
-                      next.set(MODULE_FILTER_PARAM.members, nextList.join(","));
-                    else next.delete(MODULE_FILTER_PARAM.members);
-                  });
+                      : [...memberIds, m.member_id],
+                  );
                 }}
                 className="rounded border-(--border-subtle)"
               />
@@ -387,11 +355,9 @@ export function ModuleFiltersPanel({
                     e.preventDefault();
                     e.stopPropagation();
                     if (hasCustomStart) {
-                      updateParams((next) => {
-                        next.delete(MODULE_FILTER_PARAM.start_date);
-                        next.delete(MODULE_FILTER_PARAM.start_after);
-                        next.delete(MODULE_FILTER_PARAM.start_before);
-                      });
+                      setStartDateList([]);
+                      setStartAfter(null);
+                      setStartBefore(null);
                     } else {
                       openDateModal("start");
                     }
@@ -415,30 +381,23 @@ export function ModuleFiltersPanel({
                     type="checkbox"
                     checked={!hasCustomStart && startDateList.includes(d)}
                     onChange={() => {
-                      updateParams((next) => {
-                        if (hasCustomStart) {
-                          next.set(MODULE_FILTER_PARAM.start_date, d);
-                          next.delete(MODULE_FILTER_PARAM.start_after);
-                          next.delete(MODULE_FILTER_PARAM.start_before);
-                        } else {
-                          const presets = startDateList.filter(
-                            (x) => x !== "custom",
-                          );
-                          const nextList = presets.includes(d)
-                            ? presets.filter((x) => x !== d)
-                            : [...presets, d];
-                          if (nextList.length)
-                            next.set(
-                              MODULE_FILTER_PARAM.start_date,
-                              nextList.join(","),
-                            );
-                          else {
-                            next.delete(MODULE_FILTER_PARAM.start_date);
-                            next.delete(MODULE_FILTER_PARAM.start_after);
-                            next.delete(MODULE_FILTER_PARAM.start_before);
-                          }
+                      if (hasCustomStart) {
+                        setStartDateList([d]);
+                        setStartAfter(null);
+                        setStartBefore(null);
+                      } else {
+                        const presets = startDateList.filter(
+                          (x) => x !== "custom",
+                        );
+                        const nextList = presets.includes(d)
+                          ? presets.filter((x) => x !== d)
+                          : [...presets, d];
+                        setStartDateList(nextList);
+                        if (nextList.length === 0) {
+                          setStartAfter(null);
+                          setStartBefore(null);
                         }
-                      });
+                      }
                     }}
                     className="rounded border-(--border-subtle)"
                   />
@@ -463,11 +422,9 @@ export function ModuleFiltersPanel({
                     e.preventDefault();
                     e.stopPropagation();
                     if (hasCustomDue) {
-                      updateParams((next) => {
-                        next.delete(MODULE_FILTER_PARAM.due_date);
-                        next.delete(MODULE_FILTER_PARAM.due_after);
-                        next.delete(MODULE_FILTER_PARAM.due_before);
-                      });
+                      setDueDateList([]);
+                      setDueAfter(null);
+                      setDueBefore(null);
                     } else {
                       openDateModal("due");
                     }
@@ -491,30 +448,23 @@ export function ModuleFiltersPanel({
                     type="checkbox"
                     checked={!hasCustomDue && dueDateList.includes(d)}
                     onChange={() => {
-                      updateParams((next) => {
-                        if (hasCustomDue) {
-                          next.set(MODULE_FILTER_PARAM.due_date, d);
-                          next.delete(MODULE_FILTER_PARAM.due_after);
-                          next.delete(MODULE_FILTER_PARAM.due_before);
-                        } else {
-                          const presets = dueDateList.filter(
-                            (x) => x !== "custom",
-                          );
-                          const nextList = presets.includes(d)
-                            ? presets.filter((x) => x !== d)
-                            : [...presets, d];
-                          if (nextList.length)
-                            next.set(
-                              MODULE_FILTER_PARAM.due_date,
-                              nextList.join(","),
-                            );
-                          else {
-                            next.delete(MODULE_FILTER_PARAM.due_date);
-                            next.delete(MODULE_FILTER_PARAM.due_after);
-                            next.delete(MODULE_FILTER_PARAM.due_before);
-                          }
+                      if (hasCustomDue) {
+                        setDueDateList([d]);
+                        setDueAfter(null);
+                        setDueBefore(null);
+                      } else {
+                        const presets = dueDateList.filter(
+                          (x) => x !== "custom",
+                        );
+                        const nextList = presets.includes(d)
+                          ? presets.filter((x) => x !== d)
+                          : [...presets, d];
+                        setDueDateList(nextList);
+                        if (nextList.length === 0) {
+                          setDueAfter(null);
+                          setDueBefore(null);
                         }
-                      });
+                      }
                     }}
                     className="rounded border-(--border-subtle)"
                   />
