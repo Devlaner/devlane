@@ -322,9 +322,7 @@ export function InstanceSetupConfigurePage() {
             </label>
 
             {error && (
-              <p className="text-sm text-(--txt-danger-primary)">
-                {error}
-              </p>
+              <p className="text-sm text-(--txt-danger-primary)">{error}</p>
             )}
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>

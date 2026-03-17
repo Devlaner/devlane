@@ -463,9 +463,7 @@ export function WorkspaceHomePage() {
     );
   }
   if (!workspace) {
-    return (
-      <div className="text-(--txt-secondary)">Workspace not found.</div>
-    );
+    return <div className="text-(--txt-secondary)">Workspace not found.</div>;
   }
 
   const baseUrl = `/${workspace.slug}`;
@@ -795,8 +793,7 @@ export function WorkspaceHomePage() {
           <div className="flex flex-col gap-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                Content{" "}
-                <span className="text-(--txt-tertiary)">Optional</span>
+                Content <span className="text-(--txt-tertiary)">Optional</span>
               </label>
               <textarea
                 value={stickyContent}

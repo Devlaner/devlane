@@ -140,9 +140,7 @@ export function InstanceAdminEmailPage() {
         </p>
       </div>
 
-      {error && (
-        <p className="text-sm text-(--txt-danger-primary)">{error}</p>
-      )}
+      {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
 
       <section className="space-y-3">
         <div className="grid gap-2.5 sm:grid-cols-2">

@@ -95,9 +95,7 @@ export function AnalyticsOverviewPage() {
     );
   }
   if (!workspace) {
-    return (
-      <div className="text-(--txt-secondary)">Workspace not found.</div>
-    );
+    return <div className="text-(--txt-secondary)">Workspace not found.</div>;
   }
 
   const baseUrl = `/${workspace.slug}/analytics`;
@@ -148,9 +146,7 @@ export function AnalyticsOverviewPage() {
         </Link>
       </div>
 
-      <h2 className="text-lg font-semibold text-(--txt-primary)">
-        Overview
-      </h2>
+      <h2 className="text-lg font-semibold text-(--txt-primary)">Overview</h2>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -159,9 +155,7 @@ export function AnalyticsOverviewPage() {
             key={label}
             className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3"
           >
-            <p className="text-xs font-medium text-(--txt-tertiary)">
-              {label}
-            </p>
+            <p className="text-xs font-medium text-(--txt-tertiary)">{label}</p>
             <p className="mt-1 text-2xl font-semibold text-(--txt-primary)">
               {value}
             </p>

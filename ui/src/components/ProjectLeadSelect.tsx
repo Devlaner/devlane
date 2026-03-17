@@ -34,9 +34,7 @@ export function ProjectLeadSelect({
 
   return (
     <div className="space-y-1">
-      <p className="text-sm font-medium text-(--txt-primary)">
-        Project Lead
-      </p>
+      <p className="text-sm font-medium text-(--txt-primary)">Project Lead</p>
       <div className="relative min-w-[180px]">
         <select
           value={value ?? ""}

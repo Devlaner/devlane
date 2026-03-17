@@ -62,9 +62,7 @@ export function ViewsPage() {
     );
   }
   if (!workspace || !project) {
-    return (
-      <div className="text-(--txt-secondary)">Project not found.</div>
-    );
+    return <div className="text-(--txt-secondary)">Project not found.</div>;
   }
 
   return (
@@ -75,9 +73,7 @@ export function ViewsPage() {
       </p>
       {views.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-md border border-(--border-subtle) border-dashed bg-(--bg-layer-1) py-12">
-          <p className="text-sm text-(--txt-tertiary)">
-            No saved views yet.
-          </p>
+          <p className="text-sm text-(--txt-tertiary)">No saved views yet.</p>
           <p className="mt-1 text-xs text-(--txt-tertiary)">
             Create a view to save your filters and display options.
           </p>
@@ -89,9 +85,7 @@ export function ViewsPage() {
               key={v.id}
               className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2"
             >
-              <span className="font-medium text-(--txt-primary)">
-                {v.name}
-              </span>
+              <span className="font-medium text-(--txt-primary)">{v.name}</span>
               {v.description && (
                 <p className="mt-0.5 text-sm text-(--txt-secondary)">
                   {v.description}

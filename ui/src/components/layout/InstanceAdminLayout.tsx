@@ -314,9 +314,7 @@ export function InstanceAdminLayout() {
             {breadcrumbTail && (
               <>
                 <span className="text-(--txt-icon-tertiary)">&gt;</span>
-                <span className="text-(--txt-primary)">
-                  {breadcrumbTail}
-                </span>
+                <span className="text-(--txt-primary)">{breadcrumbTail}</span>
               </>
             )}
           </div>

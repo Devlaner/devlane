@@ -326,9 +326,7 @@ export function InviteAcceptPage() {
           </p>
 
           {error && (
-            <p className="mt-3 text-sm text-(--txt-destructive)">
-              {error}
-            </p>
+            <p className="mt-3 text-sm text-(--txt-destructive)">{error}</p>
           )}
 
           <div className="mt-8 flex flex-col gap-3">

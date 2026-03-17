@@ -81,9 +81,7 @@ export function BoardPage() {
     );
   }
   if (!workspace || !project) {
-    return (
-      <div className="text-(--txt-secondary)">Project not found.</div>
-    );
+    return <div className="text-(--txt-secondary)">Project not found.</div>;
   }
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
@@ -94,9 +92,7 @@ export function BoardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-(--txt-primary)">
-        Board
-      </h1>
+      <h1 className="text-2xl font-semibold text-(--txt-primary)">Board</h1>
       <div className="flex gap-4 overflow-x-auto pb-4">
         {issuesByState.map(({ state, issues: stateIssues }) => (
           <div
@@ -110,9 +106,7 @@ export function BoardPage() {
                 borderLeftColor: state.color ?? "var(--border-subtle)",
               }}
             >
-              <h2 className="font-medium text-(--txt-primary)">
-                {state.name}
-              </h2>
+              <h2 className="font-medium text-(--txt-primary)">{state.name}</h2>
               <p className="text-xs text-(--txt-tertiary)">
                 {stateIssues.length} issue{stateIssues.length !== 1 ? "s" : ""}
               </p>

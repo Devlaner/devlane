@@ -251,9 +251,7 @@ export function AnalyticsWorkItemsPage() {
     );
   }
   if (!workspace) {
-    return (
-      <div className="text-(--txt-secondary)">Workspace not found.</div>
-    );
+    return <div className="text-(--txt-secondary)">Workspace not found.</div>;
   }
 
   const baseUrl = `/${workspace.slug}/analytics`;
@@ -276,9 +274,7 @@ export function AnalyticsWorkItemsPage() {
         </Link>
       </div>
 
-      <h2 className="text-lg font-semibold text-(--txt-primary)">
-        Work items
-      </h2>
+      <h2 className="text-lg font-semibold text-(--txt-primary)">Work items</h2>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
@@ -518,9 +514,7 @@ export function AnalyticsWorkItemsPage() {
                   key={priority}
                   className="border-b border-(--border-subtle) last:border-0"
                 >
-                  <td className="py-3 pr-4 text-(--txt-primary)">
-                    {priority}
-                  </td>
+                  <td className="py-3 pr-4 text-(--txt-primary)">{priority}</td>
                   <td className="py-3 text-(--txt-secondary)">{count}</td>
                 </tr>
               ))}
@@ -607,9 +601,7 @@ export function AnalyticsWorkItemsPage() {
                     <td className="py-3 pr-4 text-(--txt-secondary)">
                       {completed}
                     </td>
-                    <td className="py-3 text-(--txt-secondary)">
-                      {cancelled}
-                    </td>
+                    <td className="py-3 text-(--txt-secondary)">{cancelled}</td>
                   </tr>
                 ),
               )}

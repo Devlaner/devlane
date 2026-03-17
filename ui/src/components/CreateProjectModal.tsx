@@ -287,9 +287,7 @@ export function CreateProjectModal({
           </div>
 
           {error && (
-            <p className="mt-3 text-sm text-(--txt-danger-primary)">
-              {error}
-            </p>
+            <p className="mt-3 text-sm text-(--txt-danger-primary)">{error}</p>
           )}
 
           {/* Actions */}

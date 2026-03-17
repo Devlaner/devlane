@@ -993,10 +993,7 @@ function ProjectSectionHeader({
         <>
           {showSearchInput ? (
             <div className="flex h-8 min-w-[140px] max-w-[200px] items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2">
-              <span
-                className="shrink-0 text-(--txt-icon-tertiary)"
-                aria-hidden
-              >
+              <span className="shrink-0 text-(--txt-icon-tertiary)" aria-hidden>
                 <IconSearch />
               </span>
               <input

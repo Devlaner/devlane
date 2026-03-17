@@ -125,9 +125,7 @@ export function InstanceAdminWorkspacePage() {
         </p>
       </div>
 
-      {error && (
-        <p className="text-sm text-(--txt-danger-primary)">{error}</p>
-      )}
+      {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
 
       <section className="flex items-start justify-between gap-3 rounded border border-(--border-subtle) bg-(--bg-surface-1) p-3">
         <div>
@@ -172,9 +170,7 @@ export function InstanceAdminWorkspacePage() {
           </Button>
         </div>
         {error && (
-          <p className="mb-3 text-sm text-(--txt-danger-primary)">
-            {error}
-          </p>
+          <p className="mb-3 text-sm text-(--txt-danger-primary)">{error}</p>
         )}
         <ul className="space-y-2">
           {workspaces.map((w) => (
@@ -190,9 +186,7 @@ export function InstanceAdminWorkspacePage() {
                   <p className="text-sm font-medium text-(--txt-primary)">
                     {w.name}
                   </p>
-                  <p className="text-xs text-(--txt-tertiary)">
-                    [{w.slug}]
-                  </p>
+                  <p className="text-xs text-(--txt-tertiary)">[{w.slug}]</p>
                 </div>
               </div>
               <Link

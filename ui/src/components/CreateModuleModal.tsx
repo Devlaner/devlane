@@ -176,9 +176,7 @@ export function CreateModuleModal({
           </>
         }
       >
-        <div className="mb-3 text-sm text-(--txt-secondary)">
-          {projectName}
-        </div>
+        <div className="mb-3 text-sm text-(--txt-secondary)">{projectName}</div>
         <form
           id="create-module-form"
           onSubmit={handleSubmit}

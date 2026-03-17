@@ -164,9 +164,7 @@ export function NotificationsPage() {
   }
   if (!workspace) {
     return (
-      <div className="p-4 text-(--txt-secondary)">
-        Workspace not found.
-      </div>
+      <div className="p-4 text-(--txt-secondary)">Workspace not found.</div>
     );
   }
 

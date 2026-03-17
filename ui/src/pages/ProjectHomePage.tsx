@@ -82,9 +82,7 @@ export function ProjectHomePage() {
     );
   }
   if (!workspace || !project) {
-    return (
-      <div className="text-(--txt-secondary)">Project not found.</div>
-    );
+    return <div className="text-(--txt-secondary)">Project not found.</div>;
   }
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;

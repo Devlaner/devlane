@@ -701,19 +701,13 @@ export function WorkspaceViewsPage() {
       case "link":
         return <span className="text-(--txt-tertiary)">0 links</span>;
       case "attachment_count":
-        return (
-          <span className="text-(--txt-tertiary)">0 attachments</span>
-        );
+        return <span className="text-(--txt-tertiary)">0 attachments</span>;
       case "sub_work_item_count":
-        return (
-          <span className="text-(--txt-tertiary)">0 sub-work items</span>
-        );
+        return <span className="text-(--txt-tertiary)">0 sub-work items</span>;
       case "estimate":
         return <span className="text-(--txt-tertiary)">Estimate</span>;
       case "module":
-        return (
-          <span className="text-(--txt-tertiary)">Select modules</span>
-        );
+        return <span className="text-(--txt-tertiary)">Select modules</span>;
       case "cycle":
         return <span className="text-(--txt-tertiary)">Select cycle</span>;
       default:
@@ -996,9 +990,7 @@ export function WorkspaceViewsPage() {
           openId={openCellId}
           onOpen={setOpenCellId}
           label="Assignees"
-          icon={
-            <IconUser className="size-3.5 text-(--txt-icon-tertiary)" />
-          }
+          icon={<IconUser className="size-3.5 text-(--txt-icon-tertiary)" />}
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
           triggerContent={assigneeTriggerContent}
@@ -1067,9 +1059,7 @@ export function WorkspaceViewsPage() {
                     {m.member_display_name ?? m.member_email ?? m.member_id}
                   </span>
                   {checked && (
-                    <span className="ml-auto text-(--txt-tertiary)">
-                      ✓
-                    </span>
+                    <span className="ml-auto text-(--txt-tertiary)">✓</span>
                   )}
                 </button>
               );
@@ -1104,9 +1094,7 @@ export function WorkspaceViewsPage() {
           openId={openCellId}
           onOpen={setOpenCellId}
           label="Labels"
-          icon={
-            <IconTag className="size-3.5 text-(--txt-icon-tertiary)" />
-          }
+          icon={<IconTag className="size-3.5 text-(--txt-icon-tertiary)" />}
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
           triggerContent={labelsTriggerContent}
@@ -1142,9 +1130,7 @@ export function WorkspaceViewsPage() {
                     {l.name}
                   </span>
                   {checked && (
-                    <span className="ml-auto text-(--txt-tertiary)">
-                      ✓
-                    </span>
+                    <span className="ml-auto text-(--txt-tertiary)">✓</span>
                   )}
                 </button>
               );

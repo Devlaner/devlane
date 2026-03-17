@@ -694,14 +694,9 @@ export function Sidebar() {
                     <p className="truncate text-sm font-semibold text-(--txt-primary)">
                       {workspace?.name ?? "—"}
                     </p>
-                    <p className="text-xs text-(--txt-tertiary)">
-                      Members
-                    </p>
+                    <p className="text-xs text-(--txt-tertiary)">Members</p>
                   </div>
-                  <span
-                    className="shrink-0 text-(--txt-primary)"
-                    aria-hidden
-                  >
+                  <span className="shrink-0 text-(--txt-primary)" aria-hidden>
                     <IconCheck />
                   </span>
                 </div>

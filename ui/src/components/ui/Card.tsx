@@ -33,10 +33,7 @@ export type CardHeaderProps = HTMLAttributes<HTMLDivElement>;
 export function CardHeader({ className, children, ...props }: CardHeaderProps) {
   return (
     <div
-      className={cn(
-        "border-b border-(--border-subtle) px-4 py-3",
-        className,
-      )}
+      className={cn("border-b border-(--border-subtle) px-4 py-3", className)}
       {...props}
     >
       {children}

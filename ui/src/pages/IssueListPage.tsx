@@ -280,9 +280,7 @@ export function IssueListPage() {
     );
   }
   if (!workspace || !project) {
-    return (
-      <div className="text-(--txt-secondary)">Project not found.</div>
-    );
+    return <div className="text-(--txt-secondary)">Project not found.</div>;
   }
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
@@ -308,9 +306,7 @@ export function IssueListPage() {
       <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
         {issues.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 px-4 py-12">
-            <p className="text-sm text-(--txt-tertiary)">
-              No work items yet.
-            </p>
+            <p className="text-sm text-(--txt-tertiary)">No work items yet.</p>
             <Button
               size="sm"
               className="gap-1.5"

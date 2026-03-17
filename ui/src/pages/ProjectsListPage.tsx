@@ -201,9 +201,7 @@ export function ProjectsListPage() {
     );
   }
   if (!workspace) {
-    return (
-      <div className="text-(--txt-secondary)">Workspace not found.</div>
-    );
+    return <div className="text-(--txt-secondary)">Workspace not found.</div>;
   }
 
   const baseUrl = `/${workspace.slug}`;

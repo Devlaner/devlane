@@ -1344,9 +1344,7 @@ export function SettingsPage() {
                         : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                     }`}
                   >
-                    <span className="text-(--txt-icon-secondary)">
-                      {icon}
-                    </span>
+                    <span className="text-(--txt-icon-secondary)">{icon}</span>
                     {label}
                   </button>
                 ))}
@@ -1364,9 +1362,7 @@ export function SettingsPage() {
                         : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                     }`}
                   >
-                    <span className="text-(--txt-icon-secondary)">
-                      {icon}
-                    </span>
+                    <span className="text-(--txt-icon-secondary)">{icon}</span>
                     {label}
                   </button>
                 ))}
@@ -1472,9 +1468,7 @@ export function SettingsPage() {
                         : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                     }`}
                   >
-                    <span className="text-(--txt-icon-secondary)">
-                      {icon}
-                    </span>
+                    <span className="text-(--txt-icon-secondary)">{icon}</span>
                     {label}
                   </button>
                 ))}
@@ -1492,9 +1486,7 @@ export function SettingsPage() {
                         : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                     }`}
                   >
-                    <span className="text-(--txt-icon-secondary)">
-                      {icon}
-                    </span>
+                    <span className="text-(--txt-icon-secondary)">{icon}</span>
                     {label}
                   </button>
                 ))}
@@ -1563,9 +1555,7 @@ export function SettingsPage() {
                 <h2 className="text-lg font-semibold text-(--txt-primary)">
                   {firstName} {lastName}
                 </h2>
-                <p className="text-sm text-(--txt-tertiary)">
-                  {user?.email}
-                </p>
+                <p className="text-sm text-(--txt-tertiary)">{user?.email}</p>
               </div>
               <div className="grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
@@ -1605,8 +1595,7 @@ export function SettingsPage() {
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    Email{" "}
-                    <span className="text-(--txt-danger-primary)">*</span>
+                    Email <span className="text-(--txt-danger-primary)">*</span>
                   </label>
                   <input
                     type="email"
@@ -1653,10 +1642,7 @@ export function SettingsPage() {
               >
                 {profileSaveLoading ? "Saving…" : "Save changes"}
               </Button>
-              <Card
-                variant="outlined"
-                className="border-(--border-subtle)"
-              >
+              <Card variant="outlined" className="border-(--border-subtle)">
                 <button
                   type="button"
                   onClick={() => setDeactivateOpen(!deactivateOpen)}
@@ -3609,10 +3595,7 @@ export function SettingsPage() {
               >
                 {generalUpdateLoading ? "Updating…" : "Update workspace"}
               </Button>
-              <Card
-                variant="outlined"
-                className="border-(--border-subtle)"
-              >
+              <Card variant="outlined" className="border-(--border-subtle)">
                 <button
                   type="button"
                   onClick={() => setDeleteWorkspaceOpen(!deleteWorkspaceOpen)}
@@ -4022,12 +4005,8 @@ export function SettingsPage() {
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-(--txt-tertiary)">
-                    ← Prev
-                  </span>
-                  <span className="text-sm text-(--txt-tertiary)">
-                    Next →
-                  </span>
+                  <span className="text-sm text-(--txt-tertiary)">← Prev</span>
+                  <span className="text-sm text-(--txt-tertiary)">Next →</span>
                 </div>
                 <Card variant="outlined" className="mt-2">
                   <CardContent className="flex flex-col items-center justify-center py-12">

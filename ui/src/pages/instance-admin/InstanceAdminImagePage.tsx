@@ -97,9 +97,7 @@ export function InstanceAdminImagePage() {
         </p>
       </div>
 
-      {error && (
-        <p className="text-sm text-(--txt-danger-primary)">{error}</p>
-      )}
+      {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
 
       <section className="space-y-3">
         <label className="block text-xs font-medium text-(--txt-secondary)">

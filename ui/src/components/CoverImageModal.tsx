@@ -281,9 +281,7 @@ export function CoverImageModal({
             File formats supported: .jpeg, .jpg, .png, .webp
           </p>
           {uploadError && (
-            <p className="text-sm text-(--txt-danger-primary)">
-              {uploadError}
-            </p>
+            <p className="text-sm text-(--txt-danger-primary)">{uploadError}</p>
           )}
         </div>
       )}

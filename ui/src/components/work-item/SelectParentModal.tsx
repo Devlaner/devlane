@@ -105,9 +105,7 @@ export function SelectParentModal({
                 }}
                 className="flex w-full items-center gap-2 truncate px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
               >
-                <span className="shrink-0 text-(--txt-icon-tertiary)">
-                  •
-                </span>
+                <span className="shrink-0 text-(--txt-icon-tertiary)">•</span>
                 <span className="truncate">{i.title}</span>
               </button>
             ))}

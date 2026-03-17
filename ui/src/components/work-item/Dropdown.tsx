@@ -91,9 +91,7 @@ export function Dropdown({
       >
         {triggerContent ?? (
           <>
-            <span className="shrink-0 text-(--txt-icon-tertiary)">
-              {icon}
-            </span>
+            <span className="shrink-0 text-(--txt-icon-tertiary)">{icon}</span>
             <span className="truncate">{displayValue || label}</span>
           </>
         )}

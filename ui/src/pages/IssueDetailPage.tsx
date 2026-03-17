@@ -758,9 +758,7 @@ export function IssueDetailPage() {
                         updateIssue({ priority: p });
                       }}
                     >
-                      <span className="truncate text-(--txt-primary)">
-                        {p}
-                      </span>
+                      <span className="truncate text-(--txt-primary)">{p}</span>
                       <Badge
                         variant={priorityVariant[p]}
                         className="text-[10px]"

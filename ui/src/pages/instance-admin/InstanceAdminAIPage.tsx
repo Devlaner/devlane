@@ -99,9 +99,7 @@ export function InstanceAdminAIPage() {
         </p>
       </div>
 
-      {error && (
-        <p className="text-sm text-(--txt-danger-primary)">{error}</p>
-      )}
+      {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
 
       <section className="space-y-3">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-(--txt-secondary)">

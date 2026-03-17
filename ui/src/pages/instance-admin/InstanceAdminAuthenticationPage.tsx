@@ -225,9 +225,7 @@ export function InstanceAdminAuthenticationPage() {
         </p>
       </div>
 
-      {error && (
-        <p className="text-sm text-(--txt-danger-primary)">{error}</p>
-      )}
+      {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
 
       <section className="flex items-start justify-between gap-3 rounded border border-(--border-subtle) bg-(--bg-surface-1) p-3">
         <div>
