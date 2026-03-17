@@ -8,7 +8,6 @@ import { moduleService } from "../services/moduleService";
 import { issueService } from "../services/issueService";
 import { stateService } from "../services/stateService";
 import { labelService } from "../services/labelService";
-import { workspaceService as wsMembers } from "../services/workspaceService";
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
@@ -33,7 +32,15 @@ const priorityVariant: Record<
 };
 
 const IconCalendar = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
     <line x1="16" y1="2" x2="16" y2="6" />
     <line x1="8" y1="2" x2="8" y2="6" />
@@ -41,31 +48,70 @@ const IconCalendar = () => (
   </svg>
 );
 const IconUser = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
     <circle cx="12" cy="7" r="4" />
   </svg>
 );
 const IconTag = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
   </svg>
 );
 const IconMoreVertical = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden
+  >
     <circle cx="12" cy="5" r="1.5" />
     <circle cx="12" cy="12" r="1.5" />
     <circle cx="12" cy="19" r="1.5" />
   </svg>
 );
 const IconPlus = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <path d="M5 12h14" />
     <path d="M12 5v14" />
   </svg>
 );
 const IconModule = () => (
-  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-(--txt-icon-tertiary)" aria-hidden>
+  <svg
+    width="48"
+    height="48"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    className="text-(--txt-icon-tertiary)"
+    aria-hidden
+  >
     <rect width="8" height="8" x="3" y="3" rx="1" />
     <rect width="8" height="8" x="13" y="3" rx="1" />
     <rect width="8" height="8" x="3" y="13" rx="1" />
@@ -140,7 +186,7 @@ export function ModuleDetailPage() {
       issueService.list(workspaceSlug, projectId, { limit: 1000 }),
       stateService.list(workspaceSlug, projectId),
       labelService.list(workspaceSlug, projectId),
-      wsMembers.listMembers(workspaceSlug),
+      workspaceService.listMembers(workspaceSlug),
       projectService.list(workspaceSlug),
     ])
       .then(([w, p, mod, iss, st, lab, mem, proj]) => {
@@ -203,19 +249,28 @@ export function ModuleDetailPage() {
         parent_id: data.parentId || undefined,
       });
       if (created?.id) {
-        await moduleService.addIssue(workspaceSlug, data.projectId, moduleId, created.id);
+        await moduleService.addIssue(
+          workspaceSlug,
+          data.projectId,
+          moduleId,
+          created.id,
+        );
       }
       refetchIssues();
       handleCloseCreate();
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : "Failed to create work item");
+      setCreateError(
+        err instanceof Error ? err.message : "Failed to create work item",
+      );
     }
   };
 
   const getStateName = (stateId: string | null | undefined) =>
     stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : "—";
   const getLabelNames = (labelIds: string[] = []) =>
-    labelIds.map((id) => labels.find((l) => l.id === id)?.name).filter((name): name is string => Boolean(name));
+    labelIds
+      .map((id) => labels.find((l) => l.id === id)?.name)
+      .filter((name): name is string => Boolean(name));
   const getUser = (userId: string | null) => {
     if (!userId) return null;
     const m = members.find((x) => x.member_id === userId);
@@ -237,9 +292,14 @@ export function ModuleDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-8">
         <p className="text-(--txt-secondary)">Module not found.</p>
-        <Link to={`/${workspace?.slug ?? ""}/projects/${projectId}/modules`} className="text-sm font-medium text-(--brand-default) hover:underline">
-          Back to Modules
-        </Link>
+        {workspace && projectId && (
+          <Link
+            to={`/${workspace.slug}/projects/${projectId}/modules`}
+            className="text-sm font-medium text-(--brand-default) hover:underline"
+          >
+            Back to Modules
+          </Link>
+        )}
       </div>
     );
   }
@@ -248,11 +308,16 @@ export function ModuleDetailPage() {
   const displayId = (issue: IssueApiResponse) =>
     `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`;
 
-  const issuesByState = states.reduce<Record<string, IssueApiResponse[]>>((acc, s) => {
-    acc[s.id] = issues.filter((i) => (i.state_id ?? "") === s.id);
-    return acc;
-  }, {});
-  const ungrouped = issues.filter((i) => !i.state_id || !states.some((s) => s.id === i.state_id));
+  const issuesByState = states.reduce<Record<string, IssueApiResponse[]>>(
+    (acc, s) => {
+      acc[s.id] = issues.filter((i) => (i.state_id ?? "") === s.id);
+      return acc;
+    },
+    {},
+  );
+  const ungrouped = issues.filter(
+    (i) => !i.state_id || !states.some((s) => s.id === i.state_id),
+  );
   if (ungrouped.length > 0) {
     issuesByState[""] = ungrouped;
   }
@@ -264,19 +329,28 @@ export function ModuleDetailPage() {
         <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-(--border-subtle) bg-(--bg-surface-1) px-6 py-16">
           <IconModule />
           <div className="text-center">
-            <h2 className="text-lg font-semibold text-(--txt-primary)">No work items in the module</h2>
+            <h2 className="text-lg font-semibold text-(--txt-primary)">
+              No work items in the module
+            </h2>
             <p className="mt-1 text-sm text-(--txt-secondary)">
-              Create or add work items which you want to accomplish as part of this module.
+              Create or add work items which you want to accomplish as part of
+              this module.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Button size="sm" className="gap-1.5" onClick={() => setSearchParams({ create: "1" })}>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setSearchParams({ create: "1" })}
+            >
               <IconPlus />
               Create new work items
             </Button>
-            <Button size="sm" variant="secondary" className="gap-1.5" asChild>
-              <Link to={`${baseUrl}/issues`}>Add an existing work item</Link>
-            </Button>
+            <Link to={`${baseUrl}/issues`}>
+              <Button size="sm" variant="secondary" className="gap-1.5">
+                Add an existing work item
+              </Button>
+            </Link>
           </div>
         </div>
       )}
@@ -288,12 +362,20 @@ export function ModuleDetailPage() {
             const stateIssues = issuesByState[state.id] ?? [];
             if (stateIssues.length === 0) return null;
             return (
-              <section key={state.id} className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) overflow-hidden">
+              <section
+                key={state.id}
+                className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) overflow-hidden"
+              >
                 <div className="flex items-center gap-2 border-b border-(--border-subtle) bg-(--bg-layer-2) px-4 py-2">
-                  <span className="flex size-4 shrink-0 items-center justify-center rounded border border-(--border-subtle) border-dashed text-(--txt-icon-tertiary)" aria-hidden>
+                  <span
+                    className="flex size-4 shrink-0 items-center justify-center rounded border border-(--border-subtle) border-dashed text-(--txt-icon-tertiary)"
+                    aria-hidden
+                  >
                     <span className="size-2 rounded-full border border-current border-dashed" />
                   </span>
-                  <span className="text-sm font-medium text-(--txt-primary)">{state.name} {stateIssues.length}</span>
+                  <span className="text-sm font-medium text-(--txt-primary)">
+                    {state.name} {stateIssues.length}
+                  </span>
                 </div>
                 <ul className="divide-y divide-(--border-subtle)">
                   {stateIssues.map((issue) => {
@@ -307,27 +389,61 @@ export function ModuleDetailPage() {
                           className="flex min-h-12 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
                         >
                           <span className="min-w-0 flex-1 truncate text-sm">
-                            <span className="font-medium text-(--txt-accent-primary)">{displayId(issue)}</span>
-                            <span className="ml-2 text-(--txt-primary)">{issue.name}</span>
+                            <span className="font-medium text-(--txt-accent-primary)">
+                              {displayId(issue)}
+                            </span>
+                            <span className="ml-2 text-(--txt-primary)">
+                              {issue.name}
+                            </span>
                           </span>
                           <div className="flex shrink-0 items-center gap-2 text-(--txt-icon-tertiary)">
-                            <Badge variant="neutral" className="text-xs font-medium">
+                            <Badge
+                              variant="neutral"
+                              className="text-xs font-medium"
+                            >
                               {getStateName(issue.state_id ?? undefined)}
                             </Badge>
-                            <Badge variant={priorityVariant[(issue.priority as Priority) ?? "none"]} className="!px-1.5 !py-0 text-[10px]">
+                            <Badge
+                              variant={
+                                priorityVariant[
+                                  (issue.priority as Priority) ?? "none"
+                                ]
+                              }
+                              className="!px-1.5 !py-0 text-[10px]"
+                            >
                               {issue.priority ?? "—"}
                             </Badge>
-                            <span title={formatDate(issue.target_date ?? undefined)} className="flex size-6 items-center justify-center">
+                            <span
+                              title={formatDate(issue.target_date ?? undefined)}
+                              className="flex size-6 items-center justify-center"
+                            >
                               <IconCalendar />
                             </span>
-                            <span title={assignee?.name ?? "Unassigned"} className="flex size-6 items-center justify-center">
+                            <span
+                              title={assignee?.name ?? "Unassigned"}
+                              className="flex size-6 items-center justify-center"
+                            >
                               {assignee ? (
-                                <Avatar name={assignee.name} src={getImageUrl(assignee.avatarUrl) ?? undefined} size="sm" className="h-6 w-6 text-[10px]" />
+                                <Avatar
+                                  name={assignee.name}
+                                  src={
+                                    getImageUrl(assignee.avatarUrl) ?? undefined
+                                  }
+                                  size="sm"
+                                  className="h-6 w-6 text-[10px]"
+                                />
                               ) : (
                                 <IconUser />
                               )}
                             </span>
-                            <span title={labelNames.length ? labelNames.join(", ") : "Labels"} className="flex size-6 items-center justify-center">
+                            <span
+                              title={
+                                labelNames.length
+                                  ? labelNames.join(", ")
+                                  : "Labels"
+                              }
+                              className="flex size-6 items-center justify-center"
+                            >
                               <IconTag />
                             </span>
                             <button
@@ -353,7 +469,9 @@ export function ModuleDetailPage() {
           {(issuesByState[""]?.length ?? 0) > 0 && (
             <section className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) overflow-hidden">
               <div className="flex items-center gap-2 border-b border-(--border-subtle) bg-(--bg-layer-2) px-4 py-2">
-                <span className="text-sm font-medium text-(--txt-primary)">No state {issuesByState[""].length}</span>
+                <span className="text-sm font-medium text-(--txt-primary)">
+                  No state {issuesByState[""].length}
+                </span>
               </div>
               <ul className="divide-y divide-(--border-subtle)">
                 {issuesByState[""].map((issue) => {
@@ -366,16 +484,33 @@ export function ModuleDetailPage() {
                         className="flex min-h-12 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
                       >
                         <span className="min-w-0 flex-1 truncate text-sm">
-                          <span className="font-medium text-(--txt-accent-primary)">{displayId(issue)}</span>
-                          <span className="ml-2 text-(--txt-primary)">{issue.name}</span>
+                          <span className="font-medium text-(--txt-accent-primary)">
+                            {displayId(issue)}
+                          </span>
+                          <span className="ml-2 text-(--txt-primary)">
+                            {issue.name}
+                          </span>
                         </span>
                         <div className="flex shrink-0 items-center gap-2">
                           {assignee ? (
-                            <Avatar name={assignee.name} src={getImageUrl(assignee.avatarUrl) ?? undefined} size="sm" className="h-6 w-6 text-[10px]" />
+                            <Avatar
+                              name={assignee.name}
+                              src={getImageUrl(assignee.avatarUrl) ?? undefined}
+                              size="sm"
+                              className="h-6 w-6 text-[10px]"
+                            />
                           ) : (
                             <IconUser />
                           )}
-                          <button type="button" className="flex size-6 items-center justify-center rounded hover:bg-(--bg-layer-1-hover)" aria-label="More options" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                          <button
+                            type="button"
+                            className="flex size-6 items-center justify-center rounded hover:bg-(--bg-layer-1-hover)"
+                            aria-label="More options"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                          >
                             <IconMoreVertical />
                           </button>
                         </div>
@@ -391,13 +526,19 @@ export function ModuleDetailPage() {
 
       {issues.length > 0 && (
         <div className="flex flex-wrap items-center justify-center gap-3 border-t border-(--border-subtle) pt-6">
-          <Button size="sm" className="gap-1.5" onClick={() => setSearchParams({ create: "1" })}>
+          <Button
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setSearchParams({ create: "1" })}
+          >
             <IconPlus />
             Create new work items
           </Button>
-          <Button size="sm" variant="secondary" className="gap-1.5" asChild>
-            <Link to={`${baseUrl}/issues`}>Add an existing work item</Link>
-          </Button>
+          <Link to={`${baseUrl}/issues`}>
+            <Button size="sm" variant="secondary" className="gap-1.5">
+              Add an existing work item
+            </Button>
+          </Link>
         </div>
       )}
 

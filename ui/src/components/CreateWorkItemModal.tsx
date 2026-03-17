@@ -215,7 +215,9 @@ export function CreateWorkItemModal({
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [cycleId, setCycleId] = useState<string | null>(null);
-  const [moduleId, setModuleId] = useState<string | null>(defaultModuleId ?? null);
+  const [moduleId, setModuleId] = useState<string | null>(
+    defaultModuleId ?? null,
+  );
   const [parentId, setParentId] = useState<string | null>(null);
   const [parentModalOpen, setParentModalOpen] = useState(false);
 

@@ -325,6 +325,9 @@ export function ModulesPage() {
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
   const layout =
     (searchParams.get("layout") as "list" | "gallery" | "timeline") || "list";
+  const [timelineTimeframe, setTimelineTimeframe] = useState<
+    "week" | "month" | "quarter"
+  >("week");
 
   const renderListLayout = () => (
     <div className="space-y-2">
@@ -412,43 +415,265 @@ export function ModulesPage() {
   );
 
   const renderTimelineLayout = () => {
-    const withDates = sortedModules
-      .map((m) => ({
-        mod: m,
-        start: m.start_date ? new Date(m.start_date) : null,
-        end: m.target_date ? new Date(m.target_date) : null,
-      }))
-      .sort((a, b) => {
-        const aTime = a.start?.getTime() ?? a.end?.getTime() ?? 0;
-        const bTime = b.start?.getTime() ?? b.end?.getTime() ?? 0;
-        return aTime - bTime;
-      });
+    const DAY_WIDTH = 28;
+    const ROW_HEIGHT = 40;
+    const LEFT_WIDTH = 220;
+    const now = new Date();
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    ).getTime();
+
+    const withDates = sortedModules.map((mod) => {
+      const start = mod.start_date ? new Date(mod.start_date) : null;
+      const end = mod.target_date ? new Date(mod.target_date) : null;
+      const startTime = start?.getTime() ?? end?.getTime() ?? todayStart;
+      const endTime = end?.getTime() ?? start?.getTime() ?? todayStart;
+      const durationDays =
+        start && end
+          ? Math.max(
+              0,
+              Math.ceil(
+                (end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000),
+              ) + 1,
+            )
+          : 0;
+      return { mod, start, end, startTime, endTime, durationDays };
+    });
+
+    const rangeStart = Math.min(
+      ...withDates.map((d) => d.startTime),
+      todayStart - 14 * 24 * 60 * 60 * 1000,
+    );
+    const rangeEnd = Math.max(
+      ...withDates.map((d) => d.endTime),
+      todayStart + 60 * 24 * 60 * 60 * 1000,
+    );
+    const totalDays = Math.ceil(
+      (rangeEnd - rangeStart) / (24 * 60 * 60 * 1000),
+    );
+    const days: Date[] = [];
+    for (let i = 0; i < totalDays; i++) {
+      days.push(new Date(rangeStart + i * 24 * 60 * 60 * 1000));
+    }
+
+    const getDayIndex = (t: number) =>
+      Math.floor((t - rangeStart) / (24 * 60 * 60 * 1000));
+    const weekNum = (d: Date) => {
+      return Math.ceil(
+        (d.getDate() + new Date(d.getFullYear(), d.getMonth(), 1).getDay()) / 7,
+      );
+    };
+
+    const monthGroups: { label: string; startIdx: number; span: number }[] = [];
+    let i = 0;
+    while (i < days.length) {
+      const d = days[i];
+      const label = `${MONTH_ABBR[d.getMonth()]} ${d.getFullYear()}`;
+      const startIdx = i;
+      while (
+        i < days.length &&
+        days[i].getMonth() === d.getMonth() &&
+        days[i].getFullYear() === d.getFullYear()
+      )
+        i++;
+      monthGroups.push({ label, startIdx, span: i - startIdx });
+    }
 
     return (
-      <div className="space-y-3 border-l border-(--border-subtle) pl-4">
-        {withDates.map(({ mod }) => {
-          const progress = getProgress(mod);
-          const dateRange = formatModuleDateRange(mod);
-          return (
-            <div key={mod.id} className="relative pl-4">
-              <div className="absolute left-0 top-3 h-2 w-2 -translate-x-1/2 rounded-full bg-(--brand-default)" />
-              <Link
-                to={`${baseUrl}/modules/${mod.id}`}
-                className="flex items-center gap-3 rounded-md px-3 py-2 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
+      <div className="flex flex-col gap-0">
+        <div className="flex items-center justify-between border-b border-(--border-subtle) bg-(--bg-layer-2) px-4 py-2">
+          <span className="text-sm font-medium text-(--txt-secondary)">
+            {sortedModules.length} Module{sortedModules.length !== 1 ? "s" : ""}
+          </span>
+          <div className="flex items-center gap-1">
+            {(["week", "month", "quarter"] as const).map((tf) => (
+              <button
+                key={tf}
+                type="button"
+                onClick={() => setTimelineTimeframe(tf)}
+                className={`rounded px-2.5 py-1.5 text-sm font-medium capitalize ${
+                  timelineTimeframe === tf
+                    ? "bg-(--brand-200) text-(--brand-default)"
+                    : "text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
+                }`}
               >
-                <ModuleProgressCircle progress={progress} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-(--txt-primary)">
-                    {mod.name}
-                  </p>
-                  <p className="mt-0.5 text-xs text-(--txt-secondary)">
-                    {dateRange ?? "No dates"}
-                  </p>
-                </div>
-              </Link>
+                {tf}
+              </button>
+            ))}
+            <button
+              type="button"
+              className="rounded px-2.5 py-1.5 text-sm font-medium text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              className="flex size-8 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
+              aria-label="Full screen"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden
+              >
+                <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div className="flex overflow-x-auto border border-(--border-subtle) bg-(--bg-surface-1)">
+          <div
+            className="shrink-0 border-r border-(--border-subtle) bg-(--bg-layer-2)"
+            style={{ width: LEFT_WIDTH }}
+          >
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-(--border-subtle)">
+                  <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-(--txt-secondary)">
+                    Modules
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-(--txt-secondary)">
+                    Duration
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {withDates.map(({ mod, durationDays }) => (
+                  <tr
+                    key={mod.id}
+                    className="border-b border-(--border-subtle) last:border-b-0"
+                  >
+                    <td className="px-3 py-2">
+                      <Link
+                        to={`${baseUrl}/modules/${mod.id}`}
+                        className="flex items-center gap-2 text-sm text-(--txt-primary) no-underline hover:text-(--brand-default)"
+                      >
+                        <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            aria-hidden
+                          >
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M12 6v6l4 2" />
+                          </svg>
+                        </span>
+                        <span className="min-w-0 truncate">{mod.name}</span>
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2 text-sm text-(--txt-secondary)">
+                      {durationDays > 0 ? `${durationDays} days` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="min-w-0 flex-1 overflow-x-auto">
+            <div
+              style={{
+                width: totalDays * DAY_WIDTH,
+                minHeight: ROW_HEIGHT * (withDates.length + 3),
+              }}
+            >
+              {/* Month row */}
+              <div
+                className="flex border-b border-(--border-subtle) bg-(--bg-layer-2)"
+                style={{ height: 28 }}
+              >
+                {monthGroups.map((g) => (
+                  <div
+                    key={g.startIdx}
+                    className="shrink-0 border-r border-(--border-subtle) px-1 py-1 text-xs font-medium text-(--txt-secondary)"
+                    style={{ width: g.span * DAY_WIDTH }}
+                  >
+                    {g.label}
+                  </div>
+                ))}
+              </div>
+              {/* Week row */}
+              <div
+                className="flex border-b border-(--border-subtle) bg-(--bg-layer-2)"
+                style={{ height: 24 }}
+              >
+                {days
+                  .filter((_, i) => i % 7 === 0)
+                  .map((d, idx) => (
+                    <div
+                      key={idx}
+                      className="shrink-0 border-r border-(--border-subtle) px-0.5 py-0.5 text-[10px] text-(--txt-tertiary)"
+                      style={{ width: 7 * DAY_WIDTH }}
+                    >
+                      Week {weekNum(d)}
+                    </div>
+                  ))}
+              </div>
+              {/* Days row */}
+              <div
+                className="flex border-b border-(--border-subtle) bg-(--bg-layer-2)"
+                style={{ height: 28 }}
+              >
+                {days.map((d, idx) => {
+                  const isToday = d.getTime() === todayStart;
+                  return (
+                    <div
+                      key={idx}
+                      className={`shrink-0 border-r border-(--border-subtle) px-0.5 py-1 text-center text-[11px] ${
+                        isToday
+                          ? "bg-(--brand-200) font-medium text-(--brand-default)"
+                          : "text-(--txt-secondary)"
+                      }`}
+                      style={{ width: DAY_WIDTH }}
+                    >
+                      {d.getDate()}{" "}
+                      {["Su", "M", "Tu", "W", "Th", "F", "Sa"][d.getDay()]}
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Module bars */}
+              {withDates.map(({ mod, startTime, endTime }) => {
+                const startIdx = Math.max(0, getDayIndex(startTime));
+                const endIdx = Math.min(days.length - 1, getDayIndex(endTime));
+                const left = startIdx * DAY_WIDTH;
+                const width = Math.max(
+                  DAY_WIDTH,
+                  (endIdx - startIdx + 1) * DAY_WIDTH,
+                );
+                return (
+                  <div
+                    key={mod.id}
+                    className="flex items-center border-b border-(--border-subtle) last:border-b-0"
+                    style={{ height: ROW_HEIGHT }}
+                  >
+                    <div
+                      className="relative h-6"
+                      style={{ width: totalDays * DAY_WIDTH }}
+                    >
+                      <Link
+                        to={`${baseUrl}/modules/${mod.id}`}
+                        className="absolute top-1/2 -translate-y-1/2 rounded bg-(--brand-200) px-2 py-1 text-xs font-medium text-(--brand-default) no-underline hover:bg-(--brand-default) hover:text-white"
+                        style={{ left, width, minWidth: 40 }}
+                      >
+                        <span className="block truncate">{mod.name}</span>
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        </div>
       </div>
     );
   };
