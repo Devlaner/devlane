@@ -15,14 +15,14 @@ export function CollapsibleSection({
   children,
 }: CollapsibleSectionProps) {
   return (
-    <div className="border-b border-[var(--border-subtle)] last:border-b-0">
+    <div className="border-b border-(--border-subtle) last:border-b-0">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+        className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
       >
         {title}
-        <span className="text-[var(--txt-icon-tertiary)]">
+        <span className="text-(--txt-icon-tertiary)">
           {controlledOpen ? (
             <FILTER_ICONS.chevronUp />
           ) : (

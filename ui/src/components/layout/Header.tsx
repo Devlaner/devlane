@@ -62,13 +62,13 @@ export function Header() {
 
   return (
     <header
-      className="flex h-[var(--height-header)] shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4"
+      className="flex h-(--height-header) shrink-0 items-center justify-between border-b border-(--border-subtle) bg-(--bg-surface-1) px-4"
       role="banner"
     >
       <div className="flex items-center gap-4">
         <Link
           to={workspace ? `/${workspace.slug}` : "/"}
-          className="text-lg font-semibold text-[var(--txt-primary)] no-underline hover:text-[var(--txt-accent-primary)]"
+          className="text-lg font-semibold text-(--txt-primary) no-underline hover:text-(--txt-accent-primary)"
         >
           Devlane
         </Link>
@@ -78,16 +78,16 @@ export function Header() {
         >
           {breadcrumbs.map((b, i) => (
             <span key={i} className="flex items-center gap-2">
-              {i > 0 && <span className="text-[var(--txt-tertiary)]">/</span>}
+              {i > 0 && <span className="text-(--txt-tertiary)">/</span>}
               {b.href ? (
                 <Link
                   to={b.href}
-                  className="text-[var(--txt-secondary)] no-underline hover:text-[var(--txt-primary)]"
+                  className="text-(--txt-secondary) no-underline hover:text-(--txt-primary)"
                 >
                   {b.label}
                 </Link>
               ) : (
-                <span className="text-[var(--txt-primary)]">{b.label}</span>
+                <span className="text-(--txt-primary)">{b.label}</span>
               )}
             </span>
           ))}
@@ -95,9 +95,7 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-3">
-        <span className="text-sm text-[var(--txt-secondary)]">
-          {user?.name}
-        </span>
+        <span className="text-sm text-(--txt-secondary)">{user?.name}</span>
         <Button variant="ghost" size="sm" onClick={logout}>
           Log out
         </Button>

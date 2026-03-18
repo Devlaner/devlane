@@ -28,7 +28,7 @@ export function Avatar({ name, src, size = "md", className }: AvatarProps) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full bg-[var(--bg-accent-primary)] font-medium text-[var(--txt-on-color)]",
+        "inline-flex shrink-0 items-center justify-center rounded-full bg-(--bg-accent-primary) font-medium text-(--txt-on-color)",
         sizeStyles[size],
         className,
       )}

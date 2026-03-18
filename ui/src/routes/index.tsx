@@ -83,6 +83,11 @@ const ModulesPage = lazy(() =>
     page({ ModulesPage: m.ModulesPage }),
   ),
 );
+const ModuleDetailPage = lazy(() =>
+  import("../pages/ModuleDetailPage").then((m) =>
+    page({ ModuleDetailPage: m.ModuleDetailPage }),
+  ),
+);
 const SettingsPage = lazy(() =>
   import("../pages/SettingsPage").then((m) =>
     page({ SettingsPage: m.SettingsPage }),
@@ -164,7 +169,7 @@ const InviteSignUpPage = lazy(() =>
 );
 
 const PageFallback = () => (
-  <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+  <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
     Loading...
   </div>
 );
@@ -407,6 +412,14 @@ const router = createBrowserRouter([
                         element: (
                           <Suspense fallback={<PageFallback />}>
                             <ModulesPage />
+                          </Suspense>
+                        ),
+                      },
+                      {
+                        path: "modules/:moduleId",
+                        element: (
+                          <Suspense fallback={<PageFallback />}>
+                            <ModuleDetailPage />
                           </Suspense>
                         ),
                       },

@@ -90,45 +90,43 @@ export function InstanceAdminAIPage() {
   return (
     <div className="w-full max-w-6xl space-y-6">
       <div>
-        <h1 className="text-base font-semibold text-[var(--txt-primary)]">
+        <h1 className="text-base font-semibold text-(--txt-primary)">
           AI features for all your workspaces
         </h1>
-        <p className="mt-0.5 text-xs text-[var(--txt-secondary)]">
+        <p className="mt-0.5 text-xs text-(--txt-secondary)">
           Configure your AI API credentials so Devlane AI features are turned on
           for all your workspaces.
         </p>
       </div>
 
-      {error && (
-        <p className="text-sm text-[var(--txt-danger-primary)]">{error}</p>
-      )}
+      {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
 
       <section className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--txt-secondary)]">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-(--txt-secondary)">
           OpenAI
         </h2>
-        <p className="text-xs text-[var(--txt-secondary)]">
+        <p className="text-xs text-(--txt-secondary)">
           If you use ChatGPT, this is for you.
         </p>
-        <label className="block text-xs font-medium text-[var(--txt-secondary)]">
+        <label className="block text-xs font-medium text-(--txt-secondary)">
           LLM Model
           <input
             type="text"
             value={ai.model ?? ""}
             onChange={(e) => setAi((p) => ({ ...p, model: e.target.value }))}
-            className="mt-0.5 block w-full rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-2.5 py-1.5 text-xs text-[var(--txt-primary)] focus:outline-none"
+            className="mt-0.5 block w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 text-xs text-(--txt-primary) focus:outline-none"
           />
-          <p className="mt-0.5 text-[11px] text-[var(--txt-tertiary)]">
+          <p className="mt-0.5 text-[11px] text-(--txt-tertiary)">
             Choose an OpenAI engine.{" "}
             <a
               href="#"
-              className="text-[var(--txt-accent-primary)] underline hover:no-underline"
+              className="text-(--txt-accent-primary) underline hover:no-underline"
             >
               Learn more
             </a>
           </p>
         </label>
-        <label className="block text-xs font-medium text-[var(--txt-secondary)]">
+        <label className="block text-xs font-medium text-(--txt-secondary)">
           API key
           <div className="relative mt-0.5">
             <input
@@ -139,22 +137,22 @@ export function InstanceAdminAIPage() {
                 if (apiKeyLocal === undefined) setApiKeyLocal(apiKeyDisplay);
               }}
               placeholder={!apiKeyDisplay ? "Enter API key" : ""}
-              className="block w-full rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-2.5 py-1.5 pr-9 text-xs text-[var(--txt-primary)] focus:outline-none"
+              className="block w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 pr-9 text-xs text-(--txt-primary) focus:outline-none"
             />
             <button
               type="button"
               onClick={() => setShowApiKey((v) => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
               aria-label={showApiKey ? "Hide API key" : "Show API key"}
             >
               {showApiKey ? <IconEyeOff /> : <IconEye />}
             </button>
           </div>
-          <p className="mt-0.5 text-[11px] text-[var(--txt-tertiary)]">
+          <p className="mt-0.5 text-[11px] text-(--txt-tertiary)">
             You will find your API key{" "}
             <a
               href="#"
-              className="text-[var(--txt-accent-primary)] underline hover:no-underline"
+              className="text-(--txt-accent-primary) underline hover:no-underline"
             >
               here
             </a>

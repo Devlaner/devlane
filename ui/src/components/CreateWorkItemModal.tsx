@@ -170,6 +170,7 @@ export interface CreateWorkItemModalProps {
   workspaceSlug: string;
   projects: ProjectApiResponse[];
   defaultProjectId?: string;
+  defaultModuleId?: string | null;
   createError?: string | null;
   onSave?: (data: {
     title: string;
@@ -194,6 +195,7 @@ export function CreateWorkItemModal({
   workspaceSlug,
   projects,
   defaultProjectId,
+  defaultModuleId,
   createError,
   onSave,
 }: CreateWorkItemModalProps) {
@@ -213,7 +215,9 @@ export function CreateWorkItemModal({
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [cycleId, setCycleId] = useState<string | null>(null);
-  const [moduleId, setModuleId] = useState<string | null>(null);
+  const [moduleId, setModuleId] = useState<string | null>(
+    defaultModuleId ?? null,
+  );
   const [parentId, setParentId] = useState<string | null>(null);
   const [parentModalOpen, setParentModalOpen] = useState(false);
 
@@ -374,12 +378,12 @@ export function CreateWorkItemModal({
       setStartDate("");
       setDueDate("");
       setCycleId(null);
-      setModuleId(null);
+      setModuleId(defaultModuleId ?? null);
       setParentId(null);
       setOpenDropdown(null);
       setParentModalOpen(false);
     }
-  }, [open, defaultProjectId, projects]);
+  }, [open, defaultProjectId, defaultModuleId, projects]);
 
   useEffect(() => {
     if (!open) return;
@@ -496,18 +500,18 @@ export function CreateWorkItemModal({
         aria-labelledby="create-work-item-title"
       >
         <div
-          className="absolute inset-0 bg-[var(--bg-backdrop)]"
+          className="absolute inset-0 bg-(--bg-backdrop)"
           onClick={onClose}
           aria-hidden
         />
         <div
-          className="relative z-10 w-full max-w-4xl rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-overlay)]"
+          className="relative z-10 w-full max-w-4xl rounded-(--radius-lg) border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-overlay)"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="px-5 pt-5 pb-2">
             <h2
               id="create-work-item-title"
-              className="text-xl font-bold text-[var(--txt-primary)]"
+              className="text-xl font-bold text-(--txt-primary)"
             >
               Create new work item
             </h2>
@@ -525,15 +529,15 @@ export function CreateWorkItemModal({
                   )
                 }
                 displayValue={selectedProject?.name ?? ""}
-                panelClassName="flex min-w-[160px] max-h-52 flex-col rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)]"
+                panelClassName="flex min-w-[160px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
               >
-                <div className="sticky top-0 border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-1.5">
+                <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
                   <input
                     type="text"
                     placeholder="Search..."
                     value={projectSearch}
                     onChange={(e) => setProjectSearch(e.target.value)}
-                    className="w-full rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-2 py-1 text-xs placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                    className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                   />
                 </div>
                 <div className="overflow-auto py-0.5 [&_button]:px-2 [&_button]:py-1 [&_button]:text-xs">
@@ -545,7 +549,7 @@ export function CreateWorkItemModal({
                         setProjectId(p.id);
                         setOpenDropdown(null);
                       }}
-                      className="w-full text-left text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                      className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                     >
                       {p.name}
                     </button>
@@ -560,14 +564,14 @@ export function CreateWorkItemModal({
               placeholder="Title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="mb-3 border-[var(--border-subtle)]"
+              className="mb-3 border-(--border-subtle)"
             />
             <textarea
               placeholder="Click to add description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={5}
-              className="mb-4 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+              className="mb-4 w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
             />
             <div className="flex flex-nowrap items-center gap-1.5 overflow-x-auto pb-1">
               <Dropdown
@@ -578,15 +582,15 @@ export function CreateWorkItemModal({
                 icon={<IconCog />}
                 displayValue={stateName || "Backlog"}
                 compact
-                panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)]"
+                panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
               >
-                <div className="sticky top-0 border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-1.5">
+                <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
                   <input
                     type="text"
                     placeholder="Search..."
                     value={stateSearch}
                     onChange={(e) => setStateSearch(e.target.value)}
-                    className="w-full rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-2 py-1 text-xs placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                    className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                   />
                 </div>
                 <div className="overflow-auto py-0.5 [&_button]:px-2 [&_button]:py-1 [&_button]:text-xs">
@@ -598,7 +602,7 @@ export function CreateWorkItemModal({
                         setStateId(s.id);
                         setOpenDropdown(null);
                       }}
-                      className="w-full text-left text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                      className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                     >
                       {s.name}
                     </button>
@@ -617,7 +621,7 @@ export function CreateWorkItemModal({
                     : priority.charAt(0).toUpperCase() + priority.slice(1)
                 }
                 compact
-                panelClassName="max-h-52 min-w-[110px] overflow-auto rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-0.5 shadow-[var(--shadow-raised)] [&_button]:px-2 [&_button]:py-1 [&_button]:text-xs"
+                panelClassName="max-h-52 min-w-[110px] overflow-auto rounded border border-(--border-subtle) bg-(--bg-surface-1) py-0.5 shadow-(--shadow-raised) [&_button]:px-2 [&_button]:py-1 [&_button]:text-xs"
               >
                 {PRIORITIES.map((p) => (
                   <button
@@ -627,7 +631,7 @@ export function CreateWorkItemModal({
                       setPriority(p);
                       setOpenDropdown(null);
                     }}
-                    className="w-full text-left capitalize text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                    className="w-full text-left capitalize text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                   >
                     {p}
                   </button>
@@ -641,15 +645,15 @@ export function CreateWorkItemModal({
                 icon={<IconUsers />}
                 displayValue={assigneeNames || "Add assignees"}
                 compact
-                panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)]"
+                panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
               >
-                <div className="sticky top-0 border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-1.5">
+                <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
                   <input
                     type="text"
                     placeholder="Search..."
                     value={assigneeSearch}
                     onChange={(e) => setAssigneeSearch(e.target.value)}
-                    className="w-full rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-2 py-1 text-xs placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                    className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                   />
                 </div>
                 <div className="overflow-auto py-0.5 [&_button]:px-2 [&_button]:py-1 [&_button]:text-xs">
@@ -659,7 +663,7 @@ export function CreateWorkItemModal({
                       setAssigneeIds([]);
                       setOpenDropdown(null);
                     }}
-                    className="w-full text-left text-[var(--txt-tertiary)] hover:bg-[var(--bg-layer-1-hover)]"
+                    className="w-full text-left text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
                   >
                     No assignee
                   </button>
@@ -674,7 +678,7 @@ export function CreateWorkItemModal({
                             : [...prev, u.id],
                         )
                       }
-                      className="w-full text-left text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                      className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                     >
                       {u.name} {assigneeIds.includes(u.id) ? "✓" : ""}
                     </button>
@@ -689,15 +693,15 @@ export function CreateWorkItemModal({
                 icon={<IconTag />}
                 displayValue={labelNames}
                 compact
-                panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)]"
+                panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
               >
-                <div className="sticky top-0 border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-1.5">
+                <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
                   <input
                     type="text"
                     placeholder="Search..."
                     value={labelSearch}
                     onChange={(e) => setLabelSearch(e.target.value)}
-                    className="w-full rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-2 py-1 text-xs placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                    className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                   />
                 </div>
                 <div className="overflow-auto py-0.5 [&_button]:px-2 [&_button]:py-1 [&_button]:text-xs">
@@ -708,7 +712,7 @@ export function CreateWorkItemModal({
                       onClick={() => {
                         toggleLabel(l.id);
                       }}
-                      className="w-full text-left text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                      className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                     >
                       {l.name}
                     </button>
@@ -720,12 +724,12 @@ export function CreateWorkItemModal({
                         labelSearch.trim().toLowerCase(),
                     ) && (
                       <>
-                        <div className="my-1 border-t border-[var(--border-subtle)]" />
+                        <div className="my-1 border-t border-(--border-subtle)" />
                         <button
                           type="button"
                           onClick={handleCreateLabel}
                           disabled={createLabelLoading}
-                          className="w-full text-left text-[var(--brand-default)] hover:bg-[var(--bg-layer-1-hover)] disabled:opacity-50"
+                          className="w-full text-left text-(--brand-default) hover:bg-(--bg-layer-1-hover) disabled:opacity-50"
                         >
                           {createLabelLoading
                             ? "Creating…"
@@ -762,15 +766,15 @@ export function CreateWorkItemModal({
                 icon={<IconCycle />}
                 displayValue={cycleName || "No cycle"}
                 compact
-                panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)]"
+                panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
               >
-                <div className="sticky top-0 border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-1.5">
+                <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
                   <input
                     type="text"
                     placeholder="Search..."
                     value={cycleSearch}
                     onChange={(e) => setCycleSearch(e.target.value)}
-                    className="w-full rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-2 py-1 text-xs placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                    className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                   />
                 </div>
                 <div className="overflow-auto py-0.5 [&_button]:px-2 [&_button]:py-1 [&_button]:text-xs">
@@ -780,7 +784,7 @@ export function CreateWorkItemModal({
                       setCycleId(null);
                       setOpenDropdown(null);
                     }}
-                    className="w-full text-left text-[var(--txt-tertiary)] hover:bg-[var(--bg-layer-1-hover)]"
+                    className="w-full text-left text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
                   >
                     No cycle
                   </button>
@@ -792,7 +796,7 @@ export function CreateWorkItemModal({
                         setCycleId(c.id);
                         setOpenDropdown(null);
                       }}
-                      className="w-full text-left text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                      className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                     >
                       {c.name}
                     </button>
@@ -807,15 +811,15 @@ export function CreateWorkItemModal({
                 icon={<IconGrid />}
                 displayValue={moduleName ?? ""}
                 compact
-                panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)]"
+                panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
               >
-                <div className="sticky top-0 border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-1.5">
+                <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
                   <input
                     type="text"
                     placeholder="Search..."
                     value={moduleSearch}
                     onChange={(e) => setModuleSearch(e.target.value)}
-                    className="w-full rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-2 py-1 text-xs placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                    className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                   />
                 </div>
                 <div className="overflow-auto py-0.5 [&_button]:px-2 [&_button]:py-1 [&_button]:text-xs">
@@ -825,7 +829,7 @@ export function CreateWorkItemModal({
                       setModuleId(null);
                       setOpenDropdown(null);
                     }}
-                    className="w-full text-left text-[var(--txt-tertiary)] hover:bg-[var(--bg-layer-1-hover)]"
+                    className="w-full text-left text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
                   >
                     No module
                   </button>
@@ -837,7 +841,7 @@ export function CreateWorkItemModal({
                         setModuleId(m.id);
                         setOpenDropdown(null);
                       }}
-                      className="w-full text-left text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                      className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                     >
                       {m.name}
                     </button>
@@ -847,9 +851,9 @@ export function CreateWorkItemModal({
               <button
                 type="button"
                 onClick={() => setParentModalOpen(true)}
-                className="inline-flex min-w-0 items-center gap-1 rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-1.5 py-1 text-xs text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)] [&_svg]:size-3"
+                className="inline-flex min-w-0 items-center gap-1 rounded border border-(--border-subtle) bg-(--bg-layer-2) px-1.5 py-1 text-xs text-(--txt-secondary) hover:bg-(--bg-layer-2-hover) [&_svg]:size-3"
               >
-                <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
                   <IconLink2 />
                 </span>
                 <span className="truncate">{parentTitle || "Add parent"}</span>
@@ -857,10 +861,10 @@ export function CreateWorkItemModal({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-subtle)] px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-(--border-subtle) px-5 py-4">
             <div className="flex flex-col gap-1">
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--txt-secondary)]">
-                <span className="relative inline-flex h-5 w-9 shrink-0 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow after:transition-transform after:content-[''] has-[:checked]:border-[var(--brand-default)] has-[:checked]:bg-[var(--brand-default)] has-[:checked]:after:translate-x-4">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-(--txt-secondary)">
+                <span className="relative inline-flex h-5 w-9 shrink-0 rounded-full border border-(--border-subtle) bg-(--bg-layer-2) transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow after:transition-transform after:content-[''] has-[:checked]:border-(--brand-default) has-[:checked]:bg-(--brand-default) has-[:checked]:after:translate-x-4">
                   <input
                     type="checkbox"
                     checked={createMore}
@@ -871,7 +875,7 @@ export function CreateWorkItemModal({
                 Create more
               </label>
               {createError && (
-                <p className="text-sm text-[var(--txt-danger-primary)]">
+                <p className="text-sm text-(--txt-danger-primary)">
                   {createError}
                 </p>
               )}

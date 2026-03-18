@@ -140,14 +140,26 @@ func (h *ModuleHandler) Update(c *gin.Context) {
 		return
 	}
 	var body struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Status      string `json:"status"`
-		StartDate   string `json:"start_date"`
-		TargetDate  string `json:"target_date"`
+		Name        string  `json:"name"`
+		Description string  `json:"description"`
+		Status      string  `json:"status"`
+		StartDate   string  `json:"start_date"`
+		TargetDate  string  `json:"target_date"`
+		LeadID      *string `json:"lead_id"`
 	}
 	_ = c.ShouldBindJSON(&body)
-	mod, err := h.Module.Update(c.Request.Context(), slug, projectID, moduleID, user.ID, body.Name, body.Description, body.Status, parseOptionalDate(body.StartDate), parseOptionalDate(body.TargetDate))
+	var leadIDPtr *uuid.UUID
+	if body.LeadID != nil {
+		if *body.LeadID != "" {
+			id, parseErr := uuid.Parse(*body.LeadID)
+			if parseErr != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid lead_id", "detail": "must be a valid UUID"})
+				return
+			}
+			leadIDPtr = &id
+		}
+	}
+	mod, err := h.Module.Update(c.Request.Context(), slug, projectID, moduleID, user.ID, body.Name, body.Description, body.Status, parseOptionalDate(body.StartDate), parseOptionalDate(body.TargetDate), body.LeadID != nil, leadIDPtr)
 	if err != nil {
 		if err == service.ErrModuleNotFound || err == service.ErrProjectForbidden || err == service.ErrProjectNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})

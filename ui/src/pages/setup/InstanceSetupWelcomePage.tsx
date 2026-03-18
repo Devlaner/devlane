@@ -4,7 +4,7 @@ import { Button } from "../../components/ui";
 /** Devlane logo mark: blue square with white star */
 const LogoMark = () => (
   <span
-    className="flex size-9 items-center justify-center rounded-lg bg-[var(--bg-accent-primary)] text-[var(--txt-on-color)]"
+    className="flex size-9 items-center justify-center rounded-lg bg-(--bg-accent-primary) text-(--txt-on-color)"
     aria-hidden
   >
     <svg
@@ -112,7 +112,7 @@ export function InstanceSetupWelcomePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--bg-canvas)]">
+    <div className="flex min-h-screen flex-col bg-(--bg-canvas)">
       {/* Subtle grid background */}
       <div
         className="pointer-events-none fixed inset-0 opacity-[0.4] [background-image:linear-gradient(var(--border-subtle)_1px,transparent_1px),linear-gradient(90deg,var(--border-subtle)_1px,transparent_1px)] [background-size:24px_24px]"
@@ -120,7 +120,7 @@ export function InstanceSetupWelcomePage() {
       />
 
       <header className="relative z-10 shrink-0 px-6 py-4">
-        <div className="flex items-center gap-2 text-lg font-semibold text-[var(--txt-primary)]">
+        <div className="flex items-center gap-2 text-lg font-semibold text-(--txt-primary)">
           <LogoMark />
           Devlane
         </div>
@@ -128,13 +128,13 @@ export function InstanceSetupWelcomePage() {
 
       <main className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-8">
         <div className="flex w-full max-w-md flex-col items-center text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-[var(--txt-primary)] sm:text-4xl">
+          <h1 className="text-3xl font-bold tracking-tight text-(--txt-primary) sm:text-4xl">
             Welcome aboard Devlane!
           </h1>
           <div className="mt-6 w-full">
             <WelcomeIllustration />
           </div>
-          <p className="mt-2 text-sm text-[var(--txt-secondary)]">
+          <p className="mt-2 text-sm text-(--txt-secondary)">
             Get started by setting up your instance and workspace.
           </p>
           <Button

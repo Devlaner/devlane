@@ -26,7 +26,7 @@ export function WorkspaceViewsFiltersDropdown({
       label="Filters"
       icon={<FILTER_ICONS.filter />}
       displayValue="Filters"
-      panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-raised)] overflow-hidden"
+      panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
       align="right"
     >
       <WorkspaceViewsFiltersPanel

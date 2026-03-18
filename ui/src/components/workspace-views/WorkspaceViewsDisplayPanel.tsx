@@ -27,8 +27,8 @@ export function WorkspaceViewsDisplayPanel({
 
   return (
     <div className="flex flex-col">
-      <div className="border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3">
-        <p className="text-xs font-medium text-[var(--txt-secondary)]">
+      <div className="border-b border-(--border-subtle) bg-(--bg-surface-1) p-3">
+        <p className="text-xs font-medium text-(--txt-secondary)">
           Display Properties
         </p>
       </div>
@@ -42,8 +42,8 @@ export function WorkspaceViewsDisplayPanel({
               onClick={() => toggleProperty(key)}
               className={`rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 selected
-                  ? "border-transparent bg-[var(--brand-default)] text-white"
-                  : "border-[var(--border-subtle)] bg-[var(--bg-surface-1)] text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2)]"
+                  ? "border-transparent bg-(--brand-default) text-white"
+                  : "border-(--border-subtle) bg-(--bg-surface-1) text-(--txt-secondary) hover:bg-(--bg-layer-2)"
               }`}
             >
               {DISPLAY_PROPERTY_LABELS[key]}
@@ -51,8 +51,8 @@ export function WorkspaceViewsDisplayPanel({
           );
         })}
       </div>
-      <div className="border-t border-[var(--border-subtle)] p-3">
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--txt-primary)]">
+      <div className="border-t border-(--border-subtle) p-3">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-(--txt-primary)">
           <input
             type="checkbox"
             checked={display.showSubWorkItems}
@@ -62,7 +62,7 @@ export function WorkspaceViewsDisplayPanel({
                 showSubWorkItems: e.target.checked,
               }))
             }
-            className="rounded border-[var(--border-subtle)]"
+            className="rounded border-(--border-subtle)"
           />
           <span>Show sub-work items</span>
         </label>

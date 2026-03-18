@@ -45,8 +45,8 @@ export function Dropdown({
   const open = openId === id;
 
   const defaultTriggerClass = compact
-    ? "inline-flex min-w-0 items-center gap-1 rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-1.5 py-1 text-xs text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)] [&_svg]:size-3"
-    : "inline-flex min-w-0 items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-sm text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]";
+    ? "inline-flex min-w-0 items-center gap-1 rounded border border-(--border-subtle) bg-(--bg-layer-2) px-1.5 py-1 text-xs text-(--txt-secondary) hover:bg-(--bg-layer-2-hover) [&_svg]:size-3"
+    : "inline-flex min-w-0 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-sm text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)";
 
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) {
@@ -91,9 +91,7 @@ export function Dropdown({
       >
         {triggerContent ?? (
           <>
-            <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
-              {icon}
-            </span>
+            <span className="shrink-0 text-(--txt-icon-tertiary)">{icon}</span>
             <span className="truncate">{displayValue || label}</span>
           </>
         )}
@@ -105,7 +103,7 @@ export function Dropdown({
             ref={panelRef}
             className={
               panelClassName ??
-              "max-h-60 min-w-[140px] overflow-auto rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-[var(--shadow-raised)]"
+              "max-h-60 min-w-[140px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
             }
             style={{
               position: "fixed",

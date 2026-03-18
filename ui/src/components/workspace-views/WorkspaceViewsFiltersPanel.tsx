@@ -153,7 +153,7 @@ export function WorkspaceViewsFiltersPanel({
         {PRIORITIES.filter((p) => filterSearch(PRIORITY_LABELS[p])).map((p) => (
           <label
             key={p}
-            className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+            className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
           >
             <input
               type="checkbox"
@@ -166,7 +166,7 @@ export function WorkspaceViewsFiltersPanel({
                     : [...prev.priority, p],
                 }));
               }}
-              className="rounded border-[var(--border-subtle)]"
+              className="rounded border-(--border-subtle)"
             />
             <span className="flex size-4 shrink-0 items-center justify-center">
               {PRIORITY_ICONS[p]}
@@ -185,7 +185,7 @@ export function WorkspaceViewsFiltersPanel({
           (g) => (
             <label
               key={g}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             >
               <input
                 type="checkbox"
@@ -198,7 +198,7 @@ export function WorkspaceViewsFiltersPanel({
                       : [...prev.stateGroup, g],
                   }));
                 }}
-                className="rounded border-[var(--border-subtle)]"
+                className="rounded border-(--border-subtle)"
               />
               <span className="flex size-4 shrink-0 items-center justify-center">
                 {STATE_GROUP_ICONS[g]}
@@ -215,7 +215,7 @@ export function WorkspaceViewsFiltersPanel({
         onToggle={() => toggleSection("assignee")}
       >
         {currentUser && filterSearch("You") && (
-          <label className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]">
+          <label className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
             <input
               type="checkbox"
               checked={filters.assigneeIds.includes(currentUser.id)}
@@ -227,7 +227,7 @@ export function WorkspaceViewsFiltersPanel({
                     : [...prev.assigneeIds, currentUser.id],
                 }));
               }}
-              className="rounded border-[var(--border-subtle)]"
+              className="rounded border-(--border-subtle)"
             />
             {getImageUrl(currentUser.avatarUrl) ? (
               <img
@@ -236,7 +236,7 @@ export function WorkspaceViewsFiltersPanel({
                 className="size-5 shrink-0 rounded-full object-cover"
               />
             ) : (
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-200)] text-[10px] font-medium text-[var(--brand-default)]">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--brand-200) text-[10px] font-medium text-(--brand-default)">
                 {currentUser.name?.charAt(0) ?? "?"}
               </span>
             )}
@@ -254,7 +254,7 @@ export function WorkspaceViewsFiltersPanel({
           .map((m) => (
             <label
               key={m.id}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             >
               <input
                 type="checkbox"
@@ -267,7 +267,7 @@ export function WorkspaceViewsFiltersPanel({
                       : [...prev.assigneeIds, m.member_id],
                   }));
                 }}
-                className="rounded border-[var(--border-subtle)]"
+                className="rounded border-(--border-subtle)"
               />
               {getImageUrl(m.member_avatar) ? (
                 <img
@@ -276,7 +276,7 @@ export function WorkspaceViewsFiltersPanel({
                   className="size-5 shrink-0 rounded-full object-cover"
                 />
               ) : (
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--bg-layer-2)] text-[10px] text-[var(--txt-secondary)]">
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--bg-layer-2) text-[10px] text-(--txt-secondary)">
                   {(m.member_display_name ?? m.member_email ?? "?").charAt(0)}
                 </span>
               )}
@@ -293,7 +293,7 @@ export function WorkspaceViewsFiltersPanel({
         onToggle={() => toggleSection("created_by")}
       >
         {currentUser && filterSearch("You") && (
-          <label className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]">
+          <label className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
             <input
               type="checkbox"
               checked={filters.createdByIds.includes(currentUser.id)}
@@ -305,7 +305,7 @@ export function WorkspaceViewsFiltersPanel({
                     : [...prev.createdByIds, currentUser.id],
                 }));
               }}
-              className="rounded border-[var(--border-subtle)]"
+              className="rounded border-(--border-subtle)"
             />
             {getImageUrl(currentUser.avatarUrl) ? (
               <img
@@ -314,7 +314,7 @@ export function WorkspaceViewsFiltersPanel({
                 className="size-5 shrink-0 rounded-full object-cover"
               />
             ) : (
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-200)] text-[10px] font-medium text-[var(--brand-default)]">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--brand-200) text-[10px] font-medium text-(--brand-default)">
                 {currentUser.name?.charAt(0) ?? "?"}
               </span>
             )}
@@ -332,7 +332,7 @@ export function WorkspaceViewsFiltersPanel({
           .map((m) => (
             <label
               key={m.id}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             >
               <input
                 type="checkbox"
@@ -345,7 +345,7 @@ export function WorkspaceViewsFiltersPanel({
                       : [...prev.createdByIds, m.member_id],
                   }));
                 }}
-                className="rounded border-[var(--border-subtle)]"
+                className="rounded border-(--border-subtle)"
               />
               {getImageUrl(m.member_avatar) ? (
                 <img
@@ -354,7 +354,7 @@ export function WorkspaceViewsFiltersPanel({
                   className="size-5 shrink-0 rounded-full object-cover"
                 />
               ) : (
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--bg-layer-2)] text-[10px] text-[var(--txt-secondary)]">
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--bg-layer-2) text-[10px] text-(--txt-secondary)">
                   {(m.member_display_name ?? m.member_email ?? "?").charAt(0)}
                 </span>
               )}
@@ -371,7 +371,7 @@ export function WorkspaceViewsFiltersPanel({
         onToggle={() => toggleSection("label")}
       >
         {allLabels.length === 0 ? (
-          <p className="px-3 py-2 text-sm text-[var(--txt-tertiary)]">
+          <p className="px-3 py-2 text-sm text-(--txt-tertiary)">
             No labels in workspace. Add labels in a project to filter by them.
           </p>
         ) : (
@@ -380,7 +380,7 @@ export function WorkspaceViewsFiltersPanel({
             .map((l) => (
               <label
                 key={l.id}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
               >
                 <input
                   type="checkbox"
@@ -393,7 +393,7 @@ export function WorkspaceViewsFiltersPanel({
                         : [...prev.labelIds, l.id],
                     }));
                   }}
-                  className="rounded border-[var(--border-subtle)]"
+                  className="rounded border-(--border-subtle)"
                 />
                 <span
                   className="size-3 shrink-0 rounded-full"
@@ -417,7 +417,7 @@ export function WorkspaceViewsFiltersPanel({
           .map((p) => (
             <label
               key={p.id}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             >
               <input
                 type="checkbox"
@@ -430,9 +430,9 @@ export function WorkspaceViewsFiltersPanel({
                       : [...prev.projectIds, p.id],
                   }));
                 }}
-                className="rounded border-[var(--border-subtle)]"
+                className="rounded border-(--border-subtle)"
               />
-              <span className="text-[var(--txt-icon-tertiary)]">
+              <span className="text-(--txt-icon-tertiary)">
                 <FILTER_ICONS.project />
               </span>
               <span className="truncate">{p.name}</span>
@@ -448,7 +448,7 @@ export function WorkspaceViewsFiltersPanel({
         {GROUPING_OPTIONS.map((g) => (
           <label
             key={g}
-            className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+            className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
           >
             <input
               type="radio"
@@ -457,7 +457,7 @@ export function WorkspaceViewsFiltersPanel({
               onChange={() =>
                 onFiltersChange((prev) => ({ ...prev, grouping: g }))
               }
-              className="border-[var(--border-subtle)]"
+              className="border-(--border-subtle)"
             />
             <span>
               {g === "all"
@@ -480,7 +480,7 @@ export function WorkspaceViewsFiltersPanel({
             d === "custom" ? (
               <label
                 key={d}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                 onClick={(e) => {
                   e.preventDefault();
                   openDateModal("start");
@@ -491,14 +491,14 @@ export function WorkspaceViewsFiltersPanel({
                   checked={filters.startDate.includes("custom")}
                   readOnly
                   tabIndex={-1}
-                  className="rounded border-[var(--border-subtle)]"
+                  className="rounded border-(--border-subtle)"
                 />
                 <span>{DATE_PRESET_LABELS[d]}</span>
               </label>
             ) : (
               <label
                 key={d}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
               >
                 <input
                   type="checkbox"
@@ -511,7 +511,7 @@ export function WorkspaceViewsFiltersPanel({
                         : [...prev.startDate, d],
                     }));
                   }}
-                  className="rounded border-[var(--border-subtle)]"
+                  className="rounded border-(--border-subtle)"
                 />
                 <span>{DATE_PRESET_LABELS[d]}</span>
               </label>
@@ -529,7 +529,7 @@ export function WorkspaceViewsFiltersPanel({
             d === "custom" ? (
               <label
                 key={d}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                 onClick={(e) => {
                   e.preventDefault();
                   openDateModal("due");
@@ -540,14 +540,14 @@ export function WorkspaceViewsFiltersPanel({
                   checked={filters.dueDate.includes("custom")}
                   readOnly
                   tabIndex={-1}
-                  className="rounded border-[var(--border-subtle)]"
+                  className="rounded border-(--border-subtle)"
                 />
                 <span>{DATE_PRESET_LABELS[d]}</span>
               </label>
             ) : (
               <label
                 key={d}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
               >
                 <input
                   type="checkbox"
@@ -560,7 +560,7 @@ export function WorkspaceViewsFiltersPanel({
                         : [...prev.dueDate, d],
                     }));
                   }}
-                  className="rounded border-[var(--border-subtle)]"
+                  className="rounded border-(--border-subtle)"
                 />
                 <span>{DATE_PRESET_LABELS[d]}</span>
               </label>
@@ -573,9 +573,9 @@ export function WorkspaceViewsFiltersPanel({
   return (
     <>
       {compact && (
-        <div className="sticky top-0 shrink-0 border-b border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-2">
-          <div className="flex items-center gap-2 rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-2 py-1.5">
-            <span className="shrink-0 text-[var(--txt-icon-tertiary)]">
+        <div className="sticky top-0 shrink-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-2">
+          <div className="flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
+            <span className="shrink-0 text-(--txt-icon-tertiary)">
               <FILTER_ICONS.search />
             </span>
             <input
@@ -583,7 +583,7 @@ export function WorkspaceViewsFiltersPanel({
               placeholder="Search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
             />
           </div>
         </div>

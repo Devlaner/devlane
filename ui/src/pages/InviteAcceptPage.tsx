@@ -65,7 +65,7 @@ const IconGlobe = () => (
     strokeLinecap="round"
     strokeLinejoin="round"
     aria-hidden
-    className="shrink-0 text-[var(--txt-icon-secondary)]"
+    className="shrink-0 text-(--txt-icon-secondary)"
   >
     <circle cx="12" cy="12" r="10" />
     <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
@@ -184,18 +184,18 @@ export function InviteAcceptPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--bg-canvas)] p-4">
-        <p className="text-sm text-[var(--txt-tertiary)]">Loading…</p>
+      <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
+        <p className="text-sm text-(--txt-tertiary)">Loading…</p>
       </div>
     );
   }
 
   if (error && !invite) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--bg-canvas)] p-4">
+      <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
         <Card className="w-full max-w-md">
           <CardContent className="p-6">
-            <p className="text-sm text-[var(--txt-secondary)]">{error}</p>
+            <p className="text-sm text-(--txt-secondary)">{error}</p>
             <Button
               variant="secondary"
               className="mt-4"
@@ -214,20 +214,20 @@ export function InviteAcceptPage() {
   // Step 2: Join [workspace] — email + Continue → login
   if (step === "join") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--bg-canvas)] p-4">
+      <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
         <Card className="w-full max-w-md">
           <CardContent className="p-6">
-            <h1 className="flex items-center gap-2 text-2xl font-semibold text-[var(--txt-primary)]">
-              <span className="text-[var(--txt-secondary)]">Join</span>
+            <h1 className="flex items-center gap-2 text-2xl font-semibold text-(--txt-primary)">
+              <span className="text-(--txt-secondary)">Join</span>
               <IconGlobe />
               <span>{invite.workspace_name}</span>
             </h1>
-            <p className="mt-2 text-sm text-[var(--txt-secondary)]">
+            <p className="mt-2 text-sm text-(--txt-secondary)">
               Log in to start managing work with your team.
             </p>
 
             <div className="mt-6">
-              <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                 Email
               </label>
               <div className="relative">
@@ -236,14 +236,14 @@ export function InviteAcceptPage() {
                   value={joinEmail}
                   onChange={(e) => setJoinEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-2 pl-3 pr-9 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                  className="h-9 w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-2 pl-3 pr-9 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                   autoComplete="email"
                 />
                 {joinEmail && (
                   <button
                     type="button"
                     onClick={() => setJoinEmail("")}
-                    className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-full text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                    className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-full text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
                     aria-label="Clear email"
                   >
                     <IconClear />
@@ -270,7 +270,7 @@ export function InviteAcceptPage() {
               Continue
             </Button>
 
-            <p className="mt-4 text-center text-sm text-[var(--txt-secondary)]">
+            <p className="mt-4 text-center text-sm text-(--txt-secondary)">
               Already have an account?{" "}
               <button
                 type="button"
@@ -283,24 +283,24 @@ export function InviteAcceptPage() {
                     },
                   })
                 }
-                className="font-medium text-[var(--txt-accent)] hover:underline"
+                className="font-medium text-(--txt-accent) hover:underline"
               >
                 Sign in
               </button>
             </p>
 
-            <p className="mt-6 text-center text-xs text-[var(--txt-tertiary)]">
+            <p className="mt-6 text-center text-xs text-(--txt-tertiary)">
               By signing in, you understand and agree to our{" "}
               <a
                 href="/terms"
-                className="underline hover:text-[var(--txt-secondary)]"
+                className="underline hover:text-(--txt-secondary)"
               >
                 Terms of Service
               </a>{" "}
               and{" "}
               <a
                 href="/privacy"
-                className="underline hover:text-[var(--txt-secondary)]"
+                className="underline hover:text-(--txt-secondary)"
               >
                 Privacy Policy
               </a>
@@ -313,22 +313,20 @@ export function InviteAcceptPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--bg-canvas)] p-4">
+    <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
       <Card className="w-full max-w-lg">
         <CardContent className="p-8">
-          <h1 className="text-xl font-semibold text-[var(--txt-primary)]">
+          <h1 className="text-xl font-semibold text-(--txt-primary)">
             You have been invited to {invite.workspace_name}
           </h1>
-          <p className="mt-3 text-sm text-[var(--txt-secondary)]">
+          <p className="mt-3 text-sm text-(--txt-secondary)">
             Your workspace is where you'll create projects, collaborate on work
             items, and organize different streams of work in your Devlane
             account.
           </p>
 
           {error && (
-            <p className="mt-3 text-sm text-[var(--txt-destructive)]">
-              {error}
-            </p>
+            <p className="mt-3 text-sm text-(--txt-destructive)">{error}</p>
           )}
 
           <div className="mt-8 flex flex-col gap-3">
@@ -336,15 +334,15 @@ export function InviteAcceptPage() {
               type="button"
               onClick={handleAccept}
               disabled={accepting || ignoring}
-              className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-3 text-left text-sm font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)] disabled:opacity-50"
+              className="flex items-center justify-between gap-3 rounded-lg border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3 text-left text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover) disabled:opacity-50"
             >
               <span className="flex items-center gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[var(--bg-accent-primary)] text-[var(--txt-on-color)]">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-(--bg-accent-primary) text-(--txt-on-color)">
                   <IconCheck />
                 </span>
                 Accept
               </span>
-              <span className="text-[var(--txt-icon-tertiary)]">
+              <span className="text-(--txt-icon-tertiary)">
                 <IconChevronRight />
               </span>
             </button>
@@ -353,15 +351,15 @@ export function InviteAcceptPage() {
               type="button"
               onClick={handleIgnore}
               disabled={accepting || ignoring}
-              className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-3 text-left text-sm font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)] disabled:opacity-50"
+              className="flex items-center justify-between gap-3 rounded-lg border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3 text-left text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover) disabled:opacity-50"
             >
               <span className="flex items-center gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[var(--bg-layer-2)] text-[var(--txt-icon-secondary)]">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-(--bg-layer-2) text-(--txt-icon-secondary)">
                   <IconX />
                 </span>
                 Ignore
               </span>
-              <span className="text-[var(--txt-icon-tertiary)]">
+              <span className="text-(--txt-icon-tertiary)">
                 <IconChevronRight />
               </span>
             </button>

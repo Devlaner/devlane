@@ -1,15 +1,21 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink, useLocation, useParams } from "react-router-dom";
 import { workspaceService } from "../../services/workspaceService";
 import { projectService } from "../../services/projectService";
 import { favoriteService } from "../../services/favoriteService";
-import type { WorkspaceApiResponse, ProjectApiResponse } from "../../api/types";
+import type {
+  WorkspaceApiResponse,
+  ProjectApiResponse,
+  ModuleApiResponse,
+} from "../../api/types";
 import { CreateWorkItemModal } from "../CreateWorkItemModal";
 import { Avatar, Button } from "../ui";
 import { useAuth } from "../../contexts/AuthContext";
 import { useFavorites } from "../../contexts/FavoritesContext";
 import { cn, getImageUrl } from "../../lib/utils";
+import { moduleService } from "../../services/moduleService";
+import { slugify } from "../../lib/slug";
 
 const SIDEBAR_WIDTH = 256;
 const SIDEBAR_WIDTH_COLLAPSED = 0;
@@ -423,6 +429,37 @@ const projectNavItems = [
   { key: "pages", to: "pages", label: "Pages", Icon: IconFileText },
 ];
 
+function SidebarModuleLogo({ progress }: { progress: number }) {
+  // Favorites sidebar uses a compact "module" glyph (Plane-style).
+  // We intentionally do not render progress here because our backend
+  // currently only provides `issue_count` (no completed/cancelled breakdown).
+  void progress;
+
+  return (
+    <div className="flex size-5 shrink-0 items-center justify-center rounded-sm border border-(--border-subtle) bg-(--bg-layer-1) text-(--txt-tertiary)">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 16 16"
+        fill="currentColor"
+        aria-hidden
+      >
+        <rect x="2" y="2" width="4" height="4" rx="1" />
+        <rect x="6" y="2" width="4" height="4" rx="1" />
+        <rect x="10" y="2" width="4" height="4" rx="1" />
+
+        <rect x="2" y="6" width="4" height="4" rx="1" />
+        <rect x="6" y="6" width="4" height="4" rx="1" />
+        <rect x="10" y="6" width="4" height="4" rx="1" />
+
+        <rect x="2" y="10" width="4" height="4" rx="1" />
+        <rect x="6" y="10" width="4" height="4" rx="1" />
+        <rect x="10" y="10" width="4" height="4" rx="1" />
+      </svg>
+    </div>
+  );
+}
+
 export function Sidebar() {
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
@@ -444,6 +481,10 @@ export function Sidebar() {
   const [workspaces, setWorkspaces] = useState<WorkspaceApiResponse[]>([]);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const { favoriteProjectIds, setFavoriteProjectIds } = useFavorites();
+  const [favoriteModules, setFavoriteModules] = useState<
+    Array<{ projectId: string; module: ModuleApiResponse }>
+  >([]);
+  const [moduleFavoritesNonce, setModuleFavoritesNonce] = useState(0);
   const workspaceTriggerRef = useRef<HTMLButtonElement>(null);
   const workspaceDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -469,6 +510,26 @@ export function Sidebar() {
       : "";
   const favoriteProjects = projects.filter((p) =>
     favoriteProjectIds.includes(p.id),
+  );
+
+  const STORAGE_KEY_PREFIX = "module_favorites";
+  const storageKey = (workspaceId: string, projId: string) =>
+    `${STORAGE_KEY_PREFIX}_${workspaceId}_${projId}`;
+
+  const loadModuleFavoriteIds = useCallback(
+    (workspaceId: string, projId: string) => {
+      try {
+        const raw = localStorage.getItem(storageKey(workspaceId, projId));
+        if (!raw) return [];
+        const parsed = JSON.parse(raw) as unknown;
+        return Array.isArray(parsed)
+          ? parsed.filter((x) => typeof x === "string")
+          : [];
+      } catch {
+        return [];
+      }
+    },
+    [],
   );
 
   useEffect(() => {
@@ -503,6 +564,70 @@ export function Sidebar() {
       cancelled = true;
     };
   }, [slugForProjects]);
+
+  useEffect(() => {
+    if (!workspaceSlug) {
+      setFavoriteModules([]);
+      return;
+    }
+    // Load starred modules from localStorage, then resolve names via module list.
+    let cancelled = false;
+    const run = async () => {
+      const entries: Array<{ projectId: string; module: ModuleApiResponse }> =
+        [];
+      for (const proj of projects) {
+        const favIds = loadModuleFavoriteIds(workspaceSlug, proj.id);
+        if (!favIds.length) continue;
+        const mods = await moduleService.list(workspaceSlug, proj.id);
+        const favSet = new Set(favIds);
+        for (const m of mods ?? []) {
+          if (favSet.has(m.id)) {
+            entries.push({ projectId: proj.id, module: m });
+          }
+        }
+      }
+      if (!cancelled) setFavoriteModules(entries);
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug, projects, loadModuleFavoriteIds, moduleFavoritesNonce]);
+
+  // Keep the "Favorites -> Modules" list in sync without requiring a full refresh.
+  useEffect(() => {
+    if (!workspaceSlug) return;
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<{
+        workspaceId?: string;
+        projectId?: string;
+        moduleId?: string;
+        isFavorite?: boolean;
+      }>;
+      if (ce?.detail?.workspaceId !== workspaceSlug) return;
+      const { moduleId, isFavorite } = ce.detail ?? {};
+
+      // Optimistically remove immediately on un-favorite.
+      if (moduleId && isFavorite === false) {
+        setFavoriteModules((prev) =>
+          prev.filter(({ module }) => module.id !== moduleId),
+        );
+      }
+
+      // Always reload after a change to ensure names and newly-added items are correct.
+      setModuleFavoritesNonce((n) => n + 1);
+    };
+    window.addEventListener(
+      "module-favorites-changed",
+      handler as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        "module-favorites-changed",
+        handler as EventListener,
+      );
+    };
+  }, [workspaceSlug]);
 
   useEffect(() => {
     let cancelled = false;
@@ -590,7 +715,7 @@ export function Sidebar() {
   return (
     <>
       <div
-        className="flex h-full shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-surface-1)] transition-all duration-300 ease-in-out"
+        className="flex h-full shrink-0 flex-col border-r border-(--border-subtle) bg-(--bg-surface-1) transition-all duration-300 ease-in-out"
         style={{
           width: `${width}px`,
           minWidth: `${width}px`,
@@ -599,19 +724,19 @@ export function Sidebar() {
         role="complementary"
         aria-label="Main sidebar"
       >
-        <aside className="flex h-full w-full flex-col overflow-hidden bg-[var(--bg-surface-1)]">
+        <aside className="flex h-full w-full flex-col overflow-hidden bg-(--bg-surface-1)">
           {/* 1. Top: Workspace name (left, clickable) + User avatar (right) */}
           <div className="relative flex items-center justify-between gap-2 px-3 py-3">
             <button
               ref={workspaceTriggerRef}
               type="button"
               onClick={() => setWorkspaceDropdownOpen((o) => !o)}
-              className="group flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-md)] py-0.5 text-left outline-none hover:bg-[var(--bg-layer-transparent-hover)] focus-visible:outline-none"
+              className="group flex min-w-0 flex-1 items-center gap-2 rounded-(--radius-md) py-0.5 text-left outline-none hover:bg-(--bg-layer-transparent-hover) focus-visible:outline-none"
               aria-expanded={workspaceDropdownOpen}
               aria-haspopup="true"
               aria-label="Workspace menu"
             >
-              <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-layer-1)] text-sm font-semibold text-[var(--txt-secondary)]">
+              <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-(--radius-md) bg-(--bg-layer-1) text-sm font-semibold text-(--txt-secondary)">
                 {workspace?.logo && getImageUrl(workspace.logo) ? (
                   <img
                     src={getImageUrl(workspace.logo)!}
@@ -622,12 +747,12 @@ export function Sidebar() {
                   (workspace?.name ?? "—").slice(0, 2).toUpperCase()
                 )}
               </div>
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--txt-primary)]">
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-(--txt-primary)">
                 {workspace?.name ?? "Loading…"}
               </span>
               <span
                 className={cn(
-                  "shrink-0 text-[var(--txt-icon-tertiary)] transition-opacity",
+                  "shrink-0 text-(--txt-icon-tertiary) transition-opacity",
                   workspaceDropdownOpen
                     ? "opacity-100"
                     : "opacity-0 group-hover:opacity-100",
@@ -645,7 +770,7 @@ export function Sidebar() {
               <button
                 type="button"
                 onClick={() => setCollapsed(true)}
-                className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+                className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover)"
                 aria-label="Collapse sidebar"
               >
                 <IconPanelLeft />
@@ -664,7 +789,7 @@ export function Sidebar() {
             createPortal(
               <div
                 ref={workspaceDropdownRef}
-                className="z-50 min-w-[280px] rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-4 shadow-[var(--shadow-lg)]"
+                className="z-50 min-w-[280px] rounded-(--radius-lg) border border-(--border-subtle) bg-(--bg-surface-1) p-4 shadow-(--shadow-lg)"
                 style={{
                   position: "fixed",
                   top: dropdownPosition.top,
@@ -675,11 +800,11 @@ export function Sidebar() {
                 role="menu"
                 aria-label="Workspace menu"
               >
-                <p className="mb-3 truncate text-sm text-[var(--txt-primary)]">
+                <p className="mb-3 truncate text-sm text-(--txt-primary)">
                   {user?.email}
                 </p>
                 <div className="mb-4 flex items-start gap-3">
-                  <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-xs font-semibold uppercase tracking-wide text-[var(--txt-secondary)]">
+                  <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-(--border-subtle) bg-(--bg-layer-2) text-xs font-semibold uppercase tracking-wide text-(--txt-secondary)">
                     {workspace?.logo && getImageUrl(workspace.logo) ? (
                       <img
                         src={getImageUrl(workspace.logo)!}
@@ -691,17 +816,12 @@ export function Sidebar() {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-[var(--txt-primary)]">
+                    <p className="truncate text-sm font-semibold text-(--txt-primary)">
                       {workspace?.name ?? "—"}
                     </p>
-                    <p className="text-xs text-[var(--txt-tertiary)]">
-                      Members
-                    </p>
+                    <p className="text-xs text-(--txt-tertiary)">Members</p>
                   </div>
-                  <span
-                    className="shrink-0 text-[var(--txt-primary)]"
-                    aria-hidden
-                  >
+                  <span className="shrink-0 text-(--txt-primary)" aria-hidden>
                     <IconCheck />
                   </span>
                 </div>
@@ -709,7 +829,7 @@ export function Sidebar() {
                   <Link
                     to={baseUrl ? `${baseUrl}/settings` : "/settings"}
                     onClick={() => setWorkspaceDropdownOpen(false)}
-                    className="flex flex-1 items-center justify-center gap-1 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-1.5 py-1.5 text-[12px] font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-2-hover)] whitespace-nowrap"
+                    className="flex flex-1 items-center justify-center gap-1 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-1.5 py-1.5 text-[12px] font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover) whitespace-nowrap"
                   >
                     <IconSettings />
                     Settings
@@ -721,13 +841,13 @@ export function Sidebar() {
                         : "/settings"
                     }
                     onClick={() => setWorkspaceDropdownOpen(false)}
-                    className="flex flex-1 items-center justify-center gap-1 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-1.5 py-1.5 text-[12px] font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-2-hover)] whitespace-nowrap no-underline"
+                    className="flex flex-1 items-center justify-center gap-1 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-1.5 py-1.5 text-[12px] font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover) whitespace-nowrap no-underline"
                   >
                     <IconUserPlus />
                     Invite members
                   </Link>
                 </div>
-                <div className="flex flex-col gap-0.5 border-t border-[var(--border-subtle)] pt-3">
+                <div className="flex flex-col gap-0.5 border-t border-(--border-subtle) pt-3">
                   <Link
                     to={
                       baseUrl
@@ -735,7 +855,7 @@ export function Sidebar() {
                         : "/settings"
                     }
                     onClick={() => setWorkspaceDropdownOpen(false)}
-                    className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-2 text-left text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)] no-underline"
+                    className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-2 text-left text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary) no-underline"
                   >
                     <IconEnvelope />
                     Workspace invites
@@ -746,7 +866,7 @@ export function Sidebar() {
                       setWorkspaceDropdownOpen(false);
                       logout();
                     }}
-                    className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-2 text-left text-[13px] font-medium text-[var(--txt-danger-primary)] hover:bg-[var(--bg-danger-subtle)] hover:text-[var(--txt-danger-primary)]"
+                    className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-2 text-left text-[13px] font-medium text-(--txt-danger-primary) hover:bg-(--bg-danger-subtle) hover:text-(--txt-danger-primary)"
                   >
                     <IconLogOut />
                     Sign out
@@ -760,7 +880,7 @@ export function Sidebar() {
           <div className="flex items-center gap-2 px-3 py-2">
             <Button
               variant="secondary"
-              className="min-w-0 flex-1 justify-start gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-1-hover)]"
+              className="min-w-0 flex-1 justify-start gap-2 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)"
               onClick={() => setCreateWorkItemOpen(true)}
             >
               <IconPencil />
@@ -768,7 +888,7 @@ export function Sidebar() {
             </Button>
             <button
               type="button"
-              className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)]"
+              className="flex size-9 shrink-0 items-center justify-center rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover)"
               aria-label="Search"
             >
               <IconSearch />
@@ -784,17 +904,17 @@ export function Sidebar() {
                 end
                 className={({ isActive }) =>
                   cn(
-                    "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                    "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
                     isActive
-                      ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
-                      : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                      ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
+                      : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
                   )
                 }
               >
                 <span
                   className={cn(
                     "flex size-4 shrink-0 items-center justify-center",
-                    "text-[var(--txt-icon-tertiary)]",
+                    "text-(--txt-icon-tertiary)",
                   )}
                 >
                   <IconHome />
@@ -806,14 +926,14 @@ export function Sidebar() {
                 end
                 className={({ isActive }) =>
                   cn(
-                    "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                    "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
                     isActive
-                      ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
-                      : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                      ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
+                      : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
                   )
                 }
               >
-                <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
                   <IconInbox />
                 </span>
                 Inbox
@@ -827,14 +947,14 @@ export function Sidebar() {
                 end
                 className={({ isActive }) =>
                   cn(
-                    "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                    "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
                     isActive
-                      ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
-                      : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                      ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
+                      : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
                   )
                 }
               >
-                <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
                   <IconUser />
                 </span>
                 Your work
@@ -846,14 +966,14 @@ export function Sidebar() {
               <button
                 type="button"
                 onClick={() => setWorkspaceSectionExpanded((e) => !e)}
-                className="group flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-[var(--txt-placeholder)] outline-none hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-secondary)]"
+                className="group flex w-full items-center justify-between gap-2 rounded-(--radius-md) px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-(--txt-placeholder) outline-none hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-secondary)"
                 aria-expanded={workspaceSectionExpanded}
               >
                 <span>Workspace</span>
                 <span className="flex size-4 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
                   <IconChevronRight
                     className={cn(
-                      "text-[var(--txt-icon-tertiary)]",
+                      "text-(--txt-icon-tertiary)",
                       workspaceSectionExpanded && "rotate-90",
                     )}
                   />
@@ -866,14 +986,14 @@ export function Sidebar() {
                     end
                     className={({ isActive }) =>
                       cn(
-                        "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                        "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
                         isActive
-                          ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
-                          : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                          ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
+                          : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
                       )
                     }
                   >
-                    <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                    <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
                       <IconBriefcase />
                     </span>
                     Projects
@@ -882,15 +1002,15 @@ export function Sidebar() {
                     to={baseUrl ? `${baseUrl}/views/all-issues` : "/"}
                     className={({ isActive }) =>
                       cn(
-                        "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                        "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
                         isActive ||
                           location.pathname.startsWith(`${baseUrl}/views`)
-                          ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
-                          : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                          ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
+                          : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
                       )
                     }
                   >
-                    <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                    <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
                       <IconLayoutList />
                     </span>
                     Views
@@ -900,14 +1020,14 @@ export function Sidebar() {
                     end={false}
                     className={({ isActive }) =>
                       cn(
-                        "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                        "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
                         isActive
-                          ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
-                          : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                          ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
+                          : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
                       )
                     }
                   >
-                    <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                    <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
                       <IconBarChart />
                     </span>
                     Analytics
@@ -917,14 +1037,14 @@ export function Sidebar() {
                     end
                     className={({ isActive }) =>
                       cn(
-                        "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                        "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
                         isActive
-                          ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
-                          : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                          ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
+                          : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
                       )
                     }
                   >
-                    <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                    <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
                       <IconPencil />
                     </span>
                     Drafts
@@ -934,14 +1054,14 @@ export function Sidebar() {
                     end
                     className={({ isActive }) =>
                       cn(
-                        "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                        "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
                         isActive
-                          ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
-                          : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                          ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
+                          : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
                       )
                     }
                   >
-                    <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                    <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
                       <IconArchive />
                     </span>
                     Archives
@@ -955,14 +1075,14 @@ export function Sidebar() {
               <button
                 type="button"
                 onClick={() => setFavoritesSectionExpanded((e) => !e)}
-                className="group flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-[var(--txt-placeholder)] outline-none hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-secondary)]"
+                className="group flex w-full items-center justify-between gap-2 rounded-(--radius-md) px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-(--txt-placeholder) outline-none hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-secondary)"
                 aria-expanded={favoritesSectionExpanded}
               >
                 <span>Favorites</span>
                 <span className="flex size-4 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
                   <IconChevronRight
                     className={cn(
-                      "text-[var(--txt-icon-tertiary)]",
+                      "text-(--txt-icon-tertiary)",
                       favoritesSectionExpanded && "rotate-90",
                     )}
                   />
@@ -974,9 +1094,9 @@ export function Sidebar() {
                     <Link
                       key={project.id}
                       to={`${baseUrl}/projects/${project.id}`}
-                      className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]"
+                      className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                     >
-                      <div className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-[var(--bg-layer-1)] text-[10px] font-medium text-[var(--txt-tertiary)]">
+                      <div className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-(--bg-layer-1) text-[10px] font-medium text-(--txt-tertiary)">
                         {(project.identifier ?? project.id.slice(0, 2)).slice(
                           0,
                           2,
@@ -985,6 +1105,28 @@ export function Sidebar() {
                       <span className="truncate">{project.name}</span>
                     </Link>
                   ))}
+                  {favoriteModules.length > 0 && (
+                    <>
+                      {favoriteModules.map(({ projectId, module }) => (
+                        <Link
+                          key={`${projectId}:${module.id}`}
+                          to={`${baseUrl}/projects/${projectId}/modules/${slugify(module.name)}`}
+                          className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
+                        >
+                          <SidebarModuleLogo
+                            progress={
+                              module.issue_count
+                                ? Math.round((0 / module.issue_count) * 100)
+                                : 0
+                            }
+                          />
+                          <div className="min-w-0 flex-1">
+                            <span className="truncate">{module.name}</span>
+                          </div>
+                        </Link>
+                      ))}
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -995,14 +1137,14 @@ export function Sidebar() {
                 <button
                   type="button"
                   onClick={() => setProjectsSectionExpanded((e) => !e)}
-                  className="group flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-[var(--txt-placeholder)] outline-none hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-secondary)]"
+                  className="group flex w-full items-center justify-between gap-2 rounded-(--radius-md) px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-(--txt-placeholder) outline-none hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-secondary)"
                   aria-expanded={projectsSectionExpanded}
                 >
                   <span>Projects</span>
                   <span className="flex size-4 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
                     <IconChevronRight
                       className={cn(
-                        "text-[var(--txt-icon-tertiary)]",
+                        "text-(--txt-icon-tertiary)",
                         projectsSectionExpanded && "rotate-90",
                       )}
                     />
@@ -1021,11 +1163,11 @@ export function Sidebar() {
                         <button
                           type="button"
                           onClick={() => toggleProject(project.id)}
-                          className="group flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)] px-1.5 py-1.5 text-left text-[13px] font-medium text-[var(--txt-secondary)] outline-none hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]"
+                          className="group flex w-full items-center justify-between gap-2 rounded-(--radius-md) px-1.5 py-1.5 text-left text-[13px] font-medium text-(--txt-secondary) outline-none hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                           aria-expanded={isExpanded}
                         >
                           <span className="flex min-w-0 flex-1 items-center gap-2">
-                            <div className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-[var(--bg-layer-1)] text-[10px] font-medium text-[var(--txt-tertiary)]">
+                            <div className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-(--bg-layer-1) text-[10px] font-medium text-(--txt-tertiary)">
                               {(
                                 project.identifier ?? project.id.slice(0, 2)
                               ).slice(0, 2)}
@@ -1035,28 +1177,28 @@ export function Sidebar() {
                           <span className="flex size-5 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
                             <IconChevronRight
                               className={cn(
-                                "text-[var(--txt-icon-tertiary)]",
+                                "text-(--txt-icon-tertiary)",
                                 isExpanded && "rotate-90",
                               )}
                             />
                           </span>
                         </button>
                         {isExpanded && (
-                          <div className="ml-5 flex flex-col gap-0.5 border-l border-[var(--border-subtle)] pl-2">
+                          <div className="ml-5 flex flex-col gap-0.5 border-l border-(--border-subtle) pl-2">
                             {projectNavItems.map(({ key, to, label, Icon }) => (
                               <NavLink
                                 key={key}
                                 to={`${projectUrl}/${to}`}
                                 className={({ isActive }) =>
                                   cn(
-                                    "flex w-full items-center gap-2 rounded-[var(--radius-md)] px-2 py-1 text-[13px] font-medium outline-none",
+                                    "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1 text-[13px] font-medium outline-none",
                                     isActive
-                                      ? "bg-[var(--bg-layer-transparent-active)] text-[var(--txt-primary)]"
-                                      : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]",
+                                      ? "bg-(--bg-layer-transparent-active) text-(--txt-primary)"
+                                      : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
                                   )
                                 }
                               >
-                                <span className="flex size-4 shrink-0 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                                <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
                                   <Icon />
                                 </span>
                                 {label}
@@ -1073,25 +1215,25 @@ export function Sidebar() {
           </div>
 
           {/* 8. Footer: Community + Help + Settings */}
-          <div className="flex items-center justify-between gap-2 border-t border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2.5">
+          <div className="flex items-center justify-between gap-2 border-t border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2.5">
             {/* <Button
               variant="secondary"
               size="sm"
-              className="rounded-full px-3 text-[12px] font-medium text-[var(--txt-accent-primary)]"
+              className="rounded-full px-3 text-[12px] font-medium text-(--txt-accent-primary)"
             >
               Community
             </Button> */}
             <div className="flex items-center gap-0.5">
               <button
                 type="button"
-                className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-icon-secondary)]"
+                className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
                 aria-label="Help"
               >
                 <IconHelp />
               </button>
               <Link
                 to={baseUrl ? `${baseUrl}/settings` : "/settings"}
-                className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-icon-secondary)]"
+                className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
                 aria-label="Settings"
               >
                 <IconBook />
@@ -1103,13 +1245,13 @@ export function Sidebar() {
 
       {collapsed && (
         <div
-          className="flex shrink-0 flex-col items-center border-r border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-3"
+          className="flex shrink-0 flex-col items-center border-r border-(--border-subtle) bg-(--bg-surface-1) py-3"
           style={{ width: "48px", minWidth: "48px" }}
         >
           <button
             type="button"
             onClick={() => setCollapsed(false)}
-            className="flex size-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+            className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover)"
             aria-label="Expand sidebar"
           >
             <span className="rotate-180">

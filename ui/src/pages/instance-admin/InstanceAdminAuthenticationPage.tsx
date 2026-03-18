@@ -182,7 +182,7 @@ export function InstanceAdminAuthenticationPage() {
           <Skeleton className="h-4 w-80" />
           <Skeleton className="mt-1.5 h-3 w-full max-w-xl" />
         </div>
-        <section className="flex items-start justify-between gap-3 rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3">
+        <section className="flex items-start justify-between gap-3 rounded border border-(--border-subtle) bg-(--bg-surface-1) p-3">
           <div className="min-w-0 flex-1 space-y-1">
             <Skeleton className="h-3 w-64" />
             <Skeleton className="h-3 w-full max-w-md" />
@@ -195,7 +195,7 @@ export function InstanceAdminAuthenticationPage() {
             {[1, 2, 3, 4, 5].map((i) => (
               <li
                 key={i}
-                className="flex items-center justify-between gap-3 rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3"
+                className="flex items-center justify-between gap-3 rounded border border-(--border-subtle) bg-(--bg-surface-1) p-3"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2.5">
                   <Skeleton className="size-4 shrink-0 rounded" />
@@ -216,29 +216,27 @@ export function InstanceAdminAuthenticationPage() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h1 className="text-base font-semibold text-[var(--txt-primary)]">
+        <h1 className="text-base font-semibold text-(--txt-primary)">
           Manage authentication modes for your instance
         </h1>
-        <p className="mt-0.5 text-xs text-[var(--txt-secondary)]">
+        <p className="mt-0.5 text-xs text-(--txt-secondary)">
           Configure authentication modes for your team and restrict sign-ups to
           be invite only.
         </p>
       </div>
 
-      {error && (
-        <p className="text-sm text-[var(--txt-danger-primary)]">{error}</p>
-      )}
+      {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
 
-      <section className="flex items-start justify-between gap-3 rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3">
+      <section className="flex items-start justify-between gap-3 rounded border border-(--border-subtle) bg-(--bg-surface-1) p-3">
         <div>
-          <p className="text-xs font-medium text-[var(--txt-primary)]">
+          <p className="text-xs font-medium text-(--txt-primary)">
             Allow anyone to sign up even without an invite
           </p>
-          <p className="mt-0.5 text-xs text-[var(--txt-secondary)]">
+          <p className="mt-0.5 text-xs text-(--txt-secondary)">
             Toggling this off will only let users sign up when they are invited.
           </p>
         </div>
-        <label className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full bg-[var(--neutral-400)] has-[:checked]:bg-[var(--brand-default)]">
+        <label className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full bg-(--neutral-400) has-[:checked]:bg-(--brand-default)">
           <input
             type="checkbox"
             className="peer sr-only"
@@ -252,7 +250,7 @@ export function InstanceAdminAuthenticationPage() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--txt-secondary)]">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-(--txt-secondary)">
           Available authentication modes
         </h2>
         <ul className="space-y-2">
@@ -262,17 +260,17 @@ export function InstanceAdminAuthenticationPage() {
             return (
               <li
                 key={item.key}
-                className="flex items-center justify-between gap-3 rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3"
+                className="flex items-center justify-between gap-3 rounded border border-(--border-subtle) bg-(--bg-surface-1) p-3"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                  <span className="flex shrink-0 text-[var(--txt-icon-tertiary)] [&_svg]:size-4 [&_svg]:shrink-0">
+                  <span className="flex shrink-0 text-(--txt-icon-tertiary) [&_svg]:size-4 [&_svg]:shrink-0">
                     <Icon />
                   </span>
                   <div>
-                    <p className="text-sm font-medium text-[var(--txt-primary)]">
+                    <p className="text-sm font-medium text-(--txt-primary)">
                       {item.name}
                     </p>
-                    <p className="text-xs text-[var(--txt-secondary)]">
+                    <p className="text-xs text-(--txt-secondary)">
                       {item.desc}
                     </p>
                   </div>
@@ -283,7 +281,7 @@ export function InstanceAdminAuthenticationPage() {
                       {item.action}
                     </Button>
                   )}
-                  <label className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full bg-[var(--neutral-400)] has-[:checked]:bg-[var(--brand-default)]">
+                  <label className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full bg-(--neutral-400) has-[:checked]:bg-(--brand-default)">
                     <input
                       type="checkbox"
                       className="peer sr-only"

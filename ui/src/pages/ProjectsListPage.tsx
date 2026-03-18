@@ -195,15 +195,13 @@ export function ProjectsListPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading…
       </div>
     );
   }
   if (!workspace) {
-    return (
-      <div className="text-[var(--txt-secondary)]">Workspace not found.</div>
-    );
+    return <div className="text-(--txt-secondary)">Workspace not found.</div>;
   }
 
   const baseUrl = `/${workspace.slug}`;
@@ -238,7 +236,7 @@ export function ProjectsListPage() {
           return (
             <div
               key={project.id}
-              className="overflow-hidden rounded-xl bg-[var(--bg-surface-1)] shadow-sm"
+              className="overflow-hidden rounded-xl bg-(--bg-surface-1) shadow-sm"
             >
               <Link
                 to={`${baseUrl}/projects/${project.id}/issues`}
@@ -294,7 +292,7 @@ export function ProjectsListPage() {
                 </div>
                 {/* Description */}
                 <div className="px-4 py-3">
-                  <p className="line-clamp-2 text-sm text-[var(--txt-secondary)]">
+                  <p className="line-clamp-2 text-sm text-(--txt-secondary)">
                     {project.description || "No description"}
                   </p>
                 </div>
@@ -306,7 +304,7 @@ export function ProjectsListPage() {
                   className="flex min-w-0 flex-1 -space-x-2 no-underline"
                 >
                   {visibleMembers.length === 0 ? (
-                    <span className="text-xs text-[var(--txt-tertiary)]">
+                    <span className="text-xs text-(--txt-tertiary)">
                       No members
                     </span>
                   ) : (
@@ -317,12 +315,12 @@ export function ProjectsListPage() {
                           name={user.name}
                           src={user.avatarUrl}
                           size="sm"
-                          className="h-7 w-7 border-2 border-[var(--bg-surface-1)] text-[10px]"
+                          className="h-7 w-7 border-2 border-(--bg-surface-1) text-[10px]"
                         />
                       ))}
                       {extraCount > 0 && (
                         <span
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[var(--bg-surface-1)] bg-[var(--bg-layer-2)] text-[10px] font-medium text-[var(--txt-secondary)]"
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-(--bg-surface-1) bg-(--bg-layer-2) text-[10px] font-medium text-(--txt-secondary)"
                           title={`${extraCount} more`}
                         >
                           +{extraCount}
@@ -333,7 +331,7 @@ export function ProjectsListPage() {
                 </Link>
                 <Link
                   to={`${baseUrl}/settings/projects/${project.id}`}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
                   aria-label="Project settings"
                 >
                   <IconSettings />
@@ -344,7 +342,7 @@ export function ProjectsListPage() {
         })}
       </div>
       {projects.length === 0 && (
-        <p className="text-sm text-[var(--txt-tertiary)]">No projects yet.</p>
+        <p className="text-sm text-(--txt-tertiary)">No projects yet.</p>
       )}
     </div>
   );

@@ -1225,14 +1225,14 @@ export function SettingsPage() {
     : projectMembers;
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading…
       </div>
     );
   }
   if (!workspace) {
     return (
-      <div className="px-[var(--padding-page)] py-8 text-[var(--txt-secondary)]">
+      <div className="px-(--padding-page) py-8 text-(--txt-secondary)">
         Workspace not found.
       </div>
     );
@@ -1273,15 +1273,15 @@ export function SettingsPage() {
   const projectsSettingsUrl = `/${workspace.slug}/settings/projects${projects.length ? `/${projects[0].id}` : ""}`;
 
   return (
-    <div className="min-h-0 flex-1 px-[var(--padding-page)] pb-8">
+    <div className="min-h-0 flex-1 px-(--padding-page) pb-8">
       {/* Main tabs: Account | Workspace | Projects */}
-      <div className="flex gap-1 border-b border-[var(--border-subtle)]">
+      <div className="flex gap-1 border-b border-(--border-subtle)">
         <Link
           to={accountSettingsUrl}
           className={`border-b-2 px-4 py-2.5 text-sm font-medium ${
             isAccountTab
-              ? "border-[var(--brand-default)] text-[var(--txt-primary)]"
-              : "border-transparent text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]"
+              ? "border-(--brand-default) text-(--txt-primary)"
+              : "border-transparent text-(--txt-secondary) hover:text-(--txt-primary)"
           }`}
         >
           Account
@@ -1290,8 +1290,8 @@ export function SettingsPage() {
           to={baseSettingsUrl}
           className={`border-b-2 px-4 py-2.5 text-sm font-medium ${
             !isAccountTab && !isProjectsTab
-              ? "border-[var(--brand-default)] text-[var(--txt-primary)]"
-              : "border-transparent text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]"
+              ? "border-(--brand-default) text-(--txt-primary)"
+              : "border-transparent text-(--txt-secondary) hover:text-(--txt-primary)"
           }`}
         >
           Workspace
@@ -1300,8 +1300,8 @@ export function SettingsPage() {
           to={projectsSettingsUrl}
           className={`border-b-2 px-4 py-2.5 text-sm font-medium ${
             isProjectsTab
-              ? "border-[var(--brand-default)] text-[var(--txt-primary)]"
-              : "border-transparent text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]"
+              ? "border-(--brand-default) text-(--txt-primary)"
+              : "border-transparent text-(--txt-secondary) hover:text-(--txt-primary)"
           }`}
         >
           Projects
@@ -1321,16 +1321,16 @@ export function SettingsPage() {
                   size="sm"
                 />
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-[var(--txt-primary)]">
+                  <p className="truncate text-sm font-medium text-(--txt-primary)">
                     {displayName || user?.name}
                   </p>
-                  <p className="truncate text-xs text-[var(--txt-tertiary)]">
+                  <p className="truncate text-xs text-(--txt-tertiary)">
                     {user?.email}
                   </p>
                 </div>
               </div>
               <nav className="space-y-0.5">
-                <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-[var(--txt-tertiary)]">
+                <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-(--txt-tertiary)">
                   Your Profile
                 </p>
                 {ACCOUNT_SECTIONS_PROFILE.map(({ id, label, icon }) => (
@@ -1340,17 +1340,15 @@ export function SettingsPage() {
                     onClick={() => setAccountSection(id)}
                     className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors ${
                       accountSection === id
-                        ? "bg-[var(--brand-200)] text-[var(--txt-primary)]"
-                        : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]"
+                        ? "bg-(--brand-200) text-(--txt-primary)"
+                        : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                     }`}
                   >
-                    <span className="text-[var(--txt-icon-secondary)]">
-                      {icon}
-                    </span>
+                    <span className="text-(--txt-icon-secondary)">{icon}</span>
                     {label}
                   </button>
                 ))}
-                <p className="mb-2 mt-4 px-2 text-xs font-medium uppercase tracking-wider text-[var(--txt-tertiary)]">
+                <p className="mb-2 mt-4 px-2 text-xs font-medium uppercase tracking-wider text-(--txt-tertiary)">
                   Developer
                 </p>
                 {ACCOUNT_SECTIONS_DEVELOPER.map(({ id, label, icon }) => (
@@ -1360,13 +1358,11 @@ export function SettingsPage() {
                     onClick={() => setAccountSection(id)}
                     className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors ${
                       accountSection === id
-                        ? "bg-[var(--brand-200)] text-[var(--txt-primary)]"
-                        : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]"
+                        ? "bg-(--brand-200) text-(--txt-primary)"
+                        : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                     }`}
                   >
-                    <span className="text-[var(--txt-icon-secondary)]">
-                      {icon}
-                    </span>
+                    <span className="text-(--txt-icon-secondary)">{icon}</span>
                     {label}
                   </button>
                 ))}
@@ -1381,14 +1377,14 @@ export function SettingsPage() {
                   size="sm"
                 />
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-[var(--txt-primary)]">
+                  <p className="truncate text-sm font-medium text-(--txt-primary)">
                     {workspace.name}
                   </p>
-                  <p className="text-xs text-[var(--txt-tertiary)]">Admin</p>
+                  <p className="text-xs text-(--txt-tertiary)">Admin</p>
                 </div>
               </div>
               <nav className="space-y-0.5">
-                <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-[var(--txt-tertiary)]">
+                <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-(--txt-tertiary)">
                   Projects
                 </p>
                 {projects.map((proj) => {
@@ -1400,11 +1396,11 @@ export function SettingsPage() {
                         onClick={() => setProjectId(proj.id)}
                         className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors ${
                           isSelected
-                            ? "bg-[var(--brand-200)] text-[var(--txt-primary)]"
-                            : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]"
+                            ? "bg-(--brand-200) text-(--txt-primary)"
+                            : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                         }`}
                       >
-                        <span className="text-[var(--txt-icon-secondary)] flex shrink-0 items-center justify-center">
+                        <span className="text-(--txt-icon-secondary) flex shrink-0 items-center justify-center">
                           <ProjectIconDisplay
                             emoji={proj.emoji}
                             icon_prop={proj.icon_prop}
@@ -1412,12 +1408,12 @@ export function SettingsPage() {
                           />
                         </span>
                         <span className="min-w-0 truncate">{proj.name}</span>
-                        <span className="ml-auto shrink-0 text-xs text-[var(--txt-tertiary)]">
+                        <span className="ml-auto shrink-0 text-xs text-(--txt-tertiary)">
                           Admin
                         </span>
                       </button>
                       {isSelected && (
-                        <div className="ml-4 space-y-0.5 border-l border-[var(--border-subtle)] pl-2">
+                        <div className="ml-4 space-y-0.5 border-l border-(--border-subtle) pl-2">
                           {PROJECT_SECTIONS.map(({ id, label, icon }) => (
                             <button
                               key={id}
@@ -1425,11 +1421,11 @@ export function SettingsPage() {
                               onClick={() => setProjectSection(proj.id, id)}
                               className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm font-medium transition-colors ${
                                 projectSection === id
-                                  ? "bg-[var(--brand-200)] text-[var(--txt-primary)]"
-                                  : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]"
+                                  ? "bg-(--brand-200) text-(--txt-primary)"
+                                  : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                               }`}
                             >
-                              <span className="text-[var(--txt-icon-secondary)]">
+                              <span className="text-(--txt-icon-secondary)">
                                 {icon}
                               </span>
                               {label}
@@ -1451,14 +1447,14 @@ export function SettingsPage() {
                   size="sm"
                 />
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-[var(--txt-primary)]">
+                  <p className="truncate text-sm font-medium text-(--txt-primary)">
                     {workspace.name}
                   </p>
-                  <p className="text-xs text-[var(--txt-tertiary)]">Admin</p>
+                  <p className="text-xs text-(--txt-tertiary)">Admin</p>
                 </div>
               </div>
               <nav className="space-y-0.5">
-                <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-[var(--txt-tertiary)]">
+                <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-(--txt-tertiary)">
                   Administration
                 </p>
                 {WORKSPACE_SECTIONS.slice(0, 4).map(({ id, label, icon }) => (
@@ -1468,17 +1464,15 @@ export function SettingsPage() {
                     onClick={() => setSection(id)}
                     className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors ${
                       section === id
-                        ? "bg-[var(--brand-200)] text-[var(--txt-primary)]"
-                        : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]"
+                        ? "bg-(--brand-200) text-(--txt-primary)"
+                        : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                     }`}
                   >
-                    <span className="text-[var(--txt-icon-secondary)]">
-                      {icon}
-                    </span>
+                    <span className="text-(--txt-icon-secondary)">{icon}</span>
                     {label}
                   </button>
                 ))}
-                <p className="mb-2 mt-4 px-2 text-xs font-medium uppercase tracking-wider text-[var(--txt-tertiary)]">
+                <p className="mb-2 mt-4 px-2 text-xs font-medium uppercase tracking-wider text-(--txt-tertiary)">
                   Developer
                 </p>
                 {WORKSPACE_SECTIONS.slice(4).map(({ id, label, icon }) => (
@@ -1488,13 +1482,11 @@ export function SettingsPage() {
                     onClick={() => setSection(id)}
                     className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors ${
                       section === id
-                        ? "bg-[var(--brand-200)] text-[var(--txt-primary)]"
-                        : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-transparent-hover)] hover:text-[var(--txt-primary)]"
+                        ? "bg-(--brand-200) text-(--txt-primary)"
+                        : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                     }`}
                   >
-                    <span className="text-[var(--txt-icon-secondary)]">
-                      {icon}
-                    </span>
+                    <span className="text-(--txt-icon-secondary)">{icon}</span>
                     {label}
                   </button>
                 ))}
@@ -1507,10 +1499,10 @@ export function SettingsPage() {
         <main className="min-w-0 flex-1">
           {isAccountTab && accountSection === "profile" && (
             <div className="space-y-6">
-              <div className="relative h-48 rounded-[var(--radius-md)]">
+              <div className="relative h-48 rounded-(--radius-md)">
                 {/* Cover background (clipped to rounded corners; no overflow on outer so avatar can overlap) */}
                 <div
-                  className="absolute inset-0 overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-layer-2)]"
+                  className="absolute inset-0 overflow-hidden rounded-(--radius-md) bg-(--bg-layer-2)"
                   style={
                     getImageUrl(user?.coverImageUrl)
                       ? {
@@ -1522,7 +1514,7 @@ export function SettingsPage() {
                   }
                 >
                   {!getImageUrl(user?.coverImageUrl) && (
-                    <div className="absolute inset-0 bg-gradient-to-br from-[var(--neutral-800)] to-[var(--neutral-1000)]" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-(--neutral-800) to-(--neutral-1000)" />
                   )}
                 </div>
                 <Button
@@ -1537,7 +1529,7 @@ export function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => setAccountAvatarModalOpen(true)}
-                    className="block h-24 w-20 overflow-hidden rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--brand-default)]"
+                    className="block h-24 w-20 overflow-hidden rounded-xl focus:outline-none focus:ring-2 focus:ring-(--brand-default)"
                     aria-label="Change profile picture"
                   >
                     {getImageUrl(user?.avatarUrl) ? (
@@ -1547,7 +1539,7 @@ export function SettingsPage() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <span className="flex h-full w-full items-center justify-center bg-[var(--bg-accent-primary)] text-sm font-medium text-[var(--txt-on-color)]">
+                      <span className="flex h-full w-full items-center justify-center bg-(--bg-accent-primary) text-sm font-medium text-(--txt-on-color)">
                         {(user?.name ?? "")
                           .split(/\s+/)
                           .map((p) => p[0])
@@ -1560,65 +1552,62 @@ export function SettingsPage() {
                 </div>
               </div>
               <div className="pt-10">
-                <h2 className="text-lg font-semibold text-[var(--txt-primary)]">
+                <h2 className="text-lg font-semibold text-(--txt-primary)">
                   {firstName} {lastName}
                 </h2>
-                <p className="text-sm text-[var(--txt-tertiary)]">
-                  {user?.email}
-                </p>
+                <p className="text-sm text-(--txt-tertiary)">{user?.email}</p>
               </div>
               <div className="grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                  <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                     First name{" "}
-                    <span className="text-[var(--txt-danger-primary)]">*</span>
+                    <span className="text-(--txt-danger-primary)">*</span>
                   </label>
                   <input
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                    className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                  <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                     Last name
                   </label>
                   <input
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                    className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                  <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                     Display name{" "}
-                    <span className="text-[var(--txt-danger-primary)]">*</span>
+                    <span className="text-(--txt-danger-primary)">*</span>
                   </label>
                   <input
                     type="text"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                    className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
-                    Email{" "}
-                    <span className="text-[var(--txt-danger-primary)]">*</span>
+                  <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
+                    Email <span className="text-(--txt-danger-primary)">*</span>
                   </label>
                   <input
                     type="email"
                     value={profileEmail}
                     readOnly
                     disabled
-                    className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-3 py-2 text-sm text-[var(--txt-tertiary)] cursor-not-allowed"
+                    className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-2 text-sm text-(--txt-tertiary) cursor-not-allowed"
                   />
                 </div>
               </div>
               {profileError && (
-                <p className="text-sm text-[var(--txt-danger-primary)]">
+                <p className="text-sm text-(--txt-danger-primary)">
                   {profileError}
                 </p>
               )}
@@ -1653,33 +1642,30 @@ export function SettingsPage() {
               >
                 {profileSaveLoading ? "Saving…" : "Save changes"}
               </Button>
-              <Card
-                variant="outlined"
-                className="border-[var(--border-subtle)]"
-              >
+              <Card variant="outlined" className="border-(--border-subtle)">
                 <button
                   type="button"
                   onClick={() => setDeactivateOpen(!deactivateOpen)}
                   className="flex w-full items-center justify-between px-4 py-3 text-left"
                 >
-                  <span className="text-sm font-medium text-[var(--txt-danger-primary)]">
+                  <span className="text-sm font-medium text-(--txt-danger-primary)">
                     Deactivate account
                   </span>
                   <span
-                    className={`text-[var(--txt-icon-tertiary)] transition-transform ${deactivateOpen ? "rotate-180" : ""}`}
+                    className={`text-(--txt-icon-tertiary) transition-transform ${deactivateOpen ? "rotate-180" : ""}`}
                   >
                     <IconChevronDown />
                   </span>
                 </button>
                 {deactivateOpen && (
-                  <CardContent className="border-t border-[var(--border-subtle)] pt-3">
-                    <p className="text-sm text-[var(--txt-secondary)]">
+                  <CardContent className="border-t border-(--border-subtle) pt-3">
+                    <p className="text-sm text-(--txt-secondary)">
                       This action cannot be undone. Your account will be
                       deactivated.
                     </p>
                     <Button
                       variant="secondary"
-                      className="mt-3 text-[var(--txt-danger-primary)]"
+                      className="mt-3 text-(--txt-danger-primary)"
                     >
                       Deactivate account
                     </Button>
@@ -1720,19 +1706,19 @@ export function SettingsPage() {
           {isAccountTab && accountSection === "preferences" && (
             <div className="space-y-8">
               <div>
-                <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+                <h2 className="text-base font-semibold text-(--txt-primary)">
                   Preferences
                 </h2>
-                <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                <p className="mt-0.5 text-sm text-(--txt-secondary)">
                   Customize your app experience the way you work
                 </p>
               </div>
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-[var(--txt-primary)]">
+                  <label className="block text-sm font-medium text-(--txt-primary)">
                     Theme
                   </label>
-                  <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                  <p className="mt-0.5 text-sm text-(--txt-secondary)">
                     Select or customize your interface color scheme.
                   </p>
                   <div className="relative mt-2 max-w-xs">
@@ -1741,49 +1727,49 @@ export function SettingsPage() {
                       onChange={(e) =>
                         setTheme(e.target.value as "light" | "dark" | "system")
                       }
-                      className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                      className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                     >
                       <option value="light">Light</option>
                       <option value="dark">Dark</option>
                       <option value="system">System</option>
                     </select>
-                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                       <IconChevronDown />
                     </span>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[var(--txt-primary)]">
+                  <label className="block text-sm font-medium text-(--txt-primary)">
                     First day of the week
                   </label>
-                  <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                  <p className="mt-0.5 text-sm text-(--txt-secondary)">
                     This will change how all calendars in your app look.
                   </p>
                   <div className="relative mt-2 max-w-xs">
                     <select
                       value={firstDayOfWeek}
                       onChange={(e) => setFirstDayOfWeek(e.target.value)}
-                      className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                      className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                     >
                       <option value="sunday">Sunday</option>
                       <option value="monday">Monday</option>
                     </select>
-                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                       <IconChevronDown />
                     </span>
                   </div>
                 </div>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-[var(--txt-primary)]">
+                <h3 className="text-sm font-semibold text-(--txt-primary)">
                   Language & Time
                 </h3>
                 <div className="mt-4 space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-[var(--txt-primary)]">
+                    <label className="block text-sm font-medium text-(--txt-primary)">
                       Timezone
                     </label>
-                    <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                    <p className="mt-0.5 text-sm text-(--txt-secondary)">
                       Current timezone setting.
                     </p>
                     <div
@@ -1793,20 +1779,20 @@ export function SettingsPage() {
                       <button
                         type="button"
                         onClick={() => setTimezoneDropdownOpen((o) => !o)}
-                        className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                        className="flex w-full items-center justify-between rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                       >
                         <span className="truncate">
                           {timezoneOptions.find((o) => o.value === timezone)
                             ?.label ?? timezone}
                         </span>
-                        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+                        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                           <IconChevronDown />
                         </span>
                       </button>
                       {timezoneDropdownOpen && (
-                        <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-lg">
-                          <div className="border-b border-[var(--border-subtle)] p-2">
-                            <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2 py-1.5">
+                        <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-hidden rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) shadow-lg">
+                          <div className="border-b border-(--border-subtle) p-2">
+                            <div className="flex items-center gap-2 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-2 py-1.5">
                               <IconSearch />
                               <input
                                 type="text"
@@ -1815,7 +1801,7 @@ export function SettingsPage() {
                                   setTimezoneSearch(e.target.value)
                                 }
                                 placeholder="Search"
-                                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] outline-none placeholder:text-[var(--txt-placeholder)]"
+                                className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) outline-none placeholder:text-(--txt-placeholder)"
                               />
                             </div>
                           </div>
@@ -1829,7 +1815,7 @@ export function SettingsPage() {
                                   setTimezoneDropdownOpen(false);
                                   setTimezoneSearch("");
                                 }}
-                                className={`w-full rounded-[var(--radius-md)] px-2 py-1.5 text-left text-sm ${o.value === timezone ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]" : "text-[var(--txt-primary)] hover:bg-[var(--bg-layer-transparent-hover)]"}`}
+                                className={`w-full rounded-(--radius-md) px-2 py-1.5 text-left text-sm ${o.value === timezone ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)" : "text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover)"}`}
                               >
                                 {o.label}
                               </button>
@@ -1840,21 +1826,21 @@ export function SettingsPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[var(--txt-primary)]">
+                    <label className="block text-sm font-medium text-(--txt-primary)">
                       Language
                     </label>
-                    <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                    <p className="mt-0.5 text-sm text-(--txt-secondary)">
                       Choose the language used in the user interface.
                     </p>
                     <div className="relative mt-2 max-w-xs">
                       <select
                         value={language}
                         onChange={(e) => setLanguage(e.target.value)}
-                        className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                        className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                       >
                         <option value="en">English</option>
                       </select>
-                      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+                      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                         <IconChevronDown />
                       </span>
                     </div>
@@ -1880,10 +1866,10 @@ export function SettingsPage() {
           {isAccountTab && accountSection === "notifications" && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+                <h2 className="text-base font-semibold text-(--txt-primary)">
                   Email notifications
                 </h2>
-                <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                <p className="mt-0.5 text-sm text-(--txt-secondary)">
                   Stay in the loop on Work items you are subscribed to. Enable
                   this to get notified.
                 </p>
@@ -1933,13 +1919,13 @@ export function SettingsPage() {
                 ].map(({ id, label, desc, value, set, key }) => (
                   <div
                     key={id}
-                    className="flex items-start justify-between gap-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 py-3"
+                    className="flex items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3"
                   >
                     <div>
-                      <p className="text-sm font-medium text-[var(--txt-primary)]">
+                      <p className="text-sm font-medium text-(--txt-primary)">
                         {label}
                       </p>
-                      <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                      <p className="mt-0.5 text-sm text-(--txt-secondary)">
                         {desc}
                       </p>
                     </div>
@@ -1959,7 +1945,7 @@ export function SettingsPage() {
                           set(value);
                         }
                       }}
-                      className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${value ? "bg-[var(--brand-default)]" : "bg-[var(--neutral-400)]"}`}
+                      className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${value ? "bg-(--brand-default)" : "bg-(--neutral-400)"}`}
                     >
                       <span
                         className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${value ? "translate-x-4" : "translate-x-0"}`}
@@ -1973,12 +1959,12 @@ export function SettingsPage() {
 
           {isAccountTab && accountSection === "security" && (
             <div className="space-y-6">
-              <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+              <h2 className="text-base font-semibold text-(--txt-primary)">
                 Change password
               </h2>
               <div className="max-w-md space-y-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                  <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                     Current password
                   </label>
                   <div className="relative">
@@ -1987,12 +1973,12 @@ export function SettingsPage() {
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="Old password"
-                      className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-9 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                      className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-9 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                     />
                     <button
                       type="button"
                       onClick={() => setShowCurrentPass(!showCurrentPass)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)] hover:text-[var(--txt-secondary)]"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary) hover:text-(--txt-secondary)"
                       aria-label={
                         showCurrentPass ? "Hide password" : "Show password"
                       }
@@ -2002,7 +1988,7 @@ export function SettingsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                  <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                     New password
                   </label>
                   <div className="relative">
@@ -2011,12 +1997,12 @@ export function SettingsPage() {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Enter new password"
-                      className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-9 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                      className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-9 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                     />
                     <button
                       type="button"
                       onClick={() => setShowNewPass(!showNewPass)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)] hover:text-[var(--txt-secondary)]"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary) hover:text-(--txt-secondary)"
                       aria-label={
                         showNewPass ? "Hide password" : "Show password"
                       }
@@ -2026,7 +2012,7 @@ export function SettingsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                  <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                     Confirm password
                   </label>
                   <div className="relative">
@@ -2035,12 +2021,12 @@ export function SettingsPage() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Confirm password"
-                      className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-9 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                      className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-9 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPass(!showConfirmPass)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)] hover:text-[var(--txt-secondary)]"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary) hover:text-(--txt-secondary)"
                       aria-label={
                         showConfirmPass ? "Hide password" : "Show password"
                       }
@@ -2051,7 +2037,7 @@ export function SettingsPage() {
                 </div>
               </div>
               {changePasswordError && (
-                <p className="text-sm text-[var(--txt-danger-primary)]">
+                <p className="text-sm text-(--txt-danger-primary)">
                   {changePasswordError}
                 </p>
               )}
@@ -2110,22 +2096,22 @@ export function SettingsPage() {
           {isAccountTab && accountSection === "activity" && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+                <h2 className="text-base font-semibold text-(--txt-primary)">
                   Activity
                 </h2>
-                <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                <p className="mt-0.5 text-sm text-(--txt-secondary)">
                   Track your recent actions and changes across all projects and
                   work items.
                 </p>
               </div>
               {activityLoading ? (
-                <div className="py-10 text-center text-sm text-[var(--txt-tertiary)]">
+                <div className="py-10 text-center text-sm text-(--txt-tertiary)">
                   Loading activity…
                 </div>
               ) : activityList.length === 0 ? (
                 <Card variant="outlined">
                   <CardContent className="py-10 text-center">
-                    <p className="text-sm text-[var(--txt-tertiary)]">
+                    <p className="text-sm text-(--txt-tertiary)">
                       No activity yet.
                     </p>
                   </CardContent>
@@ -2135,9 +2121,9 @@ export function SettingsPage() {
                   {activityList.map((a) => (
                     <div
                       key={a.id}
-                      className="flex gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 py-3"
+                      className="flex gap-3 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3"
                     >
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--bg-layer-2)] text-[var(--txt-icon-tertiary)]">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-(--bg-layer-2) text-(--txt-icon-tertiary)">
                         {a.type === "comment" ? (
                           <IconMessageCircle />
                         ) : (
@@ -2145,18 +2131,18 @@ export function SettingsPage() {
                         )}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm text-[var(--txt-secondary)]">
+                        <p className="text-sm text-(--txt-secondary)">
                           You commented {formatRelativeTime(a.created_at)}
                         </p>
                         {a.description && (
-                          <p className="mt-1 text-sm font-medium text-[var(--txt-primary)]">
+                          <p className="mt-1 text-sm font-medium text-(--txt-primary)">
                             {a.description}
                           </p>
                         )}
                         {a.issue_id && a.issue_name && workspaceSlug && (
                           <Link
                             to={`/${workspaceSlug}/projects/${a.project_id}/issues/${a.issue_id}`}
-                            className="mt-1 inline-block text-sm text-[var(--txt-accent-primary)] hover:underline"
+                            className="mt-1 inline-block text-sm text-(--txt-accent-primary) hover:underline"
                           >
                             {a.issue_name}
                           </Link>
@@ -2173,10 +2159,10 @@ export function SettingsPage() {
             <div className="space-y-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+                  <h2 className="text-base font-semibold text-(--txt-primary)">
                     Personal Access Tokens
                   </h2>
-                  <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                  <p className="mt-0.5 text-sm text-(--txt-secondary)">
                     Generate secure API tokens to integrate your data with
                     external systems and applications.
                   </p>
@@ -2195,13 +2181,13 @@ export function SettingsPage() {
                 </Button>
               </div>
               {tokensLoading ? (
-                <div className="py-10 text-center text-sm text-[var(--txt-tertiary)]">
+                <div className="py-10 text-center text-sm text-(--txt-tertiary)">
                   Loading tokens…
                 </div>
               ) : tokensList.length === 0 ? (
                 <Card variant="outlined">
                   <CardContent className="py-10 text-center">
-                    <p className="text-sm text-[var(--txt-tertiary)]">
+                    <p className="text-sm text-(--txt-tertiary)">
                       No tokens yet.
                     </p>
                   </CardContent>
@@ -2211,25 +2197,25 @@ export function SettingsPage() {
                   {tokensList.map((t) => (
                     <div
                       key={t.id}
-                      className="flex items-center justify-between gap-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 py-3"
+                      className="flex items-center justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3"
                     >
                       <div>
-                        <p className="text-sm font-medium text-[var(--txt-primary)]">
+                        <p className="text-sm font-medium text-(--txt-primary)">
                           {t.label}
                         </p>
                         {t.description && (
-                          <p className="text-xs text-[var(--txt-tertiary)]">
+                          <p className="text-xs text-(--txt-tertiary)">
                             {t.description}
                           </p>
                         )}
-                        <p className="mt-0.5 text-xs text-[var(--txt-placeholder)]">
+                        <p className="mt-0.5 text-xs text-(--txt-placeholder)">
                           Created {formatRelativeTime(t.created_at)}
                         </p>
                       </div>
                       <Button
                         variant="secondary"
                         size="sm"
-                        className="text-[var(--txt-danger-primary)]"
+                        className="text-(--txt-danger-primary)"
                         disabled={revokingId === t.id}
                         onClick={async () => {
                           setRevokingId(t.id);
@@ -2260,10 +2246,10 @@ export function SettingsPage() {
               >
                 {createdTokenValue ? (
                   <div className="space-y-4">
-                    <p className="text-sm text-[var(--txt-secondary)]">
+                    <p className="text-sm text-(--txt-secondary)">
                       Copy this token now; it will not be shown again.
                     </p>
-                    <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-3 py-2 font-mono text-sm text-[var(--txt-primary)] break-all">
+                    <div className="rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-2 font-mono text-sm text-(--txt-primary) break-all">
                       {createdTokenValue}
                     </div>
                     <div className="flex justify-end">
@@ -2280,7 +2266,7 @@ export function SettingsPage() {
                 ) : (
                   <div className="space-y-4">
                     <div>
-                      <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                      <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                         Title
                       </label>
                       <input
@@ -2290,11 +2276,11 @@ export function SettingsPage() {
                           setTokenForm((f) => ({ ...f, label: e.target.value }))
                         }
                         placeholder="Title"
-                        className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                        className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                      <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                         Description
                       </label>
                       <textarea
@@ -2307,11 +2293,11 @@ export function SettingsPage() {
                         }
                         placeholder="Description"
                         rows={2}
-                        className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                        className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                      <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                         Expiration
                       </label>
                       <div className="relative max-w-xs">
@@ -2323,7 +2309,7 @@ export function SettingsPage() {
                               expiresIn: e.target.value,
                             }))
                           }
-                          className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                          className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                         >
                           <option value="">Never expires</option>
                           <option value="7d">1 week</option>
@@ -2331,7 +2317,7 @@ export function SettingsPage() {
                           <option value="90d">3 months</option>
                           <option value="365d">1 year</option>
                         </select>
-                        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+                        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                           <IconChevronDown />
                         </span>
                       </div>
@@ -2372,9 +2358,9 @@ export function SettingsPage() {
 
           {isProjectsTab && selectedProject && projectSection === "general" && (
             <div className="space-y-6">
-              <div className="relative h-48 rounded-[var(--radius-md)]">
+              <div className="relative h-48 rounded-(--radius-md)">
                 <div
-                  className="absolute inset-0 overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-layer-2)]"
+                  className="absolute inset-0 overflow-hidden rounded-(--radius-md) bg-(--bg-layer-2)"
                   style={
                     getImageUrl(selectedProject?.cover_image)
                       ? {
@@ -2386,7 +2372,7 @@ export function SettingsPage() {
                   }
                 >
                   {!getImageUrl(selectedProject?.cover_image) && (
-                    <div className="absolute inset-0 bg-gradient-to-br from-[var(--neutral-800)] to-[var(--neutral-1000)]" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-(--neutral-800) to-(--neutral-1000)" />
                   )}
                 </div>
                 <Button
@@ -2422,18 +2408,18 @@ export function SettingsPage() {
               </div>
               <div className="pt-10 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                  <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                     Project name
                   </label>
                   <input
                     type="text"
                     value={projectName || selectedProject.name}
                     onChange={(e) => setProjectName(e.target.value)}
-                    className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                    className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                  <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                     Description
                   </label>
                   <textarea
@@ -2443,11 +2429,11 @@ export function SettingsPage() {
                     onChange={(e) => setProjectDescription(e.target.value)}
                     rows={3}
                     placeholder="Description..."
-                    className="w-full resize-y rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                    className="w-full resize-y rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                  <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                     Project ID
                   </label>
                   <div className="flex items-center gap-1.5">
@@ -2455,10 +2441,10 @@ export function SettingsPage() {
                       type="text"
                       readOnly
                       value={selectedProject.identifier}
-                      className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-3 py-2 text-sm text-[var(--txt-tertiary)]"
+                      className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-2 text-sm text-(--txt-tertiary)"
                     />
                     <span
-                      className="text-[var(--txt-icon-tertiary)]"
+                      className="text-(--txt-icon-tertiary)"
                       title="Project identifier"
                     >
                       <IconInfo />
@@ -2490,7 +2476,7 @@ export function SettingsPage() {
                   }}
                 />
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                  <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                     Project Timezone
                   </label>
                   <div
@@ -2500,21 +2486,21 @@ export function SettingsPage() {
                     <button
                       type="button"
                       onClick={() => setProjectTimezoneDropdownOpen((o) => !o)}
-                      className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                      className="flex w-full items-center justify-between rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                     >
                       <span className="truncate">
                         {timezoneOptions.find(
                           (o) => o.value === projectTimezone,
                         )?.label ?? projectTimezone}
                       </span>
-                      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+                      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                         <IconChevronDown />
                       </span>
                     </button>
                     {projectTimezoneDropdownOpen && (
-                      <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-lg">
-                        <div className="border-b border-[var(--border-subtle)] p-2">
-                          <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2 py-1.5">
+                      <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-hidden rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) shadow-lg">
+                        <div className="border-b border-(--border-subtle) p-2">
+                          <div className="flex items-center gap-2 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-2 py-1.5">
                             <IconSearch />
                             <input
                               type="text"
@@ -2523,7 +2509,7 @@ export function SettingsPage() {
                                 setProjectTimezoneSearch(e.target.value)
                               }
                               placeholder="Search"
-                              className="min-w-0 flex-1 bg-transparent text-sm text-[var(--txt-primary)] outline-none placeholder:text-[var(--txt-placeholder)]"
+                              className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) outline-none placeholder:text-(--txt-placeholder)"
                             />
                           </div>
                         </div>
@@ -2537,7 +2523,7 @@ export function SettingsPage() {
                                 setProjectTimezoneDropdownOpen(false);
                                 setProjectTimezoneSearch("");
                               }}
-                              className={`w-full rounded-[var(--radius-md)] px-2 py-1.5 text-left text-sm ${o.value === projectTimezone ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]" : "text-[var(--txt-primary)] hover:bg-[var(--bg-layer-transparent-hover)]"}`}
+                              className={`w-full rounded-(--radius-md) px-2 py-1.5 text-left text-sm ${o.value === projectTimezone ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)" : "text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover)"}`}
                             >
                               {o.label}
                             </button>
@@ -2549,7 +2535,7 @@ export function SettingsPage() {
                 </div>
               </div>
               {projectUpdateError && (
-                <p className="text-sm text-[var(--txt-danger-primary)]">
+                <p className="text-sm text-(--txt-danger-primary)">
                   {projectUpdateError}
                 </p>
               )}
@@ -2593,7 +2579,7 @@ export function SettingsPage() {
                 {projectUpdateLoading ? "Updating…" : "Update project"}
               </Button>
               {selectedProject?.created_at && (
-                <p className="text-sm text-[var(--txt-tertiary)]">
+                <p className="text-sm text-(--txt-tertiary)">
                   Created on{" "}
                   {new Date(selectedProject.created_at).toLocaleDateString(
                     "en-US",
@@ -2657,16 +2643,16 @@ export function SettingsPage() {
 
           {isProjectsTab && selectedProject && projectSection === "members" && (
             <div className="space-y-6">
-              <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+              <h2 className="text-base font-semibold text-(--txt-primary)">
                 Members
               </h2>
               <div className="space-y-6">
-                <div className="flex flex-wrap items-start justify-between gap-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 py-3">
+                <div className="flex flex-wrap items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium text-[var(--txt-primary)]">
+                    <p className="text-sm font-medium text-(--txt-primary)">
                       Project Lead
                     </p>
-                    <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                    <p className="mt-0.5 text-sm text-(--txt-secondary)">
                       Select the project lead for the project.
                     </p>
                   </div>
@@ -2693,7 +2679,7 @@ export function SettingsPage() {
                           setProjectLeadId(previous);
                         }
                       }}
-                      className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                      className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                     >
                       <option value="">Select</option>
                       {workspaceMembers.map((m) => (
@@ -2702,17 +2688,17 @@ export function SettingsPage() {
                         </option>
                       ))}
                     </select>
-                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                       <IconChevronDown />
                     </span>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-start justify-between gap-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 py-3">
+                <div className="flex flex-wrap items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium text-[var(--txt-primary)]">
+                    <p className="text-sm font-medium text-(--txt-primary)">
                       Default Assignee
                     </p>
-                    <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                    <p className="mt-0.5 text-sm text-(--txt-secondary)">
                       Select the default assignee for the project.
                     </p>
                   </div>
@@ -2740,7 +2726,7 @@ export function SettingsPage() {
                           setDefaultAssigneeId(previous);
                         }
                       }}
-                      className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                      className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                     >
                       <option value="none">None</option>
                       {workspaceMembers.map((m) => (
@@ -2749,17 +2735,17 @@ export function SettingsPage() {
                         </option>
                       ))}
                     </select>
-                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                       <IconChevronDown />
                     </span>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-start justify-between gap-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 py-3">
+                <div className="flex flex-wrap items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium text-[var(--txt-primary)]">
+                    <p className="text-sm font-medium text-(--txt-primary)">
                       Guest access
                     </p>
-                    <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                    <p className="mt-0.5 text-sm text-(--txt-secondary)">
                       This will allow guests to have view access to all the
                       project work items.
                     </p>
@@ -2785,7 +2771,7 @@ export function SettingsPage() {
                         setGuestAccess(guestAccess);
                       }
                     }}
-                    className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${guestAccess ? "bg-[var(--brand-default)]" : "bg-[var(--neutral-400)]"}`}
+                    className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${guestAccess ? "bg-(--brand-default)" : "bg-(--neutral-400)"}`}
                   >
                     <span
                       className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${guestAccess ? "translate-x-4" : "translate-x-0"}`}
@@ -2794,12 +2780,12 @@ export function SettingsPage() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-4">
-                <h3 className="text-sm font-semibold text-[var(--txt-primary)]">
+                <h3 className="text-sm font-semibold text-(--txt-primary)">
                   Members
                 </h3>
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-2 py-1.5">
-                    <span className="text-[var(--txt-icon-tertiary)]">
+                  <div className="flex items-center gap-2 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1.5">
+                    <span className="text-(--txt-icon-tertiary)">
                       <IconSearch />
                     </span>
                     <input
@@ -2807,7 +2793,7 @@ export function SettingsPage() {
                       value={projectMembersSearch}
                       onChange={(e) => setProjectMembersSearch(e.target.value)}
                       placeholder="Search"
-                      className="w-32 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+                      className="w-32 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
                     />
                   </div>
                   <Button
@@ -2826,17 +2812,17 @@ export function SettingsPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-[var(--border-subtle)]">
-                        <th className="py-3 pr-4 font-medium text-[var(--txt-secondary)]">
+                      <tr className="border-b border-(--border-subtle)">
+                        <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
                           Full name
                         </th>
-                        <th className="py-3 pr-4 font-medium text-[var(--txt-secondary)]">
+                        <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
                           Display name
                         </th>
-                        <th className="py-3 pr-4 font-medium text-[var(--txt-secondary)]">
+                        <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
                           Account type
                         </th>
-                        <th className="py-3 font-medium text-[var(--txt-secondary)]">
+                        <th className="py-3 font-medium text-(--txt-secondary)">
                           Joining date
                         </th>
                       </tr>
@@ -2850,12 +2836,12 @@ export function SettingsPage() {
                                 name={memberLabel(m.member_id)}
                                 size="sm"
                               />
-                              <span className="text-[var(--txt-primary)]">
+                              <span className="text-(--txt-primary)">
                                 {memberLabel(m.member_id)}
                               </span>
                             </div>
                           </td>
-                          <td className="py-3 pr-4 text-[var(--txt-secondary)]">
+                          <td className="py-3 pr-4 text-(--txt-secondary)">
                             {memberLabel(m.member_id)}
                           </td>
                           <td className="py-3 pr-4">
@@ -2890,17 +2876,17 @@ export function SettingsPage() {
                                     // could toast
                                   }
                                 }}
-                                className="w-full appearance-none rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1.5 pl-2.5 pr-7 text-sm capitalize text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                                className="w-full appearance-none rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1.5 pl-2.5 pr-7 text-sm capitalize text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                               >
                                 <option value="member">Member</option>
                                 <option value="admin">Admin</option>
                               </select>
-                              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+                              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                                 <IconChevronDown />
                               </span>
                             </div>
                           </td>
-                          <td className="py-3 text-[var(--txt-secondary)]">
+                          <td className="py-3 text-(--txt-secondary)">
                             {m.created_at
                               ? new Date(m.created_at).toLocaleDateString(
                                   "en-US",
@@ -2920,19 +2906,19 @@ export function SettingsPage() {
               </Card>
               {pendingProjectInvites.length > 0 && (
                 <div className="mt-6">
-                  <h3 className="text-sm font-semibold text-[var(--txt-primary)] mb-2">
+                  <h3 className="text-sm font-semibold text-(--txt-primary) mb-2">
                     Pending invites
                   </h3>
                   <div className="space-y-2">
                     {pendingProjectInvites.map((inv) => (
                       <div
                         key={inv.id}
-                        className="flex items-center justify-between gap-3 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-3"
+                        className="flex items-center justify-between gap-3 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3"
                       >
-                        <span className="text-sm text-[var(--txt-primary)]">
+                        <span className="text-sm text-(--txt-primary)">
                           {inv.email}
                         </span>
-                        <span className="rounded-full bg-[var(--bg-warning-subtle)] px-2.5 py-0.5 text-xs font-medium text-[var(--txt-warning-primary)]">
+                        <span className="rounded-full bg-(--bg-warning-subtle) px-2.5 py-0.5 text-xs font-medium text-(--txt-warning-primary)">
                           Pending
                         </span>
                         <Button
@@ -2971,10 +2957,10 @@ export function SettingsPage() {
             projectSection === "features" && (
               <div className="space-y-8">
                 <div>
-                  <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+                  <h2 className="text-base font-semibold text-(--txt-primary)">
                     Projects and work items
                   </h2>
-                  <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                  <p className="mt-0.5 text-sm text-(--txt-secondary)">
                     Toggle these on or off this project.
                   </p>
                 </div>
@@ -3023,10 +3009,10 @@ export function SettingsPage() {
                   ].map(({ id, label, desc, value, set, key }) => (
                     <div
                       key={id}
-                      className="flex items-start justify-between gap-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 py-3"
+                      className="flex items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3"
                     >
                       <div className="flex items-start gap-3">
-                        <span className="text-[var(--txt-icon-tertiary)]">
+                        <span className="text-(--txt-icon-tertiary)">
                           {id === "cycles" && <IconClock />}
                           {id === "modules" && <IconGrid />}
                           {id === "views" && <IconLayers />}
@@ -3034,10 +3020,10 @@ export function SettingsPage() {
                           {id === "intake" && <IconInbox />}
                         </span>
                         <div>
-                          <p className="text-sm font-medium text-[var(--txt-primary)]">
+                          <p className="text-sm font-medium text-(--txt-primary)">
                             {label}
                           </p>
-                          <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                          <p className="mt-0.5 text-sm text-(--txt-secondary)">
                             {desc}
                           </p>
                         </div>
@@ -3065,7 +3051,7 @@ export function SettingsPage() {
                             set(value);
                           }
                         }}
-                        className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${value ? "bg-[var(--brand-default)]" : "bg-[var(--neutral-400)]"}`}
+                        className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${value ? "bg-(--brand-default)" : "bg-(--neutral-400)"}`}
                       >
                         <span
                           className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${value ? "translate-x-4" : "translate-x-0"}`}
@@ -3075,23 +3061,23 @@ export function SettingsPage() {
                   ))}
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-[var(--txt-primary)]">
+                  <h3 className="text-sm font-semibold text-(--txt-primary)">
                     Work management
                   </h3>
-                  <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                  <p className="mt-0.5 text-sm text-(--txt-secondary)">
                     Manage your work and projects with ease.
                   </p>
                 </div>
-                <div className="flex items-start justify-between gap-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 py-3">
+                <div className="flex items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3">
                   <div className="flex items-start gap-3">
-                    <span className="text-[var(--txt-icon-tertiary)]">
+                    <span className="text-(--txt-icon-tertiary)">
                       <IconClock />
                     </span>
                     <div>
-                      <p className="text-sm font-medium text-[var(--txt-primary)]">
+                      <p className="text-sm font-medium text-(--txt-primary)">
                         Time Tracking
                       </p>
-                      <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                      <p className="mt-0.5 text-sm text-(--txt-secondary)">
                         Log time spent on work items and projects.
                       </p>
                     </div>
@@ -3117,7 +3103,7 @@ export function SettingsPage() {
                         setFeatureTimeTracking(featureTimeTracking);
                       }
                     }}
-                    className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${featureTimeTracking ? "bg-[var(--brand-default)]" : "bg-[var(--neutral-400)]"}`}
+                    className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${featureTimeTracking ? "bg-(--brand-default)" : "bg-(--neutral-400)"}`}
                   >
                     <span
                       className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${featureTimeTracking ? "translate-x-4" : "translate-x-0"}`}
@@ -3131,10 +3117,10 @@ export function SettingsPage() {
             <div className="space-y-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+                  <h2 className="text-base font-semibold text-(--txt-primary)">
                     States
                   </h2>
-                  <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                  <p className="mt-0.5 text-sm text-(--txt-secondary)">
                     Define and customize workflow states to track the progress
                     of your work items.
                   </p>
@@ -3177,12 +3163,12 @@ export function SettingsPage() {
                     const states = byGroup[group] ?? [];
                     return (
                       <div key={group}>
-                        <h3 className="text-sm font-medium text-[var(--txt-secondary)] mb-2 capitalize">
+                        <h3 className="text-sm font-medium text-(--txt-secondary) mb-2 capitalize">
                           {group}
                         </h3>
                         <div className="space-y-2">
                           {states.length === 0 ? (
-                            <p className="text-sm text-[var(--txt-tertiary)] py-2">
+                            <p className="text-sm text-(--txt-tertiary) py-2">
                               No states in this group.
                             </p>
                           ) : (
@@ -3200,7 +3186,7 @@ export function SettingsPage() {
                                         st.color ?? "var(--border-subtle)",
                                     }}
                                   />
-                                  <span className="text-sm font-medium text-[var(--txt-primary)]">
+                                  <span className="text-sm font-medium text-(--txt-primary)">
                                     {st.name}
                                   </span>
                                 </div>
@@ -3225,7 +3211,7 @@ export function SettingsPage() {
                                   <Button
                                     size="sm"
                                     variant="secondary"
-                                    className="text-[var(--txt-danger-primary)]"
+                                    className="text-(--txt-danger-primary)"
                                     onClick={async () => {
                                       if (!workspaceSlug || !selectedProjectId)
                                         return;
@@ -3264,10 +3250,10 @@ export function SettingsPage() {
             <div className="space-y-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+                  <h2 className="text-base font-semibold text-(--txt-primary)">
                     Labels
                   </h2>
-                  <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                  <p className="mt-0.5 text-sm text-(--txt-secondary)">
                     Create custom labels to categorize and organize your work
                     items.
                   </p>
@@ -3300,7 +3286,7 @@ export function SettingsPage() {
                             label.color ?? "var(--border-subtle)",
                         }}
                       />
-                      <span className="text-sm font-medium capitalize text-[var(--txt-primary)]">
+                      <span className="text-sm font-medium capitalize text-(--txt-primary)">
                         {label.name}
                       </span>
                     </div>
@@ -3320,7 +3306,7 @@ export function SettingsPage() {
                       <Button
                         size="sm"
                         variant="secondary"
-                        className="text-[var(--txt-danger-primary)]"
+                        className="text-(--txt-danger-primary)"
                         onClick={async () => {
                           if (!workspaceSlug || !selectedProjectId) return;
                           try {
@@ -3353,14 +3339,14 @@ export function SettingsPage() {
             projectSection === "estimates" && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+                  <h2 className="text-base font-semibold text-(--txt-primary)">
                     Estimates
                   </h2>
-                  <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                  <p className="mt-0.5 text-sm text-(--txt-secondary)">
                     Set up estimation systems to track and communicate the
                     effort required for each work item.
                   </p>
-                  <p className="mt-2 text-sm text-[var(--txt-tertiary)]">
+                  <p className="mt-2 text-sm text-(--txt-tertiary)">
                     Estimate systems will be available when the API is
                     connected.
                   </p>
@@ -3371,28 +3357,28 @@ export function SettingsPage() {
                   </Button>
                 </div>
                 <Card variant="outlined" className="p-4">
-                  <p className="text-sm font-medium text-[var(--txt-primary)] mb-3">
+                  <p className="text-sm font-medium text-(--txt-primary) mb-3">
                     New Estimate
                   </p>
                   <div className="space-y-3">
                     <div>
-                      <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                      <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                         T-Shirt sizes
                       </label>
                       <input
                         type="text"
                         defaultValue="T-Shirt sizes"
-                        className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                        className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                      <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                         Description
                       </label>
                       <textarea
                         rows={2}
                         placeholder="Description..."
-                        className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                        className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -3402,16 +3388,16 @@ export function SettingsPage() {
                             key={v}
                             type="text"
                             defaultValue={v}
-                            className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                            className="rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                           />
                         ),
                       )}
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-                      <label className="flex items-center gap-2 text-sm text-[var(--txt-secondary)]">
+                      <label className="flex items-center gap-2 text-sm text-(--txt-secondary)">
                         <input
                           type="checkbox"
-                          className="rounded border-[var(--border-subtle)]"
+                          className="rounded border-(--border-subtle)"
                         />
                         Create more
                       </label>
@@ -3437,25 +3423,25 @@ export function SettingsPage() {
             projectSection === "automations" && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+                  <h2 className="text-base font-semibold text-(--txt-primary)">
                     Automations
                   </h2>
-                  <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                  <p className="mt-0.5 text-sm text-(--txt-secondary)">
                     Configure automated actions to streamline your project
                     management workflow and reduce manual tasks.
                   </p>
                 </div>
                 <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 py-3">
+                  <div className="flex items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3">
                     <div className="flex items-start gap-3">
-                      <span className="text-[var(--txt-icon-tertiary)]">
+                      <span className="text-(--txt-icon-tertiary)">
                         <IconArchive />
                       </span>
                       <div>
-                        <p className="text-sm font-medium text-[var(--txt-primary)]">
+                        <p className="text-sm font-medium text-(--txt-primary)">
                           Auto-archive closed work items
                         </p>
-                        <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                        <p className="mt-0.5 text-sm text-(--txt-secondary)">
                           Devlane will auto archive work items that have been
                           completed or canceled.
                         </p>
@@ -3466,23 +3452,23 @@ export function SettingsPage() {
                       role="switch"
                       aria-checked={autoArchive}
                       onClick={() => setAutoArchive(!autoArchive)}
-                      className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${autoArchive ? "bg-[var(--brand-default)]" : "bg-[var(--neutral-400)]"}`}
+                      className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${autoArchive ? "bg-(--brand-default)" : "bg-(--neutral-400)"}`}
                     >
                       <span
                         className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${autoArchive ? "translate-x-4" : "translate-x-0"}`}
                       />
                     </button>
                   </div>
-                  <div className="flex items-start justify-between gap-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 py-3">
+                  <div className="flex items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3">
                     <div className="flex items-start gap-3">
-                      <span className="text-[var(--txt-icon-tertiary)]">
+                      <span className="text-(--txt-icon-tertiary)">
                         <IconTrash />
                       </span>
                       <div>
-                        <p className="text-sm font-medium text-[var(--txt-primary)]">
+                        <p className="text-sm font-medium text-(--txt-primary)">
                           Auto-close work items
                         </p>
-                        <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                        <p className="mt-0.5 text-sm text-(--txt-secondary)">
                           Devlane will automatically close work items that
                           haven&apos;t been completed or canceled.
                         </p>
@@ -3493,7 +3479,7 @@ export function SettingsPage() {
                       role="switch"
                       aria-checked={autoClose}
                       onClick={() => setAutoClose(!autoClose)}
-                      className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${autoClose ? "bg-[var(--brand-default)]" : "bg-[var(--neutral-400)]"}`}
+                      className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${autoClose ? "bg-(--brand-default)" : "bg-(--neutral-400)"}`}
                     >
                       <span
                         className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${autoClose ? "translate-x-4" : "translate-x-0"}`}
@@ -3507,7 +3493,7 @@ export function SettingsPage() {
           {!isAccountTab && !isProjectsTab && section === "general" && (
             <div className="space-y-8">
               <div className="flex items-start gap-4">
-                <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--bg-layer-2)] text-lg font-semibold text-[var(--txt-secondary)]">
+                <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-(--bg-layer-2) text-lg font-semibold text-(--txt-secondary)">
                   {workspace?.logo && getImageUrl(workspace.logo) ? (
                     <img
                       src={getImageUrl(workspace.logo)!}
@@ -3519,16 +3505,16 @@ export function SettingsPage() {
                   )}
                 </div>
                 <div>
-                  <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+                  <h2 className="text-base font-semibold text-(--txt-primary)">
                     {workspaceDisplayName}
                   </h2>
-                  <p className="text-sm text-[var(--txt-tertiary)]">
+                  <p className="text-sm text-(--txt-tertiary)">
                     {workspaceUrl}
                   </p>
                   <button
                     type="button"
                     onClick={() => setWorkspaceLogoModalOpen(true)}
-                    className="mt-1 flex items-center gap-1 text-sm font-medium text-[var(--txt-accent-primary)] hover:underline"
+                    className="mt-1 flex items-center gap-1 text-sm font-medium text-(--txt-accent-primary) hover:underline"
                   >
                     <IconPencil />
                     Edit logo
@@ -3537,25 +3523,25 @@ export function SettingsPage() {
               </div>
               <div className="grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                  <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                     Workspace name
                   </label>
                   <input
                     type="text"
                     value={workspaceName || workspace.name}
                     onChange={(e) => setWorkspaceName(e.target.value)}
-                    className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                    className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                  <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                     Company size
                   </label>
                   <div className="relative">
                     <select
                       value={companySize}
                       onChange={(e) => setCompanySize(e.target.value)}
-                      className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                      className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                     >
                       {COMPANY_SIZES.map((s) => (
                         <option key={s} value={s}>
@@ -3563,25 +3549,25 @@ export function SettingsPage() {
                         </option>
                       ))}
                     </select>
-                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                       <IconChevronDown />
                     </span>
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                  <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                     Workspace URL
                   </label>
                   <input
                     type="text"
                     readOnly
                     value={workspaceUrl}
-                    className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-3 py-2 text-sm text-[var(--txt-tertiary)]"
+                    className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-2 text-sm text-(--txt-tertiary)"
                   />
                 </div>
               </div>
               {generalUpdateError && (
-                <p className="text-sm text-[var(--txt-danger-primary)]">
+                <p className="text-sm text-(--txt-danger-primary)">
                   {generalUpdateError}
                 </p>
               )}
@@ -3609,33 +3595,30 @@ export function SettingsPage() {
               >
                 {generalUpdateLoading ? "Updating…" : "Update workspace"}
               </Button>
-              <Card
-                variant="outlined"
-                className="border-[var(--border-subtle)]"
-              >
+              <Card variant="outlined" className="border-(--border-subtle)">
                 <button
                   type="button"
                   onClick={() => setDeleteWorkspaceOpen(!deleteWorkspaceOpen)}
                   className="flex w-full items-center justify-between px-4 py-3 text-left"
                 >
-                  <span className="text-sm font-medium text-[var(--txt-danger-primary)]">
+                  <span className="text-sm font-medium text-(--txt-danger-primary)">
                     Delete this workspace
                   </span>
                   <span
-                    className={`text-[var(--txt-icon-tertiary)] transition-transform ${deleteWorkspaceOpen ? "rotate-180" : ""}`}
+                    className={`text-(--txt-icon-tertiary) transition-transform ${deleteWorkspaceOpen ? "rotate-180" : ""}`}
                   >
                     <IconChevronDown />
                   </span>
                 </button>
                 {deleteWorkspaceOpen && (
-                  <CardContent className="border-t border-[var(--border-subtle)] pt-3">
-                    <p className="text-sm text-[var(--txt-secondary)]">
+                  <CardContent className="border-t border-(--border-subtle) pt-3">
+                    <p className="text-sm text-(--txt-secondary)">
                       This action cannot be undone. All projects and data in
                       this workspace will be permanently removed.
                     </p>
                     <Button
                       variant="secondary"
-                      className="mt-3 text-[var(--txt-danger-primary)]"
+                      className="mt-3 text-(--txt-danger-primary)"
                     >
                       Delete workspace
                     </Button>
@@ -3667,16 +3650,16 @@ export function SettingsPage() {
             <div className="space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+                  <h2 className="text-base font-semibold text-(--txt-primary)">
                     Members
                   </h2>
-                  <span className="rounded-full bg-[var(--brand-200)] px-2 py-0.5 text-xs font-medium text-[var(--txt-primary)]">
+                  <span className="rounded-full bg-(--brand-200) px-2 py-0.5 text-xs font-medium text-(--txt-primary)">
                     {workspaceMembers.length}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-2 py-1.5">
-                    <span className="text-[var(--txt-icon-tertiary)]">
+                  <div className="flex items-center gap-2 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1.5">
+                    <span className="text-(--txt-icon-tertiary)">
                       <IconSearch />
                     </span>
                     <input
@@ -3684,7 +3667,7 @@ export function SettingsPage() {
                       value={membersSearch}
                       onChange={(e) => setMembersSearch(e.target.value)}
                       placeholder="Search..."
-                      className="w-40 bg-transparent text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+                      className="w-40 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
                     />
                   </div>
                   <Button
@@ -3704,23 +3687,23 @@ export function SettingsPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-[var(--border-subtle)]">
-                        <th className="py-3 pr-4 font-medium text-[var(--txt-secondary)]">
+                      <tr className="border-b border-(--border-subtle)">
+                        <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
                           Full name
                         </th>
-                        <th className="py-3 pr-4 font-medium text-[var(--txt-secondary)]">
+                        <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
                           Display name
                         </th>
-                        <th className="py-3 pr-4 font-medium text-[var(--txt-secondary)]">
+                        <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
                           Email address
                         </th>
-                        <th className="py-3 pr-4 font-medium text-[var(--txt-secondary)]">
+                        <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
                           Account type
                         </th>
-                        <th className="py-3 pr-4 font-medium text-[var(--txt-secondary)]">
+                        <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
                           Authentication
                         </th>
-                        <th className="py-3 font-medium text-[var(--txt-secondary)]">
+                        <th className="py-3 font-medium text-(--txt-secondary)">
                           Joining date
                         </th>
                       </tr>
@@ -3734,16 +3717,16 @@ export function SettingsPage() {
                                 name={memberLabel(m.member_id)}
                                 size="sm"
                               />
-                              <span className="text-[var(--txt-primary)]">
+                              <span className="text-(--txt-primary)">
                                 {memberLabel(m.member_id)}
                               </span>
                             </div>
                           </td>
-                          <td className="py-3 pr-4 text-[var(--txt-secondary)]">
+                          <td className="py-3 pr-4 text-(--txt-secondary)">
                             {m.member_display_name?.trim() ||
                               memberLabel(m.member_id)}
                           </td>
-                          <td className="py-3 pr-4 text-[var(--txt-secondary)]">
+                          <td className="py-3 pr-4 text-(--txt-secondary)">
                             {m.member_email ?? "—"}
                           </td>
                           <td className="py-3 pr-4">
@@ -3771,20 +3754,20 @@ export function SettingsPage() {
                                     // could toast or set per-row error
                                   }
                                 }}
-                                className="w-full appearance-none rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1.5 pl-2.5 pr-7 text-sm capitalize text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                                className="w-full appearance-none rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1.5 pl-2.5 pr-7 text-sm capitalize text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                               >
                                 <option value="member">Member</option>
                                 <option value="admin">Admin</option>
                               </select>
-                              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+                              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                                 <IconChevronDown />
                               </span>
                             </div>
                           </td>
-                          <td className="py-3 pr-4 text-[var(--txt-secondary)]">
+                          <td className="py-3 pr-4 text-(--txt-secondary)">
                             Email
                           </td>
-                          <td className="py-3 text-[var(--txt-secondary)]">
+                          <td className="py-3 text-(--txt-secondary)">
                             {m.created_at
                               ? new Date(m.created_at).toLocaleDateString(
                                   "en-US",
@@ -3806,13 +3789,13 @@ export function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => setPendingInvitesExpanded((e) => !e)}
-                  className="flex w-full items-center gap-2 rounded-md py-2 text-left text-sm font-semibold text-[var(--txt-primary)] hover:bg-[var(--bg-layer-transparent-hover)]"
+                  className="flex w-full items-center gap-2 rounded-md py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover)"
                 >
                   Pending invites
-                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-200)] px-2 py-0.5 text-xs font-medium text-[var(--brand-default)]">
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-(--brand-200) px-2 py-0.5 text-xs font-medium text-(--brand-default)">
                     {pendingInvites.length}
                   </span>
-                  <span className="ml-auto flex size-5 items-center justify-center text-[var(--txt-icon-tertiary)]">
+                  <span className="ml-auto flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
                     {pendingInvitesExpanded ? (
                       <IconChevronUp />
                     ) : (
@@ -3823,7 +3806,7 @@ export function SettingsPage() {
                 {pendingInvitesExpanded && (
                   <div className="mt-2 space-y-2">
                     {pendingInvites.length === 0 ? (
-                      <p className="py-4 text-sm text-[var(--txt-tertiary)]">
+                      <p className="py-4 text-sm text-(--txt-tertiary)">
                         No pending invites.
                       </p>
                     ) : (
@@ -3832,26 +3815,26 @@ export function SettingsPage() {
                         return (
                           <div
                             key={inv.id}
-                            className="flex items-center gap-3 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-3"
+                            className="flex items-center gap-3 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3"
                           >
-                            <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[var(--bg-layer-2)] text-sm font-medium text-[var(--txt-secondary)]">
+                            <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-(--bg-layer-2) text-sm font-medium text-(--txt-secondary)">
                               {initial}
                             </div>
-                            <span className="min-w-0 flex-1 truncate text-sm text-[var(--txt-primary)]">
+                            <span className="min-w-0 flex-1 truncate text-sm text-(--txt-primary)">
                               {inv.email}
                             </span>
-                            <span className="shrink-0 rounded-full bg-[var(--bg-warning-subtle)] px-2.5 py-0.5 text-xs font-medium text-[var(--txt-warning-primary)]">
+                            <span className="shrink-0 rounded-full bg-(--bg-warning-subtle) px-2.5 py-0.5 text-xs font-medium text-(--txt-warning-primary)">
                               Pending
                             </span>
                             <div className="relative shrink-0 min-w-[100px]">
                               <select
                                 defaultValue={roleLabel(inv.role)}
-                                className="w-full appearance-none rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1.5 pl-2.5 pr-7 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                                className="w-full appearance-none rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1.5 pl-2.5 pr-7 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                               >
                                 <option value="member">Member</option>
                                 <option value="admin">Admin</option>
                               </select>
-                              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+                              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                                 <IconChevronDown />
                               </span>
                             </div>
@@ -3865,7 +3848,7 @@ export function SettingsPage() {
                             >
                               <button
                                 type="button"
-                                className="flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                                className="flex size-8 shrink-0 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
                                 aria-label="More options"
                                 aria-expanded={pendingInviteMenuId === inv.id}
                                 onClick={(e) => {
@@ -3879,14 +3862,14 @@ export function SettingsPage() {
                               </button>
                               {pendingInviteMenuId === inv.id && (
                                 <div
-                                  className="absolute right-0 top-full z-10 mt-1 min-w-[140px] rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-lg"
+                                  className="absolute right-0 top-full z-10 mt-1 min-w-[140px] rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-lg"
                                   role="menu"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <button
                                     type="button"
                                     role="menuitem"
-                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                                     onClick={async () => {
                                       setPendingInviteMenuId(null);
                                       const url = `${window.location.origin}/invite?token=${inv.token}`;
@@ -3905,7 +3888,7 @@ export function SettingsPage() {
                                   <button
                                     type="button"
                                     role="menuitem"
-                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--txt-destructive)] hover:bg-[var(--bg-destructive-subtle)]"
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-(--txt-destructive) hover:bg-(--bg-destructive-subtle)"
                                     onClick={async () => {
                                       setPendingInviteMenuId(null);
                                       if (!workspaceSlug) return;
@@ -3943,7 +3926,7 @@ export function SettingsPage() {
           {!isAccountTab && !isProjectsTab && section === "billing" && (
             <Card variant="outlined">
               <CardContent className="py-10 text-center">
-                <p className="text-sm text-[var(--txt-secondary)]">
+                <p className="text-sm text-(--txt-secondary)">
                   Billing & Plans settings will be available when the API is
                   connected.
                 </p>
@@ -3954,24 +3937,24 @@ export function SettingsPage() {
           {!isAccountTab && !isProjectsTab && section === "exports" && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-[var(--txt-primary)]">
+                <h2 className="text-base font-semibold text-(--txt-primary)">
                   Exports
                 </h2>
-                <p className="mt-1 text-sm text-[var(--txt-secondary)]">
+                <p className="mt-1 text-sm text-(--txt-secondary)">
                   Export your project data in various formats and access your
                   export history with download links.
                 </p>
               </div>
               <div className="flex flex-wrap items-end gap-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                  <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                     Exporting project
                   </label>
                   <div className="relative min-w-[200px]">
                     <select
                       value={exportProjectValue}
                       onChange={(e) => setExportProjectValue(e.target.value)}
-                      className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                      className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                     >
                       <option value="all">All projects</option>
                       {projects.map((p) => (
@@ -3980,26 +3963,26 @@ export function SettingsPage() {
                         </option>
                       ))}
                     </select>
-                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                       <IconChevronDown />
                     </span>
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+                  <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                     Format
                   </label>
                   <div className="relative min-w-[120px]">
                     <select
                       value={exportFormat}
                       onChange={(e) => setExportFormat(e.target.value)}
-                      className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                      className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                     >
                       <option value="csv">CSV</option>
                       <option value="json">JSON</option>
                       <option value="xlsx">Excel</option>
                     </select>
-                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                       <IconChevronDown />
                     </span>
                   </div>
@@ -4010,32 +3993,28 @@ export function SettingsPage() {
               </div>
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-[var(--txt-primary)]">
+                  <h3 className="text-sm font-semibold text-(--txt-primary)">
                     Previous exports
                   </h3>
                   <button
                     type="button"
-                    className="flex items-center gap-1 text-sm font-medium text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]"
+                    className="flex items-center gap-1 text-sm font-medium text-(--txt-secondary) hover:text-(--txt-primary)"
                   >
                     <IconRefresh />
                     Refresh status
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--txt-tertiary)]">
-                    ← Prev
-                  </span>
-                  <span className="text-sm text-[var(--txt-tertiary)]">
-                    Next →
-                  </span>
+                  <span className="text-sm text-(--txt-tertiary)">← Prev</span>
+                  <span className="text-sm text-(--txt-tertiary)">Next →</span>
                 </div>
                 <Card variant="outlined" className="mt-2">
                   <CardContent className="flex flex-col items-center justify-center py-12">
                     <IconCog />
-                    <p className="mt-2 text-sm font-medium text-[var(--txt-secondary)]">
+                    <p className="mt-2 text-sm font-medium text-(--txt-secondary)">
                       No exports yet
                     </p>
-                    <p className="mt-0.5 text-sm text-[var(--txt-tertiary)]">
+                    <p className="mt-0.5 text-sm text-(--txt-tertiary)">
                       Anytime you export, you will also have a copy here for
                       reference.
                     </p>
@@ -4048,7 +4027,7 @@ export function SettingsPage() {
           {!isAccountTab && !isProjectsTab && section === "webhooks" && (
             <Card variant="outlined">
               <CardContent className="py-10 text-center">
-                <p className="text-sm text-[var(--txt-secondary)]">
+                <p className="text-sm text-(--txt-secondary)">
                   Webhooks settings will be available when the API is connected.
                 </p>
               </CardContent>
@@ -4178,14 +4157,14 @@ export function SettingsPage() {
         }
       >
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+          <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
             Projects
           </label>
           <div className="relative">
             <select
               value={exportProjectValue}
               onChange={(e) => setExportProjectValue(e.target.value)}
-              className="w-full appearance-none rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 pr-8 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+              className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
             >
               <option value="all">All projects</option>
               {projects.map((p) => (
@@ -4194,12 +4173,12 @@ export function SettingsPage() {
                 </option>
               ))}
             </select>
-            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
               <IconChevronDown />
             </span>
           </div>
           {exportFormat === "xlsx" && (
-            <p className="mt-2 text-sm text-[var(--txt-tertiary)]">
+            <p className="mt-2 text-sm text-(--txt-tertiary)">
               Excel export will download as CSV for now.
             </p>
           )}
@@ -4288,7 +4267,7 @@ export function SettingsPage() {
           </>
         }
       >
-        <p className="mb-4 text-sm text-[var(--txt-secondary)]">
+        <p className="mb-4 text-sm text-(--txt-secondary)">
           {inviteTarget === "project"
             ? "Invite people to this project."
             : "Invite people to collaborate on your workspace."}
@@ -4307,7 +4286,7 @@ export function SettingsPage() {
                   )
                 }
                 placeholder="name@company.com"
-                className="min-w-[200px] flex-1 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                className="min-w-[200px] flex-1 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
               />
               <div className="relative min-w-[100px]">
                 <select
@@ -4321,12 +4300,12 @@ export function SettingsPage() {
                       ),
                     )
                   }
-                  className="w-full appearance-none rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-2 pl-2.5 pr-7 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                  className="w-full appearance-none rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-2 pl-2.5 pr-7 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                 >
                   <option value="member">Member</option>
                   <option value="admin">Admin</option>
                 </select>
-                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)]">
+                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                   <IconChevronDown />
                 </span>
               </div>
@@ -4340,7 +4319,7 @@ export function SettingsPage() {
                 { id: Date.now(), email: "", role: "member" as const },
               ])
             }
-            className="flex items-center gap-1.5 text-sm font-medium text-[var(--txt-accent-primary)] hover:underline"
+            className="flex items-center gap-1.5 text-sm font-medium text-(--txt-accent-primary) hover:underline"
           >
             <IconPlus />
             Add more
@@ -4417,19 +4396,19 @@ export function SettingsPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+            <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
               Name
             </label>
             <input
               type="text"
               value={projectStateName}
               onChange={(e) => setProjectStateName(e.target.value)}
-              className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+              className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
               placeholder="e.g. In Progress"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+            <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
               Color
             </label>
             <div className="flex items-center gap-2">
@@ -4437,25 +4416,25 @@ export function SettingsPage() {
                 type="color"
                 value={projectStateColor}
                 onChange={(e) => setProjectStateColor(e.target.value)}
-                className="h-9 w-14 cursor-pointer rounded border border-[var(--border-subtle)]"
+                className="h-9 w-14 cursor-pointer rounded border border-(--border-subtle)"
               />
               <input
                 type="text"
                 value={projectStateColor}
                 onChange={(e) => setProjectStateColor(e.target.value)}
-                className="flex-1 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                className="flex-1 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
               />
             </div>
           </div>
           {!projectStateEdit && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                 Group
               </label>
               <select
                 value={projectStateGroup}
                 onChange={(e) => setProjectStateGroup(e.target.value)}
-                className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
               >
                 <option value="backlog">Backlog</option>
                 <option value="unstarted">Unstarted</option>
@@ -4536,19 +4515,19 @@ export function SettingsPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+            <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
               Name
             </label>
             <input
               type="text"
               value={projectLabelName}
               onChange={(e) => setProjectLabelName(e.target.value)}
-              className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+              className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
               placeholder="e.g. Bug"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+            <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
               Color
             </label>
             <div className="flex items-center gap-2">
@@ -4556,13 +4535,13 @@ export function SettingsPage() {
                 type="color"
                 value={projectLabelColor}
                 onChange={(e) => setProjectLabelColor(e.target.value)}
-                className="h-9 w-14 cursor-pointer rounded border border-[var(--border-subtle)]"
+                className="h-9 w-14 cursor-pointer rounded border border-(--border-subtle)"
               />
               <input
                 type="text"
                 value={projectLabelColor}
                 onChange={(e) => setProjectLabelColor(e.target.value)}
-                className="flex-1 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm text-[var(--txt-primary)] focus:outline-none focus:border-[var(--border-strong)]"
+                className="flex-1 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
               />
             </div>
           </div>

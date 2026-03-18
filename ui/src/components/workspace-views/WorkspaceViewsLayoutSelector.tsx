@@ -116,7 +116,7 @@ export function WorkspaceViewsLayoutSelector() {
   };
 
   return (
-    <div className="flex items-center gap-0.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] p-0.5">
+    <div className="flex items-center gap-0.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-1) p-0.5">
       {VIEW_LAYOUTS.map((l) => {
         const Icon = LAYOUT_ICONS[l];
         const isActive = layout === l;
@@ -128,8 +128,8 @@ export function WorkspaceViewsLayoutSelector() {
             title={VIEW_LAYOUT_LABELS[l]}
             className={`flex size-8 items-center justify-center rounded transition-colors ${
               isActive
-                ? "bg-[var(--bg-layer-2)] text-[var(--txt-primary)]"
-                : "text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2)] hover:text-[var(--txt-secondary)]"
+                ? "bg-(--bg-layer-2) text-(--txt-primary)"
+                : "text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-secondary)"
             }`}
             aria-pressed={isActive}
             aria-label={VIEW_LAYOUT_LABELS[l]}

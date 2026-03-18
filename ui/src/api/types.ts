@@ -375,6 +375,7 @@ export interface ModuleApiResponse {
   status: string;
   project_id: string;
   workspace_id: string;
+  lead_id?: string | null;
   sort_order?: number;
   issue_count?: number;
   created_at: string;

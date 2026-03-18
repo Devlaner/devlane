@@ -18,7 +18,7 @@ const IconTrendingUp = () => (
     fill="none"
     stroke="currentColor"
     strokeWidth="1.5"
-    className="text-[var(--txt-icon-tertiary)]"
+    className="text-(--txt-icon-tertiary)"
     aria-hidden
   >
     <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
@@ -33,7 +33,7 @@ const IconActivity = () => (
     fill="none"
     stroke="currentColor"
     strokeWidth="1.5"
-    className="text-[var(--txt-icon-tertiary)]"
+    className="text-(--txt-icon-tertiary)"
     aria-hidden
   >
     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -47,7 +47,7 @@ const IconBarChart = () => (
     fill="none"
     stroke="currentColor"
     strokeWidth="1.5"
-    className="text-[var(--txt-icon-tertiary)]"
+    className="text-(--txt-icon-tertiary)"
     aria-hidden
   >
     <line x1="12" y1="20" x2="12" y2="10" />
@@ -204,15 +204,13 @@ export function CyclesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading…
       </div>
     );
   }
   if (!workspace || !project) {
-    return (
-      <div className="text-[var(--txt-secondary)]">Project not found.</div>
-    );
+    return <div className="text-(--txt-secondary)">Project not found.</div>;
   }
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
@@ -223,22 +221,22 @@ export function CyclesPage() {
     <div className="space-y-8">
       {/* Active cycle */}
       <section>
-        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-[var(--txt-primary)]">
+        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-(--txt-primary)">
           <span
-            className="flex h-2.5 w-2.5 rounded-full bg-[var(--warning-default)]"
+            className="flex h-2.5 w-2.5 rounded-full bg-(--warning-default)"
             aria-hidden
           />
           Active cycle
         </h2>
         {activeCycle ? (
           <div className="space-y-4">
-            <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-4">
+            <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="font-medium text-[var(--txt-primary)]">
+                  <p className="font-medium text-(--txt-primary)">
                     {activeCycle.name}
                   </p>
-                  <p className="mt-0.5 text-sm text-[var(--txt-secondary)]">
+                  <p className="mt-0.5 text-sm text-(--txt-secondary)">
                     {Math.round(
                       (getIssueCount(activeCycle.id) /
                         Math.max(1, getIssueCount(activeCycle.id))) *
@@ -247,10 +245,10 @@ export function CyclesPage() {
                     % completion
                   </p>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-[var(--txt-secondary)]">
+                <div className="flex items-center gap-2 text-sm text-(--txt-secondary)">
                   <Link
                     to={`${baseUrl}/cycles/${activeCycle.id}`}
-                    className="flex items-center gap-1 no-underline hover:text-[var(--txt-primary)]"
+                    className="flex items-center gap-1 no-underline hover:text-(--txt-primary)"
                   >
                     <IconEye /> More details
                   </Link>
@@ -273,14 +271,14 @@ export function CyclesPage() {
                   )}
                   <button
                     type="button"
-                    className="rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                    className="rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
                     aria-label="Star"
                   >
                     <IconStar />
                   </button>
                   <button
                     type="button"
-                    className="rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                    className="rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
                     aria-label="More"
                   >
                     <IconMoreVertical />
@@ -289,55 +287,55 @@ export function CyclesPage() {
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-4">
-                <h3 className="text-sm font-medium text-[var(--txt-primary)]">
+              <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-4">
+                <h3 className="text-sm font-medium text-(--txt-primary)">
                   Progress
                 </h3>
                 <div className="mt-4 flex flex-col items-center justify-center py-6">
                   <IconTrendingUp />
-                  <p className="mt-2 text-center text-sm text-[var(--txt-tertiary)]">
+                  <p className="mt-2 text-center text-sm text-(--txt-tertiary)">
                     Add work items to the cycle to view it&apos;s progress
                   </p>
                 </div>
               </div>
-              <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-4">
-                <h3 className="text-sm font-medium text-[var(--txt-primary)]">
+              <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-4">
+                <h3 className="text-sm font-medium text-(--txt-primary)">
                   Work item burndown
                 </h3>
                 <div className="mt-4 flex flex-col items-center justify-center py-6">
                   <IconActivity />
-                  <p className="mt-2 text-center text-sm text-[var(--txt-tertiary)]">
+                  <p className="mt-2 text-center text-sm text-(--txt-tertiary)">
                     Add work items to the cycle to view the burndown chart.
                   </p>
                 </div>
               </div>
-              <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-4">
-                <h3 className="text-sm font-medium text-[var(--txt-primary)]">
+              <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-4">
+                <h3 className="text-sm font-medium text-(--txt-primary)">
                   Priority work items
                 </h3>
-                <div className="mt-2 flex gap-1 border-b border-[var(--border-subtle)]">
+                <div className="mt-2 flex gap-1 border-b border-(--border-subtle)">
                   <button
                     type="button"
-                    className="border-b-2 border-[var(--brand-default)] px-2 py-1.5 text-xs font-medium text-[var(--txt-primary)]"
+                    className="border-b-2 border-(--brand-default) px-2 py-1.5 text-xs font-medium text-(--txt-primary)"
                   >
                     Priority work items
                   </button>
                   <button
                     type="button"
-                    className="px-2 py-1.5 text-xs font-medium text-[var(--txt-tertiary)] hover:text-[var(--txt-secondary)]"
+                    className="px-2 py-1.5 text-xs font-medium text-(--txt-tertiary) hover:text-(--txt-secondary)"
                   >
                     Assignees
                   </button>
                   <button
                     type="button"
-                    className="px-2 py-1.5 text-xs font-medium text-[var(--txt-tertiary)] hover:text-[var(--txt-secondary)]"
+                    className="px-2 py-1.5 text-xs font-medium text-(--txt-tertiary) hover:text-(--txt-secondary)"
                   >
                     Labels
                   </button>
                 </div>
                 <div className="flex flex-col items-center justify-center py-6">
                   <IconBarChart />
-                  <p className="mt-2 text-center text-sm text-[var(--txt-tertiary)]">
+                  <p className="mt-2 text-center text-sm text-(--txt-tertiary)">
                     Observe high priority work items tackled in the cycle at a
                     glance.
                   </p>
@@ -346,7 +344,7 @@ export function CyclesPage() {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-[var(--txt-tertiary)]">No active cycle.</p>
+          <p className="text-sm text-(--txt-tertiary)">No active cycle.</p>
         )}
       </section>
 
@@ -355,9 +353,9 @@ export function CyclesPage() {
         <button
           type="button"
           onClick={() => setUpcomingOpen((o) => !o)}
-          className="flex w-full items-center gap-2 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-2.5 text-left text-sm font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+          className="flex w-full items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-2.5 text-left text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
         >
-          <span className="flex h-2 w-2 rounded-full border-2 border-dashed border-[var(--brand-default)] bg-transparent" />
+          <span className="flex h-2 w-2 rounded-full border-2 border-dashed border-(--brand-default) bg-transparent" />
           Upcoming cycle {upcomingCycles.length}
           <span className="ml-auto">
             {upcomingOpen ? <IconChevronUp /> : <IconChevronDown />}
@@ -366,7 +364,7 @@ export function CyclesPage() {
         {upcomingOpen && (
           <div className="mt-2 space-y-2 pl-4">
             {upcomingCycles.length === 0 ? (
-              <p className="py-4 text-sm text-[var(--txt-tertiary)]">
+              <p className="py-4 text-sm text-(--txt-tertiary)">
                 No upcoming cycles.
               </p>
             ) : (
@@ -374,12 +372,12 @@ export function CyclesPage() {
                 <Link
                   key={c.id}
                   to={`${baseUrl}/cycles/${c.id}`}
-                  className="block rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3 text-sm no-underline hover:bg-[var(--bg-layer-1-hover)]"
+                  className="block rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-3 text-sm no-underline hover:bg-(--bg-layer-1-hover)"
                 >
-                  <span className="font-medium text-[var(--txt-primary)]">
+                  <span className="font-medium text-(--txt-primary)">
                     {c.name}
                   </span>
-                  <span className="ml-2 text-[var(--txt-tertiary)]">
+                  <span className="ml-2 text-(--txt-tertiary)">
                     {c.start_date && c.end_date
                       ? formatDateRange(c.start_date, c.end_date)
                       : "No dates"}
@@ -396,9 +394,9 @@ export function CyclesPage() {
         <button
           type="button"
           onClick={() => setCompletedOpen((o) => !o)}
-          className="flex w-full items-center gap-2 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-2.5 text-left text-sm font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+          className="flex w-full items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-2.5 text-left text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
         >
-          <span className="flex h-2 w-2 rounded-full bg-[var(--success-default)]" />
+          <span className="flex h-2 w-2 rounded-full bg-(--success-default)" />
           Completed cycle {completedCycles.length}
           <span className="ml-auto">
             {completedOpen ? <IconChevronUp /> : <IconChevronDown />}
@@ -407,7 +405,7 @@ export function CyclesPage() {
         {completedOpen && (
           <div className="mt-2 space-y-2 pl-4">
             {completedCycles.length === 0 ? (
-              <p className="py-4 text-sm text-[var(--txt-tertiary)]">
+              <p className="py-4 text-sm text-(--txt-tertiary)">
                 No completed cycles.
               </p>
             ) : (
@@ -415,12 +413,12 @@ export function CyclesPage() {
                 <Link
                   key={c.id}
                   to={`${baseUrl}/cycles/${c.id}`}
-                  className="block rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3 text-sm no-underline hover:bg-[var(--bg-layer-1-hover)]"
+                  className="block rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-3 text-sm no-underline hover:bg-(--bg-layer-1-hover)"
                 >
-                  <span className="font-medium text-[var(--txt-primary)]">
+                  <span className="font-medium text-(--txt-primary)">
                     {c.name}
                   </span>
-                  <span className="ml-2 text-[var(--txt-tertiary)]">
+                  <span className="ml-2 text-(--txt-tertiary)">
                     {c.start_date && c.end_date
                       ? formatDateRange(c.start_date, c.end_date)
                       : "No dates"}

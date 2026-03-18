@@ -89,15 +89,13 @@ export function AnalyticsOverviewPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading…
       </div>
     );
   }
   if (!workspace) {
-    return (
-      <div className="text-[var(--txt-secondary)]">Workspace not found.</div>
-    );
+    return <div className="text-(--txt-secondary)">Workspace not found.</div>;
   }
 
   const baseUrl = `/${workspace.slug}/analytics`;
@@ -133,36 +131,32 @@ export function AnalyticsOverviewPage() {
   return (
     <div className="space-y-6 pb-8">
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-[var(--border-subtle)]">
+      <div className="flex gap-1 border-b border-(--border-subtle)">
         <Link
           to={`${baseUrl}/overview`}
-          className="border-b-2 border-[var(--brand-default)] px-4 py-2.5 text-sm font-medium text-[var(--txt-primary)] no-underline"
+          className="border-b-2 border-(--brand-default) px-4 py-2.5 text-sm font-medium text-(--txt-primary) no-underline"
         >
           Overview
         </Link>
         <Link
           to={`${baseUrl}/work-items`}
-          className="border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-[var(--txt-secondary)] no-underline hover:text-[var(--txt-primary)]"
+          className="border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-(--txt-secondary) no-underline hover:text-(--txt-primary)"
         >
           Work items
         </Link>
       </div>
 
-      <h2 className="text-lg font-semibold text-[var(--txt-primary)]">
-        Overview
-      </h2>
+      <h2 className="text-lg font-semibold text-(--txt-primary)">Overview</h2>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {summaryCards.map(({ label, value }) => (
           <div
             key={label}
-            className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-3"
+            className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3"
           >
-            <p className="text-xs font-medium text-[var(--txt-tertiary)]">
-              {label}
-            </p>
-            <p className="mt-1 text-2xl font-semibold text-[var(--txt-primary)]">
+            <p className="text-xs font-medium text-(--txt-tertiary)">{label}</p>
+            <p className="mt-1 text-2xl font-semibold text-(--txt-primary)">
               {value}
             </p>
           </div>
@@ -172,17 +166,17 @@ export function AnalyticsOverviewPage() {
       {/* Project Insights (with Work Items + Summary of Projects) | Active Projects - same row */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
         {/* Project Insights: contains Work Items and Summary of Projects (same row) */}
-        <section className="min-w-0 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-6">
-          <h3 className="mb-4 text-base font-semibold text-[var(--txt-primary)]">
+        <section className="min-w-0 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-6">
+          <h3 className="mb-4 text-base font-semibold text-(--txt-primary)">
             Project Insights
           </h3>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-[3fr_2fr]">
             {/* Work Items - radar chart */}
             <div className="min-w-0">
-              <h4 className="mb-3 text-sm font-semibold text-[var(--txt-primary)]">
+              <h4 className="mb-3 text-sm font-semibold text-(--txt-primary)">
                 Work Items
               </h4>
-              <div className="rounded-md bg-[var(--bg-surface-1)] p-4">
+              <div className="rounded-md bg-(--bg-surface-1) p-4">
                 <div className="h-[400px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <RechartsRadarChart
@@ -217,23 +211,23 @@ export function AnalyticsOverviewPage() {
 
             {/* Summary of Projects */}
             <div className="min-w-0">
-              <h4 className="mb-2 text-sm font-semibold text-[var(--txt-primary)]">
+              <h4 className="mb-2 text-sm font-semibold text-(--txt-primary)">
                 Summary of Projects
               </h4>
-              <p className="mb-1 text-sm font-semibold text-[var(--txt-primary)]">
+              <p className="mb-1 text-sm font-semibold text-(--txt-primary)">
                 All Projects
               </p>
-              <p className="mb-3 text-sm text-[var(--txt-tertiary)]">
+              <p className="mb-3 text-sm text-(--txt-tertiary)">
                 Trend on charts
               </p>
               <ul className="space-y-3 text-sm">
                 {radarDimensions.map((d) => (
                   <li
                     key={d.name}
-                    className="flex items-center justify-between gap-4 text-[var(--txt-secondary)]"
+                    className="flex items-center justify-between gap-4 text-(--txt-secondary)"
                   >
                     <span>{d.name}</span>
-                    <span className="shrink-0 font-medium tabular-nums text-[var(--txt-primary)]">
+                    <span className="shrink-0 font-medium tabular-nums text-(--txt-primary)">
                       {d.value}
                     </span>
                   </li>
@@ -245,22 +239,22 @@ export function AnalyticsOverviewPage() {
 
         {/* Active Projects */}
         <section className="min-w-0">
-          <h3 className="mb-4 text-base font-semibold text-[var(--txt-primary)]">
+          <h3 className="mb-4 text-base font-semibold text-(--txt-primary)">
             Active Projects
           </h3>
           <ul className="space-y-2">
             {projects.map((p) => (
               <li
                 key={p.id}
-                className="flex items-center gap-3 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-3"
+                className="flex items-center gap-3 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3"
               >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[var(--bg-layer-2)] text-sm font-medium text-[var(--txt-icon-secondary)]">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-(--bg-layer-2) text-sm font-medium text-(--txt-icon-secondary)">
                   {p.name.charAt(0)}
                 </span>
-                <span className="min-w-0 flex-1 truncate font-medium text-[var(--txt-primary)]">
+                <span className="min-w-0 flex-1 truncate font-medium text-(--txt-primary)">
                   {p.name}
                 </span>
-                <span className="shrink-0 rounded bg-[var(--bg-danger-subtle)] px-2 py-0.5 text-xs font-medium text-[var(--txt-danger-primary)]">
+                <span className="shrink-0 rounded bg-(--bg-danger-subtle) px-2 py-0.5 text-xs font-medium text-(--txt-danger-primary)">
                   0%
                 </span>
               </li>

@@ -11,7 +11,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading...
       </div>
     );

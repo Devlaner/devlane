@@ -7,7 +7,7 @@ import { getApiErrorMessage } from "../../api/client";
 
 const LogoMark = () => (
   <span
-    className="flex size-9 items-center justify-center rounded-lg bg-[var(--bg-accent-primary)] text-[var(--txt-on-color)]"
+    className="flex size-9 items-center justify-center rounded-lg bg-(--bg-accent-primary) text-(--txt-on-color)"
     aria-hidden
   >
     <svg
@@ -91,12 +91,12 @@ function usePasswordRequirements(password: string) {
 
 function PasswordRequirement({ met, label }: { met: boolean; label: string }) {
   return (
-    <div className="flex items-center gap-2 text-sm text-[var(--txt-secondary)]">
+    <div className="flex items-center gap-2 text-sm text-(--txt-secondary)">
       <span
         className={`flex size-5 shrink-0 items-center justify-center rounded-full ${
           met
-            ? "bg-[var(--bg-success-primary)] text-[var(--txt-on-color)]"
-            : "bg-[var(--bg-layer-1)] text-[var(--txt-placeholder)]"
+            ? "bg-(--bg-success-primary) text-(--txt-on-color)"
+            : "bg-(--bg-layer-1) text-(--txt-placeholder)"
         }`}
         aria-hidden
       >
@@ -170,9 +170,9 @@ export function InstanceSetupConfigurePage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--bg-canvas)]">
+    <div className="flex min-h-screen flex-col bg-(--bg-canvas)">
       <header className="shrink-0 px-6 py-4">
-        <div className="flex items-center gap-2 text-lg font-semibold text-[var(--txt-primary)]">
+        <div className="flex items-center gap-2 text-lg font-semibold text-(--txt-primary)">
           <LogoMark />
           Devlane
         </div>
@@ -180,10 +180,10 @@ export function InstanceSetupConfigurePage() {
 
       <main className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-8">
         <div className="w-full max-w-md">
-          <h1 className="text-center text-xl font-semibold text-[var(--txt-primary)]">
+          <h1 className="text-center text-xl font-semibold text-(--txt-primary)">
             Setup your Devlane instance
           </h1>
-          <p className="mt-2 text-center text-sm text-[var(--txt-secondary)]">
+          <p className="mt-2 text-center text-sm text-(--txt-secondary)">
             Post setup you will be able to manage this Devlane instance.
           </p>
 
@@ -227,7 +227,7 @@ export function InstanceSetupConfigurePage() {
             <div className="flex flex-col gap-1">
               <label
                 htmlFor="setup-password"
-                className="text-sm font-medium text-[var(--txt-secondary)]"
+                className="text-sm font-medium text-(--txt-secondary)"
               >
                 Set a password *
               </label>
@@ -240,12 +240,12 @@ export function InstanceSetupConfigurePage() {
                   placeholder="New password..."
                   required
                   autoComplete="new-password"
-                  className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-2 pl-3 pr-10 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+                  className="h-9 w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-2 pl-3 pr-10 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((p) => !p)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <IconEyeOff /> : <IconEye />}
@@ -275,7 +275,7 @@ export function InstanceSetupConfigurePage() {
             <div className="flex flex-col gap-1">
               <label
                 htmlFor="setup-confirm-password"
-                className="text-sm font-medium text-[var(--txt-secondary)]"
+                className="text-sm font-medium text-(--txt-secondary)"
               >
                 Confirm password *
               </label>
@@ -288,12 +288,12 @@ export function InstanceSetupConfigurePage() {
                   placeholder="Confirm password"
                   required
                   autoComplete="new-password"
-                  className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-2 pl-3 pr-10 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none"
+                  className="h-9 w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-2 pl-3 pr-10 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword((p) => !p)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
                   aria-label={
                     showConfirmPassword ? "Hide password" : "Show password"
                   }
@@ -308,13 +308,13 @@ export function InstanceSetupConfigurePage() {
                 type="checkbox"
                 checked={allowUsageData}
                 onChange={(e) => setAllowUsageData(e.target.checked)}
-                className="mt-0.5 size-4 rounded border-[var(--border-subtle)] bg-[var(--bg-surface-1)] text-[var(--bg-accent-primary)] focus:ring-[var(--border-accent-strong)]"
+                className="mt-0.5 size-4 rounded border-(--border-subtle) bg-(--bg-surface-1) text-(--bg-accent-primary) focus:ring-(--border-accent-strong)"
               />
-              <span className="text-[var(--txt-secondary)]">
+              <span className="text-(--txt-secondary)">
                 Allow Devlane to anonymously collect usage events.{" "}
                 <a
                   href="#"
-                  className="text-[var(--txt-accent-primary)] underline hover:no-underline"
+                  className="text-(--txt-accent-primary) underline hover:no-underline"
                 >
                   See more
                 </a>
@@ -322,9 +322,7 @@ export function InstanceSetupConfigurePage() {
             </label>
 
             {error && (
-              <p className="text-sm text-[var(--txt-danger-primary)]">
-                {error}
-              </p>
+              <p className="text-sm text-(--txt-danger-primary)">{error}</p>
             )}
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>

@@ -235,13 +235,13 @@ export function InstanceAdminLayout() {
   const breadcrumbTail = segments[1] === "create" ? "Create" : null;
 
   return (
-    <div className="flex h-screen flex-col bg-[var(--bg-canvas)]">
+    <div className="flex h-screen flex-col bg-(--bg-canvas)">
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Left sidebar */}
-        <aside className="flex w-72 shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-surface-1)]">
-          <div className="shrink-0 border-b border-[var(--border-subtle)] px-3 py-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-[var(--txt-primary)]">
-              <span className="flex size-7 items-center justify-center rounded-md bg-[var(--bg-layer-2)] text-[var(--txt-icon-secondary)]">
+        <aside className="flex w-72 shrink-0 flex-col border-r border-(--border-subtle) bg-(--bg-surface-1)">
+          <div className="shrink-0 border-b border-(--border-subtle) px-3 py-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-(--txt-primary)">
+              <span className="flex size-7 items-center justify-center rounded-md bg-(--bg-layer-2) text-(--txt-icon-secondary)">
                 <IconGlobe />
               </span>
               Instance admin
@@ -257,17 +257,17 @@ export function InstanceAdminLayout() {
                   className={({ isActive }) =>
                     `mb-0.5 flex gap-2 rounded-md px-2.5 py-2 text-left no-underline transition-colors ${
                       isActive
-                        ? "bg-[var(--bg-accent-subtle)] text-[var(--txt-accent-primary)]"
-                        : "text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-primary)]"
+                        ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
+                        : "text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
                     }`
                   }
                 >
-                  <span className="mt-px shrink-0 text-[var(--txt-icon-secondary)] [&_svg]:size-4">
+                  <span className="mt-px shrink-0 text-(--txt-icon-secondary) [&_svg]:size-4">
                     <Icon />
                   </span>
                   <div className="min-w-0 flex-1 overflow-hidden">
                     <div className="text-sm font-medium">{label}</div>
-                    <div className="truncate text-[10px] leading-tight text-[var(--txt-tertiary)]">
+                    <div className="truncate text-[10px] leading-tight text-(--txt-tertiary)">
                       {desc}
                     </div>
                   </div>
@@ -275,12 +275,12 @@ export function InstanceAdminLayout() {
               );
             })}
           </nav>
-          <div className="flex shrink-0 flex-col gap-0.5 border-t border-[var(--border-subtle)] p-1.5">
+          <div className="flex shrink-0 flex-col gap-0.5 border-t border-(--border-subtle) p-1.5">
             <a
               href="http://localhost:5173"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-[var(--txt-secondary)] no-underline hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-primary)]"
+              className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
             >
               <IconExternalLink />
               Redirect to Devlane
@@ -288,14 +288,14 @@ export function InstanceAdminLayout() {
             <div className="flex gap-0.5">
               <button
                 type="button"
-                className="flex size-7 shrink-0 items-center justify-center rounded-md text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)] [&_svg]:size-4"
+                className="flex size-7 shrink-0 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary) [&_svg]:size-4"
                 aria-label="Help"
               >
                 <IconHelp />
               </button>
               <Link
                 to="/acme"
-                className="flex size-7 shrink-0 items-center justify-center rounded-md text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)] [&_svg]:size-4"
+                className="flex size-7 shrink-0 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary) [&_svg]:size-4"
                 aria-label="Back"
               >
                 <IconArrowLeft />
@@ -306,17 +306,15 @@ export function InstanceAdminLayout() {
 
         {/* Main content */}
         <main className="min-w-0 flex-1 overflow-auto p-5">
-          <div className="mb-4 flex items-center gap-1.5 text-xs text-[var(--txt-secondary)] [&_svg]:size-3.5">
+          <div className="mb-4 flex items-center gap-1.5 text-xs text-(--txt-secondary) [&_svg]:size-3.5">
             <IconSettings />
             <span>Settings</span>
-            <span className="text-[var(--txt-icon-tertiary)]">&gt;</span>
-            <span className="text-[var(--txt-primary)]">{breadcrumbLabel}</span>
+            <span className="text-(--txt-icon-tertiary)">&gt;</span>
+            <span className="text-(--txt-primary)">{breadcrumbLabel}</span>
             {breadcrumbTail && (
               <>
-                <span className="text-[var(--txt-icon-tertiary)]">&gt;</span>
-                <span className="text-[var(--txt-primary)]">
-                  {breadcrumbTail}
-                </span>
+                <span className="text-(--txt-icon-tertiary)">&gt;</span>
+                <span className="text-(--txt-primary)">{breadcrumbTail}</span>
               </>
             )}
           </div>

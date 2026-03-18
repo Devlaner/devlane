@@ -157,16 +157,14 @@ export function NotificationsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading…
       </div>
     );
   }
   if (!workspace) {
     return (
-      <div className="p-4 text-[var(--txt-secondary)]">
-        Workspace not found.
-      </div>
+      <div className="p-4 text-(--txt-secondary)">Workspace not found.</div>
     );
   }
 
@@ -175,10 +173,10 @@ export function NotificationsPage() {
   return (
     <div className="flex h-full min-h-0 w-full">
       <div
-        className="flex shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-canvas)]"
+        className="flex shrink-0 flex-col border-r border-(--border-subtle) bg-(--bg-canvas)"
         style={{ width: listWidth }}
       >
-        <div className="shrink-0 border-b border-[var(--border-subtle)] px-4">
+        <div className="shrink-0 border-b border-(--border-subtle) px-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex gap-1">
               <button
@@ -186,8 +184,8 @@ export function NotificationsPage() {
                 onClick={() => setInboxTab("all")}
                 className={`border-b-2 px-4 py-2.5 text-sm font-medium ${
                   inboxTab === "all"
-                    ? "border-[var(--brand-default)] text-[var(--txt-primary)]"
-                    : "border-transparent text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]"
+                    ? "border-(--brand-default) text-(--txt-primary)"
+                    : "border-transparent text-(--txt-secondary) hover:text-(--txt-primary)"
                 }`}
               >
                 All
@@ -197,8 +195,8 @@ export function NotificationsPage() {
                 onClick={() => setInboxTab("mentions")}
                 className={`border-b-2 px-4 py-2.5 text-sm font-medium ${
                   inboxTab === "mentions"
-                    ? "border-[var(--brand-default)] text-[var(--txt-primary)]"
-                    : "border-transparent text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]"
+                    ? "border-(--brand-default) text-(--txt-primary)"
+                    : "border-transparent text-(--txt-secondary) hover:text-(--txt-primary)"
                 }`}
               >
                 Mentions
@@ -221,11 +219,11 @@ export function NotificationsPage() {
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {items.length === 0 ? (
-            <div className="p-4 text-sm text-[var(--txt-tertiary)]">
+            <div className="p-4 text-sm text-(--txt-tertiary)">
               No notifications.
             </div>
           ) : (
-            <ul className="divide-y divide-[var(--border-subtle)]">
+            <ul className="divide-y divide-(--border-subtle)">
               {items.map((item) => {
                 const actorName = item.actorUserId
                   ? item.actorUserId.slice(0, 8)
@@ -242,30 +240,30 @@ export function NotificationsPage() {
                       onClick={() => setSelectedId(item.id)}
                       className={`flex w-full gap-3 px-4 py-3 text-left transition-colors ${
                         isSelected
-                          ? "bg-[var(--bg-layer-1)]"
-                          : "hover:bg-[var(--bg-layer-1-hover)]"
+                          ? "bg-(--bg-layer-1)"
+                          : "hover:bg-(--bg-layer-1-hover)"
                       }`}
                     >
                       <Avatar name={actorName} size="md" className="shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm text-[var(--txt-primary)]">
+                        <p className="text-sm text-(--txt-primary)">
                           <span className="font-medium">{actorName}</span>{" "}
-                          <span className="text-[var(--txt-secondary)]">
+                          <span className="text-(--txt-secondary)">
                             {item.type}
                           </span>{" "}
                           <span className="font-semibold">{item.title}</span>
                         </p>
-                        <p className="mt-0.5 truncate text-sm text-[var(--txt-secondary)]">
+                        <p className="mt-0.5 truncate text-sm text-(--txt-secondary)">
                           {project ? (project.identifier ?? project.name) : "—"}
                           -{issueRef}
                         </p>
                       </div>
-                      <span className="shrink-0 text-right text-xs text-[var(--txt-tertiary)]">
+                      <span className="shrink-0 text-right text-xs text-(--txt-tertiary)">
                         <span className="block">
                           {formatTimeAgo(item.createdAt)}
                         </span>
                         {!item.readAt && (
-                          <span className="mt-1 inline-block rounded bg-[var(--brand-200)] px-2 py-0.5 text-[10px] font-medium text-[var(--brand-default)]">
+                          <span className="mt-1 inline-block rounded bg-(--brand-200) px-2 py-0.5 text-[10px] font-medium text-(--brand-default)">
                             New
                           </span>
                         )}
@@ -279,19 +277,19 @@ export function NotificationsPage() {
         </div>
       </div>
 
-      <div className="min-w-0 flex-1 bg-[var(--bg-canvas)]">
+      <div className="min-w-0 flex-1 bg-(--bg-canvas)">
         {!selectedItem ? (
-          <div className="flex h-full items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+          <div className="flex h-full items-center justify-center p-8 text-sm text-(--txt-tertiary)">
             Select a notification to see details.
           </div>
         ) : (
-          <div className="h-full overflow-y-auto px-[var(--padding-page)] py-6">
+          <div className="h-full overflow-y-auto px-(--padding-page) py-6">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <h2 className="truncate text-lg font-semibold text-[var(--txt-primary)]">
+                <h2 className="truncate text-lg font-semibold text-(--txt-primary)">
                   {selectedItem.title}
                 </h2>
-                <p className="mt-1 text-sm text-[var(--txt-secondary)]">
+                <p className="mt-1 text-sm text-(--txt-secondary)">
                   {formatTimeAgo(selectedItem.createdAt)}
                 </p>
               </div>
@@ -319,20 +317,20 @@ export function NotificationsPage() {
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <Card variant="outlined">
                 <CardContent className="space-y-1">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--txt-tertiary)]">
+                  <p className="text-xs font-medium uppercase tracking-wide text-(--txt-tertiary)">
                     Project
                   </p>
-                  <p className="text-sm text-[var(--txt-primary)]">
+                  <p className="text-sm text-(--txt-primary)">
                     {selectedProject?.name ?? "—"}
                   </p>
                 </CardContent>
               </Card>
               <Card variant="outlined">
                 <CardContent className="space-y-1">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--txt-tertiary)]">
+                  <p className="text-xs font-medium uppercase tracking-wide text-(--txt-tertiary)">
                     Issue
                   </p>
-                  <p className="text-sm text-[var(--txt-primary)]">
+                  <p className="text-sm text-(--txt-primary)">
                     {selectedIssue?.name ?? "—"}
                   </p>
                 </CardContent>
@@ -341,10 +339,10 @@ export function NotificationsPage() {
 
             <Card variant="outlined" className="mt-4">
               <CardContent>
-                <p className="text-xs font-medium uppercase tracking-wide text-[var(--txt-tertiary)]">
+                <p className="text-xs font-medium uppercase tracking-wide text-(--txt-tertiary)">
                   Message
                 </p>
-                <pre className="mt-2 whitespace-pre-wrap break-words rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-3 text-xs text-[var(--txt-secondary)]">
+                <pre className="mt-2 whitespace-pre-wrap break-words rounded border border-(--border-subtle) bg-(--bg-surface-1) p-3 text-xs text-(--txt-secondary)">
                   {selectedItem.message
                     ? JSON.stringify(selectedItem.message, null, 2)
                     : "—"}

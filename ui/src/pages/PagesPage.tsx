@@ -117,7 +117,7 @@ const IconAlertTriangle = () => (
     fill="none"
     stroke="currentColor"
     strokeWidth="2"
-    className="shrink-0 text-[var(--warning-default)]"
+    className="shrink-0 text-(--warning-default)"
     aria-hidden
   >
     <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
@@ -203,15 +203,13 @@ export function PagesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading…
       </div>
     );
   }
   if (!workspace || !project) {
-    return (
-      <div className="text-[var(--txt-secondary)]">Project not found.</div>
-    );
+    return <div className="text-(--txt-secondary)">Project not found.</div>;
   }
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
@@ -219,7 +217,7 @@ export function PagesPage() {
   return (
     <div className="space-y-4">
       {/* Tabs: Public | Private | Archived */}
-      <div className="flex gap-1 border-b border-[var(--border-subtle)]">
+      <div className="flex gap-1 border-b border-(--border-subtle)">
         {(["public", "private", "archived"] as const).map((t) => (
           <button
             key={t}
@@ -227,8 +225,8 @@ export function PagesPage() {
             onClick={() => setTab(t)}
             className={`border-b-2 px-4 py-2.5 text-sm font-medium capitalize ${
               tab === t
-                ? "border-[var(--brand-default)] text-[var(--txt-primary)]"
-                : "border-transparent text-[var(--txt-secondary)] hover:text-[var(--txt-primary)]"
+                ? "border-(--brand-default) text-(--txt-primary)"
+                : "border-transparent text-(--txt-secondary) hover:text-(--txt-primary)"
             }`}
           >
             {t === "public"
@@ -244,7 +242,7 @@ export function PagesPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <button
           type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-2-hover)]"
+          className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
           aria-label="Search"
         >
           <IconSearch />
@@ -252,13 +250,13 @@ export function PagesPage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             <IconCalendar /> Date modified <IconChevronDown />
           </button>
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] px-2.5 py-1.5 text-[13px] font-medium text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-2-hover)]"
+            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             <IconFilter /> Filters <IconChevronDown />
           </button>
@@ -266,13 +264,13 @@ export function PagesPage() {
       </div>
 
       {/* Page list */}
-      <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]">
+      <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
         {filteredPages.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-[var(--txt-tertiary)]">
+          <p className="px-4 py-8 text-center text-sm text-(--txt-tertiary)">
             No {tab} pages yet.
           </p>
         ) : (
-          <ul className="divide-y divide-[var(--border-subtle)]">
+          <ul className="divide-y divide-(--border-subtle)">
             {filteredPages.map((page) => {
               const updatedBy = getUser(
                 page.updated_by_id ?? page.owned_by_id ?? null,
@@ -281,12 +279,12 @@ export function PagesPage() {
                 <li key={page.id}>
                   <Link
                     to={`${baseUrl}/pages/${page.id}`}
-                    className="flex items-center gap-3 px-4 py-3 no-underline transition-colors hover:bg-[var(--bg-layer-1-hover)]"
+                    className="flex items-center gap-3 px-4 py-3 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
                   >
                     {page.archived_at ? (
                       <IconAlertTriangle />
                     ) : (
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-2)] text-[var(--txt-icon-tertiary)]">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary)">
                         <svg
                           width="18"
                           height="18"
@@ -300,10 +298,10 @@ export function PagesPage() {
                         </svg>
                       </span>
                     )}
-                    <span className="min-w-0 flex-1 font-medium text-[var(--txt-primary)]">
+                    <span className="min-w-0 flex-1 font-medium text-(--txt-primary)">
                       {page.title ?? page.name}
                     </span>
-                    <div className="flex shrink-0 items-center gap-2 text-[var(--txt-icon-tertiary)]">
+                    <div className="flex shrink-0 items-center gap-2 text-(--txt-icon-tertiary)">
                       {updatedBy && (
                         <Avatar
                           name={updatedBy.name}
@@ -313,26 +311,26 @@ export function PagesPage() {
                         />
                       )}
                       <span
-                        className="flex size-8 items-center justify-center rounded hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                        className="flex size-8 items-center justify-center rounded hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
                         title="Visibility"
                       >
                         <IconGlobe />
                       </span>
                       <span
-                        className="flex size-8 items-center justify-center rounded hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                        className="flex size-8 items-center justify-center rounded hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
                         title="Info"
                       >
                         <IconInfo />
                       </span>
                       <span
-                        className="flex size-8 items-center justify-center rounded hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                        className="flex size-8 items-center justify-center rounded hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
                         title="Favorite"
                       >
                         <IconStar />
                       </span>
                       <button
                         type="button"
-                        className="flex size-8 items-center justify-center rounded hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                        className="flex size-8 items-center justify-center rounded hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
                         aria-label="More options"
                         onClick={(e) => {
                           e.preventDefault();

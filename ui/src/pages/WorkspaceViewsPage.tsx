@@ -146,7 +146,7 @@ const priorityVariant: Record<
 };
 
 const CELL_TRIGGER_CLASS =
-  "flex w-full min-w-0 items-center justify-start gap-2 rounded-none border-0 bg-transparent px-4 py-2 text-left text-sm text-[var(--txt-secondary)] hover:bg-[var(--bg-layer-1-hover)] [&_svg]:shrink-0";
+  "flex w-full min-w-0 items-center justify-start gap-2 rounded-none border-0 bg-transparent px-4 py-2 text-left text-sm text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) [&_svg]:shrink-0";
 
 const STATIC_VIEW_IDS = ["all-issues", "assigned", "created", "subscribed"];
 
@@ -552,7 +552,7 @@ export function WorkspaceViewsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading…
       </div>
     );
@@ -560,10 +560,10 @@ export function WorkspaceViewsPage() {
   if (!workspace) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
-        <p className="text-[var(--txt-secondary)]">Workspace not found.</p>
+        <p className="text-(--txt-secondary)">Workspace not found.</p>
         <Link
           to="/"
-          className="text-sm font-medium text-[var(--txt-accent-primary)] hover:underline"
+          className="text-sm font-medium text-(--txt-accent-primary) hover:underline"
         >
           Go to home
         </Link>
@@ -572,7 +572,7 @@ export function WorkspaceViewsPage() {
   }
   if (viewLoading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading view…
       </div>
     );
@@ -580,16 +580,16 @@ export function WorkspaceViewsPage() {
   if (viewNotFound && workspaceSlug) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <p className="text-lg font-medium text-[var(--txt-primary)]">
+        <p className="text-lg font-medium text-(--txt-primary)">
           View does not exist
         </p>
-        <p className="text-sm text-[var(--txt-secondary)]">
+        <p className="text-sm text-(--txt-secondary)">
           The view you are looking for does not exist or you don&apos;t have
           permission to view it.
         </p>
         <Link
           to={`/${workspace.slug}/views`}
-          className="inline-flex items-center justify-center rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-3 py-2 text-sm font-medium text-[var(--txt-primary)] hover:bg-[var(--bg-layer-1-hover)]"
+          className="inline-flex items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
         >
           All work items
         </Link>
@@ -627,10 +627,10 @@ export function WorkspaceViewsPage() {
     const firstLabel = firstLabelId ? getLabel(firstLabelId) : undefined;
     switch (key) {
       case "id":
-        return <span className="text-[var(--txt-secondary)]">{displayId}</span>;
+        return <span className="text-(--txt-secondary)">{displayId}</span>;
       case "assignee":
         return assignee ? (
-          <span className="inline-flex items-center gap-2 text-[var(--txt-secondary)]">
+          <span className="inline-flex items-center gap-2 text-(--txt-secondary)">
             {getImageUrl(assignee.member_avatar) ? (
               <img
                 src={getImageUrl(assignee.member_avatar)!}
@@ -638,7 +638,7 @@ export function WorkspaceViewsPage() {
                 className="size-6 shrink-0 rounded-full object-cover"
               />
             ) : (
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--bg-layer-2)] text-xs font-medium text-[var(--txt-secondary)]">
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-(--bg-layer-2) text-xs font-medium text-(--txt-secondary)">
                 {(
                   assignee.member_display_name ??
                   assignee.member_email ??
@@ -651,23 +651,23 @@ export function WorkspaceViewsPage() {
             </span>
           </span>
         ) : (
-          <span className="text-[var(--txt-tertiary)]">—</span>
+          <span className="text-(--txt-tertiary)">—</span>
         );
       case "start_date":
         return (
-          <span className="text-[var(--txt-secondary)]">
+          <span className="text-(--txt-secondary)">
             {formatDate(issue.start_date ?? undefined)}
           </span>
         );
       case "due_date":
         return (
-          <span className="text-[var(--txt-secondary)]">
+          <span className="text-(--txt-secondary)">
             {formatDate(issue.target_date ?? undefined)}
           </span>
         );
       case "labels":
         return firstLabel ? (
-          <span className="inline-flex items-center gap-2 text-[var(--txt-secondary)]">
+          <span className="inline-flex items-center gap-2 text-(--txt-secondary)">
             <span
               className="size-2.5 shrink-0 rounded-full"
               style={{
@@ -677,14 +677,14 @@ export function WorkspaceViewsPage() {
             {firstLabel.name}
           </span>
         ) : (
-          <span className="inline-flex items-center gap-2 text-[var(--txt-tertiary)]">
+          <span className="inline-flex items-center gap-2 text-(--txt-tertiary)">
             <IconTag className="size-3.5 shrink-0 opacity-70" />
             Select labels
           </span>
         );
       case "priority":
         return (
-          <span className="inline-flex items-center gap-2 text-[var(--txt-secondary)]">
+          <span className="inline-flex items-center gap-2 text-(--txt-secondary)">
             <IconBarChart className="size-3.5 shrink-0 text-amber-500" />
             {issue.priority === "none" || !issue.priority
               ? "None"
@@ -693,29 +693,23 @@ export function WorkspaceViewsPage() {
         );
       case "state":
         return (
-          <span className="inline-flex items-center gap-2 text-[var(--txt-secondary)]">
-            <span className="size-3.5 shrink-0 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-layer-1)]" />
+          <span className="inline-flex items-center gap-2 text-(--txt-secondary)">
+            <span className="size-3.5 shrink-0 rounded-full border border-(--border-subtle) bg-(--bg-layer-1)" />
             {getStateName(issue.state_id ?? undefined)}
           </span>
         );
       case "link":
-        return <span className="text-[var(--txt-tertiary)]">0 links</span>;
+        return <span className="text-(--txt-tertiary)">0 links</span>;
       case "attachment_count":
-        return (
-          <span className="text-[var(--txt-tertiary)]">0 attachments</span>
-        );
+        return <span className="text-(--txt-tertiary)">0 attachments</span>;
       case "sub_work_item_count":
-        return (
-          <span className="text-[var(--txt-tertiary)]">0 sub-work items</span>
-        );
+        return <span className="text-(--txt-tertiary)">0 sub-work items</span>;
       case "estimate":
-        return <span className="text-[var(--txt-tertiary)]">Estimate</span>;
+        return <span className="text-(--txt-tertiary)">Estimate</span>;
       case "module":
-        return (
-          <span className="text-[var(--txt-tertiary)]">Select modules</span>
-        );
+        return <span className="text-(--txt-tertiary)">Select modules</span>;
       case "cycle":
-        return <span className="text-[var(--txt-tertiary)]">Select cycle</span>;
+        return <span className="text-(--txt-tertiary)">Select cycle</span>;
       default:
         return null;
     }
@@ -748,12 +742,12 @@ export function WorkspaceViewsPage() {
     return (
       <th
         key={column}
-        className={`border-r-column-subtle whitespace-nowrap px-4 py-2 font-medium text-[var(--txt-secondary)] last:border-r-0${extraClass}`}
+        className={`border-r-column-subtle whitespace-nowrap px-4 py-2 font-medium text-(--txt-secondary) last:border-r-0${extraClass}`}
       >
         <button
           type="button"
           onClick={() => handleSort(column)}
-          className="inline-flex items-center gap-1.5 hover:text-[var(--txt-primary)]"
+          className="inline-flex items-center gap-1.5 hover:text-(--txt-primary)"
         >
           {icon}
           {label}
@@ -776,9 +770,9 @@ export function WorkspaceViewsPage() {
     display.layout === "gantt_chart"
   ) {
     return (
-      <div className="-mt-[var(--padding-page)] -mr-[var(--padding-page)] -mb-[var(--padding-page)] flex min-h-0 flex-1 flex-col">
+      <div className="-mt-(--padding-page) -mr-(--padding-page) -mb-(--padding-page) flex min-h-0 flex-1 flex-col">
         <div className="flex flex-1 items-center justify-center p-8">
-          <p className="text-sm text-[var(--txt-tertiary)]">
+          <p className="text-sm text-(--txt-tertiary)">
             {display.layout === "kanban" && "Kanban view is coming soon."}
             {display.layout === "calendar" && "Calendar view is coming soon."}
             {display.layout === "gantt_chart" &&
@@ -791,15 +785,15 @@ export function WorkspaceViewsPage() {
 
   if (display.layout === "list") {
     return (
-      <div className="-mt-[var(--padding-page)] -mr-[var(--padding-page)] -mb-[var(--padding-page)] flex min-h-0 flex-1 flex-col">
+      <div className="-mt-(--padding-page) -mr-(--padding-page) -mb-(--padding-page) flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto">
           {sortedIssues.length === 0 ? (
-            <div className="px-4 py-16 text-center text-sm text-[var(--txt-tertiary)]">
+            <div className="px-4 py-16 text-center text-sm text-(--txt-tertiary)">
               No work items yet. Create one from a project&apos;s Work items
               section or add a view to get started.
             </div>
           ) : (
-            <ul className="divide-y divide-[var(--border-subtle)]">
+            <ul className="divide-y divide-(--border-subtle)">
               {sortedIssues.map((issue) => {
                 const project = getProject(issue.project_id);
                 const issueBaseUrl = project
@@ -808,14 +802,14 @@ export function WorkspaceViewsPage() {
                 return (
                   <li
                     key={issue.id}
-                    className="transition-colors hover:bg-[var(--bg-layer-1-hover)]"
+                    className="transition-colors hover:bg-(--bg-layer-1-hover)"
                   >
                     <Link
                       to={`${issueBaseUrl}/issues/${issue.id}`}
-                      className="flex items-center justify-between px-4 py-3 text-[var(--txt-primary)] no-underline hover:text-[var(--txt-accent-primary)]"
+                      className="flex items-center justify-between px-4 py-3 text-(--txt-primary) no-underline hover:text-(--txt-accent-primary)"
                     >
                       <span className="font-medium">{issue.name}</span>
-                      <span className="text-sm text-[var(--txt-secondary)]">
+                      <span className="text-sm text-(--txt-secondary)">
                         {formatDate(issue.created_at)}
                       </span>
                     </Link>
@@ -836,7 +830,7 @@ export function WorkspaceViewsPage() {
     const sortCol = sortableColumnMap[key];
     const label = headerLabel(key);
     const firstColBorder = isFirstScrollableColumn(key)
-      ? " border-l border-[var(--border-subtle)]"
+      ? " border-l border-(--border-subtle)"
       : "";
     if (sortCol) {
       const icon =
@@ -858,7 +852,7 @@ export function WorkspaceViewsPage() {
     return (
       <th
         key={key}
-        className={`border-r-column-subtle whitespace-nowrap px-4 py-2 font-medium text-[var(--txt-secondary)] last:border-r-0${firstColBorder}`}
+        className={`border-r-column-subtle whitespace-nowrap px-4 py-2 font-medium text-(--txt-secondary) last:border-r-0${firstColBorder}`}
       >
         <span className="inline-flex items-center gap-1.5">
           {key === "state" && (
@@ -885,14 +879,14 @@ export function WorkspaceViewsPage() {
   ) => {
     if (key === "created_at") {
       return (
-        <span className="text-[var(--txt-secondary)]">
+        <span className="text-(--txt-secondary)">
           {formatDate(issue.created_at)}
         </span>
       );
     }
     if (key === "updated_at") {
       return (
-        <span className="text-[var(--txt-secondary)]">
+        <span className="text-(--txt-secondary)">
           {formatDate(issue.updated_at)}
         </span>
       );
@@ -919,7 +913,7 @@ export function WorkspaceViewsPage() {
           ? "None"
           : (issue.priority as string);
       const priorityTriggerContent = (
-        <span className="inline-flex min-w-0 items-center gap-2 text-[var(--txt-secondary)]">
+        <span className="inline-flex min-w-0 items-center gap-2 text-(--txt-secondary)">
           <IconBarChart className="size-3.5 shrink-0 text-amber-500" />
           <span className="truncate">{displayValue}</span>
         </span>
@@ -935,20 +929,20 @@ export function WorkspaceViewsPage() {
           triggerClassName={CELL_TRIGGER_CLASS}
           triggerContent={priorityTriggerContent}
           align="right"
-          panelClassName="max-h-60 min-w-[160px] overflow-auto rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-[var(--shadow-raised)]"
+          panelClassName="max-h-60 min-w-[160px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
         >
           {(["urgent", "high", "medium", "low", "none"] as Priority[]).map(
             (p) => (
               <button
                 key={p}
                 type="button"
-                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--bg-layer-1-hover)]"
+                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
                 onClick={() => {
                   setOpenCellId(null);
                   updateIssue(issue, { priority: p });
                 }}
               >
-                <span className="truncate capitalize text-[var(--txt-primary)]">
+                <span className="truncate capitalize text-(--txt-primary)">
                   {p}
                 </span>
                 <Badge variant={priorityVariant[p]} className="text-[10px]">
@@ -967,7 +961,7 @@ export function WorkspaceViewsPage() {
       const assigneeIds = issue.assignee_ids ?? [];
       const displayValue = assignee ? getMemberLabel(assignee.member_id) : "—";
       const assigneeTriggerContent = assignee ? (
-        <span className="inline-flex min-w-0 items-center gap-2 text-[var(--txt-secondary)]">
+        <span className="inline-flex min-w-0 items-center gap-2 text-(--txt-secondary)">
           {getImageUrl(assignee.member_avatar) ? (
             <img
               src={getImageUrl(assignee.member_avatar)!}
@@ -975,7 +969,7 @@ export function WorkspaceViewsPage() {
               className="size-6 shrink-0 rounded-full object-cover"
             />
           ) : (
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--bg-layer-2)] text-xs font-medium text-[var(--txt-secondary)]">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-(--bg-layer-2) text-xs font-medium text-(--txt-secondary)">
               {(
                 assignee.member_display_name ??
                 assignee.member_email ??
@@ -988,7 +982,7 @@ export function WorkspaceViewsPage() {
           </span>
         </span>
       ) : (
-        <span className="text-[var(--txt-tertiary)]">—</span>
+        <span className="text-(--txt-tertiary)">—</span>
       );
       return (
         <Dropdown
@@ -996,19 +990,17 @@ export function WorkspaceViewsPage() {
           openId={openCellId}
           onOpen={setOpenCellId}
           label="Assignees"
-          icon={
-            <IconUser className="size-3.5 text-[var(--txt-icon-tertiary)]" />
-          }
+          icon={<IconUser className="size-3.5 text-(--txt-icon-tertiary)" />}
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
           triggerContent={assigneeTriggerContent}
           align="right"
-          panelClassName="max-h-72 min-w-[220px] overflow-auto rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-[var(--shadow-raised)]"
+          panelClassName="max-h-72 min-w-[220px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
         >
           {currentUser && (
             <button
               type="button"
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--bg-layer-1-hover)]"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
               onClick={() => {
                 const checked = assigneeIds.includes(currentUser.id);
                 const next = checked
@@ -1024,13 +1016,13 @@ export function WorkspaceViewsPage() {
                   className="size-5 shrink-0 rounded-full object-cover"
                 />
               ) : (
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-200)] text-[10px] font-medium text-[var(--brand-default)]">
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--brand-200) text-[10px] font-medium text-(--brand-default)">
                   {currentUser.name?.charAt(0) ?? "?"}
                 </span>
               )}
-              <span className="truncate text-[var(--txt-primary)]">You</span>
+              <span className="truncate text-(--txt-primary)">You</span>
               {assigneeIds.includes(currentUser.id) && (
-                <span className="ml-auto text-[var(--txt-tertiary)]">✓</span>
+                <span className="ml-auto text-(--txt-tertiary)">✓</span>
               )}
             </button>
           )}
@@ -1042,7 +1034,7 @@ export function WorkspaceViewsPage() {
                 <button
                   key={m.id}
                   type="button"
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--bg-layer-1-hover)]"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
                   onClick={() => {
                     const next = checked
                       ? assigneeIds.filter((x) => x !== m.member_id)
@@ -1057,19 +1049,17 @@ export function WorkspaceViewsPage() {
                       className="size-5 shrink-0 rounded-full object-cover"
                     />
                   ) : (
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--bg-layer-2)] text-[10px] text-[var(--txt-secondary)]">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--bg-layer-2) text-[10px] text-(--txt-secondary)">
                       {(m.member_display_name ?? m.member_email ?? "?").charAt(
                         0,
                       )}
                     </span>
                   )}
-                  <span className="truncate text-[var(--txt-primary)]">
+                  <span className="truncate text-(--txt-primary)">
                     {m.member_display_name ?? m.member_email ?? m.member_id}
                   </span>
                   {checked && (
-                    <span className="ml-auto text-[var(--txt-tertiary)]">
-                      ✓
-                    </span>
+                    <span className="ml-auto text-(--txt-tertiary)">✓</span>
                   )}
                 </button>
               );
@@ -1083,7 +1073,7 @@ export function WorkspaceViewsPage() {
       const firstLabel = firstLabelId ? getLabel(firstLabelId) : undefined;
       const displayValue = firstLabel ? firstLabel.name : "Select labels";
       const labelsTriggerContent = firstLabel ? (
-        <span className="inline-flex min-w-0 items-center gap-2 text-[var(--txt-secondary)]">
+        <span className="inline-flex min-w-0 items-center gap-2 text-(--txt-secondary)">
           <span
             className="size-2.5 shrink-0 rounded-full"
             style={{
@@ -1093,7 +1083,7 @@ export function WorkspaceViewsPage() {
           <span className="truncate">{firstLabel.name}</span>
         </span>
       ) : (
-        <span className="inline-flex min-w-0 items-center gap-2 text-[var(--txt-tertiary)]">
+        <span className="inline-flex min-w-0 items-center gap-2 text-(--txt-tertiary)">
           <IconTag className="size-3.5 shrink-0 opacity-70" />
           <span className="truncate">Select labels</span>
         </span>
@@ -1104,17 +1094,15 @@ export function WorkspaceViewsPage() {
           openId={openCellId}
           onOpen={setOpenCellId}
           label="Labels"
-          icon={
-            <IconTag className="size-3.5 text-[var(--txt-icon-tertiary)]" />
-          }
+          icon={<IconTag className="size-3.5 text-(--txt-icon-tertiary)" />}
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
           triggerContent={labelsTriggerContent}
           align="right"
-          panelClassName="max-h-72 min-w-[220px] overflow-auto rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-1 shadow-[var(--shadow-raised)]"
+          panelClassName="max-h-72 min-w-[220px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
         >
           {labels.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-[var(--txt-tertiary)]">
+            <div className="px-3 py-2 text-sm text-(--txt-tertiary)">
               No labels.
             </div>
           ) : (
@@ -1124,7 +1112,7 @@ export function WorkspaceViewsPage() {
                 <button
                   key={l.id}
                   type="button"
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--bg-layer-1-hover)]"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
                   onClick={() => {
                     const next = checked
                       ? labelIds.filter((x) => x !== l.id)
@@ -1138,13 +1126,11 @@ export function WorkspaceViewsPage() {
                       backgroundColor: l.color ?? "var(--txt-icon-tertiary)",
                     }}
                   />
-                  <span className="truncate text-[var(--txt-primary)]">
+                  <span className="truncate text-(--txt-primary)">
                     {l.name}
                   </span>
                   {checked && (
-                    <span className="ml-auto text-[var(--txt-tertiary)]">
-                      ✓
-                    </span>
+                    <span className="ml-auto text-(--txt-tertiary)">✓</span>
                   )}
                 </button>
               );
@@ -1164,12 +1150,12 @@ export function WorkspaceViewsPage() {
           onOpen={setOpenCellId}
           label="Start date"
           icon={
-            <IconCalendar className="size-3.5 text-[var(--txt-icon-tertiary)]" />
+            <IconCalendar className="size-3.5 text-(--txt-icon-tertiary)" />
           }
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
           align="right"
-          panelClassName="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-2 shadow-[var(--shadow-raised)]"
+          panelClassName="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-2 shadow-(--shadow-raised)"
         >
           <input
             type="date"
@@ -1179,7 +1165,7 @@ export function WorkspaceViewsPage() {
               updateIssue(issue, { start_date: v });
               setOpenCellId(null);
             }}
-            className="rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-2 py-1.5 text-sm text-[var(--txt-primary)]"
+            className="rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5 text-sm text-(--txt-primary)"
           />
         </Dropdown>
       );
@@ -1195,12 +1181,12 @@ export function WorkspaceViewsPage() {
           onOpen={setOpenCellId}
           label="Due date"
           icon={
-            <IconCalendar className="size-3.5 text-[var(--txt-icon-tertiary)]" />
+            <IconCalendar className="size-3.5 text-(--txt-icon-tertiary)" />
           }
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
           align="right"
-          panelClassName="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] p-2 shadow-[var(--shadow-raised)]"
+          panelClassName="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-2 shadow-(--shadow-raised)"
         >
           <input
             type="date"
@@ -1210,7 +1196,7 @@ export function WorkspaceViewsPage() {
               updateIssue(issue, { target_date: v });
               setOpenCellId(null);
             }}
-            className="rounded border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-2 py-1.5 text-sm text-[var(--txt-primary)]"
+            className="rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5 text-sm text-(--txt-primary)"
           />
         </Dropdown>
       );
@@ -1219,19 +1205,19 @@ export function WorkspaceViewsPage() {
   };
 
   return (
-    <div className="-mt-[var(--padding-page)] -mr-[var(--padding-page)] -mb-[var(--padding-page)] flex min-h-0 flex-1 flex-col">
+    <div className="-mt-(--padding-page) -mr-(--padding-page) -mb-(--padding-page) flex min-h-0 flex-1 flex-col">
       <div className="flex-1">
         <table className="w-full min-w-max border-collapse text-left text-sm">
           <thead>
-            <tr className="border-b border-[var(--border-subtle)] bg-[var(--bg-layer-1)]">
-              <th className="sticky left-0 z-10 min-w-[200px] whitespace-nowrap border-r border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-4 py-2">
+            <tr className="border-b border-(--border-subtle) bg-(--bg-layer-1)">
+              <th className="sticky left-0 z-10 min-w-[200px] whitespace-nowrap border-r border-(--border-subtle) bg-(--bg-layer-1) px-4 py-2">
                 {(() => {
                   const isActive = display.sortBy === "name";
                   return (
                     <button
                       type="button"
                       onClick={() => handleSort("name")}
-                      className="inline-flex items-center gap-1.5 hover:text-[var(--txt-primary)] font-medium text-[var(--txt-secondary)]"
+                      className="inline-flex items-center gap-1.5 hover:text-(--txt-primary) font-medium text-(--txt-secondary)"
                     >
                       Work items
                       <IconChevronDown
@@ -1254,7 +1240,7 @@ export function WorkspaceViewsPage() {
               <tr>
                 <td
                   colSpan={totalCols}
-                  className="px-4 py-16 text-center text-sm text-[var(--txt-tertiary)]"
+                  className="px-4 py-16 text-center text-sm text-(--txt-tertiary)"
                 >
                   No work items yet. Create one from a project&apos;s Work items
                   section or add a view to get started.
@@ -1269,15 +1255,15 @@ export function WorkspaceViewsPage() {
                 return (
                   <tr
                     key={issue.id}
-                    className="border-b border-[var(--border-subtle)] last:border-b-0 transition-colors"
+                    className="border-b border-(--border-subtle) last:border-b-0 transition-colors"
                   >
-                    <td className="sticky left-0 z-10 min-w-[200px] border-r border-[var(--border-subtle)] bg-[var(--bg-surface-1)] px-4 py-2 hover:bg-[var(--bg-layer-1-hover)]">
+                    <td className="sticky left-0 z-10 min-w-[200px] border-r border-(--border-subtle) bg-(--bg-surface-1) px-4 py-2 hover:bg-(--bg-layer-1-hover)">
                       <Link
                         to={`${issueBaseUrl}/issues/${issue.id}`}
-                        className="block font-medium text-[var(--txt-primary)] no-underline hover:text-[var(--txt-accent-primary)]"
+                        className="block font-medium text-(--txt-primary) no-underline hover:text-(--txt-accent-primary)"
                       >
                         {display.properties.includes("id") && (
-                          <span className="mr-3 text-[var(--txt-secondary)]">
+                          <span className="mr-3 text-(--txt-secondary)">
                             {project
                               ? `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`
                               : issue.id.slice(-4)}
@@ -1291,8 +1277,8 @@ export function WorkspaceViewsPage() {
                         key={colKey}
                         className={
                           isEditableColumn(colKey)
-                            ? `border-r-column-subtle p-0 whitespace-nowrap last:border-r-0${isFirstScrollableColumn(colKey) ? " border-l border-[var(--border-subtle)]" : ""}`
-                            : `border-r-column-subtle px-4 py-2 whitespace-nowrap last:border-r-0${isFirstScrollableColumn(colKey) ? " border-l border-[var(--border-subtle)]" : ""}`
+                            ? `border-r-column-subtle p-0 whitespace-nowrap last:border-r-0${isFirstScrollableColumn(colKey) ? " border-l border-(--border-subtle)" : ""}`
+                            : `border-r-column-subtle px-4 py-2 whitespace-nowrap last:border-r-0${isFirstScrollableColumn(colKey) ? " border-l border-(--border-subtle)" : ""}`
                         }
                       >
                         {renderTableCell(issue, colKey)}

@@ -4,7 +4,7 @@ import { instanceService } from "../services/instanceService";
 import { workspaceService } from "../services/workspaceService";
 
 const PageFallback = () => (
-  <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+  <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
     Loading...
   </div>
 );
@@ -56,10 +56,10 @@ export function RootRedirect() {
   if (noWorkspaces) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <p className="text-[var(--txt-secondary)]">
+        <p className="text-(--txt-secondary)">
           You don’t have any workspaces yet.
         </p>
-        <p className="text-sm text-[var(--txt-tertiary)]">
+        <p className="text-sm text-(--txt-tertiary)">
           Create one from instance admin or use the API to get started.
         </p>
       </div>

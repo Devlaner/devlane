@@ -42,28 +42,28 @@ export function Modal({
       aria-labelledby="modal-title"
     >
       <div
-        className="absolute inset-0 bg-[var(--bg-backdrop)]"
+        className="absolute inset-0 bg-(--bg-backdrop)"
         onClick={onClose}
         aria-hidden
       />
       <div
         className={cn(
-          "relative z-10 w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] shadow-[var(--shadow-overlay)]",
+          "relative z-10 w-full max-w-md rounded-(--radius-lg) border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-overlay)",
           className,
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-[var(--border-subtle)] px-5 py-4">
+        <div className="border-b border-(--border-subtle) px-5 py-4">
           <h2
             id="modal-title"
-            className="text-lg font-semibold text-[var(--txt-primary)]"
+            className="text-lg font-semibold text-(--txt-primary)"
           >
             {title}
           </h2>
         </div>
         <div className="px-5 py-4">{children}</div>
         {footer != null && (
-          <div className="flex justify-end gap-2 border-t border-[var(--border-subtle)] px-5 py-4">
+          <div className="flex justify-end gap-2 border-t border-(--border-subtle) px-5 py-4">
             {footer}
           </div>
         )}

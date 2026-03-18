@@ -274,15 +274,13 @@ export function IssueListPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-sm text-[var(--txt-tertiary)]">
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
         Loading…
       </div>
     );
   }
   if (!workspace || !project) {
-    return (
-      <div className="text-[var(--txt-secondary)]">Project not found.</div>
-    );
+    return <div className="text-(--txt-secondary)">Project not found.</div>;
   }
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
@@ -291,11 +289,11 @@ export function IssueListPage() {
     <div className="space-y-4">
       {/* All work items N + plus */}
       <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-[var(--txt-primary)]">
+        <h2 className="flex items-center gap-2 text-base font-semibold text-(--txt-primary)">
           All work items {issues.length}
           <button
             type="button"
-            className="flex size-7 items-center justify-center rounded-md text-[var(--txt-icon-tertiary)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+            className="flex size-7 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
             aria-label="Add work item"
             onClick={() => setSearchParams({ create: "1" })}
           >
@@ -305,12 +303,10 @@ export function IssueListPage() {
       </div>
 
       {/* List of work item rows */}
-      <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-1)]">
+      <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
         {issues.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 px-4 py-12">
-            <p className="text-sm text-[var(--txt-tertiary)]">
-              No work items yet.
-            </p>
+            <p className="text-sm text-(--txt-tertiary)">No work items yet.</p>
             <Button
               size="sm"
               className="gap-1.5"
@@ -321,7 +317,7 @@ export function IssueListPage() {
             </Button>
           </div>
         ) : (
-          <ul className="divide-y divide-[var(--border-subtle)]">
+          <ul className="divide-y divide-(--border-subtle)">
             {issues.map((issue) => {
               const primaryAssigneeId =
                 issue.assignee_ids && issue.assignee_ids.length > 0
@@ -334,17 +330,17 @@ export function IssueListPage() {
                 <li key={issue.id}>
                   <Link
                     to={`${baseUrl}/issues/${issue.id}`}
-                    className="flex min-h-12 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-[var(--bg-layer-1-hover)]"
+                    className="flex min-h-12 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
                   >
                     <span className="min-w-0 flex-1 truncate text-sm">
-                      <span className="font-medium text-[var(--txt-accent-primary)]">
+                      <span className="font-medium text-(--txt-accent-primary)">
                         {displayId}
                       </span>
-                      <span className="ml-2 text-[var(--txt-primary)]">
+                      <span className="ml-2 text-(--txt-primary)">
                         {issue.name}
                       </span>
                     </span>
-                    <div className="flex shrink-0 items-center gap-2 text-[var(--txt-icon-tertiary)]">
+                    <div className="flex shrink-0 items-center gap-2 text-(--txt-icon-tertiary)">
                       <span title={getStateName(issue.state_id ?? undefined)}>
                         <Badge
                           variant="neutral"
@@ -411,7 +407,7 @@ export function IssueListPage() {
                       </span>
                       <button
                         type="button"
-                        className="flex size-6 items-center justify-center rounded hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-icon-secondary)]"
+                        className="flex size-6 items-center justify-center rounded hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
                         aria-label="More options"
                         onClick={(e) => {
                           e.preventDefault();
@@ -429,10 +425,10 @@ export function IssueListPage() {
         )}
 
         {issues.length > 0 && (
-          <div className="border-t border-[var(--border-subtle)] px-4 py-2.5">
+          <div className="border-t border-(--border-subtle) px-4 py-2.5">
             <button
               type="button"
-              className="flex items-center gap-1.5 rounded-md border border-dashed border-[var(--border-subtle)] bg-transparent px-3 py-2 text-sm font-medium text-[var(--txt-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-layer-1-hover)] hover:text-[var(--txt-primary)]"
+              className="flex items-center gap-1.5 rounded-md border border-dashed border-(--border-subtle) bg-transparent px-3 py-2 text-sm font-medium text-(--txt-secondary) hover:border-(--border-strong) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
               onClick={() => setSearchParams({ create: "1" })}
             >
               <IconPlus />

@@ -10,3 +10,5 @@ export { WorkspaceViewsEllipsisMenu } from "./WorkspaceViewsEllipsisMenu";
 export { WorkspaceViewsLayoutSelector } from "./WorkspaceViewsLayoutSelector";
 export { CreateViewModal } from "./CreateViewModal";
 export type { CreateViewModalProps } from "./CreateViewModal";
+export { ModuleFiltersPanel } from "./ModuleFiltersPanel";
+export type { ModuleFiltersPanelProps } from "./ModuleFiltersPanel";

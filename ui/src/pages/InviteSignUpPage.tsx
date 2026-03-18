@@ -16,7 +16,7 @@ const IconGlobe = () => (
     strokeLinecap="round"
     strokeLinejoin="round"
     aria-hidden
-    className="shrink-0 text-[var(--txt-icon-secondary)]"
+    className="shrink-0 text-(--txt-icon-secondary)"
   >
     <circle cx="12" cy="12" r="10" />
     <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
@@ -91,12 +91,12 @@ function usePasswordRequirements(password: string) {
 
 function PasswordRequirement({ met, label }: { met: boolean; label: string }) {
   return (
-    <div className="flex items-center gap-2 text-sm text-[var(--txt-secondary)]">
+    <div className="flex items-center gap-2 text-sm text-(--txt-secondary)">
       <span
         className={`flex size-5 shrink-0 items-center justify-center rounded-full ${
           met
-            ? "bg-[var(--bg-success-primary)] text-[var(--txt-on-color)]"
-            : "bg-[var(--bg-layer-1)] text-[var(--txt-placeholder)]"
+            ? "bg-(--bg-success-primary) text-(--txt-on-color)"
+            : "bg-(--bg-layer-1) text-(--txt-placeholder)"
         }`}
         aria-hidden
       >
@@ -184,35 +184,35 @@ export function InviteSignUpPage() {
 
   if (!email || !token) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--bg-canvas)] p-4">
-        <p className="text-sm text-[var(--txt-tertiary)]">Loading…</p>
+      <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
+        <p className="text-sm text-(--txt-tertiary)">Loading…</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--bg-canvas)] p-4">
+    <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
       <Card className="w-full max-w-md">
         <CardContent className="p-6">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold text-[var(--txt-primary)]">
-            <span className="text-[var(--txt-secondary)]">Join</span>
+          <h1 className="flex items-center gap-2 text-2xl font-semibold text-(--txt-primary)">
+            <span className="text-(--txt-secondary)">Join</span>
             <IconGlobe />
             <span>{workspaceName}</span>
           </h1>
-          <p className="mt-2 text-sm text-[var(--txt-secondary)]">
+          <p className="mt-2 text-sm text-(--txt-secondary)">
             Set a password to create your account and join the workspace.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]">
+              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
                 Email
               </label>
               <input
                 type="email"
                 value={email}
                 readOnly
-                className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-layer-1)] px-3 py-2 text-sm text-[var(--txt-secondary)] focus:outline-none"
+                className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-1) px-3 py-2 text-sm text-(--txt-secondary) focus:outline-none"
                 aria-readonly
               />
             </div>
@@ -220,7 +220,7 @@ export function InviteSignUpPage() {
             <div>
               <label
                 htmlFor="invite-signup-password"
-                className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]"
+                className="mb-1 block text-sm font-medium text-(--txt-secondary)"
               >
                 Password
               </label>
@@ -231,13 +231,13 @@ export function InviteSignUpPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Create a password"
-                  className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-2 pl-3 pr-9 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                  className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-2 pl-3 pr-9 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                   autoComplete="new-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((p) => !p)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)] hover:text-[var(--txt-secondary)]"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary) hover:text-(--txt-secondary)"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <IconEyeOff /> : <IconEye />}
@@ -258,7 +258,7 @@ export function InviteSignUpPage() {
             <div>
               <label
                 htmlFor="invite-signup-confirm"
-                className="mb-1 block text-sm font-medium text-[var(--txt-secondary)]"
+                className="mb-1 block text-sm font-medium text-(--txt-secondary)"
               >
                 Confirm password
               </label>
@@ -269,13 +269,13 @@ export function InviteSignUpPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm password"
-                  className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-1)] py-2 pl-3 pr-9 text-sm text-[var(--txt-primary)] placeholder:text-[var(--txt-placeholder)] focus:outline-none focus:border-[var(--border-strong)]"
+                  className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-2 pl-3 pr-9 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                   autoComplete="new-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword((p) => !p)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--txt-icon-tertiary)] hover:text-[var(--txt-secondary)]"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary) hover:text-(--txt-secondary)"
                   aria-label={
                     showConfirmPassword ? "Hide password" : "Show password"
                   }
@@ -286,7 +286,7 @@ export function InviteSignUpPage() {
             </div>
 
             {error && (
-              <p className="text-sm text-[var(--txt-destructive)]">{error}</p>
+              <p className="text-sm text-(--txt-destructive)">{error}</p>
             )}
 
             <Button
@@ -298,7 +298,7 @@ export function InviteSignUpPage() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-[var(--txt-secondary)]">
+          <p className="mt-6 text-center text-sm text-(--txt-secondary)">
             Already have an account?{" "}
             <Link
               to="/login"
@@ -306,7 +306,7 @@ export function InviteSignUpPage() {
                 from: { pathname: "/invite", search: `?token=${token}` },
                 email,
               }}
-              className="font-medium text-[var(--txt-accent)] hover:underline"
+              className="font-medium text-(--txt-accent) hover:underline"
             >
               Sign in
             </Link>
