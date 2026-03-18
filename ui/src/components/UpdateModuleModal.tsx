@@ -109,7 +109,7 @@ export function UpdateModuleModal({
     MODULE_STATUSES.find((s) => s.id === status)?.label ?? status;
 
   const handleSubmit = async () => {
-    if (!module || !workspaceSlug || !projectId) return;
+    if (!module || !workspaceSlug || !projectId || !title.trim()) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -147,7 +147,7 @@ export function UpdateModuleModal({
             <Button variant="secondary" onClick={onClose} disabled={submitting}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting || !module}>
+            <Button onClick={handleSubmit} disabled={submitting || !module || !title.trim()}>
               Update Module
             </Button>
           </>

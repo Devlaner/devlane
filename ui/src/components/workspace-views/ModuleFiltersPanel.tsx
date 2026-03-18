@@ -118,6 +118,8 @@ export function ModuleFiltersPanel({
   const [members, setWorkspaceMembers] = useState<WorkspaceMemberApiResponse[]>(
     [],
   );
+  const [showAllLeads, setShowAllLeads] = useState(false);
+  const [showAllMembers, setShowAllMembers] = useState(false);
   const [sectionOpen, setSectionOpen] = useState({
     favorites: true,
     status: true,
@@ -255,7 +257,7 @@ export function ModuleFiltersPanel({
           open={sectionOpen.lead}
           onToggle={() => toggleSection("lead")}
         >
-          {filteredMembers.slice(0, 8).map((m) => (
+          {(showAllLeads ? filteredMembers : filteredMembers.slice(0, 8)).map((m) => (
             <label
               key={m.member_id}
               className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
@@ -284,9 +286,10 @@ export function ModuleFiltersPanel({
           {filteredMembers.length > 8 && (
             <button
               type="button"
+              onClick={() => setShowAllLeads((v) => !v)}
               className="px-3 py-1.5 text-left text-sm text-(--brand-default) hover:underline"
             >
-              View all
+              {showAllLeads ? "Show less" : "View all"}
             </button>
           )}
         </CollapsibleSection>
@@ -296,7 +299,7 @@ export function ModuleFiltersPanel({
           open={sectionOpen.members}
           onToggle={() => toggleSection("members")}
         >
-          {filteredMembers.slice(0, 8).map((m) => (
+          {(showAllMembers ? filteredMembers : filteredMembers.slice(0, 8)).map((m) => (
             <label
               key={m.member_id}
               className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
@@ -325,9 +328,10 @@ export function ModuleFiltersPanel({
           {filteredMembers.length > 8 && (
             <button
               type="button"
+              onClick={() => setShowAllMembers((v) => !v)}
               className="px-3 py-1.5 text-left text-sm text-(--brand-default) hover:underline"
             >
-              View all
+              {showAllMembers ? "Show less" : "View all"}
             </button>
           )}
         </CollapsibleSection>

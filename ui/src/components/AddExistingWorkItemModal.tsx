@@ -53,6 +53,7 @@ export function AddExistingWorkItemModal({
 
   useEffect(() => {
     if (!open || !workspaceSlug || !projectId || !moduleId) return;
+    let cancelled = false;
     setLoading(true);
     setError(null);
     Promise.all([
@@ -60,12 +61,20 @@ export function AddExistingWorkItemModal({
       moduleService.listIssueIds(workspaceSlug, projectId, moduleId),
     ])
       .then(([issues, ids]) => {
+        if (cancelled) return;
         setProjectIssues(issues ?? []);
         setModuleIssueIds(new Set(ids ?? []));
         setSelectedIds(new Set());
       })
-      .catch(() => setError("Failed to load work items"))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (!cancelled) setError("Failed to load work items");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [open, workspaceSlug, projectId, moduleId]);
 
   useEffect(() => {
