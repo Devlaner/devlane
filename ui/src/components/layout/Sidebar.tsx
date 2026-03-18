@@ -430,34 +430,31 @@ const projectNavItems = [
 ];
 
 function SidebarModuleLogo({ progress }: { progress: number }) {
-  // Compact version of `ModulesPage` module logo.
-  // (No percent text here; this is used in the slim sidebar row.)
-  const r = 7;
-  const c = 2 * Math.PI * r;
-  const stroke = Math.max(0, Math.min(100, progress)) / 100;
+  // Favorites sidebar uses a compact "module" glyph (Plane-style).
+  // We intentionally do not render progress here because our backend
+  // currently only provides `issue_count` (no completed/cancelled breakdown).
+  void progress;
 
   return (
-    <div className="relative flex size-6 shrink-0 items-center justify-center">
-      <svg width="26" height="26" viewBox="0 0 20 20" aria-hidden>
-        <circle
-          cx="10"
-          cy="10"
-          r={r}
-          fill="none"
-          stroke="var(--border-subtle)"
-          strokeWidth="2"
-        />
-        <circle
-          cx="10"
-          cy="10"
-          r={r}
-          fill="none"
-          stroke="var(--brand-default)"
-          strokeWidth="2"
-          strokeDasharray={c}
-          strokeDashoffset={c - stroke * c}
-          strokeLinecap="round"
-        />
+    <div className="flex size-5 shrink-0 items-center justify-center rounded-sm border border-(--border-subtle) bg-(--bg-layer-1) text-(--txt-tertiary)">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 16 16"
+        fill="currentColor"
+        aria-hidden
+      >
+        <rect x="2" y="2" width="4" height="4" rx="1" />
+        <rect x="6" y="2" width="4" height="4" rx="1" />
+        <rect x="10" y="2" width="4" height="4" rx="1" />
+
+        <rect x="2" y="6" width="4" height="4" rx="1" />
+        <rect x="6" y="6" width="4" height="4" rx="1" />
+        <rect x="10" y="6" width="4" height="4" rx="1" />
+
+        <rect x="2" y="10" width="4" height="4" rx="1" />
+        <rect x="6" y="10" width="4" height="4" rx="1" />
+        <rect x="10" y="10" width="4" height="4" rx="1" />
       </svg>
     </div>
   );
@@ -1110,9 +1107,6 @@ export function Sidebar() {
                   ))}
                   {favoriteModules.length > 0 && (
                     <>
-                      <div className="mt-2 text-[11px] font-medium uppercase tracking-wide text-(--txt-placeholder)">
-                        Modules
-                      </div>
                       {favoriteModules.map(({ projectId, module }) => (
                         <Link
                           key={`${projectId}:${module.id}`}

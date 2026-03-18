@@ -727,8 +727,11 @@ export function ModulesPage() {
     ).getTime();
 
     const withDates = sortedModules.map((mod) => {
-      const start = mod.start_date ? new Date(mod.start_date) : null;
-      const end = mod.target_date ? new Date(mod.target_date) : null;
+      // Use local date-only parsing to avoid UTC off-by-one shifts.
+      const startIso = mod.start_date?.trim();
+      const endIso = mod.target_date?.trim();
+      const start = startIso ? parseISODateLocal(startIso) : null;
+      const end = endIso ? parseISODateLocal(endIso) : null;
       const startTime = start?.getTime() ?? end?.getTime() ?? todayStart;
       const endTime = end?.getTime() ?? start?.getTime() ?? todayStart;
       const durationDays =
