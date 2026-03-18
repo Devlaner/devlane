@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Avatar } from "../components/ui";
 import { UpdateModuleModal } from "../components/UpdateModuleModal";
+import { DateRangeModal } from "../components/workspace-views/DateRangeModal";
 import { useModulesFilter } from "../contexts/ModulesFilterContext";
 import { workspaceService } from "../services/workspaceService";
 import { projectService } from "../services/projectService";
@@ -210,6 +211,8 @@ export function ModulesPage() {
     title: string;
     message: string;
   } | null>(null);
+  const [quickDateModule, setQuickDateModule] =
+    useState<ModuleApiResponse | null>(null);
   const { favoriteModuleIds, toggleFavorite, isFavorite } = useModuleFavorites(
     workspaceSlug,
     projectId,
@@ -467,8 +470,9 @@ export function ModulesPage() {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setEditOpenDatePicker(true);
-                setEditModule(mod);
+                setQuickDateModule(mod);
+                setStatusMenuOpenId(null);
+                setEllipsisMenuOpenId(null);
               }}
               aria-label="Edit module dates"
             >
@@ -572,7 +576,8 @@ export function ModulesPage() {
                 e.preventDefault();
                 e.stopPropagation();
                 const wasFav = isFavorite(mod.id);
-                toggleFavorite(mod.id);
+                const ok = toggleFavorite(mod.id);
+                if (!ok) return;
                 setFavoritesToast({
                   title: "Success!",
                   message: wasFav
@@ -1076,6 +1081,35 @@ export function ModulesPage() {
             prev.map((m) => (m.id === updated.id ? updated : m)),
           );
           window.dispatchEvent(new CustomEvent("modules-refresh"));
+        }}
+      />
+      <DateRangeModal
+        open={quickDateModule !== null}
+        onClose={() => setQuickDateModule(null)}
+        title="Date range"
+        after={quickDateModule?.start_date ?? null}
+        before={quickDateModule?.target_date ?? null}
+        onApply={(after, before) => {
+          if (!workspaceSlug || !projectId || !quickDateModule) return;
+          void (async () => {
+            try {
+              const updated = await moduleService.update(
+                workspaceSlug,
+                projectId,
+                quickDateModule.id,
+                {
+                  start_date: after,
+                  target_date: before,
+                },
+              );
+              setModules((prev) =>
+                prev.map((m) => (m.id === updated.id ? updated : m)),
+              );
+            } catch (e) {
+              // Keep UX responsive; modal is already closing.
+              console.error("Failed to update module dates", e);
+            }
+          })();
         }}
       />
     </>
