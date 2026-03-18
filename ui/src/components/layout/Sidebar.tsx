@@ -1,15 +1,21 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink, useLocation, useParams } from "react-router-dom";
 import { workspaceService } from "../../services/workspaceService";
 import { projectService } from "../../services/projectService";
 import { favoriteService } from "../../services/favoriteService";
-import type { WorkspaceApiResponse, ProjectApiResponse } from "../../api/types";
+import type {
+  WorkspaceApiResponse,
+  ProjectApiResponse,
+  ModuleApiResponse,
+} from "../../api/types";
 import { CreateWorkItemModal } from "../CreateWorkItemModal";
 import { Avatar, Button } from "../ui";
 import { useAuth } from "../../contexts/AuthContext";
 import { useFavorites } from "../../contexts/FavoritesContext";
 import { cn, getImageUrl } from "../../lib/utils";
+import { moduleService } from "../../services/moduleService";
+import { slugify } from "../../lib/slug";
 
 const SIDEBAR_WIDTH = 256;
 const SIDEBAR_WIDTH_COLLAPSED = 0;
@@ -423,6 +429,40 @@ const projectNavItems = [
   { key: "pages", to: "pages", label: "Pages", Icon: IconFileText },
 ];
 
+function SidebarModuleLogo({ progress }: { progress: number }) {
+  // Compact version of `ModulesPage` module logo.
+  // (No percent text here; this is used in the slim sidebar row.)
+  const r = 7;
+  const c = 2 * Math.PI * r;
+  const stroke = Math.max(0, Math.min(100, progress)) / 100;
+
+  return (
+    <div className="relative flex size-6 shrink-0 items-center justify-center">
+      <svg width="26" height="26" viewBox="0 0 20 20" aria-hidden>
+        <circle
+          cx="10"
+          cy="10"
+          r={r}
+          fill="none"
+          stroke="var(--border-subtle)"
+          strokeWidth="2"
+        />
+        <circle
+          cx="10"
+          cy="10"
+          r={r}
+          fill="none"
+          stroke="var(--brand-default)"
+          strokeWidth="2"
+          strokeDasharray={c}
+          strokeDashoffset={c - stroke * c}
+          strokeLinecap="round"
+        />
+      </svg>
+    </div>
+  );
+}
+
 export function Sidebar() {
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
@@ -444,6 +484,10 @@ export function Sidebar() {
   const [workspaces, setWorkspaces] = useState<WorkspaceApiResponse[]>([]);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const { favoriteProjectIds, setFavoriteProjectIds } = useFavorites();
+  const [favoriteModules, setFavoriteModules] = useState<
+    Array<{ projectId: string; module: ModuleApiResponse }>
+  >([]);
+  const [moduleFavoritesNonce, setModuleFavoritesNonce] = useState(0);
   const workspaceTriggerRef = useRef<HTMLButtonElement>(null);
   const workspaceDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -469,6 +513,26 @@ export function Sidebar() {
       : "";
   const favoriteProjects = projects.filter((p) =>
     favoriteProjectIds.includes(p.id),
+  );
+
+  const STORAGE_KEY_PREFIX = "module_favorites";
+  const storageKey = (workspaceId: string, projId: string) =>
+    `${STORAGE_KEY_PREFIX}_${workspaceId}_${projId}`;
+
+  const loadModuleFavoriteIds = useCallback(
+    (workspaceId: string, projId: string) => {
+      try {
+        const raw = localStorage.getItem(storageKey(workspaceId, projId));
+        if (!raw) return [];
+        const parsed = JSON.parse(raw) as unknown;
+        return Array.isArray(parsed)
+          ? parsed.filter((x) => typeof x === "string")
+          : [];
+      } catch {
+        return [];
+      }
+    },
+    [],
   );
 
   useEffect(() => {
@@ -503,6 +567,70 @@ export function Sidebar() {
       cancelled = true;
     };
   }, [slugForProjects]);
+
+  useEffect(() => {
+    if (!workspaceSlug) {
+      setFavoriteModules([]);
+      return;
+    }
+    // Load starred modules from localStorage, then resolve names via module list.
+    let cancelled = false;
+    const run = async () => {
+      const entries: Array<{ projectId: string; module: ModuleApiResponse }> =
+        [];
+      for (const proj of projects) {
+        const favIds = loadModuleFavoriteIds(workspaceSlug, proj.id);
+        if (!favIds.length) continue;
+        const mods = await moduleService.list(workspaceSlug, proj.id);
+        const favSet = new Set(favIds);
+        for (const m of mods ?? []) {
+          if (favSet.has(m.id)) {
+            entries.push({ projectId: proj.id, module: m });
+          }
+        }
+      }
+      if (!cancelled) setFavoriteModules(entries);
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug, projects, loadModuleFavoriteIds, moduleFavoritesNonce]);
+
+  // Keep the "Favorites -> Modules" list in sync without requiring a full refresh.
+  useEffect(() => {
+    if (!workspaceSlug) return;
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<{
+        workspaceId?: string;
+        projectId?: string;
+        moduleId?: string;
+        isFavorite?: boolean;
+      }>;
+      if (ce?.detail?.workspaceId !== workspaceSlug) return;
+      const { moduleId, isFavorite } = ce.detail ?? {};
+
+      // Optimistically remove immediately on un-favorite.
+      if (moduleId && isFavorite === false) {
+        setFavoriteModules((prev) =>
+          prev.filter(({ module }) => module.id !== moduleId),
+        );
+      }
+
+      // Always reload after a change to ensure names and newly-added items are correct.
+      setModuleFavoritesNonce((n) => n + 1);
+    };
+    window.addEventListener(
+      "module-favorites-changed",
+      handler as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        "module-favorites-changed",
+        handler as EventListener,
+      );
+    };
+  }, [workspaceSlug]);
 
   useEffect(() => {
     let cancelled = false;
@@ -980,6 +1108,31 @@ export function Sidebar() {
                       <span className="truncate">{project.name}</span>
                     </Link>
                   ))}
+                  {favoriteModules.length > 0 && (
+                    <>
+                      <div className="mt-2 text-[11px] font-medium uppercase tracking-wide text-(--txt-placeholder)">
+                        Modules
+                      </div>
+                      {favoriteModules.map(({ projectId, module }) => (
+                        <Link
+                          key={`${projectId}:${module.id}`}
+                          to={`${baseUrl}/projects/${projectId}/modules/${slugify(module.name)}`}
+                          className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
+                        >
+                          <SidebarModuleLogo
+                            progress={
+                              module.issue_count
+                                ? Math.round((0 / module.issue_count) * 100)
+                                : 0
+                            }
+                          />
+                          <div className="min-w-0 flex-1">
+                            <span className="truncate">{module.name}</span>
+                          </div>
+                        </Link>
+                      ))}
+                    </>
+                  )}
                 </div>
               )}
             </div>

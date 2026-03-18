@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 const STORAGE_KEY_PREFIX = "module_favorites";
+const MODULE_FAVORITES_CHANGED_EVENT = "module-favorites-changed";
 
 function storageKey(workspaceId: string, projectId: string): string {
   return `${STORAGE_KEY_PREFIX}_${workspaceId}_${projectId}`;
@@ -33,7 +34,7 @@ export function useModuleFavorites(
 
   const toggleFavorite = useCallback(
     (moduleId: string) => {
-      if (!workspaceId || !projectId) return;
+      if (!workspaceId || !projectId) return false;
       setFavoriteModuleIds((prev) => {
         const next = prev.includes(moduleId)
           ? prev.filter((id) => id !== moduleId)
@@ -46,8 +47,21 @@ export function useModuleFavorites(
         } catch {
           // ignore
         }
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent(MODULE_FAVORITES_CHANGED_EVENT, {
+              detail: {
+                workspaceId,
+                projectId,
+                moduleId,
+                isFavorite: next.includes(moduleId),
+              },
+            }),
+          );
+        }
         return next;
       });
+      return true;
     },
     [workspaceId, projectId],
   );
