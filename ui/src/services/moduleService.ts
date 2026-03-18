@@ -43,6 +43,19 @@ export const moduleService = {
     return data;
   },
 
+  async update(
+    workspaceSlug: string,
+    projectId: string,
+    moduleId: string,
+    payload: Partial<CreateModulePayload>,
+  ): Promise<ModuleApiResponse> {
+    const { data } = await apiClient.patch<ModuleApiResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/modules/${encodeURIComponent(moduleId)}/`,
+      payload,
+    );
+    return data;
+  },
+
   async listIssueIds(
     workspaceSlug: string,
     projectId: string,

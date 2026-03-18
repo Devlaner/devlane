@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Avatar } from "../components/ui";
+import { UpdateModuleModal } from "../components/UpdateModuleModal";
 import { useModulesFilter } from "../contexts/ModulesFilterContext";
 import { workspaceService } from "../services/workspaceService";
 import { projectService } from "../services/projectService";
@@ -15,7 +16,6 @@ import type {
 import { getImageUrl } from "../lib/utils";
 import { slugify } from "../lib/slug";
 
-/** Zero-pad a number to 2 digits. */
 function pad2(n: number): string {
   return n < 10 ? `0${n}` : String(n);
 }
@@ -117,6 +117,31 @@ const IconMoreVertical = () => (
   </svg>
 );
 
+const MODULE_STATUSES = [
+  { id: "backlog", label: "Backlog" },
+  { id: "planned", label: "Planned" },
+  { id: "in_progress", label: "In Progress" },
+  { id: "paused", label: "Paused" },
+  { id: "completed", label: "Completed" },
+  { id: "cancelled", label: "Cancelled" },
+] as const;
+
+function StatusDot({ statusId }: { statusId: string }) {
+  const c =
+    statusId === "completed"
+      ? "bg-green-500"
+      : statusId === "cancelled"
+        ? "bg-red-500"
+        : statusId === "in_progress"
+          ? "bg-amber-500"
+          : statusId === "paused"
+            ? "bg-gray-400"
+            : statusId === "planned"
+              ? "bg-blue-500"
+              : "bg-gray-300";
+  return <span className={`size-2 rounded-full ${c}`} aria-hidden />;
+}
+
 function ModuleProgressCircle({ progress }: { progress: number }) {
   const r = 18;
   const c = 2 * Math.PI * r;
@@ -171,6 +196,14 @@ export function ModulesPage() {
   const [timelineTimeframe, setTimelineTimeframe] = useState<
     "week" | "month" | "quarter"
   >("week");
+  const [timelineFullscreen, setTimelineFullscreen] = useState(false);
+  const timelineScrollRef = useRef<HTMLDivElement | null>(null);
+  const [statusMenuOpenId, setStatusMenuOpenId] = useState<string | null>(null);
+  const [statusSavingId, setStatusSavingId] = useState<string | null>(null);
+  const [ellipsisMenuOpenId, setEllipsisMenuOpenId] = useState<string | null>(
+    null,
+  );
+  const [editModule, setEditModule] = useState<ModuleApiResponse | null>(null);
   const { favoriteModuleIds, toggleFavorite, isFavorite } = useModuleFavorites(
     workspaceSlug,
     projectId,
@@ -305,6 +338,19 @@ export function ModulesPage() {
   }, [workspaceSlug, projectId]);
 
   useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest("[data-module-status-menu]")) return;
+      if (target.closest("[data-module-ellipsis-menu]")) return;
+      setStatusMenuOpenId(null);
+      setEllipsisMenuOpenId(null);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  useEffect(() => {
     if (!workspaceSlug || !projectId) {
       queueMicrotask(() => setLoading(false));
       return;
@@ -381,36 +427,90 @@ export function ModulesPage() {
         const dateRange = formatModuleDateRange(mod);
         const lead = getLeadMember(mod.lead_id ?? null);
         const fav = isFavorite(mod.id);
+        const statusLabel =
+          MODULE_STATUSES.find((s) => s.id === mod.status)?.label ?? mod.status;
         return (
           <div
             key={mod.id}
             className="flex items-center gap-3 border-b border-(--border-subtle) last:border-b-0 px-4 py-3 hover:bg-(--bg-layer-1-hover)"
           >
-            <Link
-              to={modulePath(mod)}
-              className="flex min-w-0 flex-1 items-center gap-3 no-underline"
-            >
-              <ModuleProgressCircle progress={progress} />
-              <div className="min-w-0 flex-1">
-                <p className="font-medium text-(--txt-primary)">{mod.name}</p>
-                <div className="mt-0.5 flex items-center gap-2 text-[13px]">
-                  {dateRange !== null ? (
-                    <span className="flex items-center gap-1.5 text-(--txt-secondary)">
-                      <IconCalendar />
-                      {dateRange}
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1.5 text-(--txt-placeholder)">
-                      <IconCalendar />
-                      Start date → End date
-                    </span>
-                  )}
-                </div>
-              </div>
-              <span className="shrink-0 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1 text-[13px] font-medium capitalize text-(--txt-secondary)">
-                {mod.status}
+            <ModuleProgressCircle progress={progress} />
+            <div className="min-w-0 flex-1">
+              <Link
+                to={modulePath(mod)}
+                className="min-w-0 no-underline"
+                title={mod.name}
+              >
+                <p className="truncate font-medium text-(--txt-primary) hover:underline">
+                  {mod.name}
+                </p>
+              </Link>
+            </div>
+            <span className="shrink-0 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1 text-[13px] text-(--txt-secondary)">
+              <span className="flex items-center gap-1.5">
+                <IconCalendar />
+                {dateRange ?? "Start date → End date"}
               </span>
-            </Link>
+            </span>
+            <div className="relative shrink-0" data-module-status-menu>
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setStatusMenuOpenId((cur) => (cur === mod.id ? null : mod.id));
+                }}
+                disabled={statusSavingId === mod.id}
+                aria-haspopup="menu"
+                aria-expanded={statusMenuOpenId === mod.id}
+              >
+                <StatusDot statusId={mod.status} />
+                <span>{statusLabel}</span>
+                <span className="text-(--txt-icon-tertiary)" aria-hidden>
+                  ▾
+                </span>
+              </button>
+              {statusMenuOpenId === mod.id && (
+                <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)">
+                  {MODULE_STATUSES.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!workspaceSlug || !projectId) return;
+                        setStatusSavingId(mod.id);
+                        try {
+                          const updated = await moduleService.update(
+                            workspaceSlug,
+                            projectId,
+                            mod.id,
+                            { status: s.id },
+                          );
+                          setModules((prev) =>
+                            prev.map((x) => (x.id === mod.id ? updated : x)),
+                          );
+                          setStatusMenuOpenId(null);
+                        } finally {
+                          setStatusSavingId(null);
+                        }
+                      }}
+                    >
+                      <span className="flex items-center gap-2">
+                        <StatusDot statusId={s.id} />
+                        {s.label}
+                      </span>
+                      {mod.status === s.id && (
+                        <span className="text-(--txt-icon-tertiary)">✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {lead ? (
               <Avatar
                 name={lead.name}
@@ -455,17 +555,84 @@ export function ModulesPage() {
                 <IconStar />
               )}
             </button>
-            <button
-              type="button"
-              className="flex size-8 shrink-0 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-              aria-label="More options"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-            >
-              <IconMoreVertical />
-            </button>
+            <div className="relative shrink-0" data-module-ellipsis-menu>
+              <button
+                type="button"
+                className="flex size-8 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
+                aria-label="More options"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEllipsisMenuOpenId((cur) => (cur === mod.id ? null : mod.id));
+                }}
+              >
+                <IconMoreVertical />
+              </button>
+              {ellipsisMenuOpenId === mod.id && (
+                <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setEllipsisMenuOpenId(null);
+                      setEditModule(mod);
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      window.open(modulePath(mod), "_blank", "noopener,noreferrer");
+                      setEllipsisMenuOpenId(null);
+                    }}
+                  >
+                    Open in new tab
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      try {
+                        await navigator.clipboard.writeText(
+                          `${window.location.origin}${modulePath(mod)}`,
+                        );
+                      } catch {
+                        // ignore
+                      }
+                      setEllipsisMenuOpenId(null);
+                    }}
+                  >
+                    Copy link
+                  </button>
+                  <div className="my-1 border-t border-(--border-subtle)" />
+                  <button
+                    type="button"
+                    disabled
+                    className="flex w-full cursor-not-allowed flex-col gap-0.5 px-3 py-2 text-left text-sm text-(--txt-tertiary)"
+                  >
+                    <span>Archive</span>
+                    <span className="text-[11px] leading-tight">
+                      Only completed or canceled module can be archived.
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled
+                    className="flex w-full cursor-not-allowed items-center gap-2 px-3 py-2 text-left text-sm text-(--txt-tertiary)"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         );
       })}
@@ -506,7 +673,12 @@ export function ModulesPage() {
   );
 
   const renderTimelineLayout = () => {
-    const DAY_WIDTH = 28;
+    const DAY_WIDTH =
+      timelineTimeframe === "week"
+        ? 34
+        : timelineTimeframe === "month"
+          ? 20
+          : 14;
     const ROW_HEIGHT = 40;
     const LEFT_WIDTH = 220;
     const now = new Date();
@@ -533,14 +705,25 @@ export function ModulesPage() {
       return { mod, start, end, startTime, endTime, durationDays };
     });
 
-    const rangeStart = Math.min(
-      ...withDates.map((d) => d.startTime),
-      todayStart - 14 * 24 * 60 * 60 * 1000,
-    );
-    const rangeEnd = Math.max(
-      ...withDates.map((d) => d.endTime),
-      todayStart + 60 * 24 * 60 * 60 * 1000,
-    );
+    const viewStart = (() => {
+      const t = new Date(todayStart);
+      if (timelineTimeframe === "week") return todayStart - 7 * 86400000;
+      if (timelineTimeframe === "month")
+        return new Date(t.getFullYear(), t.getMonth(), 1).getTime();
+      const qStartMonth = Math.floor(t.getMonth() / 3) * 3;
+      return new Date(t.getFullYear(), qStartMonth, 1).getTime();
+    })();
+    const viewEnd = (() => {
+      const t = new Date(todayStart);
+      if (timelineTimeframe === "week") return todayStart + 21 * 86400000;
+      if (timelineTimeframe === "month")
+        return new Date(t.getFullYear(), t.getMonth() + 1, 8).getTime();
+      const qStartMonth = Math.floor(t.getMonth() / 3) * 3;
+      return new Date(t.getFullYear(), qStartMonth + 3, 8).getTime();
+    })();
+
+    const rangeStart = Math.min(...withDates.map((d) => d.startTime), viewStart);
+    const rangeEnd = Math.max(...withDates.map((d) => d.endTime), viewEnd);
     const totalDays = Math.ceil(
       (rangeEnd - rangeStart) / (24 * 60 * 60 * 1000),
     );
@@ -573,7 +756,13 @@ export function ModulesPage() {
     }
 
     return (
-      <div className="flex flex-col gap-0">
+      <div
+        className={`flex flex-col gap-0 ${
+          timelineFullscreen
+            ? "fixed inset-0 z-50 bg-(--bg-screen) p-3"
+            : ""
+        }`}
+      >
         <div className="flex items-center justify-between border-b border-(--border-subtle) bg-(--bg-layer-2) px-4 py-2">
           <span className="text-sm font-medium text-(--txt-secondary)">
             {sortedModules.length} Module{sortedModules.length !== 1 ? "s" : ""}
@@ -595,12 +784,18 @@ export function ModulesPage() {
             ))}
             <button
               type="button"
+              onClick={() => {
+                const idx = getDayIndex(todayStart);
+                const left = Math.max(0, idx * DAY_WIDTH - 200);
+                timelineScrollRef.current?.scrollTo({ left, behavior: "smooth" });
+              }}
               className="rounded px-2.5 py-1.5 text-sm font-medium text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
             >
               Today
             </button>
             <button
               type="button"
+              onClick={() => setTimelineFullscreen((v) => !v)}
               className="flex size-8 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
               aria-label="Full screen"
             >
@@ -618,9 +813,12 @@ export function ModulesPage() {
             </button>
           </div>
         </div>
-        <div className="flex overflow-x-auto border border-(--border-subtle) bg-(--bg-surface-1)">
+        <div
+          ref={timelineScrollRef}
+          className="flex min-h-0 flex-1 overflow-auto border border-(--border-subtle) bg-(--bg-surface-1)"
+        >
           <div
-            className="shrink-0 border-r border-(--border-subtle) bg-(--bg-layer-2)"
+            className="sticky left-0 z-20 shrink-0 border-r border-(--border-subtle) bg-(--bg-layer-2)"
             style={{ width: LEFT_WIDTH }}
           >
             <table className="w-full border-collapse">
@@ -670,67 +868,69 @@ export function ModulesPage() {
               </tbody>
             </table>
           </div>
-          <div className="min-w-0 flex-1 overflow-x-auto">
+          <div className="min-w-0 flex-1">
             <div
               style={{
                 width: totalDays * DAY_WIDTH,
                 minHeight: ROW_HEIGHT * (withDates.length + 3),
               }}
             >
-              {/* Month row */}
-              <div
-                className="flex border-b border-(--border-subtle) bg-(--bg-layer-2)"
-                style={{ height: 28 }}
-              >
-                {monthGroups.map((g) => (
-                  <div
-                    key={g.startIdx}
-                    className="shrink-0 border-r border-(--border-subtle) px-1 py-1 text-xs font-medium text-(--txt-secondary)"
-                    style={{ width: g.span * DAY_WIDTH }}
-                  >
-                    {g.label}
-                  </div>
-                ))}
-              </div>
-              {/* Week row */}
-              <div
-                className="flex border-b border-(--border-subtle) bg-(--bg-layer-2)"
-                style={{ height: 24 }}
-              >
-                {days
-                  .filter((_, i) => i % 7 === 0)
-                  .map((d, idx) => (
+              <div className="sticky top-0 z-10">
+                {/* Month row */}
+                <div
+                  className="flex border-b border-(--border-subtle) bg-(--bg-layer-2)"
+                  style={{ height: 28 }}
+                >
+                  {monthGroups.map((g) => (
                     <div
-                      key={idx}
-                      className="shrink-0 border-r border-(--border-subtle) px-0.5 py-0.5 text-[10px] text-(--txt-tertiary)"
-                      style={{ width: 7 * DAY_WIDTH }}
+                      key={g.startIdx}
+                      className="shrink-0 border-r border-(--border-subtle) px-1 py-1 text-xs font-medium text-(--txt-secondary)"
+                      style={{ width: g.span * DAY_WIDTH }}
                     >
-                      Week {weekNum(d)}
+                      {g.label}
                     </div>
                   ))}
-              </div>
-              {/* Days row */}
-              <div
-                className="flex border-b border-(--border-subtle) bg-(--bg-layer-2)"
-                style={{ height: 28 }}
-              >
-                {days.map((d, idx) => {
-                  const isToday = d.getTime() === todayStart;
-                  return (
-                    <div
-                      key={idx}
-                      className={`shrink-0 border-r border-(--border-subtle) px-0.5 py-1 text-center text-[11px] ${
-                        isToday
-                          ? "bg-(--brand-200) font-medium text-(--brand-default)"
-                          : "text-(--txt-secondary)"
-                      }`}
-                      style={{ width: DAY_WIDTH }}
-                    >
-                      {d.getDate()}{" "}
-                      {["Su", "M", "Tu", "W", "Th", "F", "Sa"][d.getDay()]}
-                    </div>
-                  );
-                })}
+                </div>
+                {/* Week row */}
+                <div
+                  className="flex border-b border-(--border-subtle) bg-(--bg-layer-2)"
+                  style={{ height: 24 }}
+                >
+                  {days
+                    .filter((_, i) => i % 7 === 0)
+                    .map((d, idx) => (
+                      <div
+                        key={idx}
+                        className="shrink-0 border-r border-(--border-subtle) px-0.5 py-0.5 text-[10px] text-(--txt-tertiary)"
+                        style={{ width: 7 * DAY_WIDTH }}
+                      >
+                        Week {weekNum(d)}
+                      </div>
+                    ))}
+                </div>
+                {/* Days row */}
+                <div
+                  className="flex border-b border-(--border-subtle) bg-(--bg-layer-2)"
+                  style={{ height: 28 }}
+                >
+                  {days.map((d, idx) => {
+                    const isToday = d.getTime() === todayStart;
+                    return (
+                      <div
+                        key={idx}
+                        className={`shrink-0 border-r border-(--border-subtle) px-0.5 py-1 text-center text-[11px] ${
+                          isToday
+                            ? "bg-(--brand-200) font-medium text-(--brand-default)"
+                            : "text-(--txt-secondary)"
+                        }`}
+                        style={{ width: DAY_WIDTH }}
+                      >
+                        {d.getDate()}{" "}
+                        {["Su", "M", "Tu", "W", "Th", "F", "Sa"][d.getDay()]}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
               {/* Module bars */}
               {withDates.map(({ mod, startTime, endTime }) => {
@@ -781,7 +981,27 @@ export function ModulesPage() {
     );
   }
 
-  if (layout === "gallery") return renderGalleryLayout();
-  if (layout === "timeline") return renderTimelineLayout();
-  return renderListLayout();
+  const content =
+    layout === "gallery"
+      ? renderGalleryLayout()
+      : layout === "timeline"
+        ? renderTimelineLayout()
+        : renderListLayout();
+
+  return (
+    <>
+      {content}
+      <UpdateModuleModal
+        open={editModule !== null}
+        onClose={() => setEditModule(null)}
+        workspaceSlug={workspaceSlug!}
+        projectId={projectId!}
+        module={editModule}
+        onUpdated={(updated) => {
+          setModules((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+          window.dispatchEvent(new CustomEvent("modules-refresh"));
+        }}
+      />
+    </>
+  );
 }
