@@ -109,8 +109,9 @@ export function UpdateModuleModal({
       q(leadSearch),
     ),
   );
-  const leadMember =
-    leadId ? members.find((m) => m.member_id === leadId) ?? null : null;
+  const leadMember = leadId
+    ? (members.find((m) => m.member_id === leadId) ?? null)
+    : null;
 
   const statusLabel =
     MODULE_STATUSES.find((s) => s.id === status)?.label ?? status;
@@ -285,7 +286,9 @@ export function UpdateModuleModal({
                         key={m.member_id}
                         type="button"
                         onClick={() => {
-                          setLeadId(leadId === m.member_id ? null : m.member_id);
+                          setLeadId(
+                            leadId === m.member_id ? null : m.member_id,
+                          );
                           setLeadDropdownOpen(false);
                         }}
                         className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
