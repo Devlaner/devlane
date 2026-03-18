@@ -1,4 +1,4 @@
-﻿import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
 const IconGlobe = () => (
   <svg

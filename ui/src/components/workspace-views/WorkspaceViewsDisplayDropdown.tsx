@@ -1,4 +1,4 @@
-﻿import { Dropdown } from "../work-item";
+import { Dropdown } from "../work-item";
 import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
 import { WorkspaceViewsDisplayPanel } from "./WorkspaceViewsDisplayPanel";
 

@@ -1,4 +1,4 @@
-﻿import {
+import {
   type DisplayPropertyKey,
   type WorkspaceViewDisplay,
   DISPLAY_PROPERTY_KEYS,

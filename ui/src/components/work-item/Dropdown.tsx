@@ -1,4 +1,4 @@
-﻿import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 const DROPDOWN_Z_INDEX = 9999;

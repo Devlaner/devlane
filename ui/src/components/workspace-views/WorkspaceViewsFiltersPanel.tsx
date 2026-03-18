@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { DateRangeModal } from "./DateRangeModal";
 import { CollapsibleSection } from "./WorkspaceViewsFiltersShared";
 import {

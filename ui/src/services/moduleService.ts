@@ -5,9 +5,9 @@ export interface CreateModulePayload {
   name: string;
   description?: string;
   status?: string;
-  start_date?: string | null;
-  target_date?: string | null;
-  lead_id?: string | null;
+  start_date?: string;
+  target_date?: string;
+  lead_id?: string;
 }
 
 export const moduleService = {

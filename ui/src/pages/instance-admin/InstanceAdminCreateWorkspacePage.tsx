@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button, Input } from "../../components/ui";
 import { CreateWorkspaceSetupHint } from "../../components/instance-admin/CreateWorkspaceSetupHint";

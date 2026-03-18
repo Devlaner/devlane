@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { instanceService } from "../services/instanceService";
 import { workspaceService } from "../services/workspaceService";

@@ -1,4 +1,4 @@
-﻿import { useEffect, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/utils";
 

@@ -17,6 +17,7 @@ import type {
 import { getImageUrl } from "../lib/utils";
 import { slugify } from "../lib/slug";
 import { parseISODateLocal } from "../lib/dateOnly";
+import { MODULE_STATUSES } from "../lib/moduleStatuses";
 
 function pad2(n: number): string {
   return n < 10 ? `0${n}` : String(n);
@@ -118,15 +119,6 @@ const IconMoreVertical = () => (
     <circle cx="12" cy="19" r="1.5" />
   </svg>
 );
-
-const MODULE_STATUSES = [
-  { id: "backlog", label: "Backlog" },
-  { id: "planned", label: "Planned" },
-  { id: "in_progress", label: "In Progress" },
-  { id: "paused", label: "Paused" },
-  { id: "completed", label: "Completed" },
-  { id: "cancelled", label: "Cancelled" },
-] as const;
 
 function StatusDot({ statusId }: { statusId: string }) {
   const c =

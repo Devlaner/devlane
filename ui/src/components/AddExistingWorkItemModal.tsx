@@ -112,11 +112,22 @@ export function AddExistingWorkItemModal({
     setSubmitting(true);
     setError(null);
     try {
-      await Promise.all(
-        Array.from(selectedIds).map((issueId) =>
-          moduleService.addIssue(workspaceSlug, projectId, moduleId, issueId),
-        ),
-      );
+      const ids = Array.from(selectedIds);
+      const BATCH = 5;
+      for (let i = 0; i < ids.length; i += BATCH) {
+        await Promise.all(
+          ids
+            .slice(i, i + BATCH)
+            .map((issueId) =>
+              moduleService.addIssue(
+                workspaceSlug,
+                projectId,
+                moduleId,
+                issueId,
+              ),
+            ),
+        );
+      }
       onAdded?.();
       onClose();
     } catch {

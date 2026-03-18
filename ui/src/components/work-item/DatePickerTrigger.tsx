@@ -1,4 +1,4 @@
-﻿import { useRef } from "react";
+import { useRef } from "react";
 
 /* eslint-disable react-refresh/only-export-components -- formatDateForDisplay shared util; keep in same file for future use */
 export function formatDateForDisplay(isoDate: string): string {

@@ -1,4 +1,4 @@
-﻿import { useParams, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Avatar, Card, CardContent } from "../components/ui";

@@ -7,15 +7,7 @@ import { Avatar } from "../ui";
 import { getImageUrl } from "../../lib/utils";
 import { workspaceService } from "../../services/workspaceService";
 import type { WorkspaceMemberApiResponse } from "../../api/types";
-
-const MODULE_STATUSES = [
-  { id: "backlog", label: "Backlog" },
-  { id: "planned", label: "Planned" },
-  { id: "in_progress", label: "In Progress" },
-  { id: "paused", label: "Paused" },
-  { id: "completed", label: "Completed" },
-  { id: "cancelled", label: "Cancelled" },
-] as const;
+import { MODULE_STATUSES } from "../../lib/moduleStatuses";
 
 function ModuleStatusIcon({ statusId }: { statusId: string }) {
   if (statusId === "backlog" || statusId === "planned") {

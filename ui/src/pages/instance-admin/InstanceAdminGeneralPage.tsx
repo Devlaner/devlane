@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Skeleton } from "../../components/ui";
 import { instanceSettingsService } from "../../services/instanceService";
 import { getApiErrorMessage } from "../../api/client";

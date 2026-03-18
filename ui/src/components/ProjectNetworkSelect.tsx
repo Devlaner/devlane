@@ -1,4 +1,4 @@
-﻿import type { ChangeEvent } from "react";
+import type { ChangeEvent } from "react";
 
 interface ProjectNetworkSelectProps {
   value: string;

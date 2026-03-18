@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Avatar } from "../components/ui";
 import { CreateProjectModal } from "../components/CreateProjectModal";

@@ -1,4 +1,4 @@
-﻿import type { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { FILTER_ICONS } from "./WorkspaceViewsFiltersData";
 
 export interface CollapsibleSectionProps {

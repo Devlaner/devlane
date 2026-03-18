@@ -7,15 +7,7 @@ import { workspaceService } from "../services/workspaceService";
 import type { ModuleApiResponse } from "../api/types";
 import type { WorkspaceMemberApiResponse } from "../api/types";
 import { formatISODateDisplay } from "../lib/dateOnly";
-
-const MODULE_STATUSES = [
-  { id: "backlog", label: "Backlog" },
-  { id: "planned", label: "Planned" },
-  { id: "in_progress", label: "In Progress" },
-  { id: "paused", label: "Paused" },
-  { id: "completed", label: "Completed" },
-  { id: "cancelled", label: "Cancelled" },
-] as const;
+import { MODULE_STATUSES } from "../lib/moduleStatuses";
 
 function formatDateRangeDisplay(
   start: string | null,

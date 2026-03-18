@@ -1,4 +1,4 @@
-﻿import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
+import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
 import {
   VIEW_LAYOUTS,
   VIEW_LAYOUT_LABELS,

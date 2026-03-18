@@ -1,4 +1,4 @@
-﻿import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button, Card, CardContent } from "../../components/ui";
 
 const IconWorkspace = () => (

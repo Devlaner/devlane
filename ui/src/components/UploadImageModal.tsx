@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button, Modal } from "./ui";
 import { uploadImage } from "../services/uploadService";
 

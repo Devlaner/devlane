@@ -1,4 +1,4 @@
-﻿/* eslint-disable react-refresh/only-export-components -- Shared constants and icon maps for filter UI */
+/* eslint-disable react-refresh/only-export-components -- Shared constants and icon maps for filter UI */
 import type { ReactNode } from "react";
 import type {
   Priority,

@@ -140,11 +140,11 @@ func (h *ModuleHandler) Update(c *gin.Context) {
 		return
 	}
 	var body struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Status      string `json:"status"`
-		StartDate   string `json:"start_date"`
-		TargetDate  string `json:"target_date"`
+		Name        string  `json:"name"`
+		Description string  `json:"description"`
+		Status      string  `json:"status"`
+		StartDate   string  `json:"start_date"`
+		TargetDate  string  `json:"target_date"`
 		LeadID      *string `json:"lead_id"`
 	}
 	_ = c.ShouldBindJSON(&body)

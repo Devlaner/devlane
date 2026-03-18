@@ -1,4 +1,4 @@
-﻿import { useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 export function ArchivesPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();

@@ -9,15 +9,7 @@ import type {
   WorkspaceMemberApiResponse,
 } from "../api/types";
 import { formatISODateDisplay } from "../lib/dateOnly";
-
-const MODULE_STATUSES = [
-  { id: "backlog", label: "Backlog" },
-  { id: "planned", label: "Planned" },
-  { id: "in_progress", label: "In Progress" },
-  { id: "paused", label: "Paused" },
-  { id: "completed", label: "Completed" },
-  { id: "cancelled", label: "Cancelled" },
-] as const;
+import { MODULE_STATUSES } from "../lib/moduleStatuses";
 
 function formatDateRangeDisplay(
   start: string | null,
@@ -129,9 +121,8 @@ export function UpdateModuleModal({
           name: title.trim(),
           description: description.trim() || undefined,
           status,
-          start_date: startDate,
-          target_date: endDate,
-          // backend treats "" as clear lead
+          start_date: startDate ?? "",
+          target_date: endDate ?? "",
           lead_id: leadId ?? "",
         },
       );

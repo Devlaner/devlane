@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Avatar, Button, Card, CardContent } from "../components/ui";
 import { workspaceService } from "../services/workspaceService";
