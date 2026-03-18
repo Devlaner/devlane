@@ -7,6 +7,7 @@ export interface CreateModulePayload {
   status?: string;
   start_date?: string | null;
   target_date?: string | null;
+  lead_id?: string | null;
 }
 
 export const moduleService = {

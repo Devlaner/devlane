@@ -206,6 +206,10 @@ export function ModulesPage() {
   );
   const [editModule, setEditModule] = useState<ModuleApiResponse | null>(null);
   const [editOpenDatePicker, setEditOpenDatePicker] = useState(false);
+  const [favoritesToast, setFavoritesToast] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
   const { favoriteModuleIds, toggleFavorite, isFavorite } = useModuleFavorites(
     workspaceSlug,
     projectId,
@@ -226,7 +230,8 @@ export function ModulesPage() {
     if (searchQuery !== "") {
       list = list.filter((m) => m.name.toLowerCase().includes(searchQuery));
     }
-    if (favoritesFilter && favoriteModuleIds.length > 0) {
+    if (favoritesFilter) {
+      if (favoriteModuleIds.length === 0) return [];
       const favSet = new Set(favoriteModuleIds);
       list = list.filter((m) => favSet.has(m.id));
     }
@@ -292,6 +297,12 @@ export function ModulesPage() {
     dueAfter,
     dueBefore,
   ]);
+
+  useEffect(() => {
+    if (!favoritesToast) return;
+    const t = window.setTimeout(() => setFavoritesToast(null), 3000);
+    return () => window.clearTimeout(t);
+  }, [favoritesToast]);
 
   const sortBy = filter.sort || "progress";
   const order = filter.order || "asc";
@@ -427,7 +438,9 @@ export function ModulesPage() {
       {sortedModules.map((mod) => {
         const progress = getProgress(mod);
         const dateRange = formatModuleDateRange(mod);
-        const lead = getLeadMember(mod.lead_id ?? null);
+        const lead = getLeadMember(
+          mod.lead_id ?? project.project_lead_id ?? null,
+        );
         const fav = isFavorite(mod.id);
         const statusLabel =
           MODULE_STATUSES.find((s) => s.id === mod.status)?.label ?? mod.status;
@@ -558,7 +571,14 @@ export function ModulesPage() {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                const wasFav = isFavorite(mod.id);
                 toggleFavorite(mod.id);
+                setFavoritesToast({
+                  title: "Success!",
+                  message: wasFav
+                    ? "Module removed from favorites."
+                    : "Module added to favorites.",
+                });
               }}
             >
               {fav ? (
@@ -1016,6 +1036,31 @@ export function ModulesPage() {
   return (
     <>
       {content}
+      {favoritesToast && (
+        <div className="fixed bottom-6 left-1/2 z-50 w-[min(520px,calc(100vw-2rem))] -translate-x-1/2 rounded-lg border border-green-200 bg-white p-5 shadow-(--shadow-raised)">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border border-green-200 text-green-600">
+              ✓
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold text-(--txt-primary)">
+                {favoritesToast.title}
+              </div>
+              <div className="mt-0.5 text-sm text-(--txt-secondary)">
+                {favoritesToast.message}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="shrink-0 rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2)"
+              aria-label="Dismiss"
+              onClick={() => setFavoritesToast(null)}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
       <UpdateModuleModal
         open={editModule !== null}
         onClose={() => {

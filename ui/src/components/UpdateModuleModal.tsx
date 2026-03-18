@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Modal, Button, Input, Avatar } from "./ui";
 import { DateRangeModal } from "./workspace-views/DateRangeModal";
 import { getImageUrl } from "../lib/utils";
@@ -57,12 +57,16 @@ export function UpdateModuleModal({
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("backlog");
+  const [leadId, setLeadId] = useState<string | null>(null);
   const [dateModalOpen, setDateModalOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const [leadDropdownOpen, setLeadDropdownOpen] = useState(false);
+  const [leadSearch, setLeadSearch] = useState("");
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const statusRef = useRef<HTMLDivElement>(null);
+  const leadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -79,31 +83,34 @@ export function UpdateModuleModal({
     setStartDate(module.start_date ?? null);
     setEndDate(module.target_date ?? null);
     setStatus(module.status ?? "backlog");
+    setLeadId(module.lead_id ?? null);
+    setLeadSearch("");
     setError(null);
     setDateModalOpen(Boolean(openDatePickerOnOpen));
     setStatusDropdownOpen(false);
+    setLeadDropdownOpen(false);
   }, [open, module, openDatePickerOnOpen]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
       if (statusRef.current?.contains(target)) return;
+      if (leadRef.current?.contains(target)) return;
       setStatusDropdownOpen(false);
+      setLeadDropdownOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const lead = useMemo(() => {
-    if (!module?.lead_id) return null;
-    const m = members.find((x) => x.member_id === module.lead_id);
-    if (!m) return null;
-    const name =
-      m.member_display_name?.trim() ??
-      m.member_email?.split("@")[0] ??
-      m.member_id.slice(0, 8);
-    return { name, avatarUrl: m.member_avatar ?? null };
-  }, [members, module?.lead_id]);
+  const q = (s: string) => s.trim().toLowerCase();
+  const filteredLead = members.filter((m) =>
+    q(m.member_display_name ?? m.member_email ?? m.member_id).includes(
+      q(leadSearch),
+    ),
+  );
+  const leadMember =
+    leadId ? members.find((m) => m.member_id === leadId) ?? null : null;
 
   const statusLabel =
     MODULE_STATUSES.find((s) => s.id === status)?.label ?? status;
@@ -123,6 +130,8 @@ export function UpdateModuleModal({
           status,
           start_date: startDate,
           target_date: endDate,
+          // backend treats "" as clear lead
+          lead_id: leadId ?? "",
         },
       );
       onUpdated?.(updated);
@@ -216,26 +225,95 @@ export function UpdateModuleModal({
               )}
             </div>
 
-            <button
-              type="button"
-              className="flex items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1 text-[13px] font-medium text-(--txt-secondary) opacity-60"
-              title="Lead editing not available yet"
-              disabled
-            >
-              {lead ? (
-                <Avatar
-                  name={lead.name}
-                  src={getImageUrl(lead.avatarUrl) ?? undefined}
-                  size="sm"
-                  className="h-5 w-5 text-[10px]"
-                />
-              ) : (
+            <div className="relative" ref={leadRef}>
+              <button
+                type="button"
+                onClick={() => setLeadDropdownOpen((v) => !v)}
+                className="flex items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+              >
+                {leadMember ? (
+                  <Avatar
+                    name={
+                      leadMember.member_display_name ??
+                      leadMember.member_email ??
+                      leadMember.member_id
+                    }
+                    src={getImageUrl(leadMember.member_avatar) ?? undefined}
+                    size="sm"
+                    className="h-5 w-5 text-[10px]"
+                  />
+                ) : (
+                  <span className="text-(--txt-icon-tertiary)" aria-hidden>
+                    👤
+                  </span>
+                )}
+                Lead
                 <span className="text-(--txt-icon-tertiary)" aria-hidden>
-                  👤
+                  ▾
                 </span>
+              </button>
+              {leadDropdownOpen && (
+                <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-1.5 shadow-(--shadow-raised)">
+                  <div className="mb-1.5 flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
+                    <span className="text-(--txt-icon-tertiary)" aria-hidden>
+                      🔎
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Search"
+                      value={leadSearch}
+                      onChange={(e) => setLeadSearch(e.target.value)}
+                      className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
+                    />
+                  </div>
+                  <div className="max-h-48 overflow-y-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLeadId(null);
+                        setLeadDropdownOpen(false);
+                      }}
+                      className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                    >
+                      <span className="truncate">No lead</span>
+                      {leadId === null && (
+                        <span className="text-(--txt-icon-tertiary)">✓</span>
+                      )}
+                    </button>
+                    {filteredLead.map((m) => (
+                      <button
+                        key={m.member_id}
+                        type="button"
+                        onClick={() => {
+                          setLeadId(leadId === m.member_id ? null : m.member_id);
+                          setLeadDropdownOpen(false);
+                        }}
+                        className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                      >
+                        <span className="flex items-center gap-2 truncate">
+                          <Avatar
+                            name={
+                              m.member_display_name ??
+                              m.member_email ??
+                              m.member_id
+                            }
+                            src={getImageUrl(m.member_avatar) ?? undefined}
+                            size="sm"
+                            className="h-6 w-6 text-xs"
+                          />
+                          {m.member_display_name?.trim() ??
+                            m.member_email ??
+                            m.member_id.slice(0, 8)}
+                        </span>
+                        {leadId === m.member_id && (
+                          <span className="text-(--txt-icon-tertiary)">✓</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
-              Lead
-            </button>
+            </div>
           </div>
         </div>
       </Modal>
