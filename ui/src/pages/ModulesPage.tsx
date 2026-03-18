@@ -199,10 +199,6 @@ export function ModulesPage() {
   );
   const [editModule, setEditModule] = useState<ModuleApiResponse | null>(null);
   const [editOpenDatePicker, setEditOpenDatePicker] = useState(false);
-  const [favoritesToast, setFavoritesToast] = useState<{
-    title: string;
-    message: string;
-  } | null>(null);
   const [quickDateModule, setQuickDateModule] =
     useState<ModuleApiResponse | null>(null);
   const { favoriteModuleIds, toggleFavorite, isFavorite } = useModuleFavorites(
@@ -293,19 +289,18 @@ export function ModulesPage() {
     dueBefore,
   ]);
 
-  useEffect(() => {
-    if (!favoritesToast) return;
-    const t = window.setTimeout(() => setFavoritesToast(null), 3000);
-    return () => window.clearTimeout(t);
-  }, [favoritesToast]);
-
   const sortBy = filter.sort || "progress";
   const order = filter.order || "asc";
   const sortedModules = [...filteredModules].sort((a, b) => {
     const getProgress = (mod: ModuleApiResponse) => {
       const total = mod.issue_count ?? 0;
-      const done = 0;
-      return total === 0 ? 0 : Math.round((done / total) * 100);
+      if (!total) return 0;
+
+      // We don't have a completed/cancelled issue breakdown on the module payload.
+      // Use module status as a simple proxy for sorting and the progress badge.
+      const done =
+        mod.status === "completed" || mod.status === "cancelled" ? total : 0;
+      return Math.round((done / total) * 100);
     };
     let cmp = 0;
     switch (sortBy) {
@@ -397,8 +392,10 @@ export function ModulesPage() {
 
   const getProgress = (mod: ModuleApiResponse) => {
     const total = mod.issue_count ?? 0;
-    const done = 0;
-    return total === 0 ? 0 : Math.round((done / total) * 100);
+    if (!total) return 0;
+    const done =
+      mod.status === "completed" || mod.status === "cancelled" ? total : 0;
+    return Math.round((done / total) * 100);
   };
 
   if (loading) {
@@ -567,15 +564,7 @@ export function ModulesPage() {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const wasFav = isFavorite(mod.id);
-                const ok = toggleFavorite(mod.id);
-                if (!ok) return;
-                setFavoritesToast({
-                  title: "Success!",
-                  message: wasFav
-                    ? "Module removed from favorites."
-                    : "Module added to favorites.",
-                });
+                void toggleFavorite(mod.id);
               }}
             >
               {fav ? (
@@ -1001,7 +990,23 @@ export function ModulesPage() {
                         className="absolute top-1/2 -translate-y-1/2 rounded bg-(--brand-200) px-2 py-1 text-xs font-medium text-(--brand-default) no-underline hover:bg-(--brand-default) hover:text-white"
                         style={{ left, width, minWidth: 40 }}
                       >
-                        <span className="block truncate">{mod.name}</span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="block min-w-0 flex-1 truncate">{mod.name}</span>
+                          <button
+                            type="button"
+                            className="pointer-events-auto inline-flex h-5 w-5 items-center justify-center rounded hover:bg-white/10"
+                            aria-label="Edit module dates"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setQuickDateModule(mod);
+                              setStatusMenuOpenId(null);
+                              setEllipsisMenuOpenId(null);
+                            }}
+                          >
+                            <IconCalendar />
+                          </button>
+                        </div>
                       </Link>
                     </div>
                   </div>
@@ -1036,31 +1041,6 @@ export function ModulesPage() {
   return (
     <>
       {content}
-      {favoritesToast && (
-        <div className="fixed bottom-6 left-1/2 z-50 w-[min(520px,calc(100vw-2rem))] -translate-x-1/2 rounded-lg border border-green-200 bg-white p-5 shadow-(--shadow-raised)">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border border-green-200 text-green-600">
-              ✓
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold text-(--txt-primary)">
-                {favoritesToast.title}
-              </div>
-              <div className="mt-0.5 text-sm text-(--txt-secondary)">
-                {favoritesToast.message}
-              </div>
-            </div>
-            <button
-              type="button"
-              className="shrink-0 rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2)"
-              aria-label="Dismiss"
-              onClick={() => setFavoritesToast(null)}
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
       <UpdateModuleModal
         open={editModule !== null}
         onClose={() => {
