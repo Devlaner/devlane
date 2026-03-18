@@ -147,7 +147,10 @@ export function UpdateModuleModal({
             <Button variant="secondary" onClick={onClose} disabled={submitting}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting || !module || !title.trim()}>
+            <Button
+              onClick={handleSubmit}
+              disabled={submitting || !module || !title.trim()}
+            >
               Update Module
             </Button>
           </>

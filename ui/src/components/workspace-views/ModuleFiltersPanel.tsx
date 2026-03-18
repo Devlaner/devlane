@@ -257,32 +257,34 @@ export function ModuleFiltersPanel({
           open={sectionOpen.lead}
           onToggle={() => toggleSection("lead")}
         >
-          {(showAllLeads ? filteredMembers : filteredMembers.slice(0, 8)).map((m) => (
-            <label
-              key={m.member_id}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-            >
-              <input
-                type="checkbox"
-                checked={leadIds.includes(m.member_id)}
-                onChange={() => {
-                  setLead(
-                    leadIds.includes(m.member_id)
-                      ? leadIds.filter((id) => id !== m.member_id)
-                      : [...leadIds, m.member_id],
-                  );
-                }}
-                className="rounded border-(--border-subtle)"
-              />
-              <Avatar
-                name={displayName(m)}
-                src={getImageUrl(m.member_avatar) ?? undefined}
-                size="sm"
-                className="h-6 w-6 shrink-0 text-xs"
-              />
-              <span className="truncate">{displayName(m)}</span>
-            </label>
-          ))}
+          {(showAllLeads ? filteredMembers : filteredMembers.slice(0, 8)).map(
+            (m) => (
+              <label
+                key={m.member_id}
+                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+              >
+                <input
+                  type="checkbox"
+                  checked={leadIds.includes(m.member_id)}
+                  onChange={() => {
+                    setLead(
+                      leadIds.includes(m.member_id)
+                        ? leadIds.filter((id) => id !== m.member_id)
+                        : [...leadIds, m.member_id],
+                    );
+                  }}
+                  className="rounded border-(--border-subtle)"
+                />
+                <Avatar
+                  name={displayName(m)}
+                  src={getImageUrl(m.member_avatar) ?? undefined}
+                  size="sm"
+                  className="h-6 w-6 shrink-0 text-xs"
+                />
+                <span className="truncate">{displayName(m)}</span>
+              </label>
+            ),
+          )}
           {filteredMembers.length > 8 && (
             <button
               type="button"
@@ -299,32 +301,34 @@ export function ModuleFiltersPanel({
           open={sectionOpen.members}
           onToggle={() => toggleSection("members")}
         >
-          {(showAllMembers ? filteredMembers : filteredMembers.slice(0, 8)).map((m) => (
-            <label
-              key={m.member_id}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-            >
-              <input
-                type="checkbox"
-                checked={memberIds.includes(m.member_id)}
-                onChange={() => {
-                  setMemberIds(
-                    memberIds.includes(m.member_id)
-                      ? memberIds.filter((id) => id !== m.member_id)
-                      : [...memberIds, m.member_id],
-                  );
-                }}
-                className="rounded border-(--border-subtle)"
-              />
-              <Avatar
-                name={displayName(m)}
-                src={getImageUrl(m.member_avatar) ?? undefined}
-                size="sm"
-                className="h-6 w-6 shrink-0 text-xs"
-              />
-              <span className="truncate">{displayName(m)}</span>
-            </label>
-          ))}
+          {(showAllMembers ? filteredMembers : filteredMembers.slice(0, 8)).map(
+            (m) => (
+              <label
+                key={m.member_id}
+                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+              >
+                <input
+                  type="checkbox"
+                  checked={memberIds.includes(m.member_id)}
+                  onChange={() => {
+                    setMemberIds(
+                      memberIds.includes(m.member_id)
+                        ? memberIds.filter((id) => id !== m.member_id)
+                        : [...memberIds, m.member_id],
+                    );
+                  }}
+                  className="rounded border-(--border-subtle)"
+                />
+                <Avatar
+                  name={displayName(m)}
+                  src={getImageUrl(m.member_avatar) ?? undefined}
+                  size="sm"
+                  className="h-6 w-6 shrink-0 text-xs"
+                />
+                <span className="truncate">{displayName(m)}</span>
+              </label>
+            ),
+          )}
           {filteredMembers.length > 8 && (
             <button
               type="button"
