@@ -1,5 +1,6 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Modal } from "../ui";
+import { parseISODateLocal, toISODateLocal } from "../../lib/dateOnly";
 
 const MONTHS = [
   "January",
@@ -15,10 +16,6 @@ const MONTHS = [
   "November",
   "December",
 ];
-
-function toISO(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
 
 function formatDisplay(d: Date): string {
   return d.toLocaleDateString("en-US", {
@@ -47,10 +44,10 @@ export function DateRangeModal({
 }: DateRangeModalProps) {
   const now = new Date();
   const defaultStart = after
-    ? new Date(after)
+    ? parseISODateLocal(after)
     : new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const defaultEnd = before
-    ? new Date(before)
+    ? parseISODateLocal(before)
     : new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
 
   const [startDate, setStartDate] = useState<Date>(defaultStart);
@@ -63,10 +60,10 @@ export function DateRangeModal({
     if (!open) return;
     const now = new Date();
     const start = after
-      ? new Date(after)
+      ? parseISODateLocal(after)
       : new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const end = before
-      ? new Date(before)
+      ? parseISODateLocal(before)
       : new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
     queueMicrotask(() => {
       setStartDate(start);
@@ -93,9 +90,9 @@ export function DateRangeModal({
     if (a.getTime() > b.getTime()) {
       setStartDate(b);
       setEndDate(a);
-      onApply(toISO(b), toISO(a));
+      onApply(toISODateLocal(b), toISODateLocal(a));
     } else {
-      onApply(toISO(a), toISO(b));
+      onApply(toISODateLocal(a), toISODateLocal(b));
     }
     onClose();
   };
@@ -118,10 +115,10 @@ export function DateRangeModal({
       );
     for (let d = 1; d <= days; d++) {
       const date = new Date(year, month, d);
-      const iso = toISO(date);
+      const iso = toISODateLocal(date);
       const selected = isStart
-        ? toISO(startDate) === iso
-        : toISO(endDate) === iso;
+        ? toISODateLocal(startDate) === iso
+        : toISODateLocal(endDate) === iso;
       const inRange =
         date >=
           new Date(

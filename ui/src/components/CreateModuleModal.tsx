@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Modal, Button, Input, Avatar } from "./ui";
 import { DateRangeModal } from "./workspace-views/DateRangeModal";
 import { getImageUrl } from "../lib/utils";
@@ -6,6 +6,7 @@ import { moduleService } from "../services/moduleService";
 import { workspaceService } from "../services/workspaceService";
 import type { ModuleApiResponse } from "../api/types";
 import type { WorkspaceMemberApiResponse } from "../api/types";
+import { formatISODateDisplay } from "../lib/dateOnly";
 
 const MODULE_STATUSES = [
   { id: "backlog", label: "Backlog" },
@@ -21,14 +22,13 @@ function formatDateRangeDisplay(
   end: string | null,
 ): string {
   if (!start && !end) return "Start date → End date";
-  const fmt = (s: string) =>
-    new Date(s).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  if (start && end) return `${fmt(start)} → ${fmt(end)}`;
-  return start ? fmt(start) : end ? fmt(end) : "Start date → End date";
+  if (start && end)
+    return `${formatISODateDisplay(start)} → ${formatISODateDisplay(end)}`;
+  return start
+    ? formatISODateDisplay(start)
+    : end
+      ? formatISODateDisplay(end)
+      : "Start date → End date";
 }
 
 export interface CreateModuleModalProps {

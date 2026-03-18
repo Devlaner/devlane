@@ -15,6 +15,7 @@ import type {
 } from "../api/types";
 import { getImageUrl } from "../lib/utils";
 import { slugify } from "../lib/slug";
+import { parseISODateLocal } from "../lib/dateOnly";
 
 function pad2(n: number): string {
   return n < 10 ? `0${n}` : String(n);
@@ -41,7 +42,7 @@ function formatModuleDateRange(mod: ModuleApiResponse): string | null {
   if (!startRaw && !endRaw) return null;
 
   const parse = (iso: string) => {
-    const d = new Date(iso);
+    const d = parseISODateLocal(iso);
     return { m: d.getMonth(), d: d.getDate(), y: d.getFullYear() };
   };
 
@@ -204,6 +205,7 @@ export function ModulesPage() {
     null,
   );
   const [editModule, setEditModule] = useState<ModuleApiResponse | null>(null);
+  const [editOpenDatePicker, setEditOpenDatePicker] = useState(false);
   const { favoriteModuleIds, toggleFavorite, isFavorite } = useModuleFavorites(
     workspaceSlug,
     projectId,
@@ -446,12 +448,22 @@ export function ModulesPage() {
                 </p>
               </Link>
             </div>
-            <span className="shrink-0 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1 text-[13px] text-(--txt-secondary)">
+            <button
+              type="button"
+              className="shrink-0 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1 text-[13px] text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setEditOpenDatePicker(true);
+                setEditModule(mod);
+              }}
+              aria-label="Edit module dates"
+            >
               <span className="flex items-center gap-1.5">
                 <IconCalendar />
                 {dateRange ?? "Start date → End date"}
               </span>
-            </span>
+            </button>
             <div className="relative shrink-0" data-module-status-menu>
               <button
                 type="button"
@@ -459,7 +471,9 @@ export function ModulesPage() {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setStatusMenuOpenId((cur) => (cur === mod.id ? null : mod.id));
+                  setStatusMenuOpenId((cur) =>
+                    cur === mod.id ? null : mod.id,
+                  );
                 }}
                 disabled={statusSavingId === mod.id}
                 aria-haspopup="menu"
@@ -563,7 +577,9 @@ export function ModulesPage() {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setEllipsisMenuOpenId((cur) => (cur === mod.id ? null : mod.id));
+                  setEllipsisMenuOpenId((cur) =>
+                    cur === mod.id ? null : mod.id,
+                  );
                 }}
               >
                 <IconMoreVertical />
@@ -577,6 +593,7 @@ export function ModulesPage() {
                       e.preventDefault();
                       e.stopPropagation();
                       setEllipsisMenuOpenId(null);
+                      setEditOpenDatePicker(false);
                       setEditModule(mod);
                     }}
                   >
@@ -588,7 +605,11 @@ export function ModulesPage() {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      window.open(modulePath(mod), "_blank", "noopener,noreferrer");
+                      window.open(
+                        modulePath(mod),
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
                       setEllipsisMenuOpenId(null);
                     }}
                   >
@@ -722,7 +743,10 @@ export function ModulesPage() {
       return new Date(t.getFullYear(), qStartMonth + 3, 8).getTime();
     })();
 
-    const rangeStart = Math.min(...withDates.map((d) => d.startTime), viewStart);
+    const rangeStart = Math.min(
+      ...withDates.map((d) => d.startTime),
+      viewStart,
+    );
     const rangeEnd = Math.max(...withDates.map((d) => d.endTime), viewEnd);
     const totalDays = Math.ceil(
       (rangeEnd - rangeStart) / (24 * 60 * 60 * 1000),
@@ -758,9 +782,7 @@ export function ModulesPage() {
     return (
       <div
         className={`flex flex-col gap-0 ${
-          timelineFullscreen
-            ? "fixed inset-0 z-50 bg-(--bg-screen) p-3"
-            : ""
+          timelineFullscreen ? "fixed inset-0 z-50 bg-(--bg-screen) p-3" : ""
         }`}
       >
         <div className="flex items-center justify-between border-b border-(--border-subtle) bg-(--bg-layer-2) px-4 py-2">
@@ -787,7 +809,10 @@ export function ModulesPage() {
               onClick={() => {
                 const idx = getDayIndex(todayStart);
                 const left = Math.max(0, idx * DAY_WIDTH - 200);
-                timelineScrollRef.current?.scrollTo({ left, behavior: "smooth" });
+                timelineScrollRef.current?.scrollTo({
+                  left,
+                  behavior: "smooth",
+                });
               }}
               className="rounded px-2.5 py-1.5 text-sm font-medium text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
             >
@@ -993,12 +1018,18 @@ export function ModulesPage() {
       {content}
       <UpdateModuleModal
         open={editModule !== null}
-        onClose={() => setEditModule(null)}
+        onClose={() => {
+          setEditModule(null);
+          setEditOpenDatePicker(false);
+        }}
         workspaceSlug={workspaceSlug!}
         projectId={projectId!}
         module={editModule}
+        openDatePickerOnOpen={editOpenDatePicker}
         onUpdated={(updated) => {
-          setModules((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+          setModules((prev) =>
+            prev.map((m) => (m.id === updated.id ? updated : m)),
+          );
           window.dispatchEvent(new CustomEvent("modules-refresh"));
         }}
       />

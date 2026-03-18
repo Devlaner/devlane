@@ -4,7 +4,11 @@ import { DateRangeModal } from "./workspace-views/DateRangeModal";
 import { getImageUrl } from "../lib/utils";
 import { workspaceService } from "../services/workspaceService";
 import { moduleService } from "../services/moduleService";
-import type { ModuleApiResponse, WorkspaceMemberApiResponse } from "../api/types";
+import type {
+  ModuleApiResponse,
+  WorkspaceMemberApiResponse,
+} from "../api/types";
+import { formatISODateDisplay } from "../lib/dateOnly";
 
 const MODULE_STATUSES = [
   { id: "backlog", label: "Backlog" },
@@ -20,14 +24,13 @@ function formatDateRangeDisplay(
   end: string | null,
 ): string {
   if (!start && !end) return "Start date → End date";
-  const fmt = (s: string) =>
-    new Date(s).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  if (start && end) return `${fmt(start)} → ${fmt(end)}`;
-  return start ? fmt(start) : end ? fmt(end) : "Start date → End date";
+  if (start && end)
+    return `${formatISODateDisplay(start)} → ${formatISODateDisplay(end)}`;
+  return start
+    ? formatISODateDisplay(start)
+    : end
+      ? formatISODateDisplay(end)
+      : "Start date → End date";
 }
 
 export interface UpdateModuleModalProps {
@@ -37,6 +40,7 @@ export interface UpdateModuleModalProps {
   projectId: string;
   module: ModuleApiResponse | null;
   onUpdated?: (module: ModuleApiResponse) => void;
+  openDatePickerOnOpen?: boolean;
 }
 
 export function UpdateModuleModal({
@@ -46,6 +50,7 @@ export function UpdateModuleModal({
   projectId,
   module,
   onUpdated,
+  openDatePickerOnOpen,
 }: UpdateModuleModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -75,9 +80,9 @@ export function UpdateModuleModal({
     setEndDate(module.target_date ?? null);
     setStatus(module.status ?? "backlog");
     setError(null);
-    setDateModalOpen(false);
+    setDateModalOpen(Boolean(openDatePickerOnOpen));
     setStatusDropdownOpen(false);
-  }, [open, module]);
+  }, [open, module, openDatePickerOnOpen]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -108,13 +113,18 @@ export function UpdateModuleModal({
     setSubmitting(true);
     setError(null);
     try {
-      const updated = await moduleService.update(workspaceSlug, projectId, module.id, {
-        name: title.trim(),
-        description: description.trim() || undefined,
-        status,
-        start_date: startDate,
-        target_date: endDate,
-      });
+      const updated = await moduleService.update(
+        workspaceSlug,
+        projectId,
+        module.id,
+        {
+          name: title.trim(),
+          description: description.trim() || undefined,
+          status,
+          start_date: startDate,
+          target_date: endDate,
+        },
+      );
       onUpdated?.(updated);
       onClose();
     } catch (e) {
@@ -245,4 +255,3 @@ export function UpdateModuleModal({
     </>
   );
 }
-
