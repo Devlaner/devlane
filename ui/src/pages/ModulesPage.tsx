@@ -991,7 +991,9 @@ export function ModulesPage() {
                         style={{ left, width, minWidth: 40 }}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="block min-w-0 flex-1 truncate">{mod.name}</span>
+                          <span className="block min-w-0 flex-1 truncate">
+                            {mod.name}
+                          </span>
                           <button
                             type="button"
                             className="pointer-events-auto inline-flex h-5 w-5 items-center justify-center rounded hover:bg-white/10"
