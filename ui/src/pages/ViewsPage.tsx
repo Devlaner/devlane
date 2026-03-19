@@ -9,7 +9,35 @@ import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
   IssueViewApiResponse,
+  WorkspaceMemberApiResponse,
 } from "../api/types";
+
+type CreatedDatePreset = "1_week" | "2_weeks" | "1_month";
+
+type ProjectViewsFilters = {
+  query: string;
+  favoritesOnly: boolean;
+  createdDatePreset: CreatedDatePreset | "custom" | null;
+  createdAfter: string | null;
+  createdBefore: string | null;
+  createdByIds: string[];
+};
+
+const PROJECT_VIEWS_FILTER_EVENT = "project-views-filter-change";
+
+function getProjectViewsFavoritesKey(workspaceId: string, projectId: string) {
+  return `project-view-favorites:${workspaceId}:${projectId}`;
+}
+
+function readFavorites(key: string): string[] {
+  try {
+    const raw = localStorage.getItem(key);
+    const arr = raw ? (JSON.parse(raw) as unknown) : [];
+    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
 
 export function ViewsPage() {
   const { workspaceSlug, projectId } = useParams<{
@@ -26,6 +54,16 @@ export function ViewsPage() {
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<ProjectViewsFilters>({
+    query: "",
+    favoritesOnly: false,
+    createdDatePreset: null,
+    createdAfter: null,
+    createdBefore: null,
+    createdByIds: [],
+  });
+  const [, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
   const loadPageData = useCallback(() => {
     if (!workspaceSlug || !projectId) {
@@ -38,16 +76,19 @@ export function ViewsPage() {
       workspaceService.getBySlug(workspaceSlug),
       projectService.get(workspaceSlug, projectId),
       viewService.list(workspaceSlug, projectId),
+      workspaceService.listMembers(workspaceSlug),
     ])
-      .then(([w, p, list]) => {
+      .then(([w, p, list, mem]) => {
         setWorkspace(w ?? null);
         setProject(p ?? null);
         setViews(list ?? []);
+        setMembers(mem ?? []);
       })
       .catch(() => {
         setWorkspace(null);
         setProject(null);
         setViews([]);
+        setMembers([]);
       })
       .finally(() => {
         setLoading(false);
@@ -66,8 +107,86 @@ export function ViewsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!workspace?.id || !projectId) return;
+    const key = getProjectViewsFavoritesKey(workspace.id, projectId);
+    setFavoriteIds(readFavorites(key));
+  }, [workspace?.id, projectId]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<ProjectViewsFilters>;
+      if (!ce.detail) return;
+      setFilters((prev) => ({ ...prev, ...ce.detail }));
+    };
+    window.addEventListener(PROJECT_VIEWS_FILTER_EVENT, handler as EventListener);
+    return () => {
+      window.removeEventListener(
+        PROJECT_VIEWS_FILTER_EVENT,
+        handler as EventListener,
+      );
+    };
+  }, []);
+
+  const toggleFavorite = (viewId: string) => {
+    if (!workspace?.id || !projectId) return;
+    const key = getProjectViewsFavoritesKey(workspace.id, projectId);
+    setFavoriteIds((prev) => {
+      const next = prev.includes(viewId)
+        ? prev.filter((id) => id !== viewId)
+        : [...prev, viewId];
+      try {
+        localStorage.setItem(key, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
+  const filteredViews = useMemo(() => {
+    const q = filters.query.trim().toLowerCase();
+    const now = Date.now();
+    const days =
+      filters.createdDatePreset === "1_week"
+        ? 7
+        : filters.createdDatePreset === "2_weeks"
+          ? 14
+          : filters.createdDatePreset === "1_month"
+            ? 30
+            : null;
+    const createdAfter = days ? now - days * 24 * 60 * 60 * 1000 : null;
+    const customAfter = filters.createdAfter
+      ? new Date(filters.createdAfter).getTime()
+      : null;
+    const customBefore = filters.createdBefore
+      ? new Date(filters.createdBefore).getTime()
+      : null;
+    return views.filter((v) => {
+      if (q) {
+        const hay = `${v.name ?? ""} ${v.description ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (filters.favoritesOnly && !favoriteIds.includes(v.id)) return false;
+      if (filters.createdByIds.length && !filters.createdByIds.includes(v.owned_by_id))
+        return false;
+      if (createdAfter) {
+        const ts = v.created_at ? new Date(v.created_at).getTime() : 0;
+        if (!ts || ts < createdAfter) return false;
+      }
+      if (filters.createdDatePreset === "custom") {
+        const ts = v.created_at ? new Date(v.created_at).getTime() : 0;
+        if (!ts) return false;
+        if (customAfter && ts < customAfter) return false;
+        if (customBefore && ts > customBefore + 24 * 60 * 60 * 1000 - 1)
+          return false;
+      }
+      return true;
+    });
+  }, [views, filters, favoriteIds]);
+
   const sortedViews = useMemo(() => {
-    const list = [...views];
+    const list = [...filteredViews];
     const sortBy = display.sortBy;
     const sortOrder = display.sortOrder;
     list.sort((a, b) => {
@@ -90,7 +209,7 @@ export function ViewsPage() {
       return sortOrder === "asc" ? cmp : -cmp;
     });
     return list;
-  }, [views, display.sortBy, display.sortOrder]);
+  }, [filteredViews, display.sortBy, display.sortOrder]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,6 +241,22 @@ export function ViewsPage() {
           year: "numeric",
         })
       : "—";
+
+  const IconStar = ({ filled }: { filled: boolean }) => (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <polygon points="12 2 15 9 22 9 17 14 19 21 12 17 5 21 7 14 2 9 9 9" />
+    </svg>
+  );
 
   if (loading) {
     return (
@@ -175,12 +310,28 @@ export function ViewsPage() {
                   className="flex items-center justify-between px-6 py-4 hover:bg-(--bg-layer-1-hover)"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-(--txt-primary)">
-                      {v.name}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-(--txt-secondary)">
-                      {v.description || "Saved project view"}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
+                        aria-label={
+                          favoriteIds.includes(v.id)
+                            ? "Unfavorite view"
+                            : "Favorite view"
+                        }
+                        onClick={() => toggleFavorite(v.id)}
+                      >
+                        <IconStar filled={favoriteIds.includes(v.id)} />
+                      </button>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-(--txt-primary)">
+                          {v.name}
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-(--txt-secondary)">
+                          {v.description || "Saved project view"}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                   <div className="shrink-0 text-xs text-(--txt-tertiary)">
                     Updated {formatDate(v.updated_at)}

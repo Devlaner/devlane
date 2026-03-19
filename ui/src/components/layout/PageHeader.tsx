@@ -29,7 +29,10 @@ import type {
   ProjectApiResponse,
   IssueViewApiResponse,
   ModuleApiResponse,
+  WorkspaceMemberApiResponse,
 } from "../../api/types";
+
+const PROJECT_VIEWS_FILTER_EVENT = "project-views-filter-change";
 
 export type ProjectSection =
   | "issues"
@@ -1011,7 +1014,6 @@ function ProjectSectionHeader({
   const navigate = useNavigate();
   const modulesFilter = useModulesFilter();
   const {
-    filters: viewsFilters,
     display: viewsDisplay,
     setDisplay,
   } = useWorkspaceViewsState();
@@ -1028,6 +1030,16 @@ function ProjectSectionHeader({
   const [modulesSortOpen, setModulesSortOpen] = useState<string | null>(null);
   const [viewsSortOpen, setViewsSortOpen] = useState<string | null>(null);
   const [viewsFiltersOpen, setViewsFiltersOpen] = useState<string | null>(null);
+  const [viewsSearchOpen, setViewsSearchOpen] = useState(false);
+  const [viewsSearchQuery, setViewsSearchQuery] = useState("");
+  const [viewsFavOnly, setViewsFavOnly] = useState(false);
+  const [viewsCreatedDate, setViewsCreatedDate] = useState<
+    "1_week" | "2_weeks" | "1_month" | null
+  >(null);
+  const [viewsCreatedBy, setViewsCreatedBy] = useState<string[]>([]);
+  const [viewsMembers, setViewsMembers] = useState<WorkspaceMemberApiResponse[]>(
+    [],
+  );
   const [modulesDateRangeModal, setModulesDateRangeModal] = useState<
     "start" | "due" | null
   >(null);
@@ -1071,6 +1083,43 @@ function ProjectSectionHeader({
       modulesSearchInputRef.current?.focus();
     }
   }, [modulesSearchExpanded]);
+
+  useEffect(() => {
+    if (section !== "views") return;
+    let cancelled = false;
+    workspaceService
+      .listMembers(workspaceSlug)
+      .then((mem) => {
+        if (!cancelled) setViewsMembers(mem ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setViewsMembers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [section, workspaceSlug]);
+
+  const dispatchViewsFilters = (
+    next: Partial<{
+      query: string;
+      favoritesOnly: boolean;
+      createdDatePreset: "1_week" | "2_weeks" | "1_month" | null;
+      createdByIds: string[];
+    }>,
+  ) => {
+    window.dispatchEvent(
+      new CustomEvent(PROJECT_VIEWS_FILTER_EVENT, {
+        detail: {
+          query: viewsSearchQuery,
+          favoritesOnly: viewsFavOnly,
+          createdDatePreset: viewsCreatedDate,
+          createdByIds: viewsCreatedBy,
+          ...next,
+        },
+      }),
+    );
+  };
 
   const q = (s: string) => s.trim().toLowerCase();
   const filteredProjects = projects.filter((p) =>
@@ -1447,16 +1496,8 @@ function ProjectSectionHeader({
       );
     }
     if (section === "views") {
-      const activeFilters = [
-        viewsFilters.priority.length,
-        viewsFilters.stateGroup.length,
-        viewsFilters.assigneeIds.length,
-        viewsFilters.createdByIds.length,
-        viewsFilters.labelIds.length,
-        viewsFilters.projectIds.length,
-        viewsFilters.startDate.length,
-        viewsFilters.dueDate.length,
-      ].some((count) => count > 0);
+      const activeFilters =
+        viewsFavOnly || !!viewsCreatedDate || viewsCreatedBy.length > 0;
       const sortLabel =
         viewsDisplay.sortBy === "name"
           ? "Name"
@@ -1465,6 +1506,65 @@ function ProjectSectionHeader({
             : "Updated at";
       return (
         <>
+          <div className="flex items-center">
+            {!viewsSearchOpen && (
+              <button
+                type="button"
+                className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
+                aria-label="Search views"
+                onClick={() => setViewsSearchOpen(true)}
+              >
+                <IconSearch />
+              </button>
+            )}
+            <div
+              className={`ml-2 overflow-hidden transition-[width] duration-200 ease-out ${
+                viewsSearchOpen ? "w-64" : "w-0"
+              }`}
+            >
+              <div className="flex items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2 py-1.5">
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
+                  <IconSearch />
+                </span>
+                <input
+                  type="text"
+                  value={viewsSearchQuery}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setViewsSearchQuery(v);
+                    dispatchViewsFilters({ query: v });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      if (viewsSearchQuery.trim()) {
+                        setViewsSearchQuery("");
+                        dispatchViewsFilters({ query: "" });
+                      } else {
+                        setViewsSearchOpen(false);
+                      }
+                    }
+                  }}
+                  placeholder="Search"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
+                  aria-label="Search"
+                />
+                {viewsSearchOpen && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewsSearchQuery("");
+                      dispatchViewsFilters({ query: "" });
+                      setViewsSearchOpen(false);
+                    }}
+                    className="shrink-0 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
+                    aria-label="Clear search"
+                  >
+                    <IconX />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
           <Dropdown
             id="project-views-sort"
             openId={viewsSortOpen}
@@ -1533,10 +1633,148 @@ function ProjectSectionHeader({
             ))}
           </Dropdown>
           <div className="relative shrink-0">
-            <WorkspaceViewsFiltersDropdown
+            <Dropdown
+              id="project-views-filters"
               openId={viewsFiltersOpen}
               onOpen={setViewsFiltersOpen}
-            />
+              label="Filters"
+              icon={<IconFilter />}
+              displayValue="Filters"
+              align="right"
+              panelClassName="flex w-[300px] max-h-[min(70vh,28rem)] flex-col overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
+              triggerContent={
+                <>
+                  <span className="shrink-0 text-(--txt-icon-tertiary)">
+                    <IconFilter />
+                  </span>
+                  <span className="truncate">Filters</span>
+                  <span className="shrink-0 text-(--txt-icon-tertiary)">
+                    <IconChevronDown />
+                  </span>
+                </>
+              }
+              triggerClassName="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+            >
+              <div className="sticky top-0 shrink-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-2">
+                <div className="flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
+                  <span className="shrink-0 text-(--txt-icon-tertiary)">
+                    <IconSearch />
+                  </span>
+                  <input
+                    type="text"
+                    value={viewsSearchQuery}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setViewsSearchQuery(v);
+                      dispatchViewsFilters({ query: v });
+                    }}
+                    placeholder="Search"
+                    className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
+                  />
+                </div>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto py-2">
+                <label className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
+                  <input
+                    type="checkbox"
+                    checked={viewsFavOnly}
+                    onChange={() => {
+                      setViewsFavOnly((prev) => {
+                        const next = !prev;
+                        dispatchViewsFilters({ favoritesOnly: next });
+                        return next;
+                      });
+                    }}
+                    className="rounded border-(--border-subtle)"
+                  />
+                  <span>Favorites</span>
+                </label>
+
+                <div className="mt-2">
+                  <div className="flex items-center justify-between px-3 py-2 text-xs font-medium text-(--txt-tertiary)">
+                    <span>Created date</span>
+                  </div>
+                  {[
+                    { id: "1_week", label: "1 week ago" },
+                    { id: "2_weeks", label: "2 weeks ago" },
+                    { id: "1_month", label: "1 month ago" },
+                  ].map((opt) => (
+                    <label
+                      key={opt.id}
+                      className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                    >
+                      <input
+                        type="radio"
+                        name="views-created-date"
+                        checked={viewsCreatedDate === opt.id}
+                        onChange={() => {
+                          setViewsCreatedDate(opt.id as never);
+                          dispatchViewsFilters({
+                            createdDatePreset: opt.id as never,
+                          });
+                        }}
+                        className="border-(--border-subtle)"
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  ))}
+                  <button
+                    type="button"
+                    className="w-full px-3 py-1.5 text-left text-sm text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
+                    onClick={() => {
+                      setViewsCreatedDate(null);
+                      dispatchViewsFilters({ createdDatePreset: null });
+                    }}
+                  >
+                    Clear created date
+                  </button>
+                </div>
+
+                <div className="mt-2">
+                  <div className="flex items-center justify-between px-3 py-2 text-xs font-medium text-(--txt-tertiary)">
+                    <span>Created by</span>
+                  </div>
+                  {viewsMembers.map((m) => {
+                    const checked = viewsCreatedBy.includes(m.member_id);
+                    const label =
+                      m.member_display_name ?? m.member_email ?? m.member_id;
+                    return (
+                      <label
+                        key={m.id}
+                        className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            setViewsCreatedBy((prev) => {
+                              const next = checked
+                                ? prev.filter((id) => id !== m.member_id)
+                                : [...prev, m.member_id];
+                              dispatchViewsFilters({ createdByIds: next });
+                              return next;
+                            });
+                          }}
+                          className="rounded border-(--border-subtle)"
+                        />
+                        {m.member_avatar ? (
+                          <img
+                            src={m.member_avatar}
+                            alt=""
+                            className="size-5 shrink-0 rounded-full object-cover"
+                          />
+                        ) : (
+                          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--bg-layer-2) text-[10px] text-(--txt-secondary)">
+                            {label.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                        <span className="truncate">{label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </Dropdown>
             {activeFilters && (
               <span
                 className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-(--brand-default)"
