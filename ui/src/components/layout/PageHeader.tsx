@@ -9,6 +9,7 @@ import {
 import { Button } from "../ui";
 import { Dropdown } from "../work-item";
 import { useModulesFilter } from "../../contexts/ModulesFilterContext";
+import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
 import {
   WorkspaceViewsFiltersDropdown,
   WorkspaceViewsDisplayDropdown,
@@ -1009,6 +1010,11 @@ function ProjectSectionHeader({
 }) {
   const navigate = useNavigate();
   const modulesFilter = useModulesFilter();
+  const {
+    filters: viewsFilters,
+    display: viewsDisplay,
+    setDisplay,
+  } = useWorkspaceViewsState();
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
   const issuesUrl = `${baseUrl}/issues`;
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
@@ -1020,6 +1026,8 @@ function ProjectSectionHeader({
     null,
   );
   const [modulesSortOpen, setModulesSortOpen] = useState<string | null>(null);
+  const [viewsSortOpen, setViewsSortOpen] = useState<string | null>(null);
+  const [viewsFiltersOpen, setViewsFiltersOpen] = useState<string | null>(null);
   const [modulesDateRangeModal, setModulesDateRangeModal] = useState<
     "start" | "due" | null
   >(null);
@@ -1439,30 +1447,115 @@ function ProjectSectionHeader({
       );
     }
     if (section === "views") {
+      const activeFilters = [
+        viewsFilters.priority.length,
+        viewsFilters.stateGroup.length,
+        viewsFilters.assigneeIds.length,
+        viewsFilters.createdByIds.length,
+        viewsFilters.labelIds.length,
+        viewsFilters.projectIds.length,
+        viewsFilters.startDate.length,
+        viewsFilters.dueDate.length,
+      ].some((count) => count > 0);
+      const sortLabel =
+        viewsDisplay.sortBy === "name"
+          ? "Name"
+          : viewsDisplay.sortBy === "created_at"
+            ? "Created at"
+            : "Updated at";
       return (
         <>
-          <button
-            type="button"
-            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+          <Dropdown
+            id="project-views-sort"
+            openId={viewsSortOpen}
+            onOpen={setViewsSortOpen}
+            label="Sort by"
+            icon={<IconArrowUpDown />}
+            displayValue={sortLabel}
+            align="right"
+            panelClassName="min-w-[180px] rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
+            triggerContent={
+              <>
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
+                  <IconArrowUpDown />
+                </span>
+                <span className="truncate">{sortLabel}</span>
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
+                  <IconChevronDown />
+                </span>
+              </>
+            }
+            triggerClassName="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
-            <IconFilter /> Filters <IconChevronDown />
-          </button>
-          <button
+            {[
+              { value: "updated_at", label: "Updated at" },
+              { value: "created_at", label: "Created at" },
+              { value: "name", label: "Name" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  setDisplay((prev) => ({
+                    ...prev,
+                    sortBy: opt.value as typeof prev.sortBy,
+                  }));
+                  setViewsSortOpen(null);
+                }}
+                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+              >
+                {opt.label}
+                {viewsDisplay.sortBy === opt.value && (
+                  <span className="shrink-0 text-(--txt-primary)">
+                    <IconCheck />
+                  </span>
+                )}
+              </button>
+            ))}
+            <div className="my-1 border-t border-(--border-subtle)" />
+            {(["desc", "asc"] as const).map((orderValue) => (
+              <button
+                key={orderValue}
+                type="button"
+                onClick={() => {
+                  setDisplay((prev) => ({ ...prev, sortOrder: orderValue }));
+                  setViewsSortOpen(null);
+                }}
+                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+              >
+                {orderValue === "desc" ? "Descending" : "Ascending"}
+                {viewsDisplay.sortOrder === orderValue && (
+                  <span className="shrink-0 text-(--txt-primary)">
+                    <IconCheck />
+                  </span>
+                )}
+              </button>
+            ))}
+          </Dropdown>
+          <div className="relative shrink-0">
+            <WorkspaceViewsFiltersDropdown
+              openId={viewsFiltersOpen}
+              onOpen={setViewsFiltersOpen}
+            />
+            {activeFilters && (
+              <span
+                className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-(--brand-default)"
+                aria-hidden
+              />
+            )}
+          </div>
+          <Button
+            size="sm"
+            className="gap-1.5 text-[13px] font-medium"
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent("project-views-create-open"),
+              );
+            }}
           >
-            Display <IconChevronDown />
-          </button>
-          <Button size="sm" className="gap-1.5 text-[13px] font-medium">
             <IconPlus /> Add view
           </Button>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-            aria-label="More options"
-          >
-            <IconMoreVertical />
-          </button>
         </>
       );
     }
