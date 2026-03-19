@@ -43,4 +43,22 @@ export const viewService = {
     );
     return data;
   },
+
+  async update(
+    workspaceSlug: string,
+    viewId: string,
+    payload: Partial<CreateViewRequest>,
+  ): Promise<IssueViewApiResponse> {
+    const { data } = await apiClient.patch<IssueViewApiResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/`,
+      payload,
+    );
+    return data;
+  },
+
+  async remove(workspaceSlug: string, viewId: string): Promise<void> {
+    await apiClient.delete(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/`,
+    );
+  },
 };

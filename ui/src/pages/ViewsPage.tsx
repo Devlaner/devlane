@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button, Input, Modal } from "../components/ui";
 import { useWorkspaceViewsState } from "../contexts/WorkspaceViewsStateContext";
+import { useAuth } from "../contexts/AuthContext";
 import { workspaceService } from "../services/workspaceService";
 import { projectService } from "../services/projectService";
 import { viewService } from "../services/viewService";
@@ -9,6 +10,7 @@ import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
   IssueViewApiResponse,
+  ProjectMemberApiResponse,
   WorkspaceMemberApiResponse,
 } from "../api/types";
 
@@ -24,6 +26,7 @@ type ProjectViewsFilters = {
 };
 
 const PROJECT_VIEWS_FILTER_EVENT = "project-views-filter-change";
+const PROJECT_MEMBER_ROLE_MIN_CREATE = 10;
 
 function getProjectViewsFavoritesKey(workspaceId: string, projectId: string) {
   return `project-view-favorites:${workspaceId}:${projectId}`;
@@ -40,19 +43,29 @@ function readFavorites(key: string): string[] {
 }
 
 export function ViewsPage() {
+  const navigate = useNavigate();
   const { workspaceSlug, projectId } = useParams<{
     workspaceSlug: string;
     projectId: string;
   }>();
+  const { user } = useAuth();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [views, setViews] = useState<IssueViewApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { display } = useWorkspaceViewsState();
   const [createOpen, setCreateOpen] = useState(false);
+  const [editOpenId, setEditOpenId] = useState<string | null>(null);
+  const [deleteOpenId, setDeleteOpenId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [copyingId, setCopyingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ProjectViewsFilters>({
     query: "",
@@ -62,7 +75,10 @@ export function ViewsPage() {
     createdBefore: null,
     createdByIds: [],
   });
-  const [, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
+  const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
+  const [projectMembers, setProjectMembers] = useState<ProjectMemberApiResponse[]>(
+    [],
+  );
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
   const loadPageData = useCallback(() => {
@@ -72,23 +88,30 @@ export function ViewsPage() {
       return Promise.resolve();
     }
     setLoading(true);
+    setLoadError(null);
     return Promise.all([
       workspaceService.getBySlug(workspaceSlug),
       projectService.get(workspaceSlug, projectId),
       viewService.list(workspaceSlug, projectId),
       workspaceService.listMembers(workspaceSlug),
+      projectService.listMembers(workspaceSlug, projectId),
     ])
-      .then(([w, p, list, mem]) => {
+      .then(([w, p, list, mem, projectMem]) => {
         setWorkspace(w ?? null);
         setProject(p ?? null);
         setViews(list ?? []);
         setMembers(mem ?? []);
+        setProjectMembers(projectMem ?? []);
       })
       .catch(() => {
         setWorkspace(null);
         setProject(null);
         setViews([]);
         setMembers([]);
+        setProjectMembers([]);
+        setLoadError(
+          "Unable to load project views right now. Please refresh and try again.",
+        );
       })
       .finally(() => {
         setLoading(false);
@@ -213,7 +236,7 @@ export function ViewsPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!workspaceSlug || !projectId || !title.trim()) return;
+    if (!workspaceSlug || !projectId || !title.trim() || !canCreateViews) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -230,6 +253,67 @@ export function ViewsPage() {
       setError(err instanceof Error ? err.message : "Failed to create view.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const activeView = useMemo(
+    () => views.find((v) => v.id === editOpenId) ?? null,
+    [views, editOpenId],
+  );
+  const deleteView = useMemo(
+    () => views.find((v) => v.id === deleteOpenId) ?? null,
+    [views, deleteOpenId],
+  );
+
+  const openEdit = (view: IssueViewApiResponse) => {
+    setEditOpenId(view.id);
+    setEditTitle(view.name ?? "");
+    setEditDescription(view.description ?? "");
+    setError(null);
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!workspaceSlug || !activeView || !editTitle.trim()) return;
+    setEditing(true);
+    setError(null);
+    try {
+      await viewService.update(workspaceSlug, activeView.id, {
+        name: editTitle.trim(),
+        description: editDescription.trim() || undefined,
+      });
+      setEditOpenId(null);
+      await loadPageData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update view.");
+    } finally {
+      setEditing(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!workspaceSlug || !deleteView) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      await viewService.remove(workspaceSlug, deleteView.id);
+      setDeleteOpenId(null);
+      await loadPageData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete view.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const copyViewLink = async (viewId: string) => {
+    if (!workspaceSlug || !projectId) return;
+    setCopyingId(viewId);
+    try {
+      const href = `${window.location.origin}/${workspaceSlug}/projects/${projectId}/views/${viewId}`;
+      await navigator.clipboard.writeText(href);
+    } finally {
+      setTimeout(() => setCopyingId((prev) => (prev === viewId ? null : prev)), 800);
     }
   };
 
@@ -258,6 +342,35 @@ export function ViewsPage() {
     </svg>
   );
 
+  const memberNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const member of members) {
+      const label =
+        member.member_display_name?.trim() ||
+        member.member_email?.split("@")[0]?.trim() ||
+        "Member";
+      map.set(member.member_id, label);
+    }
+    return map;
+  }, [members]);
+
+  const myProjectRole = useMemo(() => {
+    if (!user) return null;
+    const current = projectMembers.find((m) => m.member_id === user.id);
+    return current?.role ?? null;
+  }, [projectMembers, user]);
+
+  const viewsFeatureEnabled = project?.issue_views_view !== false;
+  const canCreateViews =
+    !!user &&
+    viewsFeatureEnabled &&
+    (project?.owner_id === user.id ||
+      (typeof myProjectRole === "number" &&
+        myProjectRole >= PROJECT_MEMBER_ROLE_MIN_CREATE));
+
+  const noViewsAtAll = views.length === 0;
+  const hasFilteredOutResults = views.length > 0 && sortedViews.length === 0;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
@@ -266,13 +379,32 @@ export function ViewsPage() {
     );
   }
   if (!workspace || !project) {
-    return <div className="text-(--txt-secondary)">Project not found.</div>;
+    return (
+      <div className="px-6 py-8 text-sm text-(--txt-secondary)">
+        {loadError ?? "Project not found."}
+      </div>
+    );
+  }
+  if (!viewsFeatureEnabled) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-10">
+        <div className="max-w-xl rounded-lg border border-(--border-subtle) bg-(--bg-layer-1) p-6 text-center">
+          <h2 className="text-lg font-semibold text-(--txt-primary)">
+            Views are disabled for this project
+          </h2>
+          <p className="mt-2 text-sm text-(--txt-secondary)">
+            Enable the Views feature in project settings to create and manage
+            project views.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <>
       <div className="-mt-(--padding-page) -mr-(--padding-page) -mb-(--padding-page) flex min-h-0 flex-1 flex-col">
-        {sortedViews.length === 0 ? (
+        {noViewsAtAll ? (
           <div className="flex min-h-0 flex-1 items-start justify-center overflow-auto px-8 py-10">
             <div className="w-full max-w-5xl">
               <h2 className="text-2xl font-semibold text-(--txt-primary)">
@@ -295,10 +427,26 @@ export function ViewsPage() {
                 </div>
               </div>
               <div className="mt-7 flex justify-center">
-                <Button size="sm" onClick={() => setCreateOpen(true)}>
+                <Button
+                  size="sm"
+                  onClick={() => setCreateOpen(true)}
+                  disabled={!canCreateViews}
+                >
                   Create your first view
                 </Button>
               </div>
+            </div>
+          </div>
+        ) : hasFilteredOutResults ? (
+          <div className="flex min-h-0 flex-1 items-center justify-center px-8 py-10">
+            <div className="max-w-lg text-center">
+              <h3 className="text-lg font-semibold text-(--txt-primary)">
+                No views match your filters
+              </h3>
+              <p className="mt-2 text-sm text-(--txt-secondary)">
+                Try clearing or relaxing your search, created date, favorites, or
+                created-by filters.
+              </p>
             </div>
           </div>
         ) : (
@@ -324,17 +472,63 @@ export function ViewsPage() {
                         <IconStar filled={favoriteIds.includes(v.id)} />
                       </button>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-(--txt-primary)">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(
+                              `/${workspaceSlug}/projects/${projectId}/views/${v.id}`,
+                            )
+                          }
+                          className="max-w-120 truncate text-left text-sm font-medium text-(--txt-primary) hover:underline"
+                        >
                           {v.name}
-                        </p>
+                        </button>
                         <p className="mt-0.5 truncate text-xs text-(--txt-secondary)">
                           {v.description || "Saved project view"}
+                        </p>
+                        <p className="mt-0.5 text-xs text-(--txt-tertiary)">
+                          Created by {memberNameById.get(v.owned_by_id) ?? "Member"}
                         </p>
                       </div>
                     </div>
                   </div>
-                  <div className="shrink-0 text-xs text-(--txt-tertiary)">
-                    Updated {formatDate(v.updated_at)}
+                  <div className="ml-4 flex shrink-0 items-center gap-2 text-xs text-(--txt-tertiary)">
+                    <span>Updated {formatDate(v.updated_at)}</span>
+                    <button
+                      type="button"
+                      onClick={() => copyViewLink(v.id)}
+                      className="rounded px-2 py-1 text-(--txt-secondary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-primary)"
+                    >
+                      {copyingId === v.id ? "Copied" : "Copy link"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        window.open(
+                          `/${workspaceSlug}/projects/${projectId}/views/${v.id}`,
+                          "_blank",
+                        )
+                      }
+                      className="rounded px-2 py-1 text-(--txt-secondary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-primary)"
+                    >
+                      Open
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!canCreateViews}
+                      onClick={() => openEdit(v)}
+                      className="rounded px-2 py-1 text-(--txt-secondary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-primary) disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!canCreateViews}
+                      onClick={() => setDeleteOpenId(v.id)}
+                      className="rounded px-2 py-1 text-(--txt-danger-primary) hover:bg-(--bg-layer-2-hover) disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
               ))}
@@ -363,7 +557,7 @@ export function ViewsPage() {
             <Button
               type="submit"
               form="project-create-view-form"
-              disabled={submitting || !title.trim()}
+              disabled={submitting || !title.trim() || !canCreateViews}
             >
               {submitting ? "Creating..." : "Add view"}
             </Button>
@@ -398,6 +592,102 @@ export function ViewsPage() {
             <p className="text-sm text-(--txt-danger-primary)">{error}</p>
           )}
         </form>
+      </Modal>
+      <Modal
+        open={!!editOpenId}
+        onClose={() => {
+          setEditOpenId(null);
+          setError(null);
+        }}
+        title="Edit view"
+        className="max-w-lg"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setEditOpenId(null)}
+              disabled={editing}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="project-edit-view-form"
+              disabled={editing || !editTitle.trim()}
+            >
+              {editing ? "Saving..." : "Save changes"}
+            </Button>
+          </>
+        }
+      >
+        <form
+          id="project-edit-view-form"
+          onSubmit={handleEdit}
+          className="space-y-4"
+        >
+          <Input
+            label="Name"
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            placeholder="View name"
+            autoFocus
+          />
+          <div>
+            <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
+              Description
+            </label>
+            <textarea
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              placeholder="Optional description"
+              rows={3}
+              className="w-full rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
+            />
+          </div>
+          {error && (
+            <p className="text-sm text-(--txt-danger-primary)">{error}</p>
+          )}
+        </form>
+      </Modal>
+      <Modal
+        open={!!deleteOpenId}
+        onClose={() => {
+          setDeleteOpenId(null);
+          setError(null);
+        }}
+        title="Delete view"
+        className="max-w-md"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setDeleteOpenId(null)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleDelete()}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-(--txt-secondary)">
+          Delete view{" "}
+          <span className="font-medium text-(--txt-primary)">
+            {deleteView?.name ?? "this view"}
+          </span>
+          ? This action cannot be undone.
+        </p>
+        {error && (
+          <p className="mt-3 text-sm text-(--txt-danger-primary)">{error}</p>
+        )}
       </Modal>
     </>
   );
