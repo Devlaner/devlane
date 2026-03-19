@@ -391,8 +391,11 @@ export interface IssueViewApiResponse {
   filters?: Record<string, unknown>;
   display_filters?: Record<string, unknown>;
   display_properties?: Record<string, unknown>;
-  access?: number;
+  access?: number | "public" | "private";
   sort_order?: number;
+  anchor?: string | null;
+  is_favorite?: boolean;
+  owned_by?: string;
   owned_by_id: string;
   workspace_id: string;
   project_id?: string | null;

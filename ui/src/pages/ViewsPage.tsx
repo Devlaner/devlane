@@ -44,6 +44,30 @@ function readFavorites(key: string): string[] {
   }
 }
 
+type AccessBadge = {
+  label: "Public" | "Private";
+  tone: "public" | "private";
+};
+
+function resolveAccessBadge(view: IssueViewApiResponse): AccessBadge | null {
+  if (typeof view.access === "string") {
+    if (view.access.toLowerCase() === "public")
+      return { label: "Public", tone: "public" };
+    if (view.access.toLowerCase() === "private")
+      return { label: "Private", tone: "private" };
+  }
+  if (typeof view.access === "number") {
+    if (view.access === 1) return { label: "Public", tone: "public" };
+    if (view.access === 0) return { label: "Private", tone: "private" };
+  }
+  return null;
+}
+
+function userInitial(name: string): string {
+  const trimmed = name.trim();
+  return trimmed ? trimmed.charAt(0).toUpperCase() : "?";
+}
+
 export function ViewsPage() {
   const navigate = useNavigate();
   const { workspaceSlug, projectId } = useParams<{
@@ -103,6 +127,12 @@ export function ViewsPage() {
         setViews(list ?? []);
         setMembers(mem ?? []);
         setProjectMembers(projectMem ?? []);
+        const serverFavorites = (list ?? [])
+          .filter((v) => v.is_favorite)
+          .map((v) => v.id);
+        if (serverFavorites.length > 0) {
+          setFavoriteIds(serverFavorites);
+        }
       })
       .catch(() => {
         setWorkspace(null);
@@ -134,8 +164,13 @@ export function ViewsPage() {
   useEffect(() => {
     if (!workspace?.id || !projectId) return;
     const key = getProjectViewsFavoritesKey(workspace.id, projectId);
-    setFavoriteIds(readFavorites(key));
-  }, [workspace?.id, projectId]);
+    setFavoriteIds((prev) => {
+      const local = readFavorites(key);
+      if (prev.length === 0) return local;
+      const merged = Array.from(new Set([...prev, ...local]));
+      return merged;
+    });
+  }, [workspace?.id, projectId, views]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -370,6 +405,14 @@ export function ViewsPage() {
     return map;
   }, [members]);
 
+  const memberAvatarById = useMemo(() => {
+    const map = new Map<string, string | undefined>();
+    for (const member of members) {
+      map.set(member.member_id, member.member_avatar);
+    }
+    return map;
+  }, [members]);
+
   const myProjectRole = useMemo(() => {
     if (!user) return null;
     const current = projectMembers.find((m) => m.member_id === user.id);
@@ -501,10 +544,52 @@ export function ViewsPage() {
                         <p className="mt-0.5 truncate text-xs text-(--txt-secondary)">
                           {v.description || "Saved project view"}
                         </p>
-                        <p className="mt-0.5 text-xs text-(--txt-tertiary)">
-                          Created by{" "}
-                          {memberNameById.get(v.owned_by_id) ?? "Member"}
-                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          {(() => {
+                            const accessBadge = resolveAccessBadge(v);
+                            if (!accessBadge) return null;
+                            return (
+                              <span
+                                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                                  accessBadge.tone === "public"
+                                    ? "border-emerald-300/60 bg-emerald-500/10 text-emerald-700"
+                                    : "border-slate-300/70 bg-slate-500/10 text-slate-700"
+                                }`}
+                              >
+                                {accessBadge.label}
+                              </span>
+                            );
+                          })()}
+                          {v.anchor ? (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-fuchsia-300/60 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] font-medium text-fuchsia-700">
+                              <span className="size-1.5 rounded-full bg-fuchsia-600" />
+                              Live
+                            </span>
+                          ) : null}
+                          {favoriteIds.includes(v.id) ? (
+                            <span className="inline-flex items-center rounded-full border border-amber-300/60 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                              Favorite
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="mt-1 flex items-center gap-2 text-xs text-(--txt-tertiary)">
+                          {memberAvatarById.get(v.owned_by_id) ? (
+                            <img
+                              src={memberAvatarById.get(v.owned_by_id)}
+                              alt=""
+                              className="size-4 rounded-full object-cover"
+                            />
+                          ) : (
+                            <span className="inline-flex size-4 items-center justify-center rounded-full bg-(--bg-layer-2) text-[9px] font-semibold text-(--txt-secondary)">
+                              {userInitial(
+                                memberNameById.get(v.owned_by_id) ?? "Member",
+                              )}
+                            </span>
+                          )}
+                          <span>
+                            Created by {memberNameById.get(v.owned_by_id) ?? "Member"}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
