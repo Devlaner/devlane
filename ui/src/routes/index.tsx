@@ -96,6 +96,11 @@ const SettingsPage = lazy(() =>
 const ViewsPage = lazy(() =>
   import("../pages/ViewsPage").then((m) => page({ ViewsPage: m.ViewsPage })),
 );
+const ViewDetailPage = lazy(() =>
+  import("../pages/ViewDetailPage").then((m) =>
+    page({ ViewDetailPage: m.ViewDetailPage }),
+  ),
+);
 const PagesPage = lazy(() =>
   import("../pages/PagesPage").then((m) => page({ PagesPage: m.PagesPage })),
 );
@@ -428,6 +433,14 @@ const router = createBrowserRouter([
                         element: (
                           <Suspense fallback={<PageFallback />}>
                             <ViewsPage />
+                          </Suspense>
+                        ),
+                      },
+                      {
+                        path: "views/:viewId",
+                        element: (
+                          <Suspense fallback={<PageFallback />}>
+                            <ViewDetailPage />
                           </Suspense>
                         ),
                       },

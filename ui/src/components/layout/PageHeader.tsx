@@ -1013,10 +1013,7 @@ function ProjectSectionHeader({
 }) {
   const navigate = useNavigate();
   const modulesFilter = useModulesFilter();
-  const {
-    display: viewsDisplay,
-    setDisplay,
-  } = useWorkspaceViewsState();
+  const { display: viewsDisplay, setDisplay } = useWorkspaceViewsState();
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
   const issuesUrl = `${baseUrl}/issues`;
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
@@ -1034,12 +1031,18 @@ function ProjectSectionHeader({
   const [viewsSearchQuery, setViewsSearchQuery] = useState("");
   const [viewsFavOnly, setViewsFavOnly] = useState(false);
   const [viewsCreatedDate, setViewsCreatedDate] = useState<
-    "1_week" | "2_weeks" | "1_month" | null
+    "1_week" | "2_weeks" | "1_month" | "custom" | null
   >(null);
-  const [viewsCreatedBy, setViewsCreatedBy] = useState<string[]>([]);
-  const [viewsMembers, setViewsMembers] = useState<WorkspaceMemberApiResponse[]>(
-    [],
+  const [viewsCreatedAfter, setViewsCreatedAfter] = useState<string | null>(
+    null,
   );
+  const [viewsCreatedBefore, setViewsCreatedBefore] = useState<string | null>(
+    null,
+  );
+  const [viewsCreatedBy, setViewsCreatedBy] = useState<string[]>([]);
+  const [viewsMembers, setViewsMembers] = useState<
+    WorkspaceMemberApiResponse[]
+  >([]);
   const [modulesDateRangeModal, setModulesDateRangeModal] = useState<
     "start" | "due" | null
   >(null);
@@ -1104,7 +1107,9 @@ function ProjectSectionHeader({
     next: Partial<{
       query: string;
       favoritesOnly: boolean;
-      createdDatePreset: "1_week" | "2_weeks" | "1_month" | null;
+      createdDatePreset: "1_week" | "2_weeks" | "1_month" | "custom" | null;
+      createdAfter: string | null;
+      createdBefore: string | null;
       createdByIds: string[];
     }>,
   ) => {
@@ -1114,6 +1119,8 @@ function ProjectSectionHeader({
           query: viewsSearchQuery,
           favoritesOnly: viewsFavOnly,
           createdDatePreset: viewsCreatedDate,
+          createdAfter: viewsCreatedAfter,
+          createdBefore: viewsCreatedBefore,
           createdByIds: viewsCreatedBy,
           ...next,
         },
@@ -1497,7 +1504,11 @@ function ProjectSectionHeader({
     }
     if (section === "views") {
       const activeFilters =
-        viewsFavOnly || !!viewsCreatedDate || viewsCreatedBy.length > 0;
+        viewsFavOnly ||
+        !!viewsCreatedDate ||
+        !!viewsCreatedAfter ||
+        !!viewsCreatedBefore ||
+        viewsCreatedBy.length > 0;
       const sortLabel =
         viewsDisplay.sortBy === "name"
           ? "Name"
@@ -1698,6 +1709,7 @@ function ProjectSectionHeader({
                     { id: "1_week", label: "1 week ago" },
                     { id: "2_weeks", label: "2 weeks ago" },
                     { id: "1_month", label: "1 month ago" },
+                    { id: "custom", label: "Custom range" },
                   ].map((opt) => (
                     <label
                       key={opt.id}
@@ -1708,9 +1720,26 @@ function ProjectSectionHeader({
                         name="views-created-date"
                         checked={viewsCreatedDate === opt.id}
                         onChange={() => {
-                          setViewsCreatedDate(opt.id as never);
+                          const nextPreset = opt.id as
+                            | "1_week"
+                            | "2_weeks"
+                            | "1_month"
+                            | "custom";
+                          setViewsCreatedDate(nextPreset);
+                          if (nextPreset !== "custom") {
+                            setViewsCreatedAfter(null);
+                            setViewsCreatedBefore(null);
+                          }
                           dispatchViewsFilters({
-                            createdDatePreset: opt.id as never,
+                            createdDatePreset: nextPreset,
+                            createdAfter:
+                              nextPreset === "custom"
+                                ? viewsCreatedAfter
+                                : null,
+                            createdBefore:
+                              nextPreset === "custom"
+                                ? viewsCreatedBefore
+                                : null,
                           });
                         }}
                         className="border-(--border-subtle)"
@@ -1723,11 +1752,61 @@ function ProjectSectionHeader({
                     className="w-full px-3 py-1.5 text-left text-sm text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
                     onClick={() => {
                       setViewsCreatedDate(null);
-                      dispatchViewsFilters({ createdDatePreset: null });
+                      setViewsCreatedAfter(null);
+                      setViewsCreatedBefore(null);
+                      dispatchViewsFilters({
+                        createdDatePreset: null,
+                        createdAfter: null,
+                        createdBefore: null,
+                      });
                     }}
                   >
                     Clear created date
                   </button>
+                  {viewsCreatedDate === "custom" && (
+                    <div className="px-3 pb-2 pt-1">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="min-w-0">
+                          <label className="mb-1 block text-xs text-(--txt-tertiary)">
+                            After
+                          </label>
+                          <input
+                            type="date"
+                            value={viewsCreatedAfter ?? ""}
+                            onChange={(e) => {
+                              const nextValue = e.target.value || null;
+                              setViewsCreatedAfter(nextValue);
+                              dispatchViewsFilters({
+                                createdDatePreset: "custom",
+                                createdAfter: nextValue,
+                                createdBefore: viewsCreatedBefore,
+                              });
+                            }}
+                            className="w-full rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1 text-sm text-(--txt-primary) focus:outline-none"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <label className="mb-1 block text-xs text-(--txt-tertiary)">
+                            Before
+                          </label>
+                          <input
+                            type="date"
+                            value={viewsCreatedBefore ?? ""}
+                            onChange={(e) => {
+                              const nextValue = e.target.value || null;
+                              setViewsCreatedBefore(nextValue);
+                              dispatchViewsFilters({
+                                createdDatePreset: "custom",
+                                createdAfter: viewsCreatedAfter,
+                                createdBefore: nextValue,
+                              });
+                            }}
+                            className="w-full rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1 text-sm text-(--txt-primary) focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-2">
@@ -2289,7 +2368,10 @@ export function PageHeader() {
     projectBase &&
     moduleId &&
     pathname === `${projectBase}/modules/${moduleId}`;
-  const isViewsPage = projectBase && pathname === `${projectBase}/views`;
+  const isViewsPage =
+    projectBase &&
+    (pathname === `${projectBase}/views` ||
+      pathname.startsWith(`${projectBase}/views/`));
   const isPagesPage = projectBase && pathname === `${projectBase}/pages`;
   const isProjectSection =
     isIssuesPage || isCyclesPage || isModulesPage || isViewsPage || isPagesPage;

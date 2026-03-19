@@ -36,7 +36,9 @@ function readFavorites(key: string): string[] {
   try {
     const raw = localStorage.getItem(key);
     const arr = raw ? (JSON.parse(raw) as unknown) : [];
-    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === "string") : [];
+    return Array.isArray(arr)
+      ? arr.filter((x): x is string => typeof x === "string")
+      : [];
   } catch {
     return [];
   }
@@ -76,14 +78,13 @@ export function ViewsPage() {
     createdByIds: [],
   });
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
-  const [projectMembers, setProjectMembers] = useState<ProjectMemberApiResponse[]>(
-    [],
-  );
+  const [projectMembers, setProjectMembers] = useState<
+    ProjectMemberApiResponse[]
+  >([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
   const loadPageData = useCallback(() => {
     if (!workspaceSlug || !projectId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset loading when no slug/project (kept for future use)
       setLoading(false);
       return Promise.resolve();
     }
@@ -142,7 +143,10 @@ export function ViewsPage() {
       if (!ce.detail) return;
       setFilters((prev) => ({ ...prev, ...ce.detail }));
     };
-    window.addEventListener(PROJECT_VIEWS_FILTER_EVENT, handler as EventListener);
+    window.addEventListener(
+      PROJECT_VIEWS_FILTER_EVENT,
+      handler as EventListener,
+    );
     return () => {
       window.removeEventListener(
         PROJECT_VIEWS_FILTER_EVENT,
@@ -152,18 +156,23 @@ export function ViewsPage() {
   }, []);
 
   const toggleFavorite = (viewId: string) => {
-    if (!workspace?.id || !projectId) return;
+    if (!workspace?.id || !projectId || !workspaceSlug) return;
     const key = getProjectViewsFavoritesKey(workspace.id, projectId);
-    setFavoriteIds((prev) => {
-      const next = prev.includes(viewId)
-        ? prev.filter((id) => id !== viewId)
-        : [...prev, viewId];
-      try {
-        localStorage.setItem(key, JSON.stringify(next));
-      } catch {
-        // ignore
-      }
-      return next;
+    const isRemoving = favoriteIds.includes(viewId);
+    const next = isRemoving
+      ? favoriteIds.filter((id) => id !== viewId)
+      : [...favoriteIds, viewId];
+    setFavoriteIds(next);
+    try {
+      localStorage.setItem(key, JSON.stringify(next));
+    } catch {
+      // ignore local storage issues
+    }
+    const action = isRemoving
+      ? viewService.removeFavorite(workspaceSlug, viewId)
+      : viewService.addFavorite(workspaceSlug, viewId);
+    void action.catch(() => {
+      // keep local favorite as fallback if server endpoint is unavailable
     });
   };
 
@@ -191,7 +200,10 @@ export function ViewsPage() {
         if (!hay.includes(q)) return false;
       }
       if (filters.favoritesOnly && !favoriteIds.includes(v.id)) return false;
-      if (filters.createdByIds.length && !filters.createdByIds.includes(v.owned_by_id))
+      if (
+        filters.createdByIds.length &&
+        !filters.createdByIds.includes(v.owned_by_id)
+      )
         return false;
       if (createdAfter) {
         const ts = v.created_at ? new Date(v.created_at).getTime() : 0;
@@ -236,7 +248,8 @@ export function ViewsPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!workspaceSlug || !projectId || !title.trim() || !canCreateViews) return;
+    if (!workspaceSlug || !projectId || !title.trim() || !canCreateViews)
+      return;
     setSubmitting(true);
     setError(null);
     try {
@@ -313,7 +326,10 @@ export function ViewsPage() {
       const href = `${window.location.origin}/${workspaceSlug}/projects/${projectId}/views/${viewId}`;
       await navigator.clipboard.writeText(href);
     } finally {
-      setTimeout(() => setCopyingId((prev) => (prev === viewId ? null : prev)), 800);
+      setTimeout(
+        () => setCopyingId((prev) => (prev === viewId ? null : prev)),
+        800,
+      );
     }
   };
 
@@ -364,9 +380,8 @@ export function ViewsPage() {
   const canCreateViews =
     !!user &&
     viewsFeatureEnabled &&
-    (project?.owner_id === user.id ||
-      (typeof myProjectRole === "number" &&
-        myProjectRole >= PROJECT_MEMBER_ROLE_MIN_CREATE));
+    typeof myProjectRole === "number" &&
+    myProjectRole >= PROJECT_MEMBER_ROLE_MIN_CREATE;
 
   const noViewsAtAll = views.length === 0;
   const hasFilteredOutResults = views.length > 0 && sortedViews.length === 0;
@@ -444,8 +459,8 @@ export function ViewsPage() {
                 No views match your filters
               </h3>
               <p className="mt-2 text-sm text-(--txt-secondary)">
-                Try clearing or relaxing your search, created date, favorites, or
-                created-by filters.
+                Try clearing or relaxing your search, created date, favorites,
+                or created-by filters.
               </p>
             </div>
           </div>
@@ -487,7 +502,8 @@ export function ViewsPage() {
                           {v.description || "Saved project view"}
                         </p>
                         <p className="mt-0.5 text-xs text-(--txt-tertiary)">
-                          Created by {memberNameById.get(v.owned_by_id) ?? "Member"}
+                          Created by{" "}
+                          {memberNameById.get(v.owned_by_id) ?? "Member"}
                         </p>
                       </div>
                     </div>

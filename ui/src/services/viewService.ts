@@ -61,4 +61,16 @@ export const viewService = {
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/`,
     );
   },
+
+  async addFavorite(workspaceSlug: string, viewId: string): Promise<void> {
+    await apiClient.post(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/favorite`,
+    );
+  },
+
+  async removeFavorite(workspaceSlug: string, viewId: string): Promise<void> {
+    await apiClient.delete(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/favorite`,
+    );
+  },
 };
