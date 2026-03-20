@@ -2278,6 +2278,9 @@ function ProjectSavedViewDetailHeader({
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
   const [projectSearch, setProjectSearch] = useState("");
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
+  const [filtersDropdownOpen, setFiltersDropdownOpen] = useState<string | null>(
+    null,
+  );
   const projectDropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -2331,7 +2334,9 @@ function ProjectSavedViewDetailHeader({
   };
 
   const q = (s: string) => s.trim().toLowerCase();
-  const filteredProjects = projects.filter((p) => q(p.name).includes(q(projectSearch)));
+  const filteredProjects = projects.filter((p) =>
+    q(p.name).includes(q(projectSearch)),
+  );
 
   return (
     <>
@@ -2450,12 +2455,10 @@ function ProjectSavedViewDetailHeader({
           <IconGrid />
         </button>
         <div className="mx-1 w-px self-stretch bg-(--border-subtle)" />
-        <button
-          type="button"
-          className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
-        >
-          <IconFilter /> Filters <IconChevronDown />
-        </button>
+        <WorkspaceViewsFiltersDropdown
+          openId={filtersDropdownOpen}
+          onOpen={setFiltersDropdownOpen}
+        />
         <ProjectSavedViewDisplayDropdown />
         <Link
           to={`/${workspaceSlug}/analytics/work-items`}
@@ -2630,11 +2633,11 @@ export function PageHeader() {
     ? "issues"
     : isCyclesPage
       ? "cycles"
-        : isModulesPage
-          ? "modules"
-          : isViewsListPage
-            ? "views"
-            : isPagesPage
+      : isModulesPage
+        ? "modules"
+        : isViewsListPage
+          ? "views"
+          : isPagesPage
             ? "pages"
             : null;
 
