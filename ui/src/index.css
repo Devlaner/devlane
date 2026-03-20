@@ -1,12 +1,51 @@
 @import './styles/tokens.css';
 @import 'tailwindcss';
 
-/* Devlane base: Inter, antialiased, placeholder */
+/* Devlane base: Inter, antialiased, placeholder, custom scrollbar */
 * {
   -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Firefox: use standard scrollbar (Chrome 121+ ignores webkit when scrollbar-width is set) */
+@-moz-document url-prefix() {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+}
+
+/* Chrome, Safari, Edge: webkit scrollbar (no scrollbar-width = no OS buttons) */
+*::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+*::-webkit-scrollbar-button:vertical:start:increment,
+*::-webkit-scrollbar-button:vertical:end:decrement,
+*::-webkit-scrollbar-button:horizontal:start:increment,
+*::-webkit-scrollbar-button:horizontal:end:decrement,
+*::-webkit-scrollbar-button:single-button:vertical:decrement,
+*::-webkit-scrollbar-button:single-button:vertical:increment,
+*::-webkit-scrollbar-button:single-button:horizontal:decrement,
+*::-webkit-scrollbar-button:single-button:horizontal:increment {
+  display: none;
+  width: 0;
+  height: 0;
+}
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+*::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
 }
 
 @layer base {
@@ -27,9 +66,10 @@
   }
 }
 
-/* Devlane: invisible scrollbars on main content (right-side scroll) */
+/* Main content: invisible scrollbars (overrides global) */
 .main-content-scroll {
   scrollbar-width: none; /* Firefox */
+  scrollbar-color: transparent transparent;
   -ms-overflow-style: none; /* IE/Edge */
 }
 .main-content-scroll::-webkit-scrollbar {

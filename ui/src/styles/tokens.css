@@ -125,6 +125,11 @@
     --txt-icon-secondary: var(--neutral-1100);
     --txt-icon-tertiary: var(--neutral-900);
     --txt-icon-on-color: var(--neutral-white);
+
+    /* Scrollbar (light) */
+    --scrollbar-track: transparent;
+    --scrollbar-thumb: var(--alpha-black-200);
+    --scrollbar-thumb-hover: var(--alpha-black-300);
   }
 
   /* ---------- Dark mode (Devlane) ---------- */
@@ -215,6 +220,11 @@
     --txt-icon-secondary: var(--neutral-1100);
     --txt-icon-tertiary: var(--neutral-1000);
     --txt-icon-on-color: var(--neutral-white);
+
+    /* Scrollbar (dark) */
+    --scrollbar-track: transparent;
+    --scrollbar-thumb: var(--alpha-white-200);
+    --scrollbar-thumb-hover: var(--alpha-white-400);
   }
 
   /* Layout (Devlane): sharp corners, thin 1px borders */
