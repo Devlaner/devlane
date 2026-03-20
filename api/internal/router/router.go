@@ -228,11 +228,17 @@ func New(cfg Config) *gin.Engine {
 
 		api.GET("/workspaces/:slug/views/", issueViewHandler.List)
 		api.POST("/workspaces/:slug/views/", issueViewHandler.Create)
+		api.GET("/workspaces/:slug/views/favorites/", issueViewHandler.ListFavorites)
 		api.GET("/workspaces/:slug/views/:viewId/", issueViewHandler.Get)
 		api.PATCH("/workspaces/:slug/views/:viewId/", issueViewHandler.Update)
 		api.DELETE("/workspaces/:slug/views/:viewId/", issueViewHandler.Delete)
+		// Favorite: GET is not an action — register so browser opens are explicit 405, not 404.
+		api.GET("/workspaces/:slug/views/:viewId/favorite", issueViewHandler.FavoriteWrongMethod)
+		api.GET("/workspaces/:slug/views/:viewId/favorite/", issueViewHandler.FavoriteWrongMethod)
 		api.POST("/workspaces/:slug/views/:viewId/favorite", issueViewHandler.AddFavorite)
+		api.POST("/workspaces/:slug/views/:viewId/favorite/", issueViewHandler.AddFavorite)
 		api.DELETE("/workspaces/:slug/views/:viewId/favorite", issueViewHandler.RemoveFavorite)
+		api.DELETE("/workspaces/:slug/views/:viewId/favorite/", issueViewHandler.RemoveFavorite)
 
 		api.GET("/workspaces/:slug/pages/", pageHandler.List)
 		api.POST("/workspaces/:slug/pages/", pageHandler.Create)

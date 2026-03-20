@@ -43,6 +43,27 @@ func (h *IssueViewHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, list)
 }
 
+// ListFavorites returns issue views favorited by the current user in this workspace.
+// GET /api/workspaces/:slug/views/favorites/
+func (h *IssueViewHandler) ListFavorites(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	slug := c.Param("slug")
+	list, err := h.IssueView.ListFavorites(c.Request.Context(), slug, user.ID)
+	if err != nil {
+		if err == service.ErrProjectForbidden {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list favorite views"})
+		return
+	}
+	c.JSON(http.StatusOK, list)
+}
+
 // Create creates a saved issue view.
 // POST /api/workspaces/:slug/views/
 func (h *IssueViewHandler) Create(c *gin.Context) {
@@ -161,6 +182,18 @@ func (h *IssueViewHandler) Delete(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+// FavoriteWrongMethod handles GET (and any unsupported verb) on the favorite URL.
+// Browsers open links with GET, so users who paste the API path see a clear message
+// instead of a generic 404 — the real actions are POST (favorite) and DELETE (unfavorite).
+func (h *IssueViewHandler) FavoriteWrongMethod(c *gin.Context) {
+	c.Header("Allow", "POST, DELETE")
+	c.JSON(http.StatusMethodNotAllowed, gin.H{
+		"error": "Method not allowed",
+		"detail": "Use POST (while signed in) to favorite this view or DELETE to unfavorite it. " +
+			"Opening this URL in a tab sends GET, which does not change favorites.",
+	})
 }
 
 // AddFavorite favorites a saved view for the current user.

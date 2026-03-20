@@ -83,6 +83,22 @@ func (s *IssueViewService) List(ctx context.Context, workspaceSlug string, proje
 	return list, nil
 }
 
+// ListFavorites returns saved views the current user favorited in the workspace (for sidebar / quick access).
+func (s *IssueViewService) ListFavorites(ctx context.Context, workspaceSlug string, userID uuid.UUID) ([]model.IssueView, error) {
+	workspaceID, err := s.ensureWorkspaceAccess(ctx, workspaceSlug, userID)
+	if err != nil {
+		return nil, err
+	}
+	list, err := s.ivs.ListFavoritedByUserInWorkspace(ctx, workspaceID, userID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range list {
+		list[i].IsFavorite = true
+	}
+	return list, nil
+}
+
 func (s *IssueViewService) Create(ctx context.Context, workspaceSlug string, projectID *uuid.UUID, userID uuid.UUID, name, description string, query, filters, displayFilters, displayProperties model.JSONMap) (*model.IssueView, error) {
 	workspaceID, err := s.ensureWorkspaceAccess(ctx, workspaceSlug, userID)
 	if err != nil {

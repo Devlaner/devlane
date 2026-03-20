@@ -23,6 +23,14 @@ export const viewService = {
     return data;
   },
 
+  /** Favorited saved views for the current user in this workspace (sidebar). */
+  async listFavorites(workspaceSlug: string): Promise<IssueViewApiResponse[]> {
+    const { data } = await apiClient.get<IssueViewApiResponse[]>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/favorites/`,
+    );
+    return data ?? [];
+  },
+
   async get(
     workspaceSlug: string,
     viewId: string,
