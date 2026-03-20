@@ -8,6 +8,7 @@ import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
   ModuleApiResponse,
+  CycleApiResponse,
   IssueViewApiResponse,
 } from '../../api/types';
 import { CreateWorkItemModal } from '../CreateWorkItemModal';
@@ -17,9 +18,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import { cn, getImageUrl } from '../../lib/utils';
 import { moduleService } from '../../services/moduleService';
+import { cycleService } from '../../services/cycleService';
 import { viewService } from '../../services/viewService';
 import { slugify } from '../../lib/slug';
 import { ISSUE_VIEW_FAVORITES_CHANGED_EVENT } from '../../lib/issueViewFavoritesEvents';
+import { CYCLE_FAVORITES_CHANGED_EVENT } from '../../hooks/useCycleFavorites';
 
 const SIDEBAR_WIDTH = 256;
 const SIDEBAR_WIDTH_COLLAPSED = 0;
@@ -456,17 +459,6 @@ const projectNavItems = [
 ];
 
 /** Pill + grid icon — matches the “Modules” category badge (not list progress rings). */
-function SidebarFavoritedModuleBadge() {
-  return (
-    <span
-      className="flex h-6 shrink-0 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-1) px-1.5 text-(--txt-icon-secondary) shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-      aria-hidden
-    >
-      <IconModuleGrid className="size-3.5" />
-    </span>
-  );
-}
-
 export function Sidebar() {
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
@@ -488,6 +480,10 @@ export function Sidebar() {
     Array<{ projectId: string; module: ModuleApiResponse }>
   >([]);
   const [moduleFavoritesNonce, setModuleFavoritesNonce] = useState(0);
+  const [favoriteCycles, setFavoriteCycles] = useState<
+    Array<{ projectId: string; cycle: CycleApiResponse }>
+  >([]);
+  const [cycleFavoritesNonce, setCycleFavoritesNonce] = useState(0);
   const [favoriteIssueViews, setFavoriteIssueViews] = useState<IssueViewApiResponse[]>([]);
   const [issueViewFavoritesNonce, setIssueViewFavoritesNonce] = useState(0);
   const workspaceTriggerRef = useRef<HTMLButtonElement>(null);
@@ -509,13 +505,27 @@ export function Sidebar() {
   const baseUrl = workspaceSlug ? `/${workspaceSlug}` : workspace ? `/${workspace.slug}` : '';
   const favoriteProjects = projects.filter((p) => favoriteProjectIds.includes(p.id));
 
-  const STORAGE_KEY_PREFIX = 'module_favorites';
-  const storageKey = (workspaceId: string, projId: string) =>
-    `${STORAGE_KEY_PREFIX}_${workspaceId}_${projId}`;
+  const MODULE_STORAGE_KEY_PREFIX = 'module_favorites';
+  const CYCLE_STORAGE_KEY_PREFIX = 'cycle_favorites';
+  const moduleStorageKey = (workspaceId: string, projId: string) =>
+    `${MODULE_STORAGE_KEY_PREFIX}_${workspaceId}_${projId}`;
+  const cycleStorageKey = (workspaceId: string, projId: string) =>
+    `${CYCLE_STORAGE_KEY_PREFIX}_${workspaceId}_${projId}`;
 
   const loadModuleFavoriteIds = useCallback((workspaceId: string, projId: string) => {
     try {
-      const raw = localStorage.getItem(storageKey(workspaceId, projId));
+      const raw = localStorage.getItem(moduleStorageKey(workspaceId, projId));
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as unknown;
+      return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : [];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const loadCycleFavoriteIds = useCallback((workspaceId: string, projId: string) => {
+    try {
+      const raw = localStorage.getItem(cycleStorageKey(workspaceId, projId));
       if (!raw) return [];
       const parsed = JSON.parse(raw) as unknown;
       return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : [];
@@ -587,6 +597,38 @@ export function Sidebar() {
 
   useEffect(() => {
     if (!workspaceSlug) {
+      setFavoriteCycles([]);
+      return;
+    }
+    let cancelled = false;
+    const run = async () => {
+      const projectsWithFavs = projects
+        .map((proj) => ({
+          proj,
+          favIds: loadCycleFavoriteIds(workspaceSlug, proj.id),
+        }))
+        .filter(({ favIds }) => favIds.length > 0);
+
+      const results = await Promise.all(
+        projectsWithFavs.map(async ({ proj, favIds }) => {
+          const cycles = await cycleService.list(workspaceSlug, proj.id);
+          const favSet = new Set(favIds);
+          return (cycles ?? [])
+            .filter((c) => favSet.has(c.id))
+            .map((c) => ({ projectId: proj.id, cycle: c }));
+        }),
+      );
+      const entries = results.flat();
+      if (!cancelled) setFavoriteCycles(entries);
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug, projects, loadCycleFavoriteIds, cycleFavoritesNonce]);
+
+  useEffect(() => {
+    if (!workspaceSlug) {
       setFavoriteIssueViews([]);
       return;
     }
@@ -641,6 +683,28 @@ export function Sidebar() {
     window.addEventListener('module-favorites-changed', handler as EventListener);
     return () => {
       window.removeEventListener('module-favorites-changed', handler as EventListener);
+    };
+  }, [workspaceSlug]);
+
+  useEffect(() => {
+    if (!workspaceSlug) return;
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<{
+        workspaceId?: string;
+        projectId?: string;
+        cycleId?: string;
+        isFavorite?: boolean;
+      }>;
+      if (ce?.detail?.workspaceId !== workspaceSlug) return;
+      const { cycleId, isFavorite } = ce.detail ?? {};
+      if (cycleId && isFavorite === false) {
+        setFavoriteCycles((prev) => prev.filter(({ cycle }) => cycle.id !== cycleId));
+      }
+      setCycleFavoritesNonce((n) => n + 1);
+    };
+    window.addEventListener(CYCLE_FAVORITES_CHANGED_EVENT, handler as EventListener);
+    return () => {
+      window.removeEventListener(CYCLE_FAVORITES_CHANGED_EVENT, handler as EventListener);
     };
   }, [workspaceSlug]);
 
@@ -724,6 +788,13 @@ export function Sidebar() {
       return next;
     });
   };
+
+  // Auto-expand current project when navigating to its page (Plane-style: expand on nav, but allow manual collapse)
+  useEffect(() => {
+    if (projectId) {
+      setExpandedProjectIds((prev) => new Set(prev).add(projectId));
+    }
+  }, [projectId]);
 
   const width = collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH;
 
@@ -1117,9 +1188,29 @@ export function Sidebar() {
                           to={`${baseUrl}/projects/${projectId}/modules/${slugify(module.name)}`}
                           className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                         >
-                          <SidebarFavoritedModuleBadge />
+                          <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
+                            <IconModuleGrid />
+                          </span>
                           <div className="min-w-0 flex-1">
                             <span className="truncate">{module.name}</span>
+                          </div>
+                        </Link>
+                      ))}
+                    </>
+                  )}
+                  {favoriteCycles.length > 0 && (
+                    <>
+                      {favoriteCycles.map(({ projectId, cycle }) => (
+                        <Link
+                          key={`${projectId}:${cycle.id}`}
+                          to={`${baseUrl}/projects/${projectId}/cycles/${cycle.id}`}
+                          className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
+                        >
+                          <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
+                            <IconIterationCw />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <span className="truncate">{cycle.name}</span>
                           </div>
                         </Link>
                       ))}
@@ -1152,8 +1243,7 @@ export function Sidebar() {
               {projectsSectionExpanded && (
                 <div className="flex flex-col gap-0.5 px-2 py-1 pb-2">
                   {projects.map((project) => {
-                    const isExpanded =
-                      expandedProjectIds.has(project.id) || projectId === project.id;
+                    const isExpanded = expandedProjectIds.has(project.id);
                     const projectUrl = `${baseUrl}/projects/${project.id}`;
                     return (
                       <div key={project.id} className="flex flex-col gap-0.5">
@@ -1184,7 +1274,7 @@ export function Sidebar() {
                           </span>
                         </button>
                         {isExpanded && (
-                          <div className="ml-5 flex flex-col gap-0.5 border-l border-(--border-subtle) pl-2">
+                          <div className="ml-5 flex flex-col gap-0.5">
                             {projectNavItems.map(({ key, to, label, Icon }) => (
                               <NavLink
                                 key={key}

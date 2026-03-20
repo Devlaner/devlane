@@ -10,6 +10,33 @@ import (
 	"github.com/google/uuid"
 )
 
+// computeCycleStatus derives status from start/end dates (Plane-style).
+// draft: no dates; current: now in range; upcoming: start > now; completed: end < now.
+func computeCycleStatus(start, end *time.Time) string {
+	now := time.Now()
+	if start == nil && end == nil {
+		return "draft"
+	}
+	if end != nil && end.Before(now) {
+		return "completed"
+	}
+	if start != nil && end != nil {
+		if !now.Before(*start) && !now.After(*end) {
+			return "current"
+		}
+		if start.After(now) {
+			return "upcoming"
+		}
+	}
+	if start != nil && start.After(now) {
+		return "upcoming"
+	}
+	if start != nil && !start.After(now) && (end == nil || !end.Before(now)) {
+		return "current"
+	}
+	return "upcoming"
+}
+
 var ErrCycleNotFound = errors.New("cycle not found")
 
 // CycleService handles cycle business logic.
@@ -48,8 +75,9 @@ func (s *CycleService) List(ctx context.Context, workspaceSlug string, projectID
 		return nil, err
 	}
 	ids := make([]uuid.UUID, 0, len(list))
-	for _, c := range list {
-		ids = append(ids, c.ID)
+	for i := range list {
+		ids = append(ids, list[i].ID)
+		list[i].Status = computeCycleStatus(list[i].StartDate, list[i].EndDate)
 	}
 	counts, err := s.cs.CountIssuesByCycleIDs(ctx, ids)
 	if err == nil {
@@ -80,6 +108,7 @@ func (s *CycleService) Create(ctx context.Context, workspaceSlug string, project
 	if err := s.cs.Create(ctx, cy); err != nil {
 		return nil, err
 	}
+	cy.Status = computeCycleStatus(cy.StartDate, cy.EndDate)
 	return cy, nil
 }
 
@@ -94,6 +123,7 @@ func (s *CycleService) Get(ctx context.Context, workspaceSlug string, projectID,
 	if cy.ProjectID != projectID {
 		return nil, ErrCycleNotFound
 	}
+	cy.Status = computeCycleStatus(cy.StartDate, cy.EndDate)
 	if counts, err := s.cs.CountIssuesByCycleIDs(ctx, []uuid.UUID{cy.ID}); err == nil {
 		cy.IssueCount = counts[cy.ID]
 	}
@@ -111,9 +141,6 @@ func (s *CycleService) Update(ctx context.Context, workspaceSlug string, project
 	if description != "" {
 		cy.Description = description
 	}
-	if status != "" {
-		cy.Status = status
-	}
 	if startDate != nil {
 		cy.StartDate = startDate
 	}
@@ -123,6 +150,7 @@ func (s *CycleService) Update(ctx context.Context, workspaceSlug string, project
 	if err := s.cs.Update(ctx, cy); err != nil {
 		return nil, err
 	}
+	cy.Status = computeCycleStatus(cy.StartDate, cy.EndDate)
 	return cy, nil
 }
 

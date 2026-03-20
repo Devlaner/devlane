@@ -15,11 +15,13 @@ import { ProjectSavedViewDisplayDropdown } from '../project-saved-view/ProjectSa
 import { ProjectSavedViewMoreMenu } from '../project-saved-view/ProjectSavedViewMoreMenu';
 import { DateRangeModal } from '../workspace-views/DateRangeModal';
 import { CreateModuleModal } from '../CreateModuleModal';
+import { CreateCycleModal } from '../CreateCycleModal';
 import { workspaceService } from '../../services/workspaceService';
 import { projectService } from '../../services/projectService';
 import { issueService } from '../../services/issueService';
 import { viewService } from '../../services/viewService';
 import { moduleService } from '../../services/moduleService';
+import { ProjectIconDisplay } from '../ProjectIconModal';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
@@ -27,6 +29,10 @@ import type {
   ModuleApiResponse,
   WorkspaceMemberApiResponse,
 } from '../../api/types';
+import {
+  PROJECT_CYCLES_FILTER_EVENT,
+  PROJECT_CYCLES_REFRESH_EVENT,
+} from '../../lib/projectCyclesEvents';
 import { PROJECT_VIEWS_FILTER_EVENT } from '../../lib/projectViewsEvents';
 
 export type ProjectSection = 'issues' | 'cycles' | 'modules' | 'views' | 'pages';
@@ -131,6 +137,22 @@ const IconChevronDown = () => (
     aria-hidden
   >
     <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
+const IconChevronUp = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="m18 15-6-6-6 6" />
   </svg>
 );
 const IconCalendar = () => (
@@ -498,7 +520,7 @@ function ProjectSectionDropdown({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
+        className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover)"
       >
         <span className="flex size-5 items-center justify-center text-(--txt-icon-secondary)">
           {currentIcon}
@@ -728,24 +750,31 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
 }
 
 function ProjectDetailHeader({
+  project,
   title,
 }: {
   workspaceSlug: string;
   projectId: string;
+  project: ProjectApiResponse;
   title: string;
 }) {
   return (
     <>
       <div className="flex items-center gap-2 text-sm font-semibold text-(--txt-primary)">
-        <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
-          <IconBriefcase />
+        <span className="flex size-5 shrink-0 items-center justify-center">
+          <ProjectIconDisplay
+            emoji={project.emoji}
+            icon_prop={project.icon_prop}
+            size={16}
+            className="leading-none"
+          />
         </span>
         {title}
       </div>
       <div className="flex items-center gap-2">
         <button
           type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
+          className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
           aria-label="Search"
         >
           <IconSearch />
@@ -822,11 +851,13 @@ const IconSliders = () => (
 function ModuleDetailHeader({
   workspaceSlug,
   projectId,
+  project,
   projectName,
   moduleName,
 }: {
   workspaceSlug: string;
   projectId: string;
+  project: ProjectApiResponse;
   projectName: string;
   moduleId: string;
   moduleName: string;
@@ -860,11 +891,19 @@ function ModuleDetailHeader({
 
   return (
     <>
-      <div className="flex min-w-0 flex-1 items-center gap-2 text-sm text-(--txt-primary)">
+      <div className="flex min-w-0 flex-1 items-center gap-1 text-sm text-(--txt-primary)">
         <Link
           to={baseUrl}
-          className="shrink-0 truncate font-medium text-(--txt-secondary) hover:text-(--txt-primary) hover:underline"
+          className="flex shrink-0 items-center gap-1.5 truncate font-medium text-(--txt-secondary) hover:text-(--txt-primary) hover:underline"
         >
+          <span className="flex size-5 shrink-0 items-center justify-center">
+            <ProjectIconDisplay
+              emoji={project.emoji}
+              icon_prop={project.icon_prop}
+              size={16}
+              className="leading-none"
+            />
+          </span>
           {projectName}
         </Link>
         <span className="shrink-0 text-(--txt-icon-tertiary)">/</span>
@@ -879,7 +918,7 @@ function ModuleDetailHeader({
           <button
             type="button"
             onClick={() => setModuleDropdownOpen((o) => !o)}
-            className="flex items-center gap-1 truncate rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
+            className="flex items-center gap-1 truncate rounded-md px-2.5 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover)"
           >
             <span className="min-w-0 truncate">{moduleName}</span>
             <span className="shrink-0 text-(--txt-icon-tertiary)">
@@ -959,12 +998,14 @@ function ModuleDetailHeader({
 function ProjectSectionHeader({
   workspaceSlug,
   projectId,
+  project,
   projectName,
   section,
   issueCount,
 }: {
   workspaceSlug: string;
   projectId: string;
+  project: ProjectApiResponse;
   projectName: string;
   section: ProjectSection;
   issueCount: number;
@@ -994,8 +1035,27 @@ function ProjectSectionHeader({
   const [viewsCreatedBy, setViewsCreatedBy] = useState<string[]>([]);
   const [viewsMembers, setViewsMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [modulesDateRangeModal, setModulesDateRangeModal] = useState<'start' | 'due' | null>(null);
+  const [createCycleOpen, setCreateCycleOpen] = useState(false);
+  const [cyclesFiltersDropdownOpen, setCyclesFiltersDropdownOpen] = useState<string | null>(null);
+  const [cyclesStatusSectionOpen, setCyclesStatusSectionOpen] = useState(true);
+  const [cyclesStartSectionOpen, setCyclesStartSectionOpen] = useState(true);
+  const [cyclesDueSectionOpen, setCyclesDueSectionOpen] = useState(true);
+  const [cyclesFiltersSearch, setCyclesFiltersSearch] = useState('');
+  const [cyclesSearchExpanded, setCyclesSearchExpanded] = useState(false);
+  const [cyclesSearch, setCyclesSearch] = useState('');
+  const [cyclesDateRangeModal, setCyclesDateRangeModal] = useState<'start' | 'due' | null>(null);
+  const [cyclesSelectedStatusKeys, setCyclesSelectedStatusKeys] = useState<string[]>([]);
+  const [cyclesSelectedStartDatePresets, setCyclesSelectedStartDatePresets] = useState<string[]>(
+    [],
+  );
+  const [cyclesSelectedDueDatePresets, setCyclesSelectedDueDatePresets] = useState<string[]>([]);
+  const [cyclesStartAfter, setCyclesStartAfter] = useState<string | null>(null);
+  const [cyclesStartBefore, setCyclesStartBefore] = useState<string | null>(null);
+  const [cyclesDueAfter, setCyclesDueAfter] = useState<string | null>(null);
+  const [cyclesDueBefore, setCyclesDueBefore] = useState<string | null>(null);
   const projectDropdownRef = useRef<HTMLDivElement | null>(null);
   const modulesSearchInputRef = useRef<HTMLInputElement | null>(null);
+  const cyclesSearchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -1031,6 +1091,12 @@ function ProjectSectionHeader({
       modulesSearchInputRef.current?.focus();
     }
   }, [modulesSearchExpanded]);
+
+  useEffect(() => {
+    if (cyclesSearchExpanded) {
+      cyclesSearchInputRef.current?.focus();
+    }
+  }, [cyclesSearchExpanded]);
 
   useEffect(() => {
     if (section !== 'views') return;
@@ -1072,6 +1138,42 @@ function ProjectSectionHeader({
       }),
     );
   };
+
+  useEffect(() => {
+    if (section !== 'cycles') return;
+    if (!workspaceSlug || !projectId) return;
+
+    window.dispatchEvent(
+      new CustomEvent(PROJECT_CYCLES_FILTER_EVENT, {
+        detail: {
+          workspaceSlug,
+          projectId,
+          filters: {
+            searchQuery: cyclesSearch,
+            statusKeys: cyclesSelectedStatusKeys,
+            startDatePresets: cyclesSelectedStartDatePresets,
+            dueDatePresets: cyclesSelectedDueDatePresets,
+            startAfter: cyclesStartAfter,
+            startBefore: cyclesStartBefore,
+            dueAfter: cyclesDueAfter,
+            dueBefore: cyclesDueBefore,
+          },
+        },
+      }),
+    );
+  }, [
+    section,
+    workspaceSlug,
+    projectId,
+    cyclesSearch,
+    cyclesSelectedStatusKeys,
+    cyclesSelectedStartDatePresets,
+    cyclesSelectedDueDatePresets,
+    cyclesStartAfter,
+    cyclesStartBefore,
+    cyclesDueAfter,
+    cyclesDueBefore,
+  ]);
 
   const q = (s: string) => s.trim().toLowerCase();
   const filteredProjects = projects.filter((p) => q(p.name).includes(q(projectSearch)));
@@ -1166,22 +1268,255 @@ function ProjectSectionHeader({
       );
     }
     if (section === 'cycles') {
+      const showCyclesSearchInput = cyclesSearchExpanded || cyclesSearch.length > 0;
       return (
         <>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
-            aria-label="Search"
+          {showCyclesSearchInput ? (
+            <div className="flex h-8 min-w-35 max-w-50 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2">
+              <span className="shrink-0 text-(--txt-icon-tertiary)" aria-hidden>
+                <IconSearch />
+              </span>
+              <input
+                ref={cyclesSearchInputRef}
+                type="text"
+                value={cyclesSearch}
+                onChange={(e) => setCyclesSearch(e.target.value)}
+                onBlur={() => {
+                  if (cyclesSearch.length === 0) setCyclesSearchExpanded(false);
+                }}
+                placeholder="Search"
+                className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
+                aria-label="Search cycles"
+              />
+              {cyclesSearch.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setCyclesSearch('')}
+                  className="shrink-0 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
+                  aria-label="Clear search"
+                >
+                  <IconX />
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCyclesSearchExpanded(true)}
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
+              aria-label="Search cycles"
+            >
+              <IconSearch />
+            </button>
+          )}
+          <Dropdown
+            id="cycles-filters"
+            openId={cyclesFiltersDropdownOpen}
+            onOpen={setCyclesFiltersDropdownOpen}
+            label="Filters"
+            icon={<IconFilter />}
+            displayValue="Filters"
+            triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+            triggerContent={
+              <span className="flex items-center gap-1.5">
+                <IconFilter /> Filters <IconChevronDown />
+              </span>
+            }
+            panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
+            align="right"
           >
-            <IconSearch />
-          </button>
-          <button
-            type="button"
-            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+            <div className="sticky top-0 shrink-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-2">
+              <div className="flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
+                <span className="shrink-0 text-(--txt-icon-tertiary)" aria-hidden>
+                  <IconSearch />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search"
+                  value={cyclesFiltersSearch}
+                  onChange={(e) => setCyclesFiltersSearch(e.target.value)}
+                  className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto py-1">
+              <div className="border-b border-(--border-subtle) last:border-b-0">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                  onClick={() => setCyclesStatusSectionOpen((o) => !o)}
+                >
+                  <span>Status of the cycle</span>
+                  <span className="text-(--txt-icon-tertiary)">
+                    {cyclesStatusSectionOpen ? <IconChevronUp /> : <IconChevronDown />}
+                  </span>
+                </button>
+                {cyclesStatusSectionOpen && (
+                  <div className="pb-1">
+                    {[
+                      { key: 'in_progress', label: 'In progress' },
+                      { key: 'yet_to_start', label: 'Yet to start' },
+                      { key: 'completed', label: 'Completed' },
+                      { key: 'draft', label: 'Draft' },
+                    ]
+                      .filter(
+                        (s) =>
+                          !cyclesFiltersSearch.trim() ||
+                          s.label.toLowerCase().includes(cyclesFiltersSearch.trim().toLowerCase()),
+                      )
+                      .map((s) => (
+                        <label
+                          key={s.key}
+                          className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={cyclesSelectedStatusKeys.includes(s.key)}
+                            onChange={() => {
+                              setCyclesSelectedStatusKeys((prev) =>
+                                prev.includes(s.key)
+                                  ? prev.filter((k) => k !== s.key)
+                                  : [...prev, s.key],
+                              );
+                            }}
+                            className="rounded border-[var(--border-subtle)]"
+                          />
+                          <span>{s.label}</span>
+                        </label>
+                      ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-b border-(--border-subtle) last:border-b-0">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                  onClick={() => setCyclesStartSectionOpen((o) => !o)}
+                >
+                  <span>Start date</span>
+                  <span className="text-(--txt-icon-tertiary)">
+                    {cyclesStartSectionOpen ? <IconChevronUp /> : <IconChevronDown />}
+                  </span>
+                </button>
+                {cyclesStartSectionOpen && (
+                  <div className="pb-1">
+                    {[
+                      { key: '1_week', label: '1 week from now' },
+                      { key: '2_weeks', label: '2 weeks from now' },
+                      { key: '1_month', label: '1 month from now' },
+                      { key: '2_months', label: '2 months from now' },
+                      { key: 'custom', label: 'Custom' },
+                    ].map((p) => {
+                      const checked = cyclesSelectedStartDatePresets.includes(p.key);
+                      return (
+                        <label
+                          key={p.key}
+                          className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              if (p.key === 'custom') {
+                                if (checked) {
+                                  setCyclesSelectedStartDatePresets((prev) =>
+                                    prev.filter((k) => k !== 'custom'),
+                                  );
+                                  setCyclesStartAfter(null);
+                                  setCyclesStartBefore(null);
+                                } else {
+                                  setCyclesSelectedStartDatePresets((prev) => [...prev, 'custom']);
+                                  setCyclesFiltersDropdownOpen(null);
+                                  setCyclesDateRangeModal('start');
+                                }
+                                return;
+                              }
+
+                              setCyclesSelectedStartDatePresets((prev) =>
+                                prev.includes(p.key)
+                                  ? prev.filter((k) => k !== p.key)
+                                  : [...prev, p.key],
+                              );
+                            }}
+                            className="rounded border-[var(--border-subtle)]"
+                          />
+                          <span>{p.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-b border-(--border-subtle) last:border-b-0">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                  onClick={() => setCyclesDueSectionOpen((o) => !o)}
+                >
+                  <span>Due date</span>
+                  <span className="text-(--txt-icon-tertiary)">
+                    {cyclesDueSectionOpen ? <IconChevronUp /> : <IconChevronDown />}
+                  </span>
+                </button>
+                {cyclesDueSectionOpen && (
+                  <div className="pb-1">
+                    {[
+                      { key: '1_week', label: '1 week from now' },
+                      { key: '2_weeks', label: '2 weeks from now' },
+                      { key: '1_month', label: '1 month from now' },
+                      { key: '2_months', label: '2 months from now' },
+                      { key: 'custom', label: 'Custom' },
+                    ].map((p) => {
+                      const checked = cyclesSelectedDueDatePresets.includes(p.key);
+                      return (
+                        <label
+                          key={p.key}
+                          className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              if (p.key === 'custom') {
+                                if (checked) {
+                                  setCyclesSelectedDueDatePresets((prev) =>
+                                    prev.filter((k) => k !== 'custom'),
+                                  );
+                                  setCyclesDueAfter(null);
+                                  setCyclesDueBefore(null);
+                                } else {
+                                  setCyclesSelectedDueDatePresets((prev) => [...prev, 'custom']);
+                                  setCyclesFiltersDropdownOpen(null);
+                                  setCyclesDateRangeModal('due');
+                                }
+                                return;
+                              }
+
+                              setCyclesSelectedDueDatePresets((prev) =>
+                                prev.includes(p.key)
+                                  ? prev.filter((k) => k !== p.key)
+                                  : [...prev, p.key],
+                              );
+                            }}
+                            className="rounded border-[var(--border-subtle)]"
+                          />
+                          <span>{p.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </Dropdown>
+          <Button
+            size="sm"
+            className="gap-1.5 text-[13px] font-medium"
+            onClick={() => setCreateCycleOpen(true)}
           >
-            <IconFilter /> Filters <IconChevronDown />
-          </button>
-          <Button size="sm" className="gap-1.5 text-[13px] font-medium">
             <IconPlus /> Add cycle
           </Button>
         </>
@@ -1806,17 +2141,25 @@ function ProjectSectionHeader({
 
   return (
     <>
-      <div className="relative flex items-center gap-2 text-sm" ref={projectDropdownRef}>
+      <div className="relative flex items-center gap-1 text-sm" ref={projectDropdownRef}>
         <Link
           to={issuesUrl}
-          className="flex items-center gap-1.5 rounded-l-md border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
+          className="flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
         >
+          <span className="flex size-5 shrink-0 items-center justify-center">
+            <ProjectIconDisplay
+              emoji={project.emoji}
+              icon_prop={project.icon_prop}
+              size={16}
+              className="leading-none"
+            />
+          </span>
           {projectName}
         </Link>
         <button
           type="button"
           onClick={() => setProjectDropdownOpen((o) => !o)}
-          className="flex h-8.5 w-8 items-center justify-center rounded-r-md border border-l-0 border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
+          className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
           aria-label="Select project"
         >
           <IconChevronDown />
@@ -1899,6 +2242,44 @@ function ProjectSectionHeader({
                 modulesFilter.setDueBefore(before);
               }
               setModulesDateRangeModal(null);
+            }}
+          />
+        </>
+      )}
+      {section === 'cycles' && (
+        <>
+          <DateRangeModal
+            open={cyclesDateRangeModal !== null}
+            onClose={() => setCyclesDateRangeModal(null)}
+            title={cyclesDateRangeModal === 'start' ? 'Start date range' : 'Due date range'}
+            after={cyclesDateRangeModal === 'start' ? cyclesStartAfter : cyclesDueAfter}
+            before={cyclesDateRangeModal === 'start' ? cyclesStartBefore : cyclesDueBefore}
+            onApply={(after, before) => {
+              if (cyclesDateRangeModal === 'start') {
+                setCyclesStartAfter(after);
+                setCyclesStartBefore(before);
+              } else {
+                setCyclesDueAfter(after);
+                setCyclesDueBefore(before);
+              }
+              setCyclesDateRangeModal(null);
+            }}
+          />
+          <CreateCycleModal
+            open={createCycleOpen}
+            onClose={() => setCreateCycleOpen(false)}
+            workspaceSlug={workspaceSlug}
+            projectId={projectId}
+            onCreated={(_created, targetProjectId) => {
+              setCreateCycleOpen(false);
+              if (targetProjectId !== projectId) {
+                navigate(`/${workspaceSlug}/projects/${targetProjectId}/cycles`);
+              }
+              window.dispatchEvent(
+                new CustomEvent(PROJECT_CYCLES_REFRESH_EVENT, {
+                  detail: { workspaceSlug, projectId: targetProjectId },
+                }),
+              );
             }}
           />
         </>
@@ -2164,12 +2545,14 @@ function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
 function ProjectSavedViewDetailHeader({
   workspaceSlug,
   projectId,
+  project,
   projectName,
   viewId,
   issueCount: _issueCount,
 }: {
   workspaceSlug: string;
   projectId: string;
+  project: ProjectApiResponse;
   projectName: string;
   viewId: string;
   issueCount: number;
@@ -2262,19 +2645,27 @@ function ProjectSavedViewDetailHeader({
   return (
     <>
       <div
-        className="relative flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm"
+        className="relative flex min-w-0 flex-1 flex-wrap items-center gap-1 text-sm"
         ref={projectDropdownRef}
       >
         <Link
           to={issuesUrl}
-          className="flex max-w-[40vw] items-center gap-1.5 truncate rounded-l-md border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
+          className="flex max-w-[40vw] items-center gap-1.5 truncate rounded-md px-3 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
         >
+          <span className="flex size-5 shrink-0 items-center justify-center">
+            <ProjectIconDisplay
+              emoji={project.emoji}
+              icon_prop={project.icon_prop}
+              size={16}
+              className="leading-none"
+            />
+          </span>
           {projectName}
         </Link>
         <button
           type="button"
           onClick={() => setProjectDropdownOpen((o) => !o)}
-          className="flex h-8.5 w-8 shrink-0 items-center justify-center rounded-r-md border border-l-0 border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
           aria-label="Select project"
         >
           <IconChevronDown />
@@ -2317,7 +2708,7 @@ function ProjectSavedViewDetailHeader({
         </span>
         <Link
           to={`${baseUrl}/views`}
-          className="flex max-w-[28vw] shrink-0 items-center gap-1.5 truncate rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
+          className="flex max-w-[28vw] shrink-0 items-center gap-1.5 truncate rounded-md px-2.5 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
         >
           <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
             <IconViewsPlane />
@@ -2327,7 +2718,7 @@ function ProjectSavedViewDetailHeader({
         <span className="shrink-0 text-(--txt-tertiary)" aria-hidden>
           /
         </span>
-        <div className="flex min-w-0 max-w-[36vw] items-center gap-1.5 truncate rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 font-medium text-(--txt-primary)">
+        <div className="flex min-w-0 max-w-[36vw] items-center gap-1.5 truncate rounded-md px-2.5 py-1.5 font-medium text-(--txt-primary)">
           <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
             <IconViewsPlane />
           </span>
@@ -2565,6 +2956,7 @@ export function PageHeader() {
       <ModuleDetailHeader
         workspaceSlug={workspaceSlug}
         projectId={projectId}
+        project={project}
         projectName={project.name}
         moduleId={module.id}
         moduleName={module.name}
@@ -2575,6 +2967,7 @@ export function PageHeader() {
       <ProjectSavedViewDetailHeader
         workspaceSlug={workspaceSlug}
         projectId={projectId}
+        project={project}
         projectName={project.name}
         viewId={viewId}
         issueCount={projectIssueCount}
@@ -2585,6 +2978,7 @@ export function PageHeader() {
       <ProjectSectionHeader
         workspaceSlug={workspaceSlug}
         projectId={projectId}
+        project={project}
         projectName={project.name}
         section={projectSection}
         issueCount={projectIssueCount}
@@ -2595,6 +2989,7 @@ export function PageHeader() {
       <ProjectDetailHeader
         workspaceSlug={workspaceSlug}
         projectId={projectId}
+        project={project}
         title={project.name}
       />
     );
@@ -2603,6 +2998,7 @@ export function PageHeader() {
       <ProjectDetailHeader
         workspaceSlug={workspaceSlug}
         projectId={projectId}
+        project={project}
         title={project.name}
       />
     );
