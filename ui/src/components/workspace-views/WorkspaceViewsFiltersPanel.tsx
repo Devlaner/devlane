@@ -50,6 +50,7 @@ export function WorkspaceViewsFiltersPanel({
   onCloseParent,
   compact = false,
 }: WorkspaceViewsFiltersPanelProps) {
+  void onCloseParent; // kept for compatibility; Custom date modal intentionally keeps dropdown open
   const { user: currentUser } = useAuth();
   const [search, setSearch] = useState("");
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
@@ -132,7 +133,6 @@ export function WorkspaceViewsFiltersPanel({
   };
 
   const openDateModal = (which: "start" | "due") => {
-    onCloseParent?.();
     setDateRangeModal(which);
   };
 
@@ -177,7 +177,7 @@ export function WorkspaceViewsFiltersPanel({
       </CollapsibleSection>
 
       <CollapsibleSection
-        title="State group"
+        title="State"
         open={sectionOpen.state_group}
         onToggle={() => toggleSection("state_group")}
       >
