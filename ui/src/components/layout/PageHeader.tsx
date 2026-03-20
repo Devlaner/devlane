@@ -1021,6 +1021,8 @@ function ProjectSectionHeader({
   const [cyclesStartSectionOpen, setCyclesStartSectionOpen] = useState(true);
   const [cyclesDueSectionOpen, setCyclesDueSectionOpen] = useState(true);
   const [cyclesFiltersSearch, setCyclesFiltersSearch] = useState('');
+  const [cyclesSearchExpanded, setCyclesSearchExpanded] = useState(false);
+  const [cyclesSearch, setCyclesSearch] = useState('');
   const [cyclesDateRangeModal, setCyclesDateRangeModal] = useState<'start' | 'due' | null>(null);
   const [cyclesSelectedStatusKeys, setCyclesSelectedStatusKeys] = useState<string[]>([]);
   const [cyclesSelectedStartDatePresets, setCyclesSelectedStartDatePresets] = useState<string[]>(
@@ -1033,6 +1035,7 @@ function ProjectSectionHeader({
   const [cyclesDueBefore, setCyclesDueBefore] = useState<string | null>(null);
   const projectDropdownRef = useRef<HTMLDivElement | null>(null);
   const modulesSearchInputRef = useRef<HTMLInputElement | null>(null);
+  const cyclesSearchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -1068,6 +1071,12 @@ function ProjectSectionHeader({
       modulesSearchInputRef.current?.focus();
     }
   }, [modulesSearchExpanded]);
+
+  useEffect(() => {
+    if (cyclesSearchExpanded) {
+      cyclesSearchInputRef.current?.focus();
+    }
+  }, [cyclesSearchExpanded]);
 
   useEffect(() => {
     if (section !== 'views') return;
@@ -1120,6 +1129,7 @@ function ProjectSectionHeader({
           workspaceSlug,
           projectId,
           filters: {
+            searchQuery: cyclesSearch,
             statusKeys: cyclesSelectedStatusKeys,
             startDatePresets: cyclesSelectedStartDatePresets,
             dueDatePresets: cyclesSelectedDueDatePresets,
@@ -1135,6 +1145,7 @@ function ProjectSectionHeader({
     section,
     workspaceSlug,
     projectId,
+    cyclesSearch,
     cyclesSelectedStatusKeys,
     cyclesSelectedStartDatePresets,
     cyclesSelectedDueDatePresets,
@@ -1237,15 +1248,47 @@ function ProjectSectionHeader({
       );
     }
     if (section === 'cycles') {
+      const showCyclesSearchInput = cyclesSearchExpanded || cyclesSearch.length > 0;
       return (
         <>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
-            aria-label="Search"
-          >
-            <IconSearch />
-          </button>
+          {showCyclesSearchInput ? (
+            <div className="flex h-8 min-w-35 max-w-50 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2">
+              <span className="shrink-0 text-(--txt-icon-tertiary)" aria-hidden>
+                <IconSearch />
+              </span>
+              <input
+                ref={cyclesSearchInputRef}
+                type="text"
+                value={cyclesSearch}
+                onChange={(e) => setCyclesSearch(e.target.value)}
+                onBlur={() => {
+                  if (cyclesSearch.length === 0) setCyclesSearchExpanded(false);
+                }}
+                placeholder="Search"
+                className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
+                aria-label="Search cycles"
+              />
+              {cyclesSearch.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setCyclesSearch('')}
+                  className="shrink-0 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
+                  aria-label="Clear search"
+                >
+                  <IconX />
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCyclesSearchExpanded(true)}
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
+              aria-label="Search cycles"
+            >
+              <IconSearch />
+            </button>
+          )}
           <Dropdown
             id="cycles-filters"
             openId={cyclesFiltersDropdownOpen}

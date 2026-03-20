@@ -104,6 +104,7 @@ const priorityVariant: Record<Priority, 'danger' | 'warning' | 'default' | 'neut
 };
 
 interface CyclesFiltersState {
+  searchQuery: string | null;
   statusKeys: CycleStatusFilterKey[];
   startDatePresets: DatePresetFilterKey[];
   dueDatePresets: DatePresetFilterKey[];
@@ -320,6 +321,7 @@ export function CyclesPage() {
   const { toggleFavorite, isFavorite } = useCycleFavorites(workspaceSlug, projectId);
 
   const [filters, setFilters] = useState<CyclesFiltersState>({
+    searchQuery: null,
     statusKeys: [],
     startDatePresets: [],
     dueDatePresets: [],
@@ -399,6 +401,7 @@ export function CyclesPage() {
 
       setFilters((prev) => ({
         ...prev,
+        searchQuery: next.searchQuery ?? prev.searchQuery,
         statusKeys: (next.statusKeys ?? prev.statusKeys) as CycleStatusFilterKey[],
         startDatePresets: (next.startDatePresets ?? prev.startDatePresets) as DatePresetFilterKey[],
         dueDatePresets: (next.dueDatePresets ?? prev.dueDatePresets) as DatePresetFilterKey[],
@@ -498,8 +501,15 @@ export function CyclesPage() {
       return filters.statusKeys.some((k) => groupStatuses[k]?.includes(c.status));
     };
 
+    const matchesSearch = (c: CycleApiResponse) => {
+      const q = filters.searchQuery?.trim().toLowerCase();
+      if (!q) return true;
+      return c.name.toLowerCase().includes(q);
+    };
+
     return cycles.filter((c) => {
       return (
+        matchesSearch(c) &&
         matchesStatus(c) &&
         matchesPresetUnion(
           c.start_date,
