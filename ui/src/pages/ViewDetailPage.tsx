@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Badge, Avatar, Button } from "../components/ui";
 import { CreateWorkItemModal } from "../components/CreateWorkItemModal";
 import { useProjectSavedViewDisplay } from "../contexts/ProjectSavedViewDisplayContext";
+import { useWorkspaceViewsState } from "../contexts/WorkspaceViewsStateContext";
 import { workspaceService } from "../services/workspaceService";
 import { projectService } from "../services/projectService";
 import { issueService } from "../services/issueService";
@@ -28,6 +29,7 @@ import type {
   SavedViewOrderBy,
 } from "../lib/projectSavedViewDisplay";
 import { getImageUrl } from "../lib/utils";
+import { parseWorkspaceViewFiltersFromSearchParams } from "../types/workspaceViewFilters";
 
 const priorityVariant: Record<
   Priority,
@@ -88,12 +90,8 @@ function sortIssuesList(
       });
     case "due_date":
       return out.sort((a, b) => {
-        const ad = a.target_date
-          ? new Date(a.target_date).getTime()
-          : Infinity;
-        const bd = b.target_date
-          ? new Date(b.target_date).getTime()
-          : Infinity;
+        const ad = a.target_date ? new Date(a.target_date).getTime() : Infinity;
+        const bd = b.target_date ? new Date(b.target_date).getTime() : Infinity;
         return ad - bd;
       });
     case "priority":
@@ -212,6 +210,8 @@ function pushUniq(arr: string[], id: string) {
 
 export function ViewDetailPage() {
   const { settings } = useProjectSavedViewDisplay();
+  const { filters: workspaceViewFilters, setFilters: setWorkspaceViewFilters } =
+    useWorkspaceViewsState();
   const { workspaceSlug, projectId, viewId } = useParams<{
     workspaceSlug: string;
     projectId: string;
@@ -273,6 +273,25 @@ export function ViewDetailPage() {
     };
   }, [workspaceSlug, viewId]);
 
+  // Keep the shared “Filters” dropdown state in sync with this saved view.
+  // We treat the saved view's `filters` JSON as the same key/value shape that
+  // `workspaceViewFiltersToSearchParams()` produces on the way into the API.
+  useEffect(() => {
+    if (!view || !viewId) return;
+    const raw = view.filters;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return;
+
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+      if (v == null) continue;
+      const s = String(v).trim();
+      if (s) params.set(k, s);
+    }
+
+    const next = parseWorkspaceViewFiltersFromSearchParams(params);
+    setWorkspaceViewFilters(next);
+  }, [setWorkspaceViewFilters, view, viewId]);
+
   useEffect(() => {
     if (!workspaceSlug || !projectId) return;
     let cancelled = false;
@@ -323,48 +342,141 @@ export function ViewDetailPage() {
 
   const filteredIssues = useMemo(() => {
     if (!view) return [];
-    let list = [...issues];
-    const rawFilters = view.filters;
-    const filters =
-      rawFilters && typeof rawFilters === "object"
-        ? (rawFilters as Record<string, unknown>)
-        : {};
-
-    const readList = (key: string) => {
-      const value = filters[key];
-      if (Array.isArray(value)) return value.map(String);
-      if (typeof value === "string" && value.trim().length > 0)
-        return value
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean);
-      return [] as string[];
+    const stateGroupMap: Record<
+      string,
+      "backlog" | "unstarted" | "started" | "completed" | "canceled"
+    > = {
+      backlog: "backlog",
+      unstarted: "unstarted",
+      started: "started",
+      completed: "completed",
+      canceled: "canceled",
     };
 
-    const stateIds = readList("state");
-    const assigneeIds = readList("assignee");
-    const createdByIds = readList("created_by");
-    const labelIds = readList("label");
-    const priority = readList("priority");
+    const getStateGroup = (stateId: string | null | undefined) => {
+      if (!stateId) return undefined;
+      const s = states.find((x) => x.id === stateId);
+      const g = s?.group?.toLowerCase();
+      return g ? stateGroupMap[g] : undefined;
+    };
 
-    if (stateIds.length) {
-      list = list.filter((i) => i.state_id && stateIds.includes(i.state_id));
-    }
-    if (assigneeIds.length) {
-      list = list.filter((i) =>
-        i.assignee_ids?.some((id) => assigneeIds.includes(id)),
-      );
-    }
-    if (createdByIds.length) {
+    let list = [...issues];
+    const f = workspaceViewFilters;
+
+    if (f.priority.length) {
       list = list.filter(
-        (i) => i.created_by_id && createdByIds.includes(i.created_by_id),
+        (i) => i.priority && f.priority.includes(i.priority as Priority),
       );
     }
-    if (labelIds.length) {
-      list = list.filter((i) => i.label_ids?.some((id) => labelIds.includes(id)));
+    if (f.stateGroup.length) {
+      list = list.filter((i) => {
+        const g = getStateGroup(i.state_id ?? undefined);
+        return g && f.stateGroup.includes(g);
+      });
     }
-    if (priority.length) {
-      list = list.filter((i) => i.priority && priority.includes(i.priority));
+    if (f.assigneeIds.length) {
+      list = list.filter((i) =>
+        i.assignee_ids?.some((id) => f.assigneeIds.includes(id)),
+      );
+    }
+    if (f.createdByIds.length) {
+      list = list.filter(
+        (i) => i.created_by_id && f.createdByIds.includes(i.created_by_id),
+      );
+    }
+    if (f.labelIds.length) {
+      list = list.filter((i) =>
+        i.label_ids?.some((id) => f.labelIds.includes(id)),
+      );
+    }
+    if (f.projectIds.length) {
+      list = list.filter((i) => f.projectIds.includes(i.project_id));
+    }
+    if (f.grouping !== "all") {
+      list = list.filter((i) => {
+        const g = getStateGroup(i.state_id ?? undefined);
+        if (f.grouping === "backlog") return g === "backlog";
+        if (f.grouping === "active")
+          return g && !["backlog", "completed", "canceled"].includes(g);
+        return true;
+      });
+    }
+
+    const now = new Date();
+    const addDays = (d: number) =>
+      new Date(now.getTime() + d * 24 * 60 * 60 * 1000);
+
+    // Only apply start date filter when we have a valid range for "custom".
+    const startDateEffective =
+      f.startDate.length &&
+      !(
+        f.startDate.includes("custom") &&
+        (!f.startAfter || !f.startBefore)
+      );
+    if (startDateEffective) {
+      list = list.filter((i) => {
+        const sd = i.start_date ? new Date(i.start_date) : null;
+        if (!sd) return false;
+        return f.startDate.some((preset) => {
+          if (
+            preset === "custom" &&
+            f.startAfter &&
+            f.startBefore
+          ) {
+            const after = new Date(f.startAfter);
+            const before = new Date(f.startBefore);
+            return sd >= after && sd <= before;
+          }
+          if (preset === "custom") return false;
+          const end =
+            preset === "1_week"
+              ? addDays(7)
+              : preset === "2_weeks"
+                ? addDays(14)
+                : preset === "1_month"
+                  ? addDays(30)
+                  : preset === "2_months"
+                    ? addDays(60)
+                    : null;
+          return end && sd >= now && sd <= end;
+        });
+      });
+    }
+
+    const dueDateEffective =
+      f.dueDate.length &&
+      !(
+        f.dueDate.includes("custom") &&
+        (!f.dueAfter || !f.dueBefore)
+      );
+    if (dueDateEffective) {
+      list = list.filter((i) => {
+        const td = i.target_date ? new Date(i.target_date) : null;
+        if (!td) return false;
+        return f.dueDate.some((preset) => {
+          if (
+            preset === "custom" &&
+            f.dueAfter &&
+            f.dueBefore
+          ) {
+            const after = new Date(f.dueAfter);
+            const before = new Date(f.dueBefore);
+            return td >= after && td <= before;
+          }
+          if (preset === "custom") return false;
+          const end =
+            preset === "1_week"
+              ? addDays(7)
+              : preset === "2_weeks"
+                ? addDays(14)
+                : preset === "1_month"
+                  ? addDays(30)
+                  : preset === "2_months"
+                    ? addDays(60)
+                    : null;
+          return end && td >= now && td <= end;
+        });
+      });
     }
 
     const queryText =
@@ -372,15 +484,14 @@ export function ViewDetailPage() {
       typeof view.query === "object" &&
       typeof (view.query as Record<string, unknown>).search === "string"
         ? ((view.query as Record<string, unknown>).search as string)
-        : null) ??
-      null;
+        : null) ?? null;
     if (queryText && queryText.trim()) {
       const q = queryText.trim().toLowerCase();
       list = list.filter((i) => i.name.toLowerCase().includes(q));
     }
 
     return list;
-  }, [issues, view]);
+  }, [issues, view, workspaceViewFilters, states]);
 
   const sortedStates = useMemo(
     () =>
@@ -477,7 +588,8 @@ export function ViewDetailPage() {
       return {
         order: ordered,
         groups: map,
-        title: (k) => (k === "none" ? "None" : k.charAt(0).toUpperCase() + k.slice(1)),
+        title: (k) =>
+          k === "none" ? "None" : k.charAt(0).toUpperCase() + k.slice(1),
       };
     }
 
@@ -608,8 +720,7 @@ export function ViewDetailPage() {
       return {
         order: ordered,
         groups: map,
-        title: (k) =>
-          k === NONE_ASSIGNEE_KEY ? "Unassigned" : memberName(k),
+        title: (k) => (k === NONE_ASSIGNEE_KEY ? "Unassigned" : memberName(k)),
       };
     }
 
@@ -642,8 +753,7 @@ export function ViewDetailPage() {
       return {
         order: ordered,
         groups: map,
-        title: (k) =>
-          k === NONE_CREATOR_KEY ? "Unknown" : memberName(k),
+        title: (k) => (k === NONE_CREATOR_KEY ? "Unknown" : memberName(k)),
       };
     }
 
@@ -807,8 +917,7 @@ export function ViewDetailPage() {
     <div className="min-h-0 flex-1 overflow-auto px-(--padding-page) py-4">
       <div className="mx-auto max-w-5xl space-y-6">
         {groupedSections.order.map((sectionKey) => {
-          const sectionIssues =
-            groupedSections.groups.get(sectionKey) ?? [];
+          const sectionIssues = groupedSections.groups.get(sectionKey) ?? [];
           if (!sectionIssues.length) return null;
           const title = groupedSections.title(sectionKey);
           return (
