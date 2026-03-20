@@ -27,6 +27,7 @@ import type {
   ModuleApiResponse,
   WorkspaceMemberApiResponse,
 } from '../../api/types';
+import { PROJECT_CYCLES_FILTER_EVENT } from '../../lib/projectCyclesEvents';
 import { PROJECT_VIEWS_FILTER_EVENT } from '../../lib/projectViewsEvents';
 
 export type ProjectSection = 'issues' | 'cycles' | 'modules' | 'views' | 'pages';
@@ -131,6 +132,22 @@ const IconChevronDown = () => (
     aria-hidden
   >
     <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
+const IconChevronUp = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="m18 15-6-6-6 6" />
   </svg>
 );
 const IconCalendar = () => (
@@ -994,6 +1011,21 @@ function ProjectSectionHeader({
   const [viewsCreatedBy, setViewsCreatedBy] = useState<string[]>([]);
   const [viewsMembers, setViewsMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [modulesDateRangeModal, setModulesDateRangeModal] = useState<'start' | 'due' | null>(null);
+  const [cyclesFiltersDropdownOpen, setCyclesFiltersDropdownOpen] = useState<string | null>(null);
+  const [cyclesStatusSectionOpen, setCyclesStatusSectionOpen] = useState(true);
+  const [cyclesStartSectionOpen, setCyclesStartSectionOpen] = useState(true);
+  const [cyclesDueSectionOpen, setCyclesDueSectionOpen] = useState(true);
+  const [cyclesFiltersSearch, setCyclesFiltersSearch] = useState('');
+  const [cyclesDateRangeModal, setCyclesDateRangeModal] = useState<'start' | 'due' | null>(null);
+  const [cyclesSelectedStatusKeys, setCyclesSelectedStatusKeys] = useState<string[]>([]);
+  const [cyclesSelectedStartDatePresets, setCyclesSelectedStartDatePresets] = useState<string[]>(
+    [],
+  );
+  const [cyclesSelectedDueDatePresets, setCyclesSelectedDueDatePresets] = useState<string[]>([]);
+  const [cyclesStartAfter, setCyclesStartAfter] = useState<string | null>(null);
+  const [cyclesStartBefore, setCyclesStartBefore] = useState<string | null>(null);
+  const [cyclesDueAfter, setCyclesDueAfter] = useState<string | null>(null);
+  const [cyclesDueBefore, setCyclesDueBefore] = useState<string | null>(null);
   const projectDropdownRef = useRef<HTMLDivElement | null>(null);
   const modulesSearchInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -1072,6 +1104,40 @@ function ProjectSectionHeader({
       }),
     );
   };
+
+  useEffect(() => {
+    if (section !== 'cycles') return;
+    if (!workspaceSlug || !projectId) return;
+
+    window.dispatchEvent(
+      new CustomEvent(PROJECT_CYCLES_FILTER_EVENT, {
+        detail: {
+          workspaceSlug,
+          projectId,
+          filters: {
+            statusKeys: cyclesSelectedStatusKeys,
+            startDatePresets: cyclesSelectedStartDatePresets,
+            dueDatePresets: cyclesSelectedDueDatePresets,
+            startAfter: cyclesStartAfter,
+            startBefore: cyclesStartBefore,
+            dueAfter: cyclesDueAfter,
+            dueBefore: cyclesDueBefore,
+          },
+        },
+      }),
+    );
+  }, [
+    section,
+    workspaceSlug,
+    projectId,
+    cyclesSelectedStatusKeys,
+    cyclesSelectedStartDatePresets,
+    cyclesSelectedDueDatePresets,
+    cyclesStartAfter,
+    cyclesStartBefore,
+    cyclesDueAfter,
+    cyclesDueBefore,
+  ]);
 
   const q = (s: string) => s.trim().toLowerCase();
   const filteredProjects = projects.filter((p) => q(p.name).includes(q(projectSearch)));
@@ -1175,12 +1241,209 @@ function ProjectSectionHeader({
           >
             <IconSearch />
           </button>
-          <button
-            type="button"
-            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+          <Dropdown
+            id="cycles-filters"
+            openId={cyclesFiltersDropdownOpen}
+            onOpen={setCyclesFiltersDropdownOpen}
+            label="Filters"
+            icon={<IconFilter />}
+            displayValue="Filters"
+            triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+            triggerContent={
+              <span className="flex items-center gap-1.5">
+                <IconFilter /> Filters <IconChevronDown />
+              </span>
+            }
+            panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
+            align="left"
           >
-            <IconFilter /> Filters <IconChevronDown />
-          </button>
+            <div className="sticky top-0 shrink-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-2">
+              <div className="flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
+                <span className="shrink-0 text-(--txt-icon-tertiary)" aria-hidden>
+                  <IconSearch />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search"
+                  value={cyclesFiltersSearch}
+                  onChange={(e) => setCyclesFiltersSearch(e.target.value)}
+                  className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto py-1">
+              <div className="border-b border-(--border-subtle) last:border-b-0">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                  onClick={() => setCyclesStatusSectionOpen((o) => !o)}
+                >
+                  <span>Status of the cycle</span>
+                  <span className="text-(--txt-icon-tertiary)">
+                    {cyclesStatusSectionOpen ? <IconChevronUp /> : <IconChevronDown />}
+                  </span>
+                </button>
+                {cyclesStatusSectionOpen && (
+                  <div className="pb-1">
+                    {[
+                      { key: 'in_progress', label: 'In progress' },
+                      { key: 'yet_to_start', label: 'Yet to start' },
+                      { key: 'completed', label: 'Completed' },
+                      { key: 'draft', label: 'Draft' },
+                    ]
+                      .filter(
+                        (s) =>
+                          !cyclesFiltersSearch.trim() ||
+                          s.label.toLowerCase().includes(cyclesFiltersSearch.trim().toLowerCase()),
+                      )
+                      .map((s) => (
+                        <label
+                          key={s.key}
+                          className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={cyclesSelectedStatusKeys.includes(s.key)}
+                            onChange={() => {
+                              setCyclesSelectedStatusKeys((prev) =>
+                                prev.includes(s.key)
+                                  ? prev.filter((k) => k !== s.key)
+                                  : [...prev, s.key],
+                              );
+                            }}
+                            className="rounded border-[var(--border-subtle)]"
+                          />
+                          <span>{s.label}</span>
+                        </label>
+                      ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-b border-(--border-subtle) last:border-b-0">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                  onClick={() => setCyclesStartSectionOpen((o) => !o)}
+                >
+                  <span>Start date</span>
+                  <span className="text-(--txt-icon-tertiary)">
+                    {cyclesStartSectionOpen ? <IconChevronUp /> : <IconChevronDown />}
+                  </span>
+                </button>
+                {cyclesStartSectionOpen && (
+                  <div className="pb-1">
+                    {[
+                      { key: '1_week', label: '1 week from now' },
+                      { key: '2_weeks', label: '2 weeks from now' },
+                      { key: '1_month', label: '1 month from now' },
+                      { key: '2_months', label: '2 months from now' },
+                      { key: 'custom', label: 'Custom' },
+                    ].map((p) => {
+                      const checked = cyclesSelectedStartDatePresets.includes(p.key);
+                      return (
+                        <label
+                          key={p.key}
+                          className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              if (p.key === 'custom') {
+                                if (checked) {
+                                  setCyclesSelectedStartDatePresets((prev) =>
+                                    prev.filter((k) => k !== 'custom'),
+                                  );
+                                  setCyclesStartAfter(null);
+                                  setCyclesStartBefore(null);
+                                } else {
+                                  setCyclesSelectedStartDatePresets((prev) => [...prev, 'custom']);
+                                  setCyclesFiltersDropdownOpen(null);
+                                  setCyclesDateRangeModal('start');
+                                }
+                                return;
+                              }
+
+                              setCyclesSelectedStartDatePresets((prev) =>
+                                prev.includes(p.key)
+                                  ? prev.filter((k) => k !== p.key)
+                                  : [...prev, p.key],
+                              );
+                            }}
+                            className="rounded border-[var(--border-subtle)]"
+                          />
+                          <span>{p.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-b border-(--border-subtle) last:border-b-0">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                  onClick={() => setCyclesDueSectionOpen((o) => !o)}
+                >
+                  <span>Due date</span>
+                  <span className="text-(--txt-icon-tertiary)">
+                    {cyclesDueSectionOpen ? <IconChevronUp /> : <IconChevronDown />}
+                  </span>
+                </button>
+                {cyclesDueSectionOpen && (
+                  <div className="pb-1">
+                    {[
+                      { key: '1_week', label: '1 week from now' },
+                      { key: '2_weeks', label: '2 weeks from now' },
+                      { key: '1_month', label: '1 month from now' },
+                      { key: '2_months', label: '2 months from now' },
+                      { key: 'custom', label: 'Custom' },
+                    ].map((p) => {
+                      const checked = cyclesSelectedDueDatePresets.includes(p.key);
+                      return (
+                        <label
+                          key={p.key}
+                          className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              if (p.key === 'custom') {
+                                if (checked) {
+                                  setCyclesSelectedDueDatePresets((prev) =>
+                                    prev.filter((k) => k !== 'custom'),
+                                  );
+                                  setCyclesDueAfter(null);
+                                  setCyclesDueBefore(null);
+                                } else {
+                                  setCyclesSelectedDueDatePresets((prev) => [...prev, 'custom']);
+                                  setCyclesFiltersDropdownOpen(null);
+                                  setCyclesDateRangeModal('due');
+                                }
+                                return;
+                              }
+
+                              setCyclesSelectedDueDatePresets((prev) =>
+                                prev.includes(p.key)
+                                  ? prev.filter((k) => k !== p.key)
+                                  : [...prev, p.key],
+                              );
+                            }}
+                            className="rounded border-[var(--border-subtle)]"
+                          />
+                          <span>{p.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </Dropdown>
           <Button size="sm" className="gap-1.5 text-[13px] font-medium">
             <IconPlus /> Add cycle
           </Button>
@@ -1902,6 +2165,25 @@ function ProjectSectionHeader({
             }}
           />
         </>
+      )}
+      {section === 'cycles' && (
+        <DateRangeModal
+          open={cyclesDateRangeModal !== null}
+          onClose={() => setCyclesDateRangeModal(null)}
+          title={cyclesDateRangeModal === 'start' ? 'Start date range' : 'Due date range'}
+          after={cyclesDateRangeModal === 'start' ? cyclesStartAfter : cyclesDueAfter}
+          before={cyclesDateRangeModal === 'start' ? cyclesStartBefore : cyclesDueBefore}
+          onApply={(after, before) => {
+            if (cyclesDateRangeModal === 'start') {
+              setCyclesStartAfter(after);
+              setCyclesStartBefore(before);
+            } else {
+              setCyclesDueAfter(after);
+              setCyclesDueBefore(before);
+            }
+            setCyclesDateRangeModal(null);
+          }}
+        />
       )}
     </>
   );

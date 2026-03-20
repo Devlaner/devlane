@@ -1,10 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Avatar } from '../components/ui';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
 import { cycleService } from '../services/cycleService';
 import type { WorkspaceApiResponse, ProjectApiResponse, CycleApiResponse } from '../api/types';
+import { PROJECT_CYCLES_FILTER_EVENT } from '../lib/projectCyclesEvents';
+import { parseISODateLocal } from '../lib/dateOnly';
+
+type CycleStatusFilterKey = 'in_progress' | 'yet_to_start' | 'completed' | 'draft';
+type DatePresetFilterKey = '1_week' | '2_weeks' | '1_month' | '2_months' | 'custom';
+
+interface CyclesFiltersState {
+  statusKeys: CycleStatusFilterKey[];
+  startDatePresets: DatePresetFilterKey[];
+  dueDatePresets: DatePresetFilterKey[];
+  startAfter: string | null;
+  startBefore: string | null;
+  dueAfter: string | null;
+  dueBefore: string | null;
+}
 
 const IconTrendingUp = () => (
   <svg
@@ -135,10 +150,21 @@ export function CyclesPage() {
   }>();
   const [upcomingOpen, setUpcomingOpen] = useState(false);
   const [completedOpen, setCompletedOpen] = useState(true);
+  const [draftOpen, setDraftOpen] = useState(false);
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [cycles, setCycles] = useState<CycleApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [filters, setFilters] = useState<CyclesFiltersState>({
+    statusKeys: [],
+    startDatePresets: [],
+    dueDatePresets: [],
+    startAfter: null,
+    startBefore: null,
+    dueAfter: null,
+    dueBefore: null,
+  });
 
   useEffect(() => {
     if (!workspaceSlug || !projectId) {
@@ -175,9 +201,125 @@ export function CyclesPage() {
     };
   }, [workspaceSlug, projectId]);
 
-  const activeCycle = cycles.find((c) => c.status === 'started' || c.status === 'current');
-  const upcomingCycles = cycles.filter((c) => c.status === 'draft' || c.status === 'upcoming');
-  const completedCycles = cycles.filter((c) => c.status === 'completed');
+  useEffect(() => {
+    if (!workspaceSlug || !projectId) return;
+
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<{
+        workspaceSlug?: string;
+        projectId?: string;
+        filters?: Partial<CyclesFiltersState>;
+      }>;
+      const d = ce.detail;
+      if (
+        !d?.workspaceSlug ||
+        !d?.projectId ||
+        d.workspaceSlug !== workspaceSlug ||
+        d.projectId !== projectId
+      ) {
+        return;
+      }
+      const next = d.filters;
+      if (!next) return;
+
+      setFilters((prev) => ({
+        ...prev,
+        statusKeys: (next.statusKeys ?? prev.statusKeys) as CycleStatusFilterKey[],
+        startDatePresets: (next.startDatePresets ?? prev.startDatePresets) as DatePresetFilterKey[],
+        dueDatePresets: (next.dueDatePresets ?? prev.dueDatePresets) as DatePresetFilterKey[],
+        startAfter: next.startAfter ?? prev.startAfter,
+        startBefore: next.startBefore ?? prev.startBefore,
+        dueAfter: next.dueAfter ?? prev.dueAfter,
+        dueBefore: next.dueBefore ?? prev.dueBefore,
+      }));
+    };
+
+    window.addEventListener(PROJECT_CYCLES_FILTER_EVENT, handler as EventListener);
+    return () => window.removeEventListener(PROJECT_CYCLES_FILTER_EVENT, handler as EventListener);
+  }, [workspaceSlug, projectId]);
+
+  const filteredCycles = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    const groupStatuses: Record<CycleStatusFilterKey, string[]> = {
+      in_progress: ['started', 'current'],
+      yet_to_start: ['upcoming'],
+      completed: ['completed'],
+      draft: ['draft'],
+    };
+
+    const presetDays: Record<DatePresetFilterKey, number | null> = {
+      '1_week': 7,
+      '2_weeks': 14,
+      '1_month': 30,
+      '2_months': 60,
+      custom: null,
+    };
+
+    const inRange = (date: Date, rangeStartMs: number, rangeEndMs: number) => {
+      const t = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+      return t >= rangeStartMs && t <= rangeEndMs;
+    };
+
+    const matchesPresetUnion = (
+      dateIso: string | null | undefined,
+      selectedPresets: DatePresetFilterKey[],
+      customAfter: string | null,
+      customBefore: string | null,
+    ) => {
+      // Empty selection means "no filtering" (match Plane behavior).
+      if (selectedPresets.length === 0) return true;
+      if (!dateIso) return false;
+
+      const date = parseISODateLocal(dateIso);
+
+      const ranges: Array<{ start: number; end: number }> = [];
+      for (const p of selectedPresets) {
+        if (p === 'custom') {
+          if (!customAfter || !customBefore) continue;
+          const a = parseISODateLocal(customAfter);
+          const b = parseISODateLocal(customBefore);
+          const aMs = new Date(a.getFullYear(), a.getMonth(), a.getDate()).getTime();
+          const bMs = new Date(b.getFullYear(), b.getMonth(), b.getDate()).getTime();
+          ranges.push({ start: Math.min(aMs, bMs), end: Math.max(aMs, bMs) });
+        } else {
+          const days = presetDays[p];
+          if (days == null) continue;
+          ranges.push({
+            start: startOfToday,
+            end: startOfToday + days * 24 * 60 * 60 * 1000,
+          });
+        }
+      }
+
+      if (ranges.length === 0) return false;
+      return ranges.some((r) => inRange(date, r.start, r.end));
+    };
+
+    const matchesStatus = (c: CycleApiResponse) => {
+      if (filters.statusKeys.length === 0) return true;
+      return filters.statusKeys.some((k) => groupStatuses[k]?.includes(c.status));
+    };
+
+    return cycles.filter((c) => {
+      return (
+        matchesStatus(c) &&
+        matchesPresetUnion(
+          c.start_date,
+          filters.startDatePresets,
+          filters.startAfter,
+          filters.startBefore,
+        ) &&
+        matchesPresetUnion(c.end_date, filters.dueDatePresets, filters.dueAfter, filters.dueBefore)
+      );
+    });
+  }, [cycles, filters]);
+
+  const activeCycle = filteredCycles.find((c) => c.status === 'started' || c.status === 'current');
+  const upcomingCycles = filteredCycles.filter((c) => c.status === 'upcoming');
+  const draftCycles = filteredCycles.filter((c) => c.status === 'draft');
+  const completedCycles = filteredCycles.filter((c) => c.status === 'completed');
 
   const getIssueCount = (cycleId: string) => cycles.find((c) => c.id === cycleId)?.issue_count ?? 0;
   const getUser = (userId: string | null): { name: string; avatarUrl?: string | null } | null => {
@@ -332,6 +474,41 @@ export function CyclesPage() {
               <p className="py-4 text-sm text-(--txt-tertiary)">No upcoming cycles.</p>
             ) : (
               upcomingCycles.map((c) => (
+                <Link
+                  key={c.id}
+                  to={`${baseUrl}/cycles/${c.id}`}
+                  className="block rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-3 text-sm no-underline hover:bg-(--bg-layer-1-hover)"
+                >
+                  <span className="font-medium text-(--txt-primary)">{c.name}</span>
+                  <span className="ml-2 text-(--txt-tertiary)">
+                    {c.start_date && c.end_date
+                      ? formatDateRange(c.start_date, c.end_date)
+                      : 'No dates'}
+                  </span>
+                </Link>
+              ))
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Draft cycle */}
+      <section>
+        <button
+          type="button"
+          onClick={() => setDraftOpen((o) => !o)}
+          className="flex w-full items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-2.5 text-left text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+        >
+          <span className="flex h-2 w-2 rounded-full border border-(--border-subtle) bg-transparent" />
+          Draft cycle {draftCycles.length}
+          <span className="ml-auto">{draftOpen ? <IconChevronUp /> : <IconChevronDown />}</span>
+        </button>
+        {draftOpen && (
+          <div className="mt-2 space-y-2 pl-4">
+            {draftCycles.length === 0 ? (
+              <p className="py-4 text-sm text-(--txt-tertiary)">No draft cycles.</p>
+            ) : (
+              draftCycles.map((c) => (
                 <Link
                   key={c.id}
                   to={`${baseUrl}/cycles/${c.id}`}
