@@ -2272,6 +2272,7 @@ function ProjectSavedViewDetailHeader({
 }) {
   void _issueCount;
   const navigate = useNavigate();
+  const { filters: workspaceViewFilters } = useWorkspaceViewsState();
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
   const issuesUrl = `${baseUrl}/issues`;
   const [viewTitle, setViewTitle] = useState<string>("…");
@@ -2337,6 +2338,29 @@ function ProjectSavedViewDetailHeader({
   const filteredProjects = projects.filter((p) =>
     q(p.name).includes(q(projectSearch)),
   );
+
+  const startDateEffective =
+    workspaceViewFilters.startDate.length &&
+    !(
+      workspaceViewFilters.startDate.includes("custom") &&
+      (!workspaceViewFilters.startAfter || !workspaceViewFilters.startBefore)
+    );
+  const dueDateEffective =
+    workspaceViewFilters.dueDate.length &&
+    !(
+      workspaceViewFilters.dueDate.includes("custom") &&
+      (!workspaceViewFilters.dueAfter || !workspaceViewFilters.dueBefore)
+    );
+  const activeFilters =
+    workspaceViewFilters.priority.length > 0 ||
+    workspaceViewFilters.stateGroup.length > 0 ||
+    workspaceViewFilters.assigneeIds.length > 0 ||
+    workspaceViewFilters.createdByIds.length > 0 ||
+    workspaceViewFilters.labelIds.length > 0 ||
+    workspaceViewFilters.projectIds.length > 0 ||
+    workspaceViewFilters.grouping !== "all" ||
+    Boolean(startDateEffective) ||
+    Boolean(dueDateEffective);
 
   return (
     <>
@@ -2455,10 +2479,18 @@ function ProjectSavedViewDetailHeader({
           <IconGrid />
         </button>
         <div className="mx-1 w-px self-stretch bg-(--border-subtle)" />
-        <WorkspaceViewsFiltersDropdown
-          openId={filtersDropdownOpen}
-          onOpen={setFiltersDropdownOpen}
-        />
+        <div className="relative shrink-0">
+          <WorkspaceViewsFiltersDropdown
+            openId={filtersDropdownOpen}
+            onOpen={setFiltersDropdownOpen}
+          />
+          {activeFilters && (
+            <span
+              className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-(--brand-default)"
+              aria-hidden
+            />
+          )}
+        </div>
         <ProjectSavedViewDisplayDropdown />
         <Link to={`${baseUrl}/views/${viewId}?create=1`}>
           <Button size="sm" className="gap-1.5 text-[13px] font-medium">

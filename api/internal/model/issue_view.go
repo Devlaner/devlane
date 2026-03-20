@@ -29,7 +29,7 @@ type IssueView struct {
 	DeletedAt         gorm.DeletedAt `gorm:"index" json:"-"`
 	CreatedByID       *uuid.UUID     `gorm:"type:uuid" json:"created_by_id,omitempty"`
 	UpdatedByID       *uuid.UUID     `gorm:"type:uuid" json:"updated_by_id,omitempty"`
-	IsFavorite bool `gorm:"-" json:"is_favorite,omitempty"`
+	IsFavorite        bool           `gorm:"-" json:"is_favorite,omitempty"`
 }
 
 func (IssueView) TableName() string { return "issue_views" }
