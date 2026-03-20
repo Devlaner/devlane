@@ -567,7 +567,7 @@ export function CyclesPage() {
     return g ? stateGroupMap[g] : undefined;
   };
 
-  const activeCycleProgressStats = useMemo(() => {
+  const activeCycleProgressStats = (() => {
     if (!activeCycle) return { started: 0, backlog: 0, completed: 0, total: 0, percentClosed: 0 };
     const started = activeCycleIssues.filter((i) => {
       const g = getStateGroup(i.state_id ?? undefined);
@@ -584,9 +584,9 @@ export function CyclesPage() {
     const total = activeCycleIssues.length;
     const percentClosed = total > 0 ? Math.round((completed / total) * 100) : 0;
     return { started, backlog, completed, total, percentClosed };
-  }, [activeCycle, activeCycleIssues, states]);
+  })();
 
-  const activeCycleAssigneeStats = useMemo(() => {
+  const activeCycleAssigneeStats = (() => {
     if (!activeCycle) return [];
     const byAssignee = new Map<string, { total: number; completed: number }>();
     for (const i of activeCycleIssues) {
@@ -615,9 +615,9 @@ export function CyclesPage() {
         percent: s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0,
       }))
       .sort((a, b) => b.total - a.total);
-  }, [activeCycle, activeCycleIssues, states]);
+  })();
 
-  const activeCycleLabelStats = useMemo(() => {
+  const activeCycleLabelStats = (() => {
     if (!activeCycle) return [];
     const byLabel = new Map<string, { total: number; completed: number }>();
     for (const i of activeCycleIssues) {
@@ -646,7 +646,7 @@ export function CyclesPage() {
         percent: s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0,
       }))
       .sort((a, b) => b.total - a.total);
-  }, [activeCycle, activeCycleIssues, states]);
+  })();
 
   const getOwnerMember = (ownedById: string | null | undefined) => {
     if (!ownedById) return null;
