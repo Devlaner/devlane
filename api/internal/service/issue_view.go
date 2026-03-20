@@ -16,10 +16,11 @@ type IssueViewService struct {
 	ivs *store.IssueViewStore
 	ps  *store.ProjectStore
 	ws  *store.WorkspaceStore
+	fav *store.UserFavoriteStore
 }
 
-func NewIssueViewService(ivs *store.IssueViewStore, ps *store.ProjectStore, ws *store.WorkspaceStore) *IssueViewService {
-	return &IssueViewService{ivs: ivs, ps: ps, ws: ws}
+func NewIssueViewService(ivs *store.IssueViewStore, ps *store.ProjectStore, ws *store.WorkspaceStore, fav *store.UserFavoriteStore) *IssueViewService {
+	return &IssueViewService{ivs: ivs, ps: ps, ws: ws, fav: fav}
 }
 
 func (s *IssueViewService) ensureWorkspaceAccess(ctx context.Context, workspaceSlug string, userID uuid.UUID) (uuid.UUID, error) {
@@ -61,7 +62,41 @@ func (s *IssueViewService) List(ctx context.Context, workspaceSlug string, proje
 			return nil, err
 		}
 	}
-	return s.ivs.ListByWorkspaceID(ctx, workspaceID, projectID)
+	list, err := s.ivs.ListByWorkspaceID(ctx, workspaceID, projectID)
+	if err != nil {
+		return nil, err
+	}
+	if s.fav != nil && len(list) > 0 {
+		favIDs, ferr := s.fav.ListIssueViewIDsByUserAndWorkspace(ctx, userID, workspaceID)
+		if ferr == nil && len(favIDs) > 0 {
+			favSet := make(map[uuid.UUID]struct{}, len(favIDs))
+			for _, id := range favIDs {
+				favSet[id] = struct{}{}
+			}
+			for i := range list {
+				if _, ok := favSet[list[i].ID]; ok {
+					list[i].IsFavorite = true
+				}
+			}
+		}
+	}
+	return list, nil
+}
+
+// ListFavorites returns saved views the current user favorited in the workspace (for sidebar / quick access).
+func (s *IssueViewService) ListFavorites(ctx context.Context, workspaceSlug string, userID uuid.UUID) ([]model.IssueView, error) {
+	workspaceID, err := s.ensureWorkspaceAccess(ctx, workspaceSlug, userID)
+	if err != nil {
+		return nil, err
+	}
+	list, err := s.ivs.ListFavoritedByUserInWorkspace(ctx, workspaceID, userID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range list {
+		list[i].IsFavorite = true
+	}
+	return list, nil
 }
 
 func (s *IssueViewService) Create(ctx context.Context, workspaceSlug string, projectID *uuid.UUID, userID uuid.UUID, name, description string, query, filters, displayFilters, displayProperties model.JSONMap) (*model.IssueView, error) {
@@ -113,6 +148,12 @@ func (s *IssueViewService) Get(ctx context.Context, workspaceSlug string, viewID
 	iv, err := s.ivs.GetByID(ctx, viewID)
 	if err != nil {
 		return nil, ErrIssueViewNotFound
+	}
+	if s.fav != nil {
+		ok, ferr := s.fav.IsIssueViewFavorited(ctx, userID, viewID)
+		if ferr == nil {
+			iv.IsFavorite = ok
+		}
 	}
 	return iv, nil
 }
@@ -166,4 +207,51 @@ func (s *IssueViewService) Delete(ctx context.Context, workspaceSlug string, vie
 		return ErrIssueViewNotFound
 	}
 	return s.ivs.Delete(ctx, viewID)
+}
+
+func (s *IssueViewService) AddFavorite(ctx context.Context, workspaceSlug string, viewID uuid.UUID, userID uuid.UUID) error {
+	if s.fav == nil {
+		return ErrIssueViewNotFound
+	}
+	workspaceID, err := s.ensureWorkspaceAccess(ctx, workspaceSlug, userID)
+	if err != nil {
+		return err
+	}
+	iv, err := s.ivs.GetByID(ctx, viewID)
+	if err != nil {
+		return ErrIssueViewNotFound
+	}
+	if iv.WorkspaceID != workspaceID {
+		return ErrIssueViewNotFound
+	}
+	if iv.ProjectID != nil {
+		if err := s.ensureProjectAccess(ctx, workspaceSlug, *iv.ProjectID, userID); err != nil {
+			return err
+		}
+	}
+	return s.fav.AddIssueView(ctx, userID, workspaceID, iv.ProjectID, viewID)
+}
+
+// RemoveFavorite removes the current user's favorite on an issue view.
+func (s *IssueViewService) RemoveFavorite(ctx context.Context, workspaceSlug string, viewID uuid.UUID, userID uuid.UUID) error {
+	if s.fav == nil {
+		return ErrIssueViewNotFound
+	}
+	workspaceID, err := s.ensureWorkspaceAccess(ctx, workspaceSlug, userID)
+	if err != nil {
+		return err
+	}
+	iv, err := s.ivs.GetByID(ctx, viewID)
+	if err != nil {
+		return ErrIssueViewNotFound
+	}
+	if iv.WorkspaceID != workspaceID {
+		return ErrIssueViewNotFound
+	}
+	if iv.ProjectID != nil {
+		if err := s.ensureProjectAccess(ctx, workspaceSlug, *iv.ProjectID, userID); err != nil {
+			return err
+		}
+	}
+	return s.fav.RemoveIssueView(ctx, userID, viewID)
 }

@@ -23,6 +23,14 @@ export const viewService = {
     return data;
   },
 
+  /** Favorited saved views for the current user in this workspace (sidebar). */
+  async listFavorites(workspaceSlug: string): Promise<IssueViewApiResponse[]> {
+    const { data } = await apiClient.get<IssueViewApiResponse[]>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/favorites/`,
+    );
+    return data ?? [];
+  },
+
   async get(
     workspaceSlug: string,
     viewId: string,
@@ -42,5 +50,69 @@ export const viewService = {
       payload,
     );
     return data;
+  },
+
+  async update(
+    workspaceSlug: string,
+    viewId: string,
+    payload: Partial<CreateViewRequest>,
+  ): Promise<IssueViewApiResponse> {
+    const { data } = await apiClient.patch<IssueViewApiResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/`,
+      payload,
+    );
+    return data;
+  },
+
+  async remove(workspaceSlug: string, viewId: string): Promise<void> {
+    await apiClient.delete(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/`,
+    );
+  },
+
+  async addFavorite(workspaceSlug: string, viewId: string): Promise<void> {
+    await apiClient.post(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/favorite`,
+    );
+  },
+
+  async removeFavorite(workspaceSlug: string, viewId: string): Promise<void> {
+    await apiClient.delete(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/favorite`,
+    );
+  },
+
+  async publish(
+    workspaceSlug: string,
+    viewId: string,
+  ): Promise<IssueViewApiResponse> {
+    try {
+      const { data } = await apiClient.post<IssueViewApiResponse>(
+        `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/publish/`,
+      );
+      return data;
+    } catch {
+      const { data } = await apiClient.post<IssueViewApiResponse>(
+        `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/publish`,
+      );
+      return data;
+    }
+  },
+
+  async unpublish(
+    workspaceSlug: string,
+    viewId: string,
+  ): Promise<IssueViewApiResponse> {
+    try {
+      const { data } = await apiClient.post<IssueViewApiResponse>(
+        `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/unpublish/`,
+      );
+      return data;
+    } catch {
+      const { data } = await apiClient.post<IssueViewApiResponse>(
+        `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/unpublish`,
+      );
+      return data;
+    }
   },
 };

@@ -38,6 +38,18 @@ func (s *IssueViewStore) ListByWorkspaceID(ctx context.Context, workspaceID uuid
 	return list, err
 }
 
+// ListFavoritedByUserInWorkspace returns issue views the user favorited in this workspace (project or workspace-scoped).
+func (s *IssueViewStore) ListFavoritedByUserInWorkspace(ctx context.Context, workspaceID, userID uuid.UUID) ([]model.IssueView, error) {
+	var list []model.IssueView
+	err := s.db.WithContext(ctx).
+		Table("issue_views").
+		Joins(`INNER JOIN user_favorites ON user_favorites.entity_identifier = issue_views.id AND user_favorites.entity_type = ?`, FavoriteEntityTypeIssueView).
+		Where("issue_views.workspace_id = ? AND user_favorites.user_id = ? AND issue_views.deleted_at IS NULL", workspaceID, userID).
+		Order("issue_views.name ASC").
+		Find(&list).Error
+	return list, err
+}
+
 func (s *IssueViewStore) Update(ctx context.Context, v *model.IssueView) error {
 	return s.db.WithContext(ctx).Save(v).Error
 }

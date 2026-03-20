@@ -9,6 +9,7 @@ import {
 import { Button } from "../ui";
 import { Dropdown } from "../work-item";
 import { useModulesFilter } from "../../contexts/ModulesFilterContext";
+import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
 import {
   WorkspaceViewsFiltersDropdown,
   WorkspaceViewsDisplayDropdown,
@@ -16,6 +17,8 @@ import {
   CreateViewModal,
   ModuleFiltersPanel,
 } from "../workspace-views";
+import { ProjectSavedViewDisplayDropdown } from "../project-saved-view/ProjectSavedViewDisplayDropdown";
+import { ProjectSavedViewMoreMenu } from "../project-saved-view/ProjectSavedViewMoreMenu";
 import { DateRangeModal } from "../workspace-views/DateRangeModal";
 import { CreateModuleModal } from "../CreateModuleModal";
 import { workspaceService } from "../../services/workspaceService";
@@ -28,7 +31,9 @@ import type {
   ProjectApiResponse,
   IssueViewApiResponse,
   ModuleApiResponse,
+  WorkspaceMemberApiResponse,
 } from "../../api/types";
+import { PROJECT_VIEWS_FILTER_EVENT } from "../../lib/projectViewsEvents";
 
 export type ProjectSection =
   | "issues"
@@ -1009,6 +1014,7 @@ function ProjectSectionHeader({
 }) {
   const navigate = useNavigate();
   const modulesFilter = useModulesFilter();
+  const { display: viewsDisplay, setDisplay } = useWorkspaceViewsState();
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
   const issuesUrl = `${baseUrl}/issues`;
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
@@ -1020,6 +1026,24 @@ function ProjectSectionHeader({
     null,
   );
   const [modulesSortOpen, setModulesSortOpen] = useState<string | null>(null);
+  const [viewsSortOpen, setViewsSortOpen] = useState<string | null>(null);
+  const [viewsFiltersOpen, setViewsFiltersOpen] = useState<string | null>(null);
+  const [viewsSearchOpen, setViewsSearchOpen] = useState(false);
+  const [viewsSearchQuery, setViewsSearchQuery] = useState("");
+  const [viewsFavOnly, setViewsFavOnly] = useState(false);
+  const [viewsCreatedDate, setViewsCreatedDate] = useState<
+    "1_week" | "2_weeks" | "1_month" | "custom" | null
+  >(null);
+  const [viewsCreatedAfter, setViewsCreatedAfter] = useState<string | null>(
+    null,
+  );
+  const [viewsCreatedBefore, setViewsCreatedBefore] = useState<string | null>(
+    null,
+  );
+  const [viewsCreatedBy, setViewsCreatedBy] = useState<string[]>([]);
+  const [viewsMembers, setViewsMembers] = useState<
+    WorkspaceMemberApiResponse[]
+  >([]);
   const [modulesDateRangeModal, setModulesDateRangeModal] = useState<
     "start" | "due" | null
   >(null);
@@ -1063,6 +1087,47 @@ function ProjectSectionHeader({
       modulesSearchInputRef.current?.focus();
     }
   }, [modulesSearchExpanded]);
+
+  useEffect(() => {
+    if (section !== "views") return;
+    let cancelled = false;
+    workspaceService
+      .listMembers(workspaceSlug)
+      .then((mem) => {
+        if (!cancelled) setViewsMembers(mem ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setViewsMembers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [section, workspaceSlug]);
+
+  const dispatchViewsFilters = (
+    next: Partial<{
+      query: string;
+      favoritesOnly: boolean;
+      createdDatePreset: "1_week" | "2_weeks" | "1_month" | "custom" | null;
+      createdAfter: string | null;
+      createdBefore: string | null;
+      createdByIds: string[];
+    }>,
+  ) => {
+    window.dispatchEvent(
+      new CustomEvent(PROJECT_VIEWS_FILTER_EVENT, {
+        detail: {
+          query: viewsSearchQuery,
+          favoritesOnly: viewsFavOnly,
+          createdDatePreset: viewsCreatedDate,
+          createdAfter: viewsCreatedAfter,
+          createdBefore: viewsCreatedBefore,
+          createdByIds: viewsCreatedBy,
+          ...next,
+        },
+      }),
+    );
+  };
 
   const q = (s: string) => s.trim().toLowerCase();
   const filteredProjects = projects.filter((p) =>
@@ -1439,30 +1504,376 @@ function ProjectSectionHeader({
       );
     }
     if (section === "views") {
+      const activeFilters =
+        viewsFavOnly ||
+        !!viewsCreatedDate ||
+        !!viewsCreatedAfter ||
+        !!viewsCreatedBefore ||
+        viewsCreatedBy.length > 0;
+      const sortLabel =
+        viewsDisplay.sortBy === "name"
+          ? "Name"
+          : viewsDisplay.sortBy === "created_at"
+            ? "Created at"
+            : "Updated at";
       return (
         <>
-          <button
-            type="button"
-            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+          <div className="flex items-center">
+            {!viewsSearchOpen && (
+              <button
+                type="button"
+                className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
+                aria-label="Search views"
+                onClick={() => setViewsSearchOpen(true)}
+              >
+                <IconSearch />
+              </button>
+            )}
+            <div
+              className={`ml-2 overflow-hidden transition-[width] duration-200 ease-out ${
+                viewsSearchOpen ? "w-64" : "w-0"
+              }`}
+            >
+              <div className="flex items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2 py-1.5">
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
+                  <IconSearch />
+                </span>
+                <input
+                  type="text"
+                  value={viewsSearchQuery}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setViewsSearchQuery(v);
+                    dispatchViewsFilters({ query: v });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      if (viewsSearchQuery.trim()) {
+                        setViewsSearchQuery("");
+                        dispatchViewsFilters({ query: "" });
+                      } else {
+                        setViewsSearchOpen(false);
+                      }
+                    }
+                  }}
+                  placeholder="Search"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
+                  aria-label="Search"
+                />
+                {viewsSearchOpen && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewsSearchQuery("");
+                      dispatchViewsFilters({ query: "" });
+                      setViewsSearchOpen(false);
+                    }}
+                    className="shrink-0 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
+                    aria-label="Clear search"
+                  >
+                    <IconX />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+          <Dropdown
+            id="project-views-sort"
+            openId={viewsSortOpen}
+            onOpen={setViewsSortOpen}
+            label="Sort by"
+            icon={<IconArrowUpDown />}
+            displayValue={sortLabel}
+            align="right"
+            panelClassName="min-w-[180px] rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
+            triggerContent={
+              <>
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
+                  <IconArrowUpDown />
+                </span>
+                <span className="truncate">{sortLabel}</span>
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
+                  <IconChevronDown />
+                </span>
+              </>
+            }
+            triggerClassName="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
-            <IconFilter /> Filters <IconChevronDown />
-          </button>
-          <button
+            {[
+              { value: "updated_at", label: "Updated at" },
+              { value: "created_at", label: "Created at" },
+              { value: "name", label: "Name" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  setDisplay((prev) => ({
+                    ...prev,
+                    sortBy: opt.value as typeof prev.sortBy,
+                  }));
+                  setViewsSortOpen(null);
+                }}
+                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+              >
+                {opt.label}
+                {viewsDisplay.sortBy === opt.value && (
+                  <span className="shrink-0 text-(--txt-primary)">
+                    <IconCheck />
+                  </span>
+                )}
+              </button>
+            ))}
+            <div className="my-1 border-t border-(--border-subtle)" />
+            {(["desc", "asc"] as const).map((orderValue) => (
+              <button
+                key={orderValue}
+                type="button"
+                onClick={() => {
+                  setDisplay((prev) => ({ ...prev, sortOrder: orderValue }));
+                  setViewsSortOpen(null);
+                }}
+                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+              >
+                {orderValue === "desc" ? "Descending" : "Ascending"}
+                {viewsDisplay.sortOrder === orderValue && (
+                  <span className="shrink-0 text-(--txt-primary)">
+                    <IconCheck />
+                  </span>
+                )}
+              </button>
+            ))}
+          </Dropdown>
+          <div className="relative shrink-0">
+            <Dropdown
+              id="project-views-filters"
+              openId={viewsFiltersOpen}
+              onOpen={setViewsFiltersOpen}
+              label="Filters"
+              icon={<IconFilter />}
+              displayValue="Filters"
+              align="right"
+              panelClassName="flex w-[300px] max-h-[min(70vh,28rem)] flex-col overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
+              triggerContent={
+                <>
+                  <span className="shrink-0 text-(--txt-icon-tertiary)">
+                    <IconFilter />
+                  </span>
+                  <span className="truncate">Filters</span>
+                  <span className="shrink-0 text-(--txt-icon-tertiary)">
+                    <IconChevronDown />
+                  </span>
+                </>
+              }
+              triggerClassName="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+            >
+              <div className="sticky top-0 shrink-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-2">
+                <div className="flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
+                  <span className="shrink-0 text-(--txt-icon-tertiary)">
+                    <IconSearch />
+                  </span>
+                  <input
+                    type="text"
+                    value={viewsSearchQuery}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setViewsSearchQuery(v);
+                      dispatchViewsFilters({ query: v });
+                    }}
+                    placeholder="Search"
+                    className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
+                  />
+                </div>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto py-2">
+                <label className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
+                  <input
+                    type="checkbox"
+                    checked={viewsFavOnly}
+                    onChange={() => {
+                      setViewsFavOnly((prev) => {
+                        const next = !prev;
+                        dispatchViewsFilters({ favoritesOnly: next });
+                        return next;
+                      });
+                    }}
+                    className="rounded border-(--border-subtle)"
+                  />
+                  <span>Favorites</span>
+                </label>
+
+                <div className="mt-2">
+                  <div className="flex items-center justify-between px-3 py-2 text-xs font-medium text-(--txt-tertiary)">
+                    <span>Created date</span>
+                  </div>
+                  {[
+                    { id: "1_week", label: "1 week ago" },
+                    { id: "2_weeks", label: "2 weeks ago" },
+                    { id: "1_month", label: "1 month ago" },
+                    { id: "custom", label: "Custom range" },
+                  ].map((opt) => (
+                    <label
+                      key={opt.id}
+                      className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                    >
+                      <input
+                        type="radio"
+                        name="views-created-date"
+                        checked={viewsCreatedDate === opt.id}
+                        onChange={() => {
+                          const nextPreset = opt.id as
+                            | "1_week"
+                            | "2_weeks"
+                            | "1_month"
+                            | "custom";
+                          setViewsCreatedDate(nextPreset);
+                          if (nextPreset !== "custom") {
+                            setViewsCreatedAfter(null);
+                            setViewsCreatedBefore(null);
+                          }
+                          dispatchViewsFilters({
+                            createdDatePreset: nextPreset,
+                            createdAfter:
+                              nextPreset === "custom"
+                                ? viewsCreatedAfter
+                                : null,
+                            createdBefore:
+                              nextPreset === "custom"
+                                ? viewsCreatedBefore
+                                : null,
+                          });
+                        }}
+                        className="border-(--border-subtle)"
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  ))}
+                  <button
+                    type="button"
+                    className="w-full px-3 py-1.5 text-left text-sm text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
+                    onClick={() => {
+                      setViewsCreatedDate(null);
+                      setViewsCreatedAfter(null);
+                      setViewsCreatedBefore(null);
+                      dispatchViewsFilters({
+                        createdDatePreset: null,
+                        createdAfter: null,
+                        createdBefore: null,
+                      });
+                    }}
+                  >
+                    Clear created date
+                  </button>
+                  {viewsCreatedDate === "custom" && (
+                    <div className="px-3 pb-2 pt-1">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="min-w-0">
+                          <label className="mb-1 block text-xs text-(--txt-tertiary)">
+                            After
+                          </label>
+                          <input
+                            type="date"
+                            value={viewsCreatedAfter ?? ""}
+                            onChange={(e) => {
+                              const nextValue = e.target.value || null;
+                              setViewsCreatedAfter(nextValue);
+                              dispatchViewsFilters({
+                                createdDatePreset: "custom",
+                                createdAfter: nextValue,
+                                createdBefore: viewsCreatedBefore,
+                              });
+                            }}
+                            className="w-full rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1 text-sm text-(--txt-primary) focus:outline-none"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <label className="mb-1 block text-xs text-(--txt-tertiary)">
+                            Before
+                          </label>
+                          <input
+                            type="date"
+                            value={viewsCreatedBefore ?? ""}
+                            onChange={(e) => {
+                              const nextValue = e.target.value || null;
+                              setViewsCreatedBefore(nextValue);
+                              dispatchViewsFilters({
+                                createdDatePreset: "custom",
+                                createdAfter: viewsCreatedAfter,
+                                createdBefore: nextValue,
+                              });
+                            }}
+                            className="w-full rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1 text-sm text-(--txt-primary) focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-2">
+                  <div className="flex items-center justify-between px-3 py-2 text-xs font-medium text-(--txt-tertiary)">
+                    <span>Created by</span>
+                  </div>
+                  {viewsMembers.map((m) => {
+                    const checked = viewsCreatedBy.includes(m.member_id);
+                    const label =
+                      m.member_display_name ?? m.member_email ?? m.member_id;
+                    return (
+                      <label
+                        key={m.id}
+                        className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            setViewsCreatedBy((prev) => {
+                              const next = checked
+                                ? prev.filter((id) => id !== m.member_id)
+                                : [...prev, m.member_id];
+                              dispatchViewsFilters({ createdByIds: next });
+                              return next;
+                            });
+                          }}
+                          className="rounded border-(--border-subtle)"
+                        />
+                        {m.member_avatar ? (
+                          <img
+                            src={m.member_avatar}
+                            alt=""
+                            className="size-5 shrink-0 rounded-full object-cover"
+                          />
+                        ) : (
+                          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--bg-layer-2) text-[10px] text-(--txt-secondary)">
+                            {label.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                        <span className="truncate">{label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </Dropdown>
+            {activeFilters && (
+              <span
+                className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-(--brand-default)"
+                aria-hidden
+              />
+            )}
+          </div>
+          <Button
+            size="sm"
+            className="gap-1.5 text-[13px] font-medium"
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent("project-views-create-open"),
+              );
+            }}
           >
-            Display <IconChevronDown />
-          </button>
-          <Button size="sm" className="gap-1.5 text-[13px] font-medium">
             <IconPlus /> Add view
           </Button>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-            aria-label="More options"
-          >
-            <IconMoreVertical />
-          </button>
         </>
       );
     }
@@ -1843,15 +2254,270 @@ function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Project saved view detail (Plane-style: work items + issues toolbar + breadcrumb)
+// ---------------------------------------------------------------------------
+
+function ProjectSavedViewDetailHeader({
+  workspaceSlug,
+  projectId,
+  projectName,
+  viewId,
+  issueCount: _issueCount,
+}: {
+  workspaceSlug: string;
+  projectId: string;
+  projectName: string;
+  viewId: string;
+  issueCount: number;
+}) {
+  void _issueCount;
+  const navigate = useNavigate();
+  const { filters: workspaceViewFilters } = useWorkspaceViewsState();
+  const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
+  const issuesUrl = `${baseUrl}/issues`;
+  const [viewTitle, setViewTitle] = useState<string>("…");
+  const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
+  const [projectSearch, setProjectSearch] = useState("");
+  const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
+  const [filtersDropdownOpen, setFiltersDropdownOpen] = useState<string | null>(
+    null,
+  );
+  const projectDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const v = await viewService.get(workspaceSlug, viewId);
+        if (!cancelled) setViewTitle(v?.name?.trim() ? v.name : "View");
+      } catch {
+        if (!cancelled) setViewTitle("View");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug, viewId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    projectService
+      .list(workspaceSlug)
+      .then((list) => {
+        if (!cancelled) setProjects(list ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setProjects([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        projectDropdownRef.current &&
+        !projectDropdownRef.current.contains(e.target as Node)
+      ) {
+        setProjectDropdownOpen(false);
+      }
+    };
+    if (projectDropdownOpen) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [projectDropdownOpen]);
+
+  const handleSelectProject = (targetProjectId: string) => {
+    setProjectDropdownOpen(false);
+    if (targetProjectId === projectId) return;
+    const targetBase = `/${workspaceSlug}/projects/${targetProjectId}`;
+    navigate(`${targetBase}/views`);
+  };
+
+  const q = (s: string) => s.trim().toLowerCase();
+  const filteredProjects = projects.filter((p) =>
+    q(p.name).includes(q(projectSearch)),
+  );
+
+  const startDateEffective =
+    workspaceViewFilters.startDate.length &&
+    !(
+      workspaceViewFilters.startDate.includes("custom") &&
+      (!workspaceViewFilters.startAfter || !workspaceViewFilters.startBefore)
+    );
+  const dueDateEffective =
+    workspaceViewFilters.dueDate.length &&
+    !(
+      workspaceViewFilters.dueDate.includes("custom") &&
+      (!workspaceViewFilters.dueAfter || !workspaceViewFilters.dueBefore)
+    );
+  const activeFilters =
+    workspaceViewFilters.priority.length > 0 ||
+    workspaceViewFilters.stateGroup.length > 0 ||
+    workspaceViewFilters.assigneeIds.length > 0 ||
+    workspaceViewFilters.createdByIds.length > 0 ||
+    workspaceViewFilters.labelIds.length > 0 ||
+    workspaceViewFilters.projectIds.length > 0 ||
+    workspaceViewFilters.grouping !== "all" ||
+    Boolean(startDateEffective) ||
+    Boolean(dueDateEffective);
+
+  return (
+    <>
+      <div
+        className="relative flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm"
+        ref={projectDropdownRef}
+      >
+        <Link
+          to={issuesUrl}
+          className="flex max-w-[40vw] items-center gap-1.5 truncate rounded-l-md border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
+        >
+          {projectName}
+        </Link>
+        <button
+          type="button"
+          onClick={() => setProjectDropdownOpen((o) => !o)}
+          className="flex h-8.5 w-8 shrink-0 items-center justify-center rounded-r-md border border-l-0 border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
+          aria-label="Select project"
+        >
+          <IconChevronDown />
+        </button>
+        {projectDropdownOpen && (
+          <div className="absolute left-0 top-full z-20 mt-1.5 w-64 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-1.5 shadow-(--shadow-raised)">
+            <div className="mb-1.5 flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
+              <span className="shrink-0 text-(--txt-icon-tertiary)">
+                <IconSearch />
+              </span>
+              <input
+                type="text"
+                placeholder="Search"
+                value={projectSearch}
+                onChange={(e) => setProjectSearch(e.target.value)}
+                className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
+              />
+            </div>
+            <div className="max-h-64 overflow-y-auto py-0.5">
+              {filteredProjects.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => handleSelectProject(p.id)}
+                  className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                >
+                  <span className="truncate">{p.name}</span>
+                  {p.id === projectId && (
+                    <span className="shrink-0 text-(--txt-primary)">
+                      <IconCheck />
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <span className="shrink-0 text-(--txt-tertiary)" aria-hidden>
+          /
+        </span>
+        <Link
+          to={`${baseUrl}/views`}
+          className="flex max-w-[28vw] shrink-0 items-center gap-1.5 truncate rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
+        >
+          <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
+            <IconViewsPlane />
+          </span>
+          Views
+        </Link>
+        <span className="shrink-0 text-(--txt-tertiary)" aria-hidden>
+          /
+        </span>
+        <div className="flex min-w-0 max-w-[36vw] items-center gap-1.5 truncate rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 font-medium text-(--txt-primary)">
+          <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
+            <IconViewsPlane />
+          </span>
+          <span className="truncate">{viewTitle}</span>
+        </div>
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-1">
+        <button
+          type="button"
+          className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--brand-default) hover:bg-(--bg-layer-2-hover)"
+          aria-label="List view"
+          title="List view"
+        >
+          <IconList />
+        </button>
+        <button
+          type="button"
+          className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+          aria-label="Kanban"
+          title="Kanban"
+        >
+          <IconColumns />
+        </button>
+        <Link
+          to={`${baseUrl}/board`}
+          className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+          aria-label="Board"
+          title="Board"
+        >
+          <IconLayoutGrid />
+        </Link>
+        <button
+          type="button"
+          className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+          aria-label="Calendar"
+          title="Calendar"
+        >
+          <IconCalendar />
+        </button>
+        <button
+          type="button"
+          className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+          aria-label="Gallery"
+          title="Gallery"
+        >
+          <IconGrid />
+        </button>
+        <div className="mx-1 w-px self-stretch bg-(--border-subtle)" />
+        <div className="relative shrink-0">
+          <WorkspaceViewsFiltersDropdown
+            openId={filtersDropdownOpen}
+            onOpen={setFiltersDropdownOpen}
+          />
+          {activeFilters && (
+            <span
+              className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-(--brand-default)"
+              aria-hidden
+            />
+          )}
+        </div>
+        <ProjectSavedViewDisplayDropdown />
+        <Link to={`${baseUrl}/views/${viewId}?create=1`}>
+          <Button size="sm" className="gap-1.5 text-[13px] font-medium">
+            <IconPlus /> Add work item
+          </Button>
+        </Link>
+        <ProjectSavedViewMoreMenu
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
+          viewId={viewId}
+        />
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // PageHeader
 // ---------------------------------------------------------------------------
 
 export function PageHeader() {
   const location = useLocation();
-  const { workspaceSlug, projectId, moduleId } = useParams<{
+  const { workspaceSlug, projectId, moduleId, viewId } = useParams<{
     workspaceSlug?: string;
     projectId?: string;
     moduleId?: string;
+    viewId?: string;
   }>();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
@@ -1958,10 +2624,20 @@ export function PageHeader() {
     projectBase &&
     moduleId &&
     pathname === `${projectBase}/modules/${moduleId}`;
-  const isViewsPage = projectBase && pathname === `${projectBase}/views`;
+  const pathNoTrailingSlash = pathname.replace(/\/+$/, "") || pathname;
+  const isViewsListPage =
+    projectBase && pathNoTrailingSlash === `${projectBase}/views`;
+  const isProjectSavedViewDetailPage =
+    projectBase &&
+    !!viewId &&
+    pathNoTrailingSlash === `${projectBase}/views/${viewId}`;
   const isPagesPage = projectBase && pathname === `${projectBase}/pages`;
   const isProjectSection =
-    isIssuesPage || isCyclesPage || isModulesPage || isViewsPage || isPagesPage;
+    isIssuesPage ||
+    isCyclesPage ||
+    isModulesPage ||
+    isViewsListPage ||
+    isPagesPage;
   const isProjectDetail =
     workspaceSlug &&
     projectId &&
@@ -1985,7 +2661,7 @@ export function PageHeader() {
       ? "cycles"
       : isModulesPage
         ? "modules"
-        : isViewsPage
+        : isViewsListPage
           ? "views"
           : isPagesPage
             ? "pages"
@@ -2020,6 +2696,22 @@ export function PageHeader() {
         projectName={project.name}
         moduleId={module.id}
         moduleName={module.name}
+      />
+    );
+  } else if (
+    isProjectSavedViewDetailPage &&
+    workspaceSlug &&
+    projectId &&
+    viewId &&
+    project
+  ) {
+    content = (
+      <ProjectSavedViewDetailHeader
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        projectName={project.name}
+        viewId={viewId}
+        issueCount={projectIssueCount}
       />
     );
   } else if (

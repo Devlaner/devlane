@@ -70,6 +70,10 @@ export function Dropdown({
     if (!open) return;
     const handleClick = (e: MouseEvent) => {
       const target = e.target as Node;
+      const targetEl = target as HTMLElement | null;
+      // If a modal is open (e.g. date-range picker), don't close the dropdown
+      // when the user clicks inside the modal (modal is portaled to `body`).
+      if (targetEl?.closest?.('[role="dialog"]')) return;
       if (
         !triggerRef.current?.contains(target) &&
         !panelRef.current?.contains(target)

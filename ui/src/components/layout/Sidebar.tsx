@@ -8,6 +8,7 @@ import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
   ModuleApiResponse,
+  IssueViewApiResponse,
 } from "../../api/types";
 import { CreateWorkItemModal } from "../CreateWorkItemModal";
 import { Avatar, Button } from "../ui";
@@ -15,7 +16,9 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useFavorites } from "../../contexts/FavoritesContext";
 import { cn, getImageUrl } from "../../lib/utils";
 import { moduleService } from "../../services/moduleService";
+import { viewService } from "../../services/viewService";
 import { slugify } from "../../lib/slug";
+import { ISSUE_VIEW_FAVORITES_CHANGED_EVENT } from "../../lib/issueViewFavoritesEvents";
 
 const SIDEBAR_WIDTH = 256;
 const SIDEBAR_WIDTH_COLLAPSED = 0;
@@ -200,6 +203,33 @@ const IconFileStack = () => (
     <path d="M17 2v4a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V2" />
   </svg>
 );
+const IconViewLayers = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
+    <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" />
+    <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" />
+  </svg>
+);
+
+function favoritedIssueViewHref(
+  baseUrl: string,
+  view: IssueViewApiResponse,
+): string {
+  if (view.project_id) {
+    return `${baseUrl}/projects/${view.project_id}/views/${view.id}`;
+  }
+  return `${baseUrl}/views/${view.id}`;
+}
 const IconIterationCw = () => (
   <svg
     width="16"
@@ -235,10 +265,9 @@ const IconLayers = () => (
     <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" />
   </svg>
 );
-const IconLayoutList = () => (
+/** 2×2 grid — same glyph as project “Modules” nav (Plane-style module badge). */
+const IconModuleGrid = ({ className }: { className?: string }) => (
   <svg
-    width="16"
-    height="16"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -246,13 +275,12 @@ const IconLayoutList = () => (
     strokeLinecap="round"
     strokeLinejoin="round"
     aria-hidden
+    className={cn("shrink-0", className ?? "size-4")}
   >
-    <line x1="8" x2="21" y1="6" y2="6" />
-    <line x1="8" x2="21" y1="12" y2="12" />
-    <line x1="8" x2="21" y1="18" y2="18" />
-    <line x1="3" x2="3.01" y1="6" y2="6" />
-    <line x1="3" x2="3.01" y1="12" y2="12" />
-    <line x1="3" x2="3.01" y1="18" y2="18" />
+    <rect x="3" y="3" width="7" height="7" rx="1" />
+    <rect x="14" y="3" width="7" height="7" rx="1" />
+    <rect x="3" y="14" width="7" height="7" rx="1" />
+    <rect x="14" y="14" width="7" height="7" rx="1" />
   </svg>
 );
 const IconFileText = () => (
@@ -424,39 +452,20 @@ const IconLogOut = () => (
 const projectNavItems = [
   { key: "issues", to: "issues", label: "Work items", Icon: IconFileStack },
   { key: "cycles", to: "cycles", label: "Cycles", Icon: IconIterationCw },
-  { key: "modules", to: "modules", label: "Modules", Icon: IconLayers },
-  { key: "views", to: "views", label: "Views", Icon: IconLayoutList },
+  { key: "modules", to: "modules", label: "Modules", Icon: IconModuleGrid },
+  { key: "views", to: "views", label: "Views", Icon: IconLayers },
   { key: "pages", to: "pages", label: "Pages", Icon: IconFileText },
 ];
 
-function SidebarModuleLogo({ progress }: { progress: number }) {
-  // Favorites sidebar uses a compact "module" glyph (Plane-style).
-  // We intentionally do not render progress here because our backend
-  // currently only provides `issue_count` (no completed/cancelled breakdown).
-  void progress;
-
+/** Pill + grid icon — matches the “Modules” category badge (not list progress rings). */
+function SidebarFavoritedModuleBadge() {
   return (
-    <div className="flex size-5 shrink-0 items-center justify-center rounded-sm border border-(--border-subtle) bg-(--bg-layer-1) text-(--txt-tertiary)">
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 16 16"
-        fill="currentColor"
-        aria-hidden
-      >
-        <rect x="2" y="2" width="4" height="4" rx="1" />
-        <rect x="6" y="2" width="4" height="4" rx="1" />
-        <rect x="10" y="2" width="4" height="4" rx="1" />
-
-        <rect x="2" y="6" width="4" height="4" rx="1" />
-        <rect x="6" y="6" width="4" height="4" rx="1" />
-        <rect x="10" y="6" width="4" height="4" rx="1" />
-
-        <rect x="2" y="10" width="4" height="4" rx="1" />
-        <rect x="6" y="10" width="4" height="4" rx="1" />
-        <rect x="10" y="10" width="4" height="4" rx="1" />
-      </svg>
-    </div>
+    <span
+      className="flex h-6 shrink-0 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-1) px-1.5 text-(--txt-icon-secondary) shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+      aria-hidden
+    >
+      <IconModuleGrid className="size-3.5" />
+    </span>
   );
 }
 
@@ -485,6 +494,10 @@ export function Sidebar() {
     Array<{ projectId: string; module: ModuleApiResponse }>
   >([]);
   const [moduleFavoritesNonce, setModuleFavoritesNonce] = useState(0);
+  const [favoriteIssueViews, setFavoriteIssueViews] = useState<
+    IssueViewApiResponse[]
+  >([]);
+  const [issueViewFavoritesNonce, setIssueViewFavoritesNonce] = useState(0);
   const workspaceTriggerRef = useRef<HTMLButtonElement>(null);
   const workspaceDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -593,6 +606,44 @@ export function Sidebar() {
       cancelled = true;
     };
   }, [workspaceSlug, projects, loadModuleFavoriteIds, moduleFavoritesNonce]);
+
+  useEffect(() => {
+    if (!workspaceSlug) {
+      setFavoriteIssueViews([]);
+      return;
+    }
+    let cancelled = false;
+    void viewService
+      .listFavorites(workspaceSlug)
+      .then((list) => {
+        if (!cancelled) setFavoriteIssueViews(list ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setFavoriteIssueViews([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug, issueViewFavoritesNonce]);
+
+  useEffect(() => {
+    if (!workspaceSlug) return;
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<{ workspaceSlug?: string }>;
+      if (ce.detail?.workspaceSlug !== workspaceSlug) return;
+      setIssueViewFavoritesNonce((n) => n + 1);
+    };
+    window.addEventListener(
+      ISSUE_VIEW_FAVORITES_CHANGED_EVENT,
+      handler as EventListener,
+    );
+    return () => {
+      window.removeEventListener(
+        ISSUE_VIEW_FAVORITES_CHANGED_EVENT,
+        handler as EventListener,
+      );
+    };
+  }, [workspaceSlug]);
 
   // Keep the "Favorites -> Modules" list in sync without requiring a full refresh.
   useEffect(() => {
@@ -1011,7 +1062,7 @@ export function Sidebar() {
                     }
                   >
                     <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
-                      <IconLayoutList />
+                      <IconLayers />
                     </span>
                     Views
                   </NavLink>
@@ -1105,6 +1156,18 @@ export function Sidebar() {
                       <span className="truncate">{project.name}</span>
                     </Link>
                   ))}
+                  {favoriteIssueViews.map((view) => (
+                    <Link
+                      key={view.id}
+                      to={favoritedIssueViewHref(baseUrl, view)}
+                      className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
+                    >
+                      <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
+                        <IconViewLayers />
+                      </span>
+                      <span className="truncate">{view.name}</span>
+                    </Link>
+                  ))}
                   {favoriteModules.length > 0 && (
                     <>
                       {favoriteModules.map(({ projectId, module }) => (
@@ -1113,13 +1176,7 @@ export function Sidebar() {
                           to={`${baseUrl}/projects/${projectId}/modules/${slugify(module.name)}`}
                           className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                         >
-                          <SidebarModuleLogo
-                            progress={
-                              module.issue_count
-                                ? Math.round((0 / module.issue_count) * 100)
-                                : 0
-                            }
-                          />
+                          <SidebarFavoritedModuleBadge />
                           <div className="min-w-0 flex-1">
                             <span className="truncate">{module.name}</span>
                           </div>
