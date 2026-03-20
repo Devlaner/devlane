@@ -1,20 +1,13 @@
 /* eslint-disable react-refresh/only-export-components -- Context file exports hooks + provider */
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
-export type ModulesLayout = "list" | "gallery" | "timeline";
+export type ModulesLayout = 'list' | 'gallery' | 'timeline';
 
 export interface ModulesFilterState {
   search: string;
   layout: ModulesLayout;
   sort: string;
-  order: "asc" | "desc";
+  order: 'asc' | 'desc';
   favorites: boolean;
   status: string[];
   lead: string[];
@@ -31,7 +24,7 @@ export interface ModulesFilterContextValue extends ModulesFilterState {
   setSearch: (v: string) => void;
   setLayout: (v: ModulesLayout) => void;
   setSort: (v: string) => void;
-  setOrder: (v: "asc" | "desc") => void;
+  setOrder: (v: 'asc' | 'desc') => void;
   setFavorites: (v: boolean) => void;
   setStatus: (v: string[] | ((prev: string[]) => string[])) => void;
   setLead: (v: string[] | ((prev: string[]) => string[])) => void;
@@ -42,16 +35,14 @@ export interface ModulesFilterContextValue extends ModulesFilterState {
   setStartBefore: (v: string | null) => void;
   setDueAfter: (v: string | null) => void;
   setDueBefore: (v: string | null) => void;
-  updateFilter: (
-    updater: (prev: ModulesFilterState) => Partial<ModulesFilterState>,
-  ) => void;
+  updateFilter: (updater: (prev: ModulesFilterState) => Partial<ModulesFilterState>) => void;
 }
 
 const defaultState: ModulesFilterState = {
-  search: "",
-  layout: "list",
-  sort: "progress",
-  order: "asc",
+  search: '',
+  layout: 'list',
+  sort: 'progress',
+  order: 'asc',
   favorites: false,
   status: [],
   lead: [],
@@ -64,9 +55,7 @@ const defaultState: ModulesFilterState = {
   dueBefore: null,
 };
 
-const ModulesFilterContext = createContext<ModulesFilterContextValue | null>(
-  null,
-);
+const ModulesFilterContext = createContext<ModulesFilterContextValue | null>(null);
 
 export function ModulesFilterProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ModulesFilterState>(defaultState);
@@ -87,57 +76,42 @@ export function ModulesFilterProvider({ children }: { children: ReactNode }) {
   const setSort = useCallback((v: string) => {
     setState((prev) => ({ ...prev, sort: v }));
   }, []);
-  const setOrder = useCallback((v: "asc" | "desc") => {
+  const setOrder = useCallback((v: 'asc' | 'desc') => {
     setState((prev) => ({ ...prev, order: v }));
   }, []);
   const setFavorites = useCallback((v: boolean) => {
     setState((prev) => ({ ...prev, favorites: v }));
   }, []);
-  const setStatus = useCallback(
-    (v: string[] | ((prev: string[]) => string[])) => {
-      setState((prev) => ({
-        ...prev,
-        status: typeof v === "function" ? v(prev.status) : v,
-      }));
-    },
-    [],
-  );
-  const setLead = useCallback(
-    (v: string[] | ((prev: string[]) => string[])) => {
-      setState((prev) => ({
-        ...prev,
-        lead: typeof v === "function" ? v(prev.lead) : v,
-      }));
-    },
-    [],
-  );
-  const setMembers = useCallback(
-    (v: string[] | ((prev: string[]) => string[])) => {
-      setState((prev) => ({
-        ...prev,
-        members: typeof v === "function" ? v(prev.members) : v,
-      }));
-    },
-    [],
-  );
-  const setStartDateList = useCallback(
-    (v: string[] | ((prev: string[]) => string[])) => {
-      setState((prev) => ({
-        ...prev,
-        startDateList: typeof v === "function" ? v(prev.startDateList) : v,
-      }));
-    },
-    [],
-  );
-  const setDueDateList = useCallback(
-    (v: string[] | ((prev: string[]) => string[])) => {
-      setState((prev) => ({
-        ...prev,
-        dueDateList: typeof v === "function" ? v(prev.dueDateList) : v,
-      }));
-    },
-    [],
-  );
+  const setStatus = useCallback((v: string[] | ((prev: string[]) => string[])) => {
+    setState((prev) => ({
+      ...prev,
+      status: typeof v === 'function' ? v(prev.status) : v,
+    }));
+  }, []);
+  const setLead = useCallback((v: string[] | ((prev: string[]) => string[])) => {
+    setState((prev) => ({
+      ...prev,
+      lead: typeof v === 'function' ? v(prev.lead) : v,
+    }));
+  }, []);
+  const setMembers = useCallback((v: string[] | ((prev: string[]) => string[])) => {
+    setState((prev) => ({
+      ...prev,
+      members: typeof v === 'function' ? v(prev.members) : v,
+    }));
+  }, []);
+  const setStartDateList = useCallback((v: string[] | ((prev: string[]) => string[])) => {
+    setState((prev) => ({
+      ...prev,
+      startDateList: typeof v === 'function' ? v(prev.startDateList) : v,
+    }));
+  }, []);
+  const setDueDateList = useCallback((v: string[] | ((prev: string[]) => string[])) => {
+    setState((prev) => ({
+      ...prev,
+      dueDateList: typeof v === 'function' ? v(prev.dueDateList) : v,
+    }));
+  }, []);
   const setStartAfter = useCallback((v: string | null) => {
     setState((prev) => ({ ...prev, startAfter: v }));
   }, []);
@@ -190,19 +164,13 @@ export function ModulesFilterProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  return (
-    <ModulesFilterContext.Provider value={value}>
-      {children}
-    </ModulesFilterContext.Provider>
-  );
+  return <ModulesFilterContext.Provider value={value}>{children}</ModulesFilterContext.Provider>;
 }
 
 export function useModulesFilter(): ModulesFilterContextValue {
   const ctx = useContext(ModulesFilterContext);
   if (!ctx) {
-    throw new Error(
-      "useModulesFilter must be used within ModulesFilterProvider",
-    );
+    throw new Error('useModulesFilter must be used within ModulesFilterProvider');
   }
   return ctx;
 }

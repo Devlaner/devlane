@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { viewService } from "../../services/viewService";
-import { PROJECT_VIEWS_REFRESH_EVENT } from "../../lib/projectViewsEvents";
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { viewService } from '../../services/viewService';
+import { PROJECT_VIEWS_REFRESH_EVENT } from '../../lib/projectViewsEvents';
 
 const IconEdit = () => (
   <svg
@@ -66,13 +66,7 @@ const IconTrash = () => (
 );
 
 const IconMoreVertical = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    aria-hidden
-  >
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
     <circle cx="12" cy="5" r="1.5" />
     <circle cx="12" cy="12" r="1.5" />
     <circle cx="12" cy="19" r="1.5" />
@@ -102,8 +96,8 @@ export function ProjectSavedViewMoreMenu({
         setOpen(false);
       }
     };
-    if (open) document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    if (open) document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
   }, [open]);
 
   const openEdit = () => {
@@ -113,7 +107,7 @@ export function ProjectSavedViewMoreMenu({
 
   const openInNewTab = () => {
     setOpen(false);
-    window.open(fullUrl, "_blank", "noopener,noreferrer");
+    window.open(fullUrl, '_blank', 'noopener,noreferrer');
   };
 
   const copyLink = async () => {
@@ -121,13 +115,13 @@ export function ProjectSavedViewMoreMenu({
     try {
       await navigator.clipboard.writeText(fullUrl);
     } catch {
-      window.prompt("Copy link:", fullUrl);
+      window.prompt('Copy link:', fullUrl);
     }
   };
 
   const deleteView = async () => {
     setOpen(false);
-    if (!window.confirm("Delete this view? This cannot be undone.")) {
+    if (!window.confirm('Delete this view? This cannot be undone.')) {
       return;
     }
     setBusy(true);
@@ -136,7 +130,7 @@ export function ProjectSavedViewMoreMenu({
       window.dispatchEvent(new CustomEvent(PROJECT_VIEWS_REFRESH_EVENT));
       void navigate(`${baseUrl}/views`);
     } catch {
-      window.alert("Could not delete this view. Try again.");
+      window.alert('Could not delete this view. Try again.');
     } finally {
       setBusy(false);
     }

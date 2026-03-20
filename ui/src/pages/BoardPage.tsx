@@ -1,27 +1,24 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Card, CardContent, Badge } from "../components/ui";
-import { workspaceService } from "../services/workspaceService";
-import { projectService } from "../services/projectService";
-import { issueService } from "../services/issueService";
-import { stateService } from "../services/stateService";
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Card, CardContent, Badge } from '../components/ui';
+import { workspaceService } from '../services/workspaceService';
+import { projectService } from '../services/projectService';
+import { issueService } from '../services/issueService';
+import { stateService } from '../services/stateService';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
   IssueApiResponse,
   StateApiResponse,
-} from "../api/types";
-import type { Priority } from "../types";
+} from '../api/types';
+import type { Priority } from '../types';
 
-const priorityVariant: Record<
-  Priority,
-  "danger" | "warning" | "default" | "neutral"
-> = {
-  urgent: "danger",
-  high: "danger",
-  medium: "warning",
-  low: "default",
-  none: "neutral",
+const priorityVariant: Record<Priority, 'danger' | 'warning' | 'default' | 'neutral'> = {
+  urgent: 'danger',
+  high: 'danger',
+  medium: 'warning',
+  low: 'default',
+  none: 'neutral',
 };
 
 export function BoardPage() {
@@ -102,13 +99,13 @@ export function BoardPage() {
             <div
               className="border-b border-(--border-subtle) px-4 py-3"
               style={{
-                borderLeftWidth: "4px",
-                borderLeftColor: state.color ?? "var(--border-subtle)",
+                borderLeftWidth: '4px',
+                borderLeftColor: state.color ?? 'var(--border-subtle)',
               }}
             >
               <h2 className="font-medium text-(--txt-primary)">{state.name}</h2>
               <p className="text-xs text-(--txt-tertiary)">
-                {stateIssues.length} issue{stateIssues.length !== 1 ? "s" : ""}
+                {stateIssues.length} issue{stateIssues.length !== 1 ? 's' : ''}
               </p>
             </div>
             <div className="flex-1 space-y-2 overflow-y-auto p-3">
@@ -123,18 +120,10 @@ export function BoardPage() {
                     className="cursor-pointer transition-shadow hover:shadow-(--shadow-overlay)"
                   >
                     <CardContent className="p-3">
-                      <p className="font-medium text-(--txt-primary)">
-                        {issue.name}
-                      </p>
+                      <p className="font-medium text-(--txt-primary)">{issue.name}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <Badge
-                          variant={
-                            priorityVariant[
-                              (issue.priority as Priority) ?? "none"
-                            ]
-                          }
-                        >
-                          {issue.priority ?? "—"}
+                        <Badge variant={priorityVariant[(issue.priority as Priority) ?? 'none']}>
+                          {issue.priority ?? '—'}
                         </Badge>
                       </div>
                     </CardContent>
@@ -142,9 +131,7 @@ export function BoardPage() {
                 </Link>
               ))}
               {stateIssues.length === 0 && (
-                <p className="py-4 text-center text-sm text-(--txt-tertiary)">
-                  No issues
-                </p>
+                <p className="py-4 text-center text-sm text-(--txt-tertiary)">No issues</p>
               )}
             </div>
           </div>

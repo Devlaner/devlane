@@ -1,11 +1,8 @@
-import { apiClient } from "../api/client";
-import type { LabelApiResponse } from "../api/types";
+import { apiClient } from '../api/client';
+import type { LabelApiResponse } from '../api/types';
 
 export const labelService = {
-  async list(
-    workspaceSlug: string,
-    projectId: string,
-  ): Promise<LabelApiResponse[]> {
+  async list(workspaceSlug: string, projectId: string): Promise<LabelApiResponse[]> {
     const { data } = await apiClient.get<LabelApiResponse[]>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issue-labels/`,
     );
@@ -37,11 +34,7 @@ export const labelService = {
     return data;
   },
 
-  async delete(
-    workspaceSlug: string,
-    projectId: string,
-    labelId: string,
-  ): Promise<void> {
+  async delete(workspaceSlug: string, projectId: string, labelId: string): Promise<void> {
     await apiClient.delete(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issue-labels/${encodeURIComponent(labelId)}/`,
     );

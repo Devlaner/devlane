@@ -1,14 +1,10 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Avatar } from "../components/ui";
-import { workspaceService } from "../services/workspaceService";
-import { projectService } from "../services/projectService";
-import { cycleService } from "../services/cycleService";
-import type {
-  WorkspaceApiResponse,
-  ProjectApiResponse,
-  CycleApiResponse,
-} from "../api/types";
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Avatar } from '../components/ui';
+import { workspaceService } from '../services/workspaceService';
+import { projectService } from '../services/projectService';
+import { cycleService } from '../services/cycleService';
+import type { WorkspaceApiResponse, ProjectApiResponse, CycleApiResponse } from '../api/types';
 
 const IconTrendingUp = () => (
   <svg
@@ -99,13 +95,7 @@ const IconStar = () => (
   </svg>
 );
 const IconMoreVertical = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    aria-hidden
-  >
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
     <circle cx="12" cy="5" r="1.5" />
     <circle cx="12" cy="12" r="1.5" />
     <circle cx="12" cy="19" r="1.5" />
@@ -185,19 +175,12 @@ export function CyclesPage() {
     };
   }, [workspaceSlug, projectId]);
 
-  const activeCycle = cycles.find(
-    (c) => c.status === "started" || c.status === "current",
-  );
-  const upcomingCycles = cycles.filter(
-    (c) => c.status === "draft" || c.status === "upcoming",
-  );
-  const completedCycles = cycles.filter((c) => c.status === "completed");
+  const activeCycle = cycles.find((c) => c.status === 'started' || c.status === 'current');
+  const upcomingCycles = cycles.filter((c) => c.status === 'draft' || c.status === 'upcoming');
+  const completedCycles = cycles.filter((c) => c.status === 'completed');
 
-  const getIssueCount = (cycleId: string) =>
-    cycles.find((c) => c.id === cycleId)?.issue_count ?? 0;
-  const getUser = (
-    userId: string | null,
-  ): { name: string; avatarUrl?: string | null } | null => {
+  const getIssueCount = (cycleId: string) => cycles.find((c) => c.id === cycleId)?.issue_count ?? 0;
+  const getUser = (userId: string | null): { name: string; avatarUrl?: string | null } | null => {
     void userId; // reserved for future assignee display
     return null;
   };
@@ -215,17 +198,14 @@ export function CyclesPage() {
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
   const formatDateRange = (start: string, end: string) =>
-    `${new Date(start).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} – ${new Date(end).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    `${new Date(start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} – ${new Date(end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
   return (
     <div className="space-y-8">
       {/* Active cycle */}
       <section>
         <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-(--txt-primary)">
-          <span
-            className="flex h-2.5 w-2.5 rounded-full bg-(--warning-default)"
-            aria-hidden
-          />
+          <span className="flex h-2.5 w-2.5 rounded-full bg-(--warning-default)" aria-hidden />
           Active cycle
         </h2>
         {activeCycle ? (
@@ -233,13 +213,10 @@ export function CyclesPage() {
             <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="font-medium text-(--txt-primary)">
-                    {activeCycle.name}
-                  </p>
+                  <p className="font-medium text-(--txt-primary)">{activeCycle.name}</p>
                   <p className="mt-0.5 text-sm text-(--txt-secondary)">
                     {Math.round(
-                      (getIssueCount(activeCycle.id) /
-                        Math.max(1, getIssueCount(activeCycle.id))) *
+                      (getIssueCount(activeCycle.id) / Math.max(1, getIssueCount(activeCycle.id))) *
                         0,
                     )}
                     % completion
@@ -255,16 +232,13 @@ export function CyclesPage() {
                   <span className="flex items-center gap-1">
                     <IconCalendar />
                     {activeCycle.start_date && activeCycle.end_date
-                      ? formatDateRange(
-                          activeCycle.start_date,
-                          activeCycle.end_date,
-                        )
-                      : "No dates"}
+                      ? formatDateRange(activeCycle.start_date, activeCycle.end_date)
+                      : 'No dates'}
                   </span>
-                  {getUser("u1") && (
+                  {getUser('u1') && (
                     <Avatar
-                      name={getUser("u1")!.name}
-                      src={getUser("u1")!.avatarUrl}
+                      name={getUser('u1')!.name}
+                      src={getUser('u1')!.avatarUrl}
                       size="sm"
                       className="h-6 w-6 text-[10px]"
                     />
@@ -288,9 +262,7 @@ export function CyclesPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-4">
-                <h3 className="text-sm font-medium text-(--txt-primary)">
-                  Progress
-                </h3>
+                <h3 className="text-sm font-medium text-(--txt-primary)">Progress</h3>
                 <div className="mt-4 flex flex-col items-center justify-center py-6">
                   <IconTrendingUp />
                   <p className="mt-2 text-center text-sm text-(--txt-tertiary)">
@@ -299,9 +271,7 @@ export function CyclesPage() {
                 </div>
               </div>
               <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-4">
-                <h3 className="text-sm font-medium text-(--txt-primary)">
-                  Work item burndown
-                </h3>
+                <h3 className="text-sm font-medium text-(--txt-primary)">Work item burndown</h3>
                 <div className="mt-4 flex flex-col items-center justify-center py-6">
                   <IconActivity />
                   <p className="mt-2 text-center text-sm text-(--txt-tertiary)">
@@ -310,9 +280,7 @@ export function CyclesPage() {
                 </div>
               </div>
               <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-4">
-                <h3 className="text-sm font-medium text-(--txt-primary)">
-                  Priority work items
-                </h3>
+                <h3 className="text-sm font-medium text-(--txt-primary)">Priority work items</h3>
                 <div className="mt-2 flex gap-1 border-b border-(--border-subtle)">
                   <button
                     type="button"
@@ -336,8 +304,7 @@ export function CyclesPage() {
                 <div className="flex flex-col items-center justify-center py-6">
                   <IconBarChart />
                   <p className="mt-2 text-center text-sm text-(--txt-tertiary)">
-                    Observe high priority work items tackled in the cycle at a
-                    glance.
+                    Observe high priority work items tackled in the cycle at a glance.
                   </p>
                 </div>
               </div>
@@ -357,16 +324,12 @@ export function CyclesPage() {
         >
           <span className="flex h-2 w-2 rounded-full border-2 border-dashed border-(--brand-default) bg-transparent" />
           Upcoming cycle {upcomingCycles.length}
-          <span className="ml-auto">
-            {upcomingOpen ? <IconChevronUp /> : <IconChevronDown />}
-          </span>
+          <span className="ml-auto">{upcomingOpen ? <IconChevronUp /> : <IconChevronDown />}</span>
         </button>
         {upcomingOpen && (
           <div className="mt-2 space-y-2 pl-4">
             {upcomingCycles.length === 0 ? (
-              <p className="py-4 text-sm text-(--txt-tertiary)">
-                No upcoming cycles.
-              </p>
+              <p className="py-4 text-sm text-(--txt-tertiary)">No upcoming cycles.</p>
             ) : (
               upcomingCycles.map((c) => (
                 <Link
@@ -374,13 +337,11 @@ export function CyclesPage() {
                   to={`${baseUrl}/cycles/${c.id}`}
                   className="block rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-3 text-sm no-underline hover:bg-(--bg-layer-1-hover)"
                 >
-                  <span className="font-medium text-(--txt-primary)">
-                    {c.name}
-                  </span>
+                  <span className="font-medium text-(--txt-primary)">{c.name}</span>
                   <span className="ml-2 text-(--txt-tertiary)">
                     {c.start_date && c.end_date
                       ? formatDateRange(c.start_date, c.end_date)
-                      : "No dates"}
+                      : 'No dates'}
                   </span>
                 </Link>
               ))
@@ -398,16 +359,12 @@ export function CyclesPage() {
         >
           <span className="flex h-2 w-2 rounded-full bg-(--success-default)" />
           Completed cycle {completedCycles.length}
-          <span className="ml-auto">
-            {completedOpen ? <IconChevronUp /> : <IconChevronDown />}
-          </span>
+          <span className="ml-auto">{completedOpen ? <IconChevronUp /> : <IconChevronDown />}</span>
         </button>
         {completedOpen && (
           <div className="mt-2 space-y-2 pl-4">
             {completedCycles.length === 0 ? (
-              <p className="py-4 text-sm text-(--txt-tertiary)">
-                No completed cycles.
-              </p>
+              <p className="py-4 text-sm text-(--txt-tertiary)">No completed cycles.</p>
             ) : (
               completedCycles.map((c) => (
                 <Link
@@ -415,13 +372,11 @@ export function CyclesPage() {
                   to={`${baseUrl}/cycles/${c.id}`}
                   className="block rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-3 text-sm no-underline hover:bg-(--bg-layer-1-hover)"
                 >
-                  <span className="font-medium text-(--txt-primary)">
-                    {c.name}
-                  </span>
+                  <span className="font-medium text-(--txt-primary)">{c.name}</span>
                   <span className="ml-2 text-(--txt-tertiary)">
                     {c.start_date && c.end_date
                       ? formatDateRange(c.start_date, c.end_date)
-                      : "No dates"}
+                      : 'No dates'}
                   </span>
                 </Link>
               ))

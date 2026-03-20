@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { Button, IconEye, IconEyeOff, Skeleton } from "../../components/ui";
-import { instanceSettingsService } from "../../services/instanceService";
-import { getApiErrorMessage } from "../../api/client";
-import type { InstanceImageSection } from "../../api/types";
+import { useEffect, useState } from 'react';
+import { Button, IconEye, IconEyeOff, Skeleton } from '../../components/ui';
+import { instanceSettingsService } from '../../services/instanceService';
+import { getApiErrorMessage } from '../../api/client';
+import type { InstanceImageSection } from '../../api/types';
 
 export function InstanceAdminImagePage() {
   const [image, setImage] = useState<InstanceImageSection>({
@@ -11,15 +11,11 @@ export function InstanceAdminImagePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showAccessKey, setShowAccessKey] = useState(false);
-  const [accessKeyLocal, setAccessKeyLocal] = useState<string | undefined>(
-    undefined,
-  );
-  const [error, setError] = useState("");
+  const [accessKeyLocal, setAccessKeyLocal] = useState<string | undefined>(undefined);
+  const [error, setError] = useState('');
 
   const accessKeyDisplay =
-    accessKeyLocal !== undefined
-      ? accessKeyLocal
-      : (image.unsplash_access_key ?? "");
+    accessKeyLocal !== undefined ? accessKeyLocal : (image.unsplash_access_key ?? '');
 
   useEffect(() => {
     let cancelled = false;
@@ -30,7 +26,7 @@ export function InstanceAdminImagePage() {
         const i = (settings.image || {}) as InstanceImageSection;
         setImage({
           unsplash_access_key_set: i.unsplash_access_key_set ?? false,
-          unsplash_access_key: i.unsplash_access_key ?? "",
+          unsplash_access_key: i.unsplash_access_key ?? '',
         });
       })
       .catch((err) => {
@@ -45,23 +41,19 @@ export function InstanceAdminImagePage() {
   }, []);
 
   const handleSave = () => {
-    setError("");
+    setError('');
     setSaving(true);
     const accessKeyToSend =
       accessKeyLocal !== undefined ? accessKeyLocal : image.unsplash_access_key;
     const payload: InstanceImageSection = {
       ...image,
-      unsplash_access_key: accessKeyToSend ?? "",
+      unsplash_access_key: accessKeyToSend ?? '',
     };
     instanceSettingsService
-      .updateSection(
-        "image",
-        payload as import("../../api/types").InstanceSettingSectionValue,
-      )
+      .updateSection('image', payload as import('../../api/types').InstanceSettingSectionValue)
       .then((res) => {
         setAccessKeyLocal(undefined);
-        if (res.value)
-          setImage((p) => ({ ...p, ...res.value }) as InstanceImageSection);
+        if (res.value) setImage((p) => ({ ...p, ...res.value }) as InstanceImageSection);
       })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setSaving(false));
@@ -104,27 +96,26 @@ export function InstanceAdminImagePage() {
           Access key from your Unsplash account
           <div className="relative mt-0.5">
             <input
-              type={showAccessKey ? "text" : "password"}
+              type={showAccessKey ? 'text' : 'password'}
               value={accessKeyDisplay}
               onChange={(e) => setAccessKeyLocal(e.target.value)}
               onFocus={() => {
-                if (accessKeyLocal === undefined)
-                  setAccessKeyLocal(accessKeyDisplay);
+                if (accessKeyLocal === undefined) setAccessKeyLocal(accessKeyDisplay);
               }}
-              placeholder={!accessKeyDisplay ? "Enter access key" : ""}
+              placeholder={!accessKeyDisplay ? 'Enter access key' : ''}
               className="block w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 pr-9 text-xs text-(--txt-primary) focus:outline-none"
             />
             <button
               type="button"
               onClick={() => setShowAccessKey((v) => !v)}
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-              aria-label={showAccessKey ? "Hide access key" : "Show access key"}
+              aria-label={showAccessKey ? 'Hide access key' : 'Show access key'}
             >
               {showAccessKey ? <IconEyeOff /> : <IconEye />}
             </button>
           </div>
           <p className="mt-0.5 text-[11px] text-(--txt-tertiary)">
-            You will find your access key in your Unsplash developer console.{" "}
+            You will find your access key in your Unsplash developer console.{' '}
             <a
               href="https://unsplash.com/developers/docs/api-reference/access-key"
               target="_blank"
@@ -137,13 +128,8 @@ export function InstanceAdminImagePage() {
         </label>
       </section>
 
-      <Button
-        size="sm"
-        className="text-xs"
-        onClick={handleSave}
-        disabled={saving}
-      >
-        {saving ? "Saving…" : "Save changes"}
+      <Button size="sm" className="text-xs" onClick={handleSave} disabled={saving}>
+        {saving ? 'Saving…' : 'Save changes'}
       </Button>
     </div>
   );

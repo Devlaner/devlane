@@ -1,21 +1,18 @@
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
-import { Button, Input } from "./ui";
-import { CoverImageModal } from "./CoverImageModal";
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Button, Input } from './ui';
+import { CoverImageModal } from './CoverImageModal';
 import {
   ProjectIconDisplay,
   ProjectIconModal,
   type ProjectIconSelection,
-} from "./ProjectIconModal";
-import { projectService } from "../services/projectService";
-import type {
-  ProjectApiResponse,
-  WorkspaceMemberApiResponse,
-} from "../api/types";
-import { useAuth } from "../contexts/AuthContext";
-import { workspaceService } from "../services/workspaceService";
-import { ProjectNetworkSelect } from "./ProjectNetworkSelect";
-import { ProjectLeadSelect } from "./ProjectLeadSelect";
+} from './ProjectIconModal';
+import { projectService } from '../services/projectService';
+import type { ProjectApiResponse, WorkspaceMemberApiResponse } from '../api/types';
+import { useAuth } from '../contexts/AuthContext';
+import { workspaceService } from '../services/workspaceService';
+import { ProjectNetworkSelect } from './ProjectNetworkSelect';
+import { ProjectLeadSelect } from './ProjectLeadSelect';
 
 export interface CreateProjectModalProps {
   open: boolean;
@@ -25,11 +22,11 @@ export interface CreateProjectModalProps {
 }
 
 const COVER_GRADIENTS = [
-  "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%)",
-  "linear-gradient(135deg, #0ea5e9 0%, #38bdf8 50%, #7dd3fc 100%)",
-  "linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%)",
-  "linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #fcd34d 100%)",
-  "linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #f9a8d4 100%)",
+  'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%)',
+  'linear-gradient(135deg, #0ea5e9 0%, #38bdf8 50%, #7dd3fc 100%)',
+  'linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%)',
+  'linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #fcd34d 100%)',
+  'linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #f9a8d4 100%)',
 ];
 
 const IconInfo = () => (
@@ -74,41 +71,38 @@ export function CreateProjectModal({
   onSuccess,
 }: CreateProjectModalProps) {
   const { user } = useAuth();
-  const [name, setName] = useState("");
-  const [identifier, setIdentifier] = useState("");
-  const [description, setDescription] = useState("");
+  const [name, setName] = useState('');
+  const [identifier, setIdentifier] = useState('');
+  const [description, setDescription] = useState('');
   const [emoji, setEmoji] = useState<string | null>(null);
-  const [iconProp, setIconProp] =
-    useState<ProjectIconSelection["icon_prop"]>(null);
+  const [iconProp, setIconProp] = useState<ProjectIconSelection['icon_prop']>(null);
   const [coverImage, setCoverImage] = useState<string | null>(null);
-  const [network, setNetwork] = useState<"public" | "private">("public");
+  const [network, setNetwork] = useState<'public' | 'private'>('public');
   const [projectLeadId, setProjectLeadId] = useState<string | null>(null);
-  const [workspaceMembers, setWorkspaceMembers] = useState<
-    WorkspaceMemberApiResponse[]
-  >([]);
-  const [error, setError] = useState("");
+  const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMemberApiResponse[]>([]);
+  const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [coverModalOpen, setCoverModalOpen] = useState(false);
   const [iconModalOpen, setIconModalOpen] = useState(false);
 
   const handleClose = () => {
-    setName("");
-    setIdentifier("");
-    setDescription("");
+    setName('');
+    setIdentifier('');
+    setDescription('');
     setEmoji(null);
     setIconProp(null);
     setCoverImage(null);
-    setNetwork("public");
+    setNetwork('public');
     setProjectLeadId(null);
-    setError("");
+    setError('');
     onClose();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setError('');
     if (!name.trim()) {
-      setError("Project name is required.");
+      setError('Project name is required.');
       return;
     }
     setSubmitting(true);
@@ -120,7 +114,7 @@ export function CreateProjectModal({
         cover_image: coverImage || undefined,
         emoji: emoji ?? undefined,
         icon_prop: iconProp ?? undefined,
-        guest_view_all_features: network === "public" ? true : undefined,
+        guest_view_all_features: network === 'public' ? true : undefined,
         project_lead_id: projectLeadId ?? undefined,
       };
 
@@ -128,9 +122,7 @@ export function CreateProjectModal({
       onSuccess?.(project);
       handleClose();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to create project.",
-      );
+      setError(err instanceof Error ? err.message : 'Failed to create project.');
     } finally {
       setSubmitting(false);
     }
@@ -140,10 +132,10 @@ export function CreateProjectModal({
     if (!open) return;
 
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === 'Escape') onClose();
     };
-    document.addEventListener("keydown", handleEscape);
-    document.body.style.overflow = "hidden";
+    document.addEventListener('keydown', handleEscape);
+    document.body.style.overflow = 'hidden';
 
     // Load workspace members for project lead dropdown
     workspaceService
@@ -154,8 +146,8 @@ export function CreateProjectModal({
       });
 
     return () => {
-      document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = "";
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = '';
     };
   }, [open, onClose, workspaceSlug]);
 
@@ -165,8 +157,8 @@ export function CreateProjectModal({
     coverImage != null
       ? {
           backgroundImage: `url(${coverImage})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
         }
       : {
           background: COVER_GRADIENTS[0],
@@ -182,11 +174,7 @@ export function CreateProjectModal({
       <h2 id="create-project-modal-title" className="sr-only">
         Create project
       </h2>
-      <div
-        className="absolute inset-0 bg-(--bg-backdrop)"
-        onClick={handleClose}
-        aria-hidden
-      />
+      <div className="absolute inset-0 bg-(--bg-backdrop)" onClick={handleClose} aria-hidden />
       <div
         className="relative z-10 w-full max-w-2xl overflow-hidden rounded-(--radius-lg) border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-overlay)"
         onClick={(e) => e.stopPropagation()}
@@ -244,9 +232,7 @@ export function CreateProjectModal({
               <Input
                 value={identifier}
                 onChange={(e) =>
-                  setIdentifier(
-                    e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ""),
-                  )
+                  setIdentifier(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))
                 }
                 placeholder="e.g. PROJ"
                 disabled={submitting}
@@ -273,11 +259,7 @@ export function CreateProjectModal({
 
           {/* Network + Project Lead (under description, side by side) */}
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <ProjectNetworkSelect
-              value={network}
-              onChange={setNetwork}
-              disabled={submitting}
-            />
+            <ProjectNetworkSelect value={network} onChange={setNetwork} disabled={submitting} />
             <ProjectLeadSelect
               value={projectLeadId}
               members={workspaceMembers}
@@ -286,22 +268,15 @@ export function CreateProjectModal({
             />
           </div>
 
-          {error && (
-            <p className="mt-3 text-sm text-(--txt-danger-primary)">{error}</p>
-          )}
+          {error && <p className="mt-3 text-sm text-(--txt-danger-primary)">{error}</p>}
 
           {/* Actions */}
           <div className="mt-6 flex justify-end gap-2 border-t border-(--border-subtle) pt-4">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={handleClose}
-              disabled={submitting}
-            >
+            <Button type="button" variant="secondary" onClick={handleClose} disabled={submitting}>
               Cancel
             </Button>
             <Button type="submit" disabled={submitting || !name.trim()}>
-              {submitting ? "Creating…" : "Create project"}
+              {submitting ? 'Creating…' : 'Create project'}
             </Button>
           </div>
         </form>

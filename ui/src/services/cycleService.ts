@@ -1,11 +1,8 @@
-import { apiClient } from "../api/client";
-import type { CycleApiResponse } from "../api/types";
+import { apiClient } from '../api/client';
+import type { CycleApiResponse } from '../api/types';
 
 export const cycleService = {
-  async list(
-    workspaceSlug: string,
-    projectId: string,
-  ): Promise<CycleApiResponse[]> {
+  async list(workspaceSlug: string, projectId: string): Promise<CycleApiResponse[]> {
     const { data } = await apiClient.get<CycleApiResponse[]>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/cycles/`,
     );

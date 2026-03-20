@@ -1,10 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- Shared constants and icon maps for filter UI */
-import type { ReactNode } from "react";
-import type {
-  Priority,
-  StateGroup,
-  DatePreset,
-} from "../../types/workspaceViewFilters";
+import type { ReactNode } from 'react';
+import type { Priority, StateGroup, DatePreset } from '../../types/workspaceViewFilters';
 
 const IconChevronUp = () => (
   <svg
@@ -73,9 +69,7 @@ const IconFilter = () => (
   </svg>
 );
 const IconUrgent = () => (
-  <span className="flex size-4 items-center justify-center text-[10px] text-red-500">
-    !
-  </span>
+  <span className="flex size-4 items-center justify-center text-[10px] text-red-500">!</span>
 );
 const IconHigh = () => (
   <span className="inline-flex size-4 items-end justify-center gap-px text-amber-500">
@@ -145,25 +139,25 @@ export const STATE_GROUP_ICONS: Record<StateGroup, ReactNode> = {
 };
 
 export const PRIORITY_LABELS: Record<Priority, string> = {
-  urgent: "Urgent",
-  high: "High",
-  medium: "Medium",
-  low: "Low",
-  none: "None",
+  urgent: 'Urgent',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+  none: 'None',
 };
 
 export const STATE_GROUP_LABELS: Record<StateGroup, string> = {
-  backlog: "Backlog",
-  unstarted: "Unstarted",
-  started: "Started",
-  completed: "Completed",
-  canceled: "Canceled",
+  backlog: 'Backlog',
+  unstarted: 'Unstarted',
+  started: 'Started',
+  completed: 'Completed',
+  canceled: 'Canceled',
 };
 
 export const DATE_PRESET_LABELS: Record<DatePreset, string> = {
-  "1_week": "1 week from now",
-  "2_weeks": "2 weeks from now",
-  "1_month": "1 month from now",
-  "2_months": "2 months from now",
-  custom: "Custom",
+  '1_week': '1 week from now',
+  '2_weeks': '2 weeks from now',
+  '1_month': '1 month from now',
+  '2_months': '2 months from now',
+  custom: 'Custom',
 };

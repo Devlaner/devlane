@@ -1,22 +1,15 @@
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { Link, useParams } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import { useWorkspaceViewsState } from "../contexts/WorkspaceViewsStateContext";
-import { Badge } from "../components/ui";
-import { Dropdown } from "../components/work-item";
-import { workspaceService } from "../services/workspaceService";
-import { projectService } from "../services/projectService";
-import { issueService } from "../services/issueService";
-import { stateService } from "../services/stateService";
-import { labelService } from "../services/labelService";
-import { viewService } from "../services/viewService";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useWorkspaceViewsState } from '../contexts/WorkspaceViewsStateContext';
+import { Badge } from '../components/ui';
+import { Dropdown } from '../components/work-item';
+import { workspaceService } from '../services/workspaceService';
+import { projectService } from '../services/projectService';
+import { issueService } from '../services/issueService';
+import { stateService } from '../services/stateService';
+import { labelService } from '../services/labelService';
+import { viewService } from '../services/viewService';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
@@ -24,13 +17,13 @@ import type {
   StateApiResponse,
   LabelApiResponse,
   WorkspaceMemberApiResponse,
-} from "../api/types";
-import type { Priority } from "../types";
-import { getImageUrl } from "../lib/utils";
+} from '../api/types';
+import type { Priority } from '../types';
+import { getImageUrl } from '../lib/utils';
 import {
   parseWorkspaceViewFiltersFromSearchParams,
   type StateGroup,
-} from "../types/workspaceViewFilters";
+} from '../types/workspaceViewFilters';
 import {
   DISPLAY_PROPERTY_KEYS,
   SPREADSHEET_COLUMN_ORDER,
@@ -40,7 +33,7 @@ import {
   type SortableColumn,
   type SortOrder,
   type ViewLayout,
-} from "../types/workspaceViewDisplay";
+} from '../types/workspaceViewDisplay';
 
 const IconChevronDown = (props: React.SVGAttributes<SVGSVGElement>) => (
   <svg
@@ -134,21 +127,18 @@ const IconCalendar = (props: React.SVGAttributes<SVGSVGElement>) => (
   </svg>
 );
 
-const priorityVariant: Record<
-  Priority,
-  "danger" | "warning" | "default" | "neutral"
-> = {
-  urgent: "danger",
-  high: "danger",
-  medium: "warning",
-  low: "default",
-  none: "neutral",
+const priorityVariant: Record<Priority, 'danger' | 'warning' | 'default' | 'neutral'> = {
+  urgent: 'danger',
+  high: 'danger',
+  medium: 'warning',
+  low: 'default',
+  none: 'neutral',
 };
 
 const CELL_TRIGGER_CLASS =
-  "flex w-full min-w-0 items-center justify-start gap-2 rounded-none border-0 bg-transparent px-4 py-2 text-left text-sm text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) [&_svg]:shrink-0";
+  'flex w-full min-w-0 items-center justify-start gap-2 rounded-none border-0 bg-transparent px-4 py-2 text-left text-sm text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) [&_svg]:shrink-0';
 
-const STATIC_VIEW_IDS = ["all-issues", "assigned", "created", "subscribed"];
+const STATIC_VIEW_IDS = ['all-issues', 'assigned', 'created', 'subscribed'];
 
 function isCustomViewId(viewId: string | undefined): boolean {
   if (!viewId) return false;
@@ -181,13 +171,7 @@ export function WorkspaceViewsPage() {
       prevViewIdRef.current = viewId;
       viewAppliedRef.current = false;
     }
-    if (
-      !workspaceSlug ||
-      !viewId ||
-      !isCustomViewId(viewId) ||
-      viewAppliedRef.current
-    )
-      return;
+    if (!workspaceSlug || !viewId || !isCustomViewId(viewId) || viewAppliedRef.current) return;
     viewAppliedRef.current = true;
     queueMicrotask(() => setViewLoading(true));
     viewService
@@ -195,16 +179,14 @@ export function WorkspaceViewsPage() {
       .then((view) => {
         setViewNotFound(false);
         const f = view.filters as Record<string, string> | undefined;
-        if (f && typeof f === "object") {
+        if (f && typeof f === 'object') {
           const nextFilters = parseWorkspaceViewFiltersFromSearchParams(
             new URLSearchParams(f as Record<string, string>),
           );
           setFilters(nextFilters);
         }
-        const dp = view.display_properties as
-          | Record<string, boolean>
-          | undefined;
-        if (dp && typeof dp === "object") {
+        const dp = view.display_properties as Record<string, boolean> | undefined;
+        if (dp && typeof dp === 'object') {
           const keys = Object.entries(dp)
             .filter(([, v]) => v)
             .map(([k]) => k)
@@ -214,13 +196,10 @@ export function WorkspaceViewsPage() {
           setDisplay((prev) => ({ ...prev, properties: keys }));
         }
         const df = view.display_filters as Record<string, unknown> | undefined;
-        if (df && typeof df === "object") {
+        if (df && typeof df === 'object') {
           setDisplay((prev) => {
             const next = { ...prev, showSubWorkItems: df.sub_issue === true };
-            if (
-              typeof df.layout === "string" &&
-              VIEW_LAYOUTS.includes(df.layout as ViewLayout)
-            ) {
+            if (typeof df.layout === 'string' && VIEW_LAYOUTS.includes(df.layout as ViewLayout)) {
               next.layout = df.layout as ViewLayout;
             }
             return next;
@@ -236,16 +215,14 @@ export function WorkspaceViewsPage() {
 
   const filteredIssues = useMemo(() => {
     const stateGroupMap: Record<string, StateGroup> = {
-      backlog: "backlog",
-      unstarted: "unstarted",
-      started: "started",
-      completed: "completed",
-      canceled: "canceled",
-      cancelled: "canceled",
+      backlog: 'backlog',
+      unstarted: 'unstarted',
+      started: 'started',
+      completed: 'completed',
+      canceled: 'canceled',
+      cancelled: 'canceled',
     };
-    const getStateGroup = (
-      stateId: string | null | undefined,
-    ): StateGroup | undefined => {
+    const getStateGroup = (stateId: string | null | undefined): StateGroup | undefined => {
       if (!stateId) return undefined;
       const s = states.find((x) => x.id === stateId);
       const g = s?.group?.toLowerCase();
@@ -254,9 +231,7 @@ export function WorkspaceViewsPage() {
 
     let list = issues;
     if (filters.priority.length) {
-      list = list.filter(
-        (i) => i.priority && filters.priority.includes(i.priority as Priority),
-      );
+      list = list.filter((i) => i.priority && filters.priority.includes(i.priority as Priority));
     }
     if (filters.stateGroup.length) {
       list = list.filter((i) => {
@@ -265,66 +240,51 @@ export function WorkspaceViewsPage() {
       });
     }
     if (filters.assigneeIds.length) {
-      list = list.filter((i) =>
-        i.assignee_ids?.some((id) => filters.assigneeIds.includes(id)),
-      );
+      list = list.filter((i) => i.assignee_ids?.some((id) => filters.assigneeIds.includes(id)));
     }
     if (filters.createdByIds.length) {
-      list = list.filter(
-        (i) =>
-          i.created_by_id && filters.createdByIds.includes(i.created_by_id),
-      );
+      list = list.filter((i) => i.created_by_id && filters.createdByIds.includes(i.created_by_id));
     }
     if (filters.labelIds.length) {
-      list = list.filter((i) =>
-        i.label_ids?.some((id) => filters.labelIds.includes(id)),
-      );
+      list = list.filter((i) => i.label_ids?.some((id) => filters.labelIds.includes(id)));
     }
     if (filters.projectIds.length) {
       list = list.filter((i) => filters.projectIds.includes(i.project_id));
     }
-    if (filters.grouping !== "all") {
+    if (filters.grouping !== 'all') {
       list = list.filter((i) => {
         const g = getStateGroup(i.state_id ?? undefined);
-        if (filters.grouping === "backlog") return g === "backlog";
-        if (filters.grouping === "active")
-          return g && !["backlog", "completed", "canceled"].includes(g);
+        if (filters.grouping === 'backlog') return g === 'backlog';
+        if (filters.grouping === 'active')
+          return g && !['backlog', 'completed', 'canceled'].includes(g);
         return true;
       });
     }
     const now = new Date();
-    const addDays = (d: number) =>
-      new Date(now.getTime() + d * 24 * 60 * 60 * 1000);
+    const addDays = (d: number) => new Date(now.getTime() + d * 24 * 60 * 60 * 1000);
     // Only apply start date filter when we have a valid range for "custom" (otherwise custom would exclude all)
     const startDateEffective =
       filters.startDate.length &&
-      !(
-        filters.startDate.includes("custom") &&
-        (!filters.startAfter || !filters.startBefore)
-      );
+      !(filters.startDate.includes('custom') && (!filters.startAfter || !filters.startBefore));
     if (startDateEffective) {
       list = list.filter((i) => {
         const sd = i.start_date ? new Date(i.start_date) : null;
         if (!sd) return false;
         return filters.startDate.some((preset) => {
-          if (
-            preset === "custom" &&
-            filters.startAfter &&
-            filters.startBefore
-          ) {
+          if (preset === 'custom' && filters.startAfter && filters.startBefore) {
             const after = new Date(filters.startAfter);
             const before = new Date(filters.startBefore);
             return sd >= after && sd <= before;
           }
-          if (preset === "custom") return false;
+          if (preset === 'custom') return false;
           const end =
-            preset === "1_week"
+            preset === '1_week'
               ? addDays(7)
-              : preset === "2_weeks"
+              : preset === '2_weeks'
                 ? addDays(14)
-                : preset === "1_month"
+                : preset === '1_month'
                   ? addDays(30)
-                  : preset === "2_months"
+                  : preset === '2_months'
                     ? addDays(60)
                     : null;
           return end && sd >= now && sd <= end;
@@ -333,29 +293,26 @@ export function WorkspaceViewsPage() {
     }
     const dueDateEffective =
       filters.dueDate.length &&
-      !(
-        filters.dueDate.includes("custom") &&
-        (!filters.dueAfter || !filters.dueBefore)
-      );
+      !(filters.dueDate.includes('custom') && (!filters.dueAfter || !filters.dueBefore));
     if (dueDateEffective) {
       list = list.filter((i) => {
         const td = i.target_date ? new Date(i.target_date) : null;
         if (!td) return false;
         return filters.dueDate.some((preset) => {
-          if (preset === "custom" && filters.dueAfter && filters.dueBefore) {
+          if (preset === 'custom' && filters.dueAfter && filters.dueBefore) {
             const after = new Date(filters.dueAfter);
             const before = new Date(filters.dueBefore);
             return td >= after && td <= before;
           }
-          if (preset === "custom") return false;
+          if (preset === 'custom') return false;
           const end =
-            preset === "1_week"
+            preset === '1_week'
               ? addDays(7)
-              : preset === "2_weeks"
+              : preset === '2_weeks'
                 ? addDays(14)
-                : preset === "1_month"
+                : preset === '1_month'
                   ? addDays(30)
-                  : preset === "2_months"
+                  : preset === '2_months'
                     ? addDays(60)
                     : null;
           return end && td >= now && td <= end;
@@ -363,9 +320,9 @@ export function WorkspaceViewsPage() {
       });
     }
     // Static view filters (Plane-style: assigned to me, created by me, subscribed)
-    if (viewId === "assigned" && currentUser?.id) {
+    if (viewId === 'assigned' && currentUser?.id) {
       list = list.filter((i) => i.assignee_ids?.includes(currentUser.id));
-    } else if (viewId === "created" && currentUser?.id) {
+    } else if (viewId === 'created' && currentUser?.id) {
       list = list.filter((i) => i.created_by_id === currentUser.id);
     }
     // "subscribed" would filter by issue subscribers when API supports it; for now show all
@@ -395,23 +352,23 @@ export function WorkspaceViewsPage() {
     };
     const getVal = (i: IssueApiResponse): string | number => {
       switch (display.sortBy) {
-        case "name":
-          return i.name ?? "";
-        case "created_at":
+        case 'name':
+          return i.name ?? '';
+        case 'created_at':
           return i.created_at ? new Date(i.created_at).getTime() : 0;
-        case "updated_at":
+        case 'updated_at':
           return i.updated_at ? new Date(i.updated_at).getTime() : 0;
-        case "priority":
-          return prioOrder[i.priority ?? "none"] ?? 5;
-        case "state":
-          return stateMap.get(i.state_id ?? "")?.name ?? "—";
-        case "assignee": {
-          const m = memberMap.get(i.assignee_ids?.[0] ?? "");
-          return m?.member_display_name ?? m?.member_email ?? "—";
+        case 'priority':
+          return prioOrder[i.priority ?? 'none'] ?? 5;
+        case 'state':
+          return stateMap.get(i.state_id ?? '')?.name ?? '—';
+        case 'assignee': {
+          const m = memberMap.get(i.assignee_ids?.[0] ?? '');
+          return m?.member_display_name ?? m?.member_email ?? '—';
         }
-        case "start_date":
+        case 'start_date':
           return i.start_date ? new Date(i.start_date).getTime() : 0;
-        case "due_date":
+        case 'due_date':
           return i.target_date ? new Date(i.target_date).getTime() : 0;
         default:
           return 0;
@@ -421,19 +378,17 @@ export function WorkspaceViewsPage() {
       const va = getVal(a);
       const vb = getVal(b);
       const cmp =
-        typeof va === "string" && typeof vb === "string"
-          ? va.localeCompare(vb, undefined, { sensitivity: "base" })
+        typeof va === 'string' && typeof vb === 'string'
+          ? va.localeCompare(vb, undefined, { sensitivity: 'base' })
           : Number(va) - Number(vb);
-      return display.sortOrder === "asc" ? cmp : -cmp;
+      return display.sortOrder === 'asc' ? cmp : -cmp;
     });
     return list;
   }, [filteredIssues, display.sortBy, display.sortOrder, stateMap, memberMap]);
 
   const handleSort = (column: SortableColumn) => {
     const nextOrder: SortOrder =
-      display.sortBy === column && display.sortOrder === "desc"
-        ? "asc"
-        : "desc";
+      display.sortBy === column && display.sortOrder === 'desc' ? 'asc' : 'desc';
     setDisplay((prev) => ({ ...prev, sortBy: column, sortOrder: nextOrder }));
   };
 
@@ -465,9 +420,7 @@ export function WorkspaceViewsPage() {
         const n = projs.length;
         return Promise.all([
           workspaceService.listMembers(workspaceSlug),
-          ...projs.map((p) =>
-            issueService.list(workspaceSlug!, p.id, { limit: 100 }),
-          ),
+          ...projs.map((p) => issueService.list(workspaceSlug!, p.id, { limit: 100 })),
           ...projs.map((p) => stateService.list(workspaceSlug!, p.id)),
           ...projs.map((p) => labelService.list(workspaceSlug!, p.id)),
         ]).then((results) => ({ results, n }));
@@ -500,25 +453,22 @@ export function WorkspaceViewsPage() {
     };
   }, [workspaceSlug]);
 
-  const getProject = (projectId: string) =>
-    projects.find((p) => p.id === projectId);
+  const getProject = (projectId: string) => projects.find((p) => p.id === projectId);
   const getStateName = (stateId: string | null | undefined) =>
-    stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : "—";
-  const getMember = (
-    memberId: string,
-  ): WorkspaceMemberApiResponse | undefined =>
+    stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : '—';
+  const getMember = (memberId: string): WorkspaceMemberApiResponse | undefined =>
     members.find((m) => m.member_id === memberId);
   const getLabel = (labelId: string): LabelApiResponse | undefined =>
     labels.find((l) => l.id === labelId);
 
   const getMemberLabel = (memberId: string): string => {
-    if (currentUser?.id && memberId === currentUser.id) return "You";
+    if (currentUser?.id && memberId === currentUser.id) return 'You';
     const m = getMember(memberId);
     const display = m?.member_display_name ?? m?.member_email;
     if (display) return display;
-    const emailUser = m?.member_email?.split("@")[0]?.trim();
+    const emailUser = m?.member_email?.split('@')[0]?.trim();
     if (emailUser) return emailUser;
-    return "Member";
+    return 'Member';
   };
 
   const updateIssue = useCallback(
@@ -534,15 +484,8 @@ export function WorkspaceViewsPage() {
     ) => {
       if (!workspaceSlug) return;
       try {
-        await issueService.update(
-          workspaceSlug,
-          issue.project_id,
-          issue.id,
-          patch as never,
-        );
-        setIssues((prev) =>
-          prev.map((i) => (i.id === issue.id ? { ...i, ...patch } : i)),
-        );
+        await issueService.update(workspaceSlug, issue.project_id, issue.id, patch as never);
+        setIssues((prev) => prev.map((i) => (i.id === issue.id ? { ...i, ...patch } : i)));
       } catch {
         // Optionally show toast; for now silent
       }
@@ -561,10 +504,7 @@ export function WorkspaceViewsPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
         <p className="text-(--txt-secondary)">Workspace not found.</p>
-        <Link
-          to="/"
-          className="text-sm font-medium text-(--txt-accent-primary) hover:underline"
-        >
+        <Link to="/" className="text-sm font-medium text-(--txt-accent-primary) hover:underline">
           Go to home
         </Link>
       </div>
@@ -580,12 +520,9 @@ export function WorkspaceViewsPage() {
   if (viewNotFound && workspaceSlug) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <p className="text-lg font-medium text-(--txt-primary)">
-          View does not exist
-        </p>
+        <p className="text-lg font-medium text-(--txt-primary)">View does not exist</p>
         <p className="text-sm text-(--txt-secondary)">
-          The view you are looking for does not exist or you don&apos;t have
-          permission to view it.
+          The view you are looking for does not exist or you don&apos;t have permission to view it.
         </p>
         <Link
           to={`/${workspace.slug}/views`}
@@ -602,33 +539,31 @@ export function WorkspaceViewsPage() {
   // Plane-style: fixed column order, scrollable from Priority onward
   const scrollableColumns = SPREADSHEET_COLUMN_ORDER.filter(
     (k) =>
-      k === "created_at" ||
-      k === "updated_at" ||
+      k === 'created_at' ||
+      k === 'updated_at' ||
       display.properties.includes(k as DisplayPropertyKey),
   );
   const formatDate = (s: string | undefined | null) =>
     s
-      ? new Date(s).toLocaleDateString("en-US", {
-          month: "short",
-          day: "2-digit",
-          year: "numeric",
+      ? new Date(s).toLocaleDateString('en-US', {
+          month: 'short',
+          day: '2-digit',
+          year: 'numeric',
         })
-      : "—";
+      : '—';
 
   const renderCell = (issue: IssueApiResponse, key: DisplayPropertyKey) => {
     const project = getProject(issue.project_id);
     const displayId = project
       ? `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`
       : issue.id.slice(-4);
-    const assignee = issue.assignee_ids?.[0]
-      ? getMember(issue.assignee_ids[0])
-      : undefined;
+    const assignee = issue.assignee_ids?.[0] ? getMember(issue.assignee_ids[0]) : undefined;
     const firstLabelId = issue.label_ids?.[0];
     const firstLabel = firstLabelId ? getLabel(firstLabelId) : undefined;
     switch (key) {
-      case "id":
+      case 'id':
         return <span className="text-(--txt-secondary)">{displayId}</span>;
-      case "assignee":
+      case 'assignee':
         return assignee ? (
           <span className="inline-flex items-center gap-2 text-(--txt-secondary)">
             {getImageUrl(assignee.member_avatar) ? (
@@ -639,39 +574,35 @@ export function WorkspaceViewsPage() {
               />
             ) : (
               <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-(--bg-layer-2) text-xs font-medium text-(--txt-secondary)">
-                {(
-                  assignee.member_display_name ??
-                  assignee.member_email ??
-                  "?"
-                ).charAt(0)}
+                {(assignee.member_display_name ?? assignee.member_email ?? '?').charAt(0)}
               </span>
             )}
             <span className="truncate">
-              {assignee.member_display_name ?? assignee.member_email ?? "—"}
+              {assignee.member_display_name ?? assignee.member_email ?? '—'}
             </span>
           </span>
         ) : (
           <span className="text-(--txt-tertiary)">—</span>
         );
-      case "start_date":
+      case 'start_date':
         return (
           <span className="text-(--txt-secondary)">
             {formatDate(issue.start_date ?? undefined)}
           </span>
         );
-      case "due_date":
+      case 'due_date':
         return (
           <span className="text-(--txt-secondary)">
             {formatDate(issue.target_date ?? undefined)}
           </span>
         );
-      case "labels":
+      case 'labels':
         return firstLabel ? (
           <span className="inline-flex items-center gap-2 text-(--txt-secondary)">
             <span
               className="size-2.5 shrink-0 rounded-full"
               style={{
-                backgroundColor: firstLabel.color ?? "var(--txt-icon-tertiary)",
+                backgroundColor: firstLabel.color ?? 'var(--txt-icon-tertiary)',
               }}
             />
             {firstLabel.name}
@@ -682,33 +613,31 @@ export function WorkspaceViewsPage() {
             Select labels
           </span>
         );
-      case "priority":
+      case 'priority':
         return (
           <span className="inline-flex items-center gap-2 text-(--txt-secondary)">
             <IconBarChart className="size-3.5 shrink-0 text-amber-500" />
-            {issue.priority === "none" || !issue.priority
-              ? "None"
-              : issue.priority}
+            {issue.priority === 'none' || !issue.priority ? 'None' : issue.priority}
           </span>
         );
-      case "state":
+      case 'state':
         return (
           <span className="inline-flex items-center gap-2 text-(--txt-secondary)">
             <span className="size-3.5 shrink-0 rounded-full border border-(--border-subtle) bg-(--bg-layer-1)" />
             {getStateName(issue.state_id ?? undefined)}
           </span>
         );
-      case "link":
+      case 'link':
         return <span className="text-(--txt-tertiary)">0 links</span>;
-      case "attachment_count":
+      case 'attachment_count':
         return <span className="text-(--txt-tertiary)">0 attachments</span>;
-      case "sub_work_item_count":
+      case 'sub_work_item_count':
         return <span className="text-(--txt-tertiary)">0 sub-work items</span>;
-      case "estimate":
+      case 'estimate':
         return <span className="text-(--txt-tertiary)">Estimate</span>;
-      case "module":
+      case 'module':
         return <span className="text-(--txt-tertiary)">Select modules</span>;
-      case "cycle":
+      case 'cycle':
         return <span className="text-(--txt-tertiary)">Select cycle</span>;
       default:
         return null;
@@ -716,27 +645,27 @@ export function WorkspaceViewsPage() {
   };
 
   const headerLabel = (key: (typeof scrollableColumns)[number]): string => {
-    if (key === "created_at") return "Created on";
-    if (key === "updated_at") return "Updated on";
+    if (key === 'created_at') return 'Created on';
+    if (key === 'updated_at') return 'Updated on';
     return DISPLAY_PROPERTY_LABELS[key as DisplayPropertyKey];
   };
   const totalCols = 1 + scrollableColumns.length;
   const sortableColumnMap: Partial<
-    Record<DisplayPropertyKey | "created_at" | "updated_at", SortableColumn>
+    Record<DisplayPropertyKey | 'created_at' | 'updated_at', SortableColumn>
   > = {
-    priority: "priority",
-    state: "state",
-    assignee: "assignee",
-    start_date: "start_date",
-    due_date: "due_date",
-    created_at: "created_at",
-    updated_at: "updated_at",
+    priority: 'priority',
+    state: 'state',
+    assignee: 'assignee',
+    start_date: 'start_date',
+    due_date: 'due_date',
+    created_at: 'created_at',
+    updated_at: 'updated_at',
   };
   const renderSortableTh = (
     column: SortableColumn,
     label: string,
     icon?: React.ReactNode,
-    extraClass = "",
+    extraClass = '',
   ) => {
     const isActive = display.sortBy === column;
     return (
@@ -752,11 +681,9 @@ export function WorkspaceViewsPage() {
           {icon}
           {label}
           <IconChevronDown
-            className={`size-4 shrink-0 opacity-60 ${isActive ? "opacity-100" : ""}`}
+            className={`size-4 shrink-0 opacity-60 ${isActive ? 'opacity-100' : ''}`}
             style={
-              isActive && display.sortOrder === "asc"
-                ? { transform: "rotate(180deg)" }
-                : undefined
+              isActive && display.sortOrder === 'asc' ? { transform: 'rotate(180deg)' } : undefined
             }
           />
         </button>
@@ -765,45 +692,39 @@ export function WorkspaceViewsPage() {
   };
 
   if (
-    display.layout === "kanban" ||
-    display.layout === "calendar" ||
-    display.layout === "gantt_chart"
+    display.layout === 'kanban' ||
+    display.layout === 'calendar' ||
+    display.layout === 'gantt_chart'
   ) {
     return (
       <div className="-mt-(--padding-page) -mr-(--padding-page) -mb-(--padding-page) flex min-h-0 flex-1 flex-col">
         <div className="flex flex-1 items-center justify-center p-8">
           <p className="text-sm text-(--txt-tertiary)">
-            {display.layout === "kanban" && "Kanban view is coming soon."}
-            {display.layout === "calendar" && "Calendar view is coming soon."}
-            {display.layout === "gantt_chart" &&
-              "Gantt chart view is coming soon."}
+            {display.layout === 'kanban' && 'Kanban view is coming soon.'}
+            {display.layout === 'calendar' && 'Calendar view is coming soon.'}
+            {display.layout === 'gantt_chart' && 'Gantt chart view is coming soon.'}
           </p>
         </div>
       </div>
     );
   }
 
-  if (display.layout === "list") {
+  if (display.layout === 'list') {
     return (
       <div className="-mt-(--padding-page) -mr-(--padding-page) -mb-(--padding-page) flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto">
           {sortedIssues.length === 0 ? (
             <div className="px-4 py-16 text-center text-sm text-(--txt-tertiary)">
-              No work items yet. Create one from a project&apos;s Work items
-              section or add a view to get started.
+              No work items yet. Create one from a project&apos;s Work items section or add a view
+              to get started.
             </div>
           ) : (
             <ul className="divide-y divide-(--border-subtle)">
               {sortedIssues.map((issue) => {
                 const project = getProject(issue.project_id);
-                const issueBaseUrl = project
-                  ? `${baseUrl}/projects/${project.id}`
-                  : baseUrl;
+                const issueBaseUrl = project ? `${baseUrl}/projects/${project.id}` : baseUrl;
                 return (
-                  <li
-                    key={issue.id}
-                    className="transition-colors hover:bg-(--bg-layer-1-hover)"
-                  >
+                  <li key={issue.id} className="transition-colors hover:bg-(--bg-layer-1-hover)">
                     <Link
                       to={`${issueBaseUrl}/issues/${issue.id}`}
                       className="flex items-center justify-between px-4 py-3 text-(--txt-primary) no-underline hover:text-(--txt-accent-primary)"
@@ -829,24 +750,20 @@ export function WorkspaceViewsPage() {
   const scrollableTh = (key: (typeof scrollableColumns)[number]) => {
     const sortCol = sortableColumnMap[key];
     const label = headerLabel(key);
-    const firstColBorder = isFirstScrollableColumn(key)
-      ? " border-l border-(--border-subtle)"
-      : "";
+    const firstColBorder = isFirstScrollableColumn(key) ? ' border-l border-(--border-subtle)' : '';
     if (sortCol) {
       const icon =
-        key === "state" ? (
+        key === 'state' ? (
           <IconRadio className="size-4 shrink-0 opacity-70" />
-        ) : key === "priority" ? (
+        ) : key === 'priority' ? (
           <IconBarChart className="size-4 shrink-0 opacity-70" />
-        ) : key === "assignee" ? (
+        ) : key === 'assignee' ? (
           <IconUser className="size-4 shrink-0 opacity-70" />
-        ) : key === "labels" ? (
+        ) : key === 'labels' ? (
           <IconTag className="size-4 shrink-0 opacity-70" />
         ) : undefined;
       return (
-        <Fragment key={key}>
-          {renderSortableTh(sortCol, label, icon, firstColBorder)}
-        </Fragment>
+        <Fragment key={key}>{renderSortableTh(sortCol, label, icon, firstColBorder)}</Fragment>
       );
     }
     return (
@@ -855,63 +772,33 @@ export function WorkspaceViewsPage() {
         className={`border-r-column-subtle whitespace-nowrap px-4 py-2 font-medium text-(--txt-secondary) last:border-r-0${firstColBorder}`}
       >
         <span className="inline-flex items-center gap-1.5">
-          {key === "state" && (
-            <IconRadio className="size-4 shrink-0 opacity-70" />
-          )}
-          {key === "priority" && (
-            <IconBarChart className="size-4 shrink-0 opacity-70" />
-          )}
-          {key === "assignee" && (
-            <IconUser className="size-4 shrink-0 opacity-70" />
-          )}
-          {key === "labels" && (
-            <IconTag className="size-4 shrink-0 opacity-70" />
-          )}
+          {key === 'state' && <IconRadio className="size-4 shrink-0 opacity-70" />}
+          {key === 'priority' && <IconBarChart className="size-4 shrink-0 opacity-70" />}
+          {key === 'assignee' && <IconUser className="size-4 shrink-0 opacity-70" />}
+          {key === 'labels' && <IconTag className="size-4 shrink-0 opacity-70" />}
           {label}
         </span>
       </th>
     );
   };
 
-  const scrollableTd = (
-    issue: IssueApiResponse,
-    key: (typeof scrollableColumns)[number],
-  ) => {
-    if (key === "created_at") {
-      return (
-        <span className="text-(--txt-secondary)">
-          {formatDate(issue.created_at)}
-        </span>
-      );
+  const scrollableTd = (issue: IssueApiResponse, key: (typeof scrollableColumns)[number]) => {
+    if (key === 'created_at') {
+      return <span className="text-(--txt-secondary)">{formatDate(issue.created_at)}</span>;
     }
-    if (key === "updated_at") {
-      return (
-        <span className="text-(--txt-secondary)">
-          {formatDate(issue.updated_at)}
-        </span>
-      );
+    if (key === 'updated_at') {
+      return <span className="text-(--txt-secondary)">{formatDate(issue.updated_at)}</span>;
     }
     return renderCell(issue, key as DisplayPropertyKey);
   };
 
-  const editableKeys = [
-    "priority",
-    "assignee",
-    "labels",
-    "start_date",
-    "due_date",
-  ];
+  const editableKeys = ['priority', 'assignee', 'labels', 'start_date', 'due_date'];
   const isEditableColumn = (key: string) => editableKeys.includes(key);
 
-  const renderTableCell = (
-    issue: IssueApiResponse,
-    key: (typeof scrollableColumns)[number],
-  ) => {
-    if (key === "priority") {
+  const renderTableCell = (issue: IssueApiResponse, key: (typeof scrollableColumns)[number]) => {
+    if (key === 'priority') {
       const displayValue =
-        issue.priority === "none" || !issue.priority
-          ? "None"
-          : (issue.priority as string);
+        issue.priority === 'none' || !issue.priority ? 'None' : (issue.priority as string);
       const priorityTriggerContent = (
         <span className="inline-flex min-w-0 items-center gap-2 text-(--txt-secondary)">
           <IconBarChart className="size-3.5 shrink-0 text-amber-500" />
@@ -931,35 +818,29 @@ export function WorkspaceViewsPage() {
           align="right"
           panelClassName="max-h-60 min-w-[160px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
         >
-          {(["urgent", "high", "medium", "low", "none"] as Priority[]).map(
-            (p) => (
-              <button
-                key={p}
-                type="button"
-                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
-                onClick={() => {
-                  setOpenCellId(null);
-                  updateIssue(issue, { priority: p });
-                }}
-              >
-                <span className="truncate capitalize text-(--txt-primary)">
-                  {p}
-                </span>
-                <Badge variant={priorityVariant[p]} className="text-[10px]">
-                  {p}
-                </Badge>
-              </button>
-            ),
-          )}
+          {(['urgent', 'high', 'medium', 'low', 'none'] as Priority[]).map((p) => (
+            <button
+              key={p}
+              type="button"
+              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
+              onClick={() => {
+                setOpenCellId(null);
+                updateIssue(issue, { priority: p });
+              }}
+            >
+              <span className="truncate capitalize text-(--txt-primary)">{p}</span>
+              <Badge variant={priorityVariant[p]} className="text-[10px]">
+                {p}
+              </Badge>
+            </button>
+          ))}
         </Dropdown>
       );
     }
-    if (key === "assignee") {
-      const assignee = issue.assignee_ids?.[0]
-        ? getMember(issue.assignee_ids[0])
-        : undefined;
+    if (key === 'assignee') {
+      const assignee = issue.assignee_ids?.[0] ? getMember(issue.assignee_ids[0]) : undefined;
       const assigneeIds = issue.assignee_ids ?? [];
-      const displayValue = assignee ? getMemberLabel(assignee.member_id) : "—";
+      const displayValue = assignee ? getMemberLabel(assignee.member_id) : '—';
       const assigneeTriggerContent = assignee ? (
         <span className="inline-flex min-w-0 items-center gap-2 text-(--txt-secondary)">
           {getImageUrl(assignee.member_avatar) ? (
@@ -970,15 +851,11 @@ export function WorkspaceViewsPage() {
             />
           ) : (
             <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-(--bg-layer-2) text-xs font-medium text-(--txt-secondary)">
-              {(
-                assignee.member_display_name ??
-                assignee.member_email ??
-                "?"
-              ).charAt(0)}
+              {(assignee.member_display_name ?? assignee.member_email ?? '?').charAt(0)}
             </span>
           )}
           <span className="truncate">
-            {assignee.member_display_name ?? assignee.member_email ?? "—"}
+            {assignee.member_display_name ?? assignee.member_email ?? '—'}
           </span>
         </span>
       ) : (
@@ -1017,7 +894,7 @@ export function WorkspaceViewsPage() {
                 />
               ) : (
                 <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--brand-200) text-[10px] font-medium text-(--brand-default)">
-                  {currentUser.name?.charAt(0) ?? "?"}
+                  {currentUser.name?.charAt(0) ?? '?'}
                 </span>
               )}
               <span className="truncate text-(--txt-primary)">You</span>
@@ -1050,34 +927,30 @@ export function WorkspaceViewsPage() {
                     />
                   ) : (
                     <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--bg-layer-2) text-[10px] text-(--txt-secondary)">
-                      {(m.member_display_name ?? m.member_email ?? "?").charAt(
-                        0,
-                      )}
+                      {(m.member_display_name ?? m.member_email ?? '?').charAt(0)}
                     </span>
                   )}
                   <span className="truncate text-(--txt-primary)">
                     {m.member_display_name ?? m.member_email ?? m.member_id}
                   </span>
-                  {checked && (
-                    <span className="ml-auto text-(--txt-tertiary)">✓</span>
-                  )}
+                  {checked && <span className="ml-auto text-(--txt-tertiary)">✓</span>}
                 </button>
               );
             })}
         </Dropdown>
       );
     }
-    if (key === "labels") {
+    if (key === 'labels') {
       const labelIds = issue.label_ids ?? [];
       const firstLabelId = labelIds[0];
       const firstLabel = firstLabelId ? getLabel(firstLabelId) : undefined;
-      const displayValue = firstLabel ? firstLabel.name : "Select labels";
+      const displayValue = firstLabel ? firstLabel.name : 'Select labels';
       const labelsTriggerContent = firstLabel ? (
         <span className="inline-flex min-w-0 items-center gap-2 text-(--txt-secondary)">
           <span
             className="size-2.5 shrink-0 rounded-full"
             style={{
-              backgroundColor: firstLabel.color ?? "var(--txt-icon-tertiary)",
+              backgroundColor: firstLabel.color ?? 'var(--txt-icon-tertiary)',
             }}
           />
           <span className="truncate">{firstLabel.name}</span>
@@ -1102,9 +975,7 @@ export function WorkspaceViewsPage() {
           panelClassName="max-h-72 min-w-[220px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
         >
           {labels.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-(--txt-tertiary)">
-              No labels.
-            </div>
+            <div className="px-3 py-2 text-sm text-(--txt-tertiary)">No labels.</div>
           ) : (
             labels.map((l) => {
               const checked = labelIds.includes(l.id);
@@ -1114,24 +985,18 @@ export function WorkspaceViewsPage() {
                   type="button"
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
                   onClick={() => {
-                    const next = checked
-                      ? labelIds.filter((x) => x !== l.id)
-                      : [...labelIds, l.id];
+                    const next = checked ? labelIds.filter((x) => x !== l.id) : [...labelIds, l.id];
                     updateIssue(issue, { label_ids: next });
                   }}
                 >
                   <span
                     className="size-3 shrink-0 rounded-full"
                     style={{
-                      backgroundColor: l.color ?? "var(--txt-icon-tertiary)",
+                      backgroundColor: l.color ?? 'var(--txt-icon-tertiary)',
                     }}
                   />
-                  <span className="truncate text-(--txt-primary)">
-                    {l.name}
-                  </span>
-                  {checked && (
-                    <span className="ml-auto text-(--txt-tertiary)">✓</span>
-                  )}
+                  <span className="truncate text-(--txt-primary)">{l.name}</span>
+                  {checked && <span className="ml-auto text-(--txt-tertiary)">✓</span>}
                 </button>
               );
             })
@@ -1139,19 +1004,15 @@ export function WorkspaceViewsPage() {
         </Dropdown>
       );
     }
-    if (key === "start_date") {
-      const displayValue = issue.start_date
-        ? formatDate(issue.start_date)
-        : "—";
+    if (key === 'start_date') {
+      const displayValue = issue.start_date ? formatDate(issue.start_date) : '—';
       return (
         <Dropdown
           id={`${issue.id}-start_date`}
           openId={openCellId}
           onOpen={setOpenCellId}
           label="Start date"
-          icon={
-            <IconCalendar className="size-3.5 text-(--txt-icon-tertiary)" />
-          }
+          icon={<IconCalendar className="size-3.5 text-(--txt-icon-tertiary)" />}
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
           align="right"
@@ -1159,7 +1020,7 @@ export function WorkspaceViewsPage() {
         >
           <input
             type="date"
-            value={issue.start_date ?? ""}
+            value={issue.start_date ?? ''}
             onChange={(e) => {
               const v = e.target.value || null;
               updateIssue(issue, { start_date: v });
@@ -1170,19 +1031,15 @@ export function WorkspaceViewsPage() {
         </Dropdown>
       );
     }
-    if (key === "due_date") {
-      const displayValue = issue.target_date
-        ? formatDate(issue.target_date)
-        : "—";
+    if (key === 'due_date') {
+      const displayValue = issue.target_date ? formatDate(issue.target_date) : '—';
       return (
         <Dropdown
           id={`${issue.id}-due_date`}
           openId={openCellId}
           onOpen={setOpenCellId}
           label="Due date"
-          icon={
-            <IconCalendar className="size-3.5 text-(--txt-icon-tertiary)" />
-          }
+          icon={<IconCalendar className="size-3.5 text-(--txt-icon-tertiary)" />}
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
           align="right"
@@ -1190,7 +1047,7 @@ export function WorkspaceViewsPage() {
         >
           <input
             type="date"
-            value={issue.target_date ?? ""}
+            value={issue.target_date ?? ''}
             onChange={(e) => {
               const v = e.target.value || null;
               updateIssue(issue, { target_date: v });
@@ -1212,19 +1069,19 @@ export function WorkspaceViewsPage() {
             <tr className="border-b border-(--border-subtle) bg-(--bg-layer-1)">
               <th className="sticky left-0 z-10 min-w-[200px] whitespace-nowrap border-r border-(--border-subtle) bg-(--bg-layer-1) px-4 py-2">
                 {(() => {
-                  const isActive = display.sortBy === "name";
+                  const isActive = display.sortBy === 'name';
                   return (
                     <button
                       type="button"
-                      onClick={() => handleSort("name")}
+                      onClick={() => handleSort('name')}
                       className="inline-flex items-center gap-1.5 hover:text-(--txt-primary) font-medium text-(--txt-secondary)"
                     >
                       Work items
                       <IconChevronDown
-                        className={`size-4 shrink-0 opacity-60 ${isActive ? "opacity-100" : ""}`}
+                        className={`size-4 shrink-0 opacity-60 ${isActive ? 'opacity-100' : ''}`}
                         style={
-                          isActive && display.sortOrder === "asc"
-                            ? { transform: "rotate(180deg)" }
+                          isActive && display.sortOrder === 'asc'
+                            ? { transform: 'rotate(180deg)' }
                             : undefined
                         }
                       />
@@ -1242,16 +1099,14 @@ export function WorkspaceViewsPage() {
                   colSpan={totalCols}
                   className="px-4 py-16 text-center text-sm text-(--txt-tertiary)"
                 >
-                  No work items yet. Create one from a project&apos;s Work items
-                  section or add a view to get started.
+                  No work items yet. Create one from a project&apos;s Work items section or add a
+                  view to get started.
                 </td>
               </tr>
             ) : (
               sortedIssues.map((issue) => {
                 const project = getProject(issue.project_id);
-                const issueBaseUrl = project
-                  ? `${baseUrl}/projects/${project.id}`
-                  : baseUrl;
+                const issueBaseUrl = project ? `${baseUrl}/projects/${project.id}` : baseUrl;
                 return (
                   <tr
                     key={issue.id}
@@ -1262,7 +1117,7 @@ export function WorkspaceViewsPage() {
                         to={`${issueBaseUrl}/issues/${issue.id}`}
                         className="block font-medium text-(--txt-primary) no-underline hover:text-(--txt-accent-primary)"
                       >
-                        {display.properties.includes("id") && (
+                        {display.properties.includes('id') && (
                           <span className="mr-3 text-(--txt-secondary)">
                             {project
                               ? `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`
@@ -1277,8 +1132,8 @@ export function WorkspaceViewsPage() {
                         key={colKey}
                         className={
                           isEditableColumn(colKey)
-                            ? `border-r-column-subtle p-0 whitespace-nowrap last:border-r-0${isFirstScrollableColumn(colKey) ? " border-l border-(--border-subtle)" : ""}`
-                            : `border-r-column-subtle px-4 py-2 whitespace-nowrap last:border-r-0${isFirstScrollableColumn(colKey) ? " border-l border-(--border-subtle)" : ""}`
+                            ? `border-r-column-subtle p-0 whitespace-nowrap last:border-r-0${isFirstScrollableColumn(colKey) ? ' border-l border-(--border-subtle)' : ''}`
+                            : `border-r-column-subtle px-4 py-2 whitespace-nowrap last:border-r-0${isFirstScrollableColumn(colKey) ? ' border-l border-(--border-subtle)' : ''}`
                         }
                       >
                         {renderTableCell(issue, colKey)}

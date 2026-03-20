@@ -9,14 +9,14 @@ import {
   type Dispatch,
   type ReactNode,
   type SetStateAction,
-} from "react";
-import { useLocation, useParams } from "react-router-dom";
+} from 'react';
+import { useLocation, useParams } from 'react-router-dom';
 import {
   type SavedViewDisplaySettings,
   cloneDefaultSettings,
   parsePersistedSavedViewDisplay,
   serializeSettings,
-} from "../lib/projectSavedViewDisplay";
+} from '../lib/projectSavedViewDisplay';
 
 type ProjectSavedViewDisplayContextValue = {
   active: boolean;
@@ -24,25 +24,22 @@ type ProjectSavedViewDisplayContextValue = {
   setSettings: Dispatch<SetStateAction<SavedViewDisplaySettings>>;
 };
 
-const ProjectSavedViewDisplayContext =
-  createContext<ProjectSavedViewDisplayContextValue | null>(null);
+const ProjectSavedViewDisplayContext = createContext<ProjectSavedViewDisplayContextValue | null>(
+  null,
+);
 
-export function ProjectSavedViewDisplayProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export function ProjectSavedViewDisplayProvider({ children }: { children: ReactNode }) {
   const { workspaceSlug, projectId, viewId } = useParams<{
     workspaceSlug?: string;
     projectId?: string;
     viewId?: string;
   }>();
   const { pathname } = useLocation();
-  const normalized = pathname.replace(/\/+$/, "");
+  const normalized = pathname.replace(/\/+$/, '');
   const expectedPath =
     workspaceSlug && projectId && viewId
       ? `/${workspaceSlug}/projects/${projectId}/views/${viewId}`
-      : "";
+      : '';
   const active = Boolean(expectedPath && normalized === expectedPath);
 
   const storageKey =
@@ -50,9 +47,7 @@ export function ProjectSavedViewDisplayProvider({
       ? `devlane:saved-view-display:${workspaceSlug}:${viewId}`
       : null;
 
-  const [settings, setSettings] = useState<SavedViewDisplaySettings>(() =>
-    cloneDefaultSettings(),
-  );
+  const [settings, setSettings] = useState<SavedViewDisplaySettings>(() => cloneDefaultSettings());
 
   useEffect(() => {
     if (!storageKey) {
@@ -97,7 +92,7 @@ export function useProjectSavedViewDisplay(): ProjectSavedViewDisplayContextValu
   const ctx = useContext(ProjectSavedViewDisplayContext);
   if (!ctx) {
     throw new Error(
-      "useProjectSavedViewDisplay must be used within ProjectSavedViewDisplayProvider",
+      'useProjectSavedViewDisplay must be used within ProjectSavedViewDisplayProvider',
     );
   }
   return ctx;

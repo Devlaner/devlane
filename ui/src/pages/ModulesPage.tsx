@@ -1,41 +1,41 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Avatar } from "../components/ui";
-import { UpdateModuleModal } from "../components/UpdateModuleModal";
-import { DateRangeModal } from "../components/workspace-views/DateRangeModal";
-import { useModulesFilter } from "../contexts/ModulesFilterContext";
-import { workspaceService } from "../services/workspaceService";
-import { projectService } from "../services/projectService";
-import { moduleService } from "../services/moduleService";
-import { useModuleFavorites } from "../hooks/useModuleFavorites";
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Avatar } from '../components/ui';
+import { UpdateModuleModal } from '../components/UpdateModuleModal';
+import { DateRangeModal } from '../components/workspace-views/DateRangeModal';
+import { useModulesFilter } from '../contexts/ModulesFilterContext';
+import { workspaceService } from '../services/workspaceService';
+import { projectService } from '../services/projectService';
+import { moduleService } from '../services/moduleService';
+import { useModuleFavorites } from '../hooks/useModuleFavorites';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
   ModuleApiResponse,
   WorkspaceMemberApiResponse,
-} from "../api/types";
-import { getImageUrl } from "../lib/utils";
-import { slugify } from "../lib/slug";
-import { parseISODateLocal } from "../lib/dateOnly";
-import { MODULE_STATUSES } from "../lib/moduleStatuses";
+} from '../api/types';
+import { getImageUrl } from '../lib/utils';
+import { slugify } from '../lib/slug';
+import { parseISODateLocal } from '../lib/dateOnly';
+import { MODULE_STATUSES } from '../lib/moduleStatuses';
 
 function pad2(n: number): string {
   return n < 10 ? `0${n}` : String(n);
 }
 
 const MONTH_ABBR = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 function formatModuleDateRange(mod: ModuleApiResponse): string | null {
@@ -107,13 +107,7 @@ const IconCalendar = () => (
   </svg>
 );
 const IconMoreVertical = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    aria-hidden
-  >
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
     <circle cx="12" cy="5" r="1.5" />
     <circle cx="12" cy="12" r="1.5" />
     <circle cx="12" cy="19" r="1.5" />
@@ -122,17 +116,17 @@ const IconMoreVertical = () => (
 
 function StatusDot({ statusId }: { statusId: string }) {
   const c =
-    statusId === "completed"
-      ? "bg-green-500"
-      : statusId === "cancelled"
-        ? "bg-red-500"
-        : statusId === "in_progress"
-          ? "bg-amber-500"
-          : statusId === "paused"
-            ? "bg-gray-400"
-            : statusId === "planned"
-              ? "bg-blue-500"
-              : "bg-gray-300";
+    statusId === 'completed'
+      ? 'bg-green-500'
+      : statusId === 'cancelled'
+        ? 'bg-red-500'
+        : statusId === 'in_progress'
+          ? 'bg-amber-500'
+          : statusId === 'paused'
+            ? 'bg-gray-400'
+            : statusId === 'planned'
+              ? 'bg-blue-500'
+              : 'bg-gray-300';
   return <span className={`size-2 rounded-full ${c}`} aria-hidden />;
 }
 
@@ -142,21 +136,8 @@ function ModuleProgressCircle({ progress }: { progress: number }) {
   const stroke = Math.max(0, Math.min(100, progress)) / 100;
   return (
     <div className="relative flex size-10 shrink-0 items-center justify-center">
-      <svg
-        width="40"
-        height="40"
-        viewBox="0 0 40 40"
-        className="-rotate-90"
-        aria-hidden
-      >
-        <circle
-          cx="20"
-          cy="20"
-          r={r}
-          fill="none"
-          stroke="var(--border-subtle)"
-          strokeWidth="3"
-        />
+      <svg width="40" height="40" viewBox="0 0 40 40" className="-rotate-90" aria-hidden>
+        <circle cx="20" cy="20" r={r} fill="none" stroke="var(--border-subtle)" strokeWidth="3" />
         <circle
           cx="20"
           cy="20"
@@ -169,9 +150,7 @@ function ModuleProgressCircle({ progress }: { progress: number }) {
           strokeLinecap="round"
         />
       </svg>
-      <span className="absolute text-[10px] font-medium text-(--txt-secondary)">
-        {progress}%
-      </span>
+      <span className="absolute text-[10px] font-medium text-(--txt-secondary)">{progress}%</span>
     </div>
   );
 }
@@ -187,26 +166,21 @@ export function ModulesPage() {
   const [modules, setModules] = useState<ModuleApiResponse[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [timelineTimeframe, setTimelineTimeframe] = useState<
-    "week" | "month" | "quarter"
-  >("week");
+  const [timelineTimeframe, setTimelineTimeframe] = useState<'week' | 'month' | 'quarter'>('week');
   const [timelineFullscreen, setTimelineFullscreen] = useState(false);
   const timelineScrollRef = useRef<HTMLDivElement | null>(null);
   const [statusMenuOpenId, setStatusMenuOpenId] = useState<string | null>(null);
   const [statusSavingId, setStatusSavingId] = useState<string | null>(null);
-  const [ellipsisMenuOpenId, setEllipsisMenuOpenId] = useState<string | null>(
-    null,
-  );
+  const [ellipsisMenuOpenId, setEllipsisMenuOpenId] = useState<string | null>(null);
   const [editModule, setEditModule] = useState<ModuleApiResponse | null>(null);
   const [editOpenDatePicker, setEditOpenDatePicker] = useState(false);
-  const [quickDateModule, setQuickDateModule] =
-    useState<ModuleApiResponse | null>(null);
+  const [quickDateModule, setQuickDateModule] = useState<ModuleApiResponse | null>(null);
   const { favoriteModuleIds, toggleFavorite, isFavorite } = useModuleFavorites(
     workspaceSlug,
     projectId,
   );
 
-  const searchQuery = (filter.search ?? "").trim().toLowerCase();
+  const searchQuery = (filter.search ?? '').trim().toLowerCase();
   const favoritesFilter = filter.favorites;
   const statusFilter = filter.status;
   const startDateList = filter.startDateList;
@@ -218,7 +192,7 @@ export function ModulesPage() {
 
   const filteredModules = useMemo(() => {
     let list = modules;
-    if (searchQuery !== "") {
+    if (searchQuery !== '') {
       list = list.filter((m) => m.name.toLowerCase().includes(searchQuery));
     }
     if (favoritesFilter) {
@@ -228,24 +202,23 @@ export function ModulesPage() {
     }
     if (statusFilter.length > 0) {
       const allowed = new Set(statusFilter.map((s) => s.toLowerCase()));
-      list = list.filter((m) => allowed.has((m.status ?? "").toLowerCase()));
+      list = list.filter((m) => allowed.has((m.status ?? '').toLowerCase()));
     }
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const addDays = (d: Date, n: number) =>
-      new Date(d.getTime() + n * 24 * 60 * 60 * 1000);
+    const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 24 * 60 * 60 * 1000);
     const toDate = (iso: string) => new Date(iso.slice(0, 10));
     const inRange = (value: Date, min: Date, max: Date) =>
       value.getTime() >= min.getTime() && value.getTime() <= max.getTime();
     const matchStartPreset = (d: Date, preset: string) => {
-      if (preset === "1_week") return inRange(d, today, addDays(today, 7));
-      if (preset === "2_weeks") return inRange(d, today, addDays(today, 14));
-      if (preset === "1_month") return inRange(d, today, addDays(today, 30));
-      if (preset === "2_months") return inRange(d, today, addDays(today, 60));
+      if (preset === '1_week') return inRange(d, today, addDays(today, 7));
+      if (preset === '2_weeks') return inRange(d, today, addDays(today, 14));
+      if (preset === '1_month') return inRange(d, today, addDays(today, 30));
+      if (preset === '2_months') return inRange(d, today, addDays(today, 60));
       return false;
     };
     if (startDateList.length > 0) {
-      const hasCustomStart = startDateList.includes("custom");
+      const hasCustomStart = startDateList.includes('custom');
       list = list.filter((m) => {
         const sd = m.start_date?.trim();
         if (!sd) return false;
@@ -260,7 +233,7 @@ export function ModulesPage() {
       });
     }
     if (dueDateList.length > 0) {
-      const hasCustomDue = dueDateList.includes("custom");
+      const hasCustomDue = dueDateList.includes('custom');
       list = list.filter((m) => {
         const td = m.target_date?.trim();
         if (!td) return false;
@@ -289,8 +262,8 @@ export function ModulesPage() {
     dueBefore,
   ]);
 
-  const sortBy = filter.sort || "progress";
-  const order = filter.order || "asc";
+  const sortBy = filter.sort || 'progress';
+  const order = filter.order || 'asc';
   const sortedModules = [...filteredModules].sort((a, b) => {
     const getProgress = (mod: ModuleApiResponse) => {
       const total = mod.issue_count ?? 0;
@@ -298,34 +271,33 @@ export function ModulesPage() {
 
       // We don't have a completed/cancelled issue breakdown on the module payload.
       // Use module status as a simple proxy for sorting and the progress badge.
-      const done =
-        mod.status === "completed" || mod.status === "cancelled" ? total : 0;
+      const done = mod.status === 'completed' || mod.status === 'cancelled' ? total : 0;
       return Math.round((done / total) * 100);
     };
     let cmp = 0;
     switch (sortBy) {
-      case "name":
-        cmp = (a.name ?? "").localeCompare(b.name ?? "");
+      case 'name':
+        cmp = (a.name ?? '').localeCompare(b.name ?? '');
         break;
-      case "progress":
+      case 'progress':
         cmp = getProgress(a) - getProgress(b);
         break;
-      case "work_items":
+      case 'work_items':
         cmp = (a.issue_count ?? 0) - (b.issue_count ?? 0);
         break;
-      case "due_date":
-        cmp = (a.target_date ?? "").localeCompare(b.target_date ?? "");
+      case 'due_date':
+        cmp = (a.target_date ?? '').localeCompare(b.target_date ?? '');
         break;
-      case "created_date":
-        cmp = (a.created_at ?? "").localeCompare(b.created_at ?? "");
+      case 'created_date':
+        cmp = (a.created_at ?? '').localeCompare(b.created_at ?? '');
         break;
-      case "manual":
+      case 'manual':
         cmp = (a.sort_order ?? 0) - (b.sort_order ?? 0);
         break;
       default:
         cmp = getProgress(a) - getProgress(b);
     }
-    return order === "desc" ? -cmp : cmp;
+    return order === 'desc' ? -cmp : cmp;
   });
 
   useEffect(() => {
@@ -336,21 +308,21 @@ export function ModulesPage() {
         .then((list) => setModules(list ?? []))
         .catch(() => {});
     };
-    window.addEventListener("modules-refresh", handler);
-    return () => window.removeEventListener("modules-refresh", handler);
+    window.addEventListener('modules-refresh', handler);
+    return () => window.removeEventListener('modules-refresh', handler);
   }, [workspaceSlug, projectId]);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
       if (!target) return;
-      if (target.closest("[data-module-status-menu]")) return;
-      if (target.closest("[data-module-ellipsis-menu]")) return;
+      if (target.closest('[data-module-status-menu]')) return;
+      if (target.closest('[data-module-ellipsis-menu]')) return;
       setStatusMenuOpenId(null);
       setEllipsisMenuOpenId(null);
     };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
   }, []);
 
   useEffect(() => {
@@ -393,8 +365,7 @@ export function ModulesPage() {
   const getProgress = (mod: ModuleApiResponse) => {
     const total = mod.issue_count ?? 0;
     if (!total) return 0;
-    const done =
-      mod.status === "completed" || mod.status === "cancelled" ? total : 0;
+    const done = mod.status === 'completed' || mod.status === 'cancelled' ? total : 0;
     return Math.round((done / total) * 100);
   };
 
@@ -411,17 +382,14 @@ export function ModulesPage() {
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
 
-  const modulePath = (m: ModuleApiResponse) =>
-    `${baseUrl}/modules/${slugify(m.name)}`;
+  const modulePath = (m: ModuleApiResponse) => `${baseUrl}/modules/${slugify(m.name)}`;
   const layout = filter.layout;
 
   const getLeadMember = (leadId: string | null | undefined) => {
     if (!leadId) return null;
     const m = members.find((x) => x.member_id === leadId);
     const name =
-      m?.member_display_name?.trim() ??
-      m?.member_email?.split("@")[0] ??
-      leadId.slice(0, 8);
+      m?.member_display_name?.trim() ?? m?.member_email?.split('@')[0] ?? leadId.slice(0, 8);
     return { name, avatarUrl: m?.member_avatar ?? null };
   };
 
@@ -430,12 +398,9 @@ export function ModulesPage() {
       {sortedModules.map((mod) => {
         const progress = getProgress(mod);
         const dateRange = formatModuleDateRange(mod);
-        const lead = getLeadMember(
-          mod.lead_id ?? project.project_lead_id ?? null,
-        );
+        const lead = getLeadMember(mod.lead_id ?? project.project_lead_id ?? null);
         const fav = isFavorite(mod.id);
-        const statusLabel =
-          MODULE_STATUSES.find((s) => s.id === mod.status)?.label ?? mod.status;
+        const statusLabel = MODULE_STATUSES.find((s) => s.id === mod.status)?.label ?? mod.status;
         return (
           <div
             key={mod.id}
@@ -443,11 +408,7 @@ export function ModulesPage() {
           >
             <ModuleProgressCircle progress={progress} />
             <div className="min-w-0 flex-1">
-              <Link
-                to={modulePath(mod)}
-                className="min-w-0 no-underline"
-                title={mod.name}
-              >
+              <Link to={modulePath(mod)} className="min-w-0 no-underline" title={mod.name}>
                 <p className="truncate font-medium text-(--txt-primary) hover:underline">
                   {mod.name}
                 </p>
@@ -467,7 +428,7 @@ export function ModulesPage() {
             >
               <span className="flex items-center gap-1.5">
                 <IconCalendar />
-                {dateRange ?? "Start date → End date"}
+                {dateRange ?? 'Start date → End date'}
               </span>
             </button>
             <div className="relative shrink-0" data-module-status-menu>
@@ -477,9 +438,7 @@ export function ModulesPage() {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setStatusMenuOpenId((cur) =>
-                    cur === mod.id ? null : mod.id,
-                  );
+                  setStatusMenuOpenId((cur) => (cur === mod.id ? null : mod.id));
                 }}
                 disabled={statusSavingId === mod.id}
                 aria-haspopup="menu"
@@ -510,9 +469,7 @@ export function ModulesPage() {
                             mod.id,
                             { status: s.id },
                           );
-                          setModules((prev) =>
-                            prev.map((x) => (x.id === mod.id ? updated : x)),
-                          );
+                          setModules((prev) => prev.map((x) => (x.id === mod.id ? updated : x)));
                           setStatusMenuOpenId(null);
                         } finally {
                           setStatusSavingId(null);
@@ -523,9 +480,7 @@ export function ModulesPage() {
                         <StatusDot statusId={s.id} />
                         {s.label}
                       </span>
-                      {mod.status === s.id && (
-                        <span className="text-(--txt-icon-tertiary)">✓</span>
-                      )}
+                      {mod.status === s.id && <span className="text-(--txt-icon-tertiary)">✓</span>}
                     </button>
                   ))}
                 </div>
@@ -560,7 +515,7 @@ export function ModulesPage() {
             <button
               type="button"
               className="flex size-8 shrink-0 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-              aria-label={fav ? "Remove from favorites" : "Add to favorites"}
+              aria-label={fav ? 'Remove from favorites' : 'Add to favorites'}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -583,9 +538,7 @@ export function ModulesPage() {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setEllipsisMenuOpenId((cur) =>
-                    cur === mod.id ? null : mod.id,
-                  );
+                  setEllipsisMenuOpenId((cur) => (cur === mod.id ? null : mod.id));
                 }}
               >
                 <IconMoreVertical />
@@ -611,11 +564,7 @@ export function ModulesPage() {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      window.open(
-                        modulePath(mod),
-                        "_blank",
-                        "noopener,noreferrer",
-                      );
+                      window.open(modulePath(mod), '_blank', 'noopener,noreferrer');
                       setEllipsisMenuOpenId(null);
                     }}
                   >
@@ -678,9 +627,7 @@ export function ModulesPage() {
             className="flex flex-col gap-3 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-4 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
           >
             <div className="flex items-center justify-between gap-2">
-              <p className="min-w-0 flex-1 truncate font-medium text-(--txt-primary)">
-                {mod.name}
-              </p>
+              <p className="min-w-0 flex-1 truncate font-medium text-(--txt-primary)">{mod.name}</p>
               <ModuleProgressCircle progress={progress} />
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px]">
@@ -700,20 +647,11 @@ export function ModulesPage() {
   );
 
   const renderTimelineLayout = () => {
-    const DAY_WIDTH =
-      timelineTimeframe === "week"
-        ? 34
-        : timelineTimeframe === "month"
-          ? 20
-          : 14;
+    const DAY_WIDTH = timelineTimeframe === 'week' ? 34 : timelineTimeframe === 'month' ? 20 : 14;
     const ROW_HEIGHT = 40;
     const LEFT_WIDTH = 220;
     const now = new Date();
-    const todayStart = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-    ).getTime();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
     const withDates = sortedModules.map((mod) => {
       // Use local date-only parsing to avoid UTC off-by-one shifts.
@@ -725,52 +663,39 @@ export function ModulesPage() {
       const endTime = end?.getTime() ?? start?.getTime() ?? todayStart;
       const durationDays =
         start && end
-          ? Math.max(
-              0,
-              Math.ceil(
-                (end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000),
-              ) + 1,
-            )
+          ? Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1)
           : 0;
       return { mod, start, end, startTime, endTime, durationDays };
     });
 
     const viewStart = (() => {
       const t = new Date(todayStart);
-      if (timelineTimeframe === "week") return todayStart - 7 * 86400000;
-      if (timelineTimeframe === "month")
+      if (timelineTimeframe === 'week') return todayStart - 7 * 86400000;
+      if (timelineTimeframe === 'month')
         return new Date(t.getFullYear(), t.getMonth(), 1).getTime();
       const qStartMonth = Math.floor(t.getMonth() / 3) * 3;
       return new Date(t.getFullYear(), qStartMonth, 1).getTime();
     })();
     const viewEnd = (() => {
       const t = new Date(todayStart);
-      if (timelineTimeframe === "week") return todayStart + 21 * 86400000;
-      if (timelineTimeframe === "month")
+      if (timelineTimeframe === 'week') return todayStart + 21 * 86400000;
+      if (timelineTimeframe === 'month')
         return new Date(t.getFullYear(), t.getMonth() + 1, 8).getTime();
       const qStartMonth = Math.floor(t.getMonth() / 3) * 3;
       return new Date(t.getFullYear(), qStartMonth + 3, 8).getTime();
     })();
 
-    const rangeStart = Math.min(
-      ...withDates.map((d) => d.startTime),
-      viewStart,
-    );
+    const rangeStart = Math.min(...withDates.map((d) => d.startTime), viewStart);
     const rangeEnd = Math.max(...withDates.map((d) => d.endTime), viewEnd);
-    const totalDays = Math.ceil(
-      (rangeEnd - rangeStart) / (24 * 60 * 60 * 1000),
-    );
+    const totalDays = Math.ceil((rangeEnd - rangeStart) / (24 * 60 * 60 * 1000));
     const days: Date[] = [];
     for (let i = 0; i < totalDays; i++) {
       days.push(new Date(rangeStart + i * 24 * 60 * 60 * 1000));
     }
 
-    const getDayIndex = (t: number) =>
-      Math.floor((t - rangeStart) / (24 * 60 * 60 * 1000));
+    const getDayIndex = (t: number) => Math.floor((t - rangeStart) / (24 * 60 * 60 * 1000));
     const weekNum = (d: Date) => {
-      return Math.ceil(
-        (d.getDate() + new Date(d.getFullYear(), d.getMonth(), 1).getDay()) / 7,
-      );
+      return Math.ceil((d.getDate() + new Date(d.getFullYear(), d.getMonth(), 1).getDay()) / 7);
     };
 
     const monthGroups: { label: string; startIdx: number; span: number }[] = [];
@@ -791,23 +716,23 @@ export function ModulesPage() {
     return (
       <div
         className={`flex flex-col gap-0 ${
-          timelineFullscreen ? "fixed inset-0 z-50 bg-(--bg-screen) p-3" : ""
+          timelineFullscreen ? 'fixed inset-0 z-50 bg-(--bg-screen) p-3' : ''
         }`}
       >
         <div className="flex items-center justify-between border-b border-(--border-subtle) bg-(--bg-layer-2) px-4 py-2">
           <span className="text-sm font-medium text-(--txt-secondary)">
-            {sortedModules.length} Module{sortedModules.length !== 1 ? "s" : ""}
+            {sortedModules.length} Module{sortedModules.length !== 1 ? 's' : ''}
           </span>
           <div className="flex items-center gap-1">
-            {(["week", "month", "quarter"] as const).map((tf) => (
+            {(['week', 'month', 'quarter'] as const).map((tf) => (
               <button
                 key={tf}
                 type="button"
                 onClick={() => setTimelineTimeframe(tf)}
                 className={`rounded px-2.5 py-1.5 text-sm font-medium capitalize ${
                   timelineTimeframe === tf
-                    ? "bg-(--brand-200) text-(--brand-default)"
-                    : "text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
+                    ? 'bg-(--brand-200) text-(--brand-default)'
+                    : 'text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)'
                 }`}
               >
                 {tf}
@@ -820,7 +745,7 @@ export function ModulesPage() {
                 const left = Math.max(0, idx * DAY_WIDTH - 200);
                 timelineScrollRef.current?.scrollTo({
                   left,
-                  behavior: "smooth",
+                  behavior: 'smooth',
                 });
               }}
               className="rounded px-2.5 py-1.5 text-sm font-medium text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
@@ -868,10 +793,7 @@ export function ModulesPage() {
               </thead>
               <tbody>
                 {withDates.map(({ mod, durationDays }) => (
-                  <tr
-                    key={mod.id}
-                    className="border-b border-(--border-subtle) last:border-b-0"
-                  >
+                  <tr key={mod.id} className="border-b border-(--border-subtle) last:border-b-0">
                     <td className="px-3 py-2">
                       <Link
                         to={modulePath(mod)}
@@ -895,7 +817,7 @@ export function ModulesPage() {
                       </Link>
                     </td>
                     <td className="px-3 py-2 text-sm text-(--txt-secondary)">
-                      {durationDays > 0 ? `${durationDays} days` : "—"}
+                      {durationDays > 0 ? `${durationDays} days` : '—'}
                     </td>
                   </tr>
                 ))}
@@ -954,13 +876,12 @@ export function ModulesPage() {
                         key={idx}
                         className={`shrink-0 border-r border-(--border-subtle) px-0.5 py-1 text-center text-[11px] ${
                           isToday
-                            ? "bg-(--brand-200) font-medium text-(--brand-default)"
-                            : "text-(--txt-secondary)"
+                            ? 'bg-(--brand-200) font-medium text-(--brand-default)'
+                            : 'text-(--txt-secondary)'
                         }`}
                         style={{ width: DAY_WIDTH }}
                       >
-                        {d.getDate()}{" "}
-                        {["Su", "M", "Tu", "W", "Th", "F", "Sa"][d.getDay()]}
+                        {d.getDate()} {['Su', 'M', 'Tu', 'W', 'Th', 'F', 'Sa'][d.getDay()]}
                       </div>
                     );
                   })}
@@ -971,29 +892,21 @@ export function ModulesPage() {
                 const startIdx = Math.max(0, getDayIndex(startTime));
                 const endIdx = Math.min(days.length - 1, getDayIndex(endTime));
                 const left = startIdx * DAY_WIDTH;
-                const width = Math.max(
-                  DAY_WIDTH,
-                  (endIdx - startIdx + 1) * DAY_WIDTH,
-                );
+                const width = Math.max(DAY_WIDTH, (endIdx - startIdx + 1) * DAY_WIDTH);
                 return (
                   <div
                     key={mod.id}
                     className="flex items-center border-b border-(--border-subtle) last:border-b-0"
                     style={{ height: ROW_HEIGHT }}
                   >
-                    <div
-                      className="relative h-6"
-                      style={{ width: totalDays * DAY_WIDTH }}
-                    >
+                    <div className="relative h-6" style={{ width: totalDays * DAY_WIDTH }}>
                       <Link
                         to={modulePath(mod)}
                         className="absolute top-1/2 -translate-y-1/2 rounded bg-(--brand-200) px-2 py-1 text-xs font-medium text-(--brand-default) no-underline hover:bg-(--brand-default) hover:text-white"
                         style={{ left, width, minWidth: 40 }}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="block min-w-0 flex-1 truncate">
-                            {mod.name}
-                          </span>
+                          <span className="block min-w-0 flex-1 truncate">{mod.name}</span>
                           <button
                             type="button"
                             className="pointer-events-auto inline-flex h-5 w-5 items-center justify-center rounded hover:bg-white/10"
@@ -1025,18 +938,18 @@ export function ModulesPage() {
     return (
       <p className="py-8 text-center text-sm text-(--txt-tertiary)">
         {favoritesFilter
-          ? "No favorite modules. Star modules to add them here."
+          ? 'No favorite modules. Star modules to add them here.'
           : searchQuery
-            ? "No modules match your search."
-            : "No modules yet."}
+            ? 'No modules match your search.'
+            : 'No modules yet.'}
       </p>
     );
   }
 
   const content =
-    layout === "gallery"
+    layout === 'gallery'
       ? renderGalleryLayout()
-      : layout === "timeline"
+      : layout === 'timeline'
         ? renderTimelineLayout()
         : renderListLayout();
 
@@ -1054,10 +967,8 @@ export function ModulesPage() {
         module={editModule}
         openDatePickerOnOpen={editOpenDatePicker}
         onUpdated={(updated) => {
-          setModules((prev) =>
-            prev.map((m) => (m.id === updated.id ? updated : m)),
-          );
-          window.dispatchEvent(new CustomEvent("modules-refresh"));
+          setModules((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+          window.dispatchEvent(new CustomEvent('modules-refresh'));
         }}
       />
       <DateRangeModal
@@ -1079,12 +990,10 @@ export function ModulesPage() {
                   target_date: before,
                 },
               );
-              setModules((prev) =>
-                prev.map((m) => (m.id === updated.id ? updated : m)),
-              );
+              setModules((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
             } catch (e) {
               // Keep UX responsive; modal is already closing.
-              console.error("Failed to update module dates", e);
+              console.error('Failed to update module dates', e);
             }
           })();
         }}

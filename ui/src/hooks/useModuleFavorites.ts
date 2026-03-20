@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from 'react';
 
-const STORAGE_KEY_PREFIX = "module_favorites";
-const MODULE_FAVORITES_CHANGED_EVENT = "module-favorites-changed";
+const STORAGE_KEY_PREFIX = 'module_favorites';
+const MODULE_FAVORITES_CHANGED_EVENT = 'module-favorites-changed';
 
 function storageKey(workspaceId: string, projectId: string): string {
   return `${STORAGE_KEY_PREFIX}_${workspaceId}_${projectId}`;
@@ -12,23 +12,17 @@ function loadFavorites(workspaceId: string, projectId: string): string[] {
     const raw = localStorage.getItem(storageKey(workspaceId, projectId));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed)
-      ? parsed.filter((x): x is string => typeof x === "string")
-      : [];
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
   } catch {
     return [];
   }
 }
 
-export function useModuleFavorites(
-  workspaceId: string | undefined,
-  projectId: string | undefined,
-) {
+export function useModuleFavorites(workspaceId: string | undefined, projectId: string | undefined) {
   const [favoriteModuleIds, setFavoriteModuleIds] = useState<string[]>([]);
 
   useEffect(() => {
-    const next =
-      workspaceId && projectId ? loadFavorites(workspaceId, projectId) : [];
+    const next = workspaceId && projectId ? loadFavorites(workspaceId, projectId) : [];
     queueMicrotask(() => setFavoriteModuleIds(next));
   }, [workspaceId, projectId]);
 
@@ -40,14 +34,11 @@ export function useModuleFavorites(
           ? prev.filter((id) => id !== moduleId)
           : [...prev, moduleId];
         try {
-          localStorage.setItem(
-            storageKey(workspaceId, projectId),
-            JSON.stringify(next),
-          );
+          localStorage.setItem(storageKey(workspaceId, projectId), JSON.stringify(next));
         } catch {
           // ignore
         }
-        if (typeof window !== "undefined") {
+        if (typeof window !== 'undefined') {
           window.dispatchEvent(
             new CustomEvent(MODULE_FAVORITES_CHANGED_EVENT, {
               detail: {

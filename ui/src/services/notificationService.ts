@@ -1,12 +1,9 @@
-import { apiClient } from "../api/client";
-import type { NotificationApiResponse } from "../api/types";
+import { apiClient } from '../api/client';
+import type { NotificationApiResponse } from '../api/types';
 
 export const notificationService = {
-  async list(
-    workspaceSlug: string,
-    unreadOnly = false,
-  ): Promise<NotificationApiResponse[]> {
-    const params = unreadOnly ? "?unread_only=true" : "";
+  async list(workspaceSlug: string, unreadOnly = false): Promise<NotificationApiResponse[]> {
+    const params = unreadOnly ? '?unread_only=true' : '';
     const { data } = await apiClient.get<NotificationApiResponse[]>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/notifications/${params}`,
     );

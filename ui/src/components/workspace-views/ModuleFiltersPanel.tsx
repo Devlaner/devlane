@@ -1,16 +1,16 @@
-import { useState, useEffect } from "react";
-import { useModulesFilter } from "../../contexts/ModulesFilterContext";
-import { CollapsibleSection } from "./WorkspaceViewsFiltersShared";
-import { DATE_PRESET_LABELS, FILTER_ICONS } from "./WorkspaceViewsFiltersData";
-import { DATE_PRESETS } from "../../types/workspaceViewFilters";
-import { Avatar } from "../ui";
-import { getImageUrl } from "../../lib/utils";
-import { workspaceService } from "../../services/workspaceService";
-import type { WorkspaceMemberApiResponse } from "../../api/types";
-import { MODULE_STATUSES } from "../../lib/moduleStatuses";
+import { useState, useEffect } from 'react';
+import { useModulesFilter } from '../../contexts/ModulesFilterContext';
+import { CollapsibleSection } from './WorkspaceViewsFiltersShared';
+import { DATE_PRESET_LABELS, FILTER_ICONS } from './WorkspaceViewsFiltersData';
+import { DATE_PRESETS } from '../../types/workspaceViewFilters';
+import { Avatar } from '../ui';
+import { getImageUrl } from '../../lib/utils';
+import { workspaceService } from '../../services/workspaceService';
+import type { WorkspaceMemberApiResponse } from '../../api/types';
+import { MODULE_STATUSES } from '../../lib/moduleStatuses';
 
 function ModuleStatusIcon({ statusId }: { statusId: string }) {
-  if (statusId === "backlog" || statusId === "planned") {
+  if (statusId === 'backlog' || statusId === 'planned') {
     return (
       <span
         className="flex size-4 shrink-0 items-center justify-center rounded border border-(--border-subtle) border-dashed text-(--txt-icon-tertiary)"
@@ -20,12 +20,9 @@ function ModuleStatusIcon({ statusId }: { statusId: string }) {
       </span>
     );
   }
-  if (statusId === "in_progress") {
+  if (statusId === 'in_progress') {
     return (
-      <span
-        className="flex size-4 shrink-0 items-center justify-center text-amber-500"
-        aria-hidden
-      >
+      <span className="flex size-4 shrink-0 items-center justify-center text-amber-500" aria-hidden>
         <svg
           width="14"
           height="14"
@@ -40,7 +37,7 @@ function ModuleStatusIcon({ statusId }: { statusId: string }) {
       </span>
     );
   }
-  if (statusId === "paused") {
+  if (statusId === 'paused') {
     return (
       <span
         className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)"
@@ -61,7 +58,7 @@ function ModuleStatusIcon({ statusId }: { statusId: string }) {
       </span>
     );
   }
-  if (statusId === "completed") {
+  if (statusId === 'completed') {
     return (
       <span
         className="flex size-4 shrink-0 items-center justify-center rounded-full bg-green-500/20 text-green-600"
@@ -80,7 +77,7 @@ function ModuleStatusIcon({ statusId }: { statusId: string }) {
       </span>
     );
   }
-  if (statusId === "cancelled") {
+  if (statusId === 'cancelled') {
     return (
       <span
         className="flex size-4 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-red-500"
@@ -106,18 +103,13 @@ function ModuleStatusIcon({ statusId }: { statusId: string }) {
 export interface ModuleFiltersPanelProps {
   workspaceSlug: string;
   /** When provided, called when user clicks Custom (start/due) so parent can close dropdown and show date modal */
-  onOpenDateModal?: (which: "start" | "due") => void;
+  onOpenDateModal?: (which: 'start' | 'due') => void;
 }
 
-export function ModuleFiltersPanel({
-  workspaceSlug,
-  onOpenDateModal,
-}: ModuleFiltersPanelProps) {
+export function ModuleFiltersPanel({ workspaceSlug, onOpenDateModal }: ModuleFiltersPanelProps) {
   const filter = useModulesFilter();
-  const [search, setSearch] = useState("");
-  const [members, setWorkspaceMembers] = useState<WorkspaceMemberApiResponse[]>(
-    [],
-  );
+  const [search, setSearch] = useState('');
+  const [members, setWorkspaceMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [showAllLeads, setShowAllLeads] = useState(false);
   const [showAllMembers, setShowAllMembers] = useState(false);
   const [sectionOpen, setSectionOpen] = useState({
@@ -163,14 +155,14 @@ export function ModuleFiltersPanel({
     setDueAfter,
     setDueBefore,
   } = filter;
-  const hasCustomStart = startDateList.includes("custom");
-  const hasCustomDue = dueDateList.includes("custom");
+  const hasCustomStart = startDateList.includes('custom');
+  const hasCustomDue = dueDateList.includes('custom');
 
   const toggleSection = (key: keyof typeof sectionOpen) => {
     setSectionOpen((s) => ({ ...s, [key]: !s[key] }));
   };
 
-  const openDateModal = (which: "start" | "due") => {
+  const openDateModal = (which: 'start' | 'due') => {
     if (onOpenDateModal) {
       onOpenDateModal(which);
     }
@@ -181,9 +173,7 @@ export function ModuleFiltersPanel({
 
   const q = (s: string) => s.trim().toLowerCase();
   const filteredMembers = members.filter((m) =>
-    q(m.member_display_name ?? m.member_email ?? m.member_id).includes(
-      q(search),
-    ),
+    q(m.member_display_name ?? m.member_email ?? m.member_id).includes(q(search)),
   );
   const displayName = (m: WorkspaceMemberApiResponse) =>
     m.member_display_name?.trim() ?? m.member_email ?? m.member_id.slice(0, 12);
@@ -206,12 +196,12 @@ export function ModuleFiltersPanel({
       </div>
       <div
         className="min-h-0 flex-1 overflow-y-auto py-1"
-        style={{ maxHeight: "min(70vh, 28rem)" }}
+        style={{ maxHeight: 'min(70vh, 28rem)' }}
       >
         <CollapsibleSection
           title="Favorites"
           open={sectionOpen.favorites}
-          onToggle={() => toggleSection("favorites")}
+          onToggle={() => toggleSection('favorites')}
         >
           <label className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
             <input
@@ -227,7 +217,7 @@ export function ModuleFiltersPanel({
         <CollapsibleSection
           title="Status"
           open={sectionOpen.status}
-          onToggle={() => toggleSection("status")}
+          onToggle={() => toggleSection('status')}
         >
           {MODULE_STATUSES.filter((s) => filterSearch(s.label)).map((s) => (
             <label
@@ -255,43 +245,41 @@ export function ModuleFiltersPanel({
         <CollapsibleSection
           title="Lead"
           open={sectionOpen.lead}
-          onToggle={() => toggleSection("lead")}
+          onToggle={() => toggleSection('lead')}
         >
-          {(showAllLeads ? filteredMembers : filteredMembers.slice(0, 8)).map(
-            (m) => (
-              <label
-                key={m.member_id}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-              >
-                <input
-                  type="checkbox"
-                  checked={leadIds.includes(m.member_id)}
-                  onChange={() => {
-                    setLead(
-                      leadIds.includes(m.member_id)
-                        ? leadIds.filter((id) => id !== m.member_id)
-                        : [...leadIds, m.member_id],
-                    );
-                  }}
-                  className="rounded border-(--border-subtle)"
-                />
-                <Avatar
-                  name={displayName(m)}
-                  src={getImageUrl(m.member_avatar) ?? undefined}
-                  size="sm"
-                  className="h-6 w-6 shrink-0 text-xs"
-                />
-                <span className="truncate">{displayName(m)}</span>
-              </label>
-            ),
-          )}
+          {(showAllLeads ? filteredMembers : filteredMembers.slice(0, 8)).map((m) => (
+            <label
+              key={m.member_id}
+              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+            >
+              <input
+                type="checkbox"
+                checked={leadIds.includes(m.member_id)}
+                onChange={() => {
+                  setLead(
+                    leadIds.includes(m.member_id)
+                      ? leadIds.filter((id) => id !== m.member_id)
+                      : [...leadIds, m.member_id],
+                  );
+                }}
+                className="rounded border-(--border-subtle)"
+              />
+              <Avatar
+                name={displayName(m)}
+                src={getImageUrl(m.member_avatar) ?? undefined}
+                size="sm"
+                className="h-6 w-6 shrink-0 text-xs"
+              />
+              <span className="truncate">{displayName(m)}</span>
+            </label>
+          ))}
           {filteredMembers.length > 8 && (
             <button
               type="button"
               onClick={() => setShowAllLeads((v) => !v)}
               className="px-3 py-1.5 text-left text-sm text-(--brand-default) hover:underline"
             >
-              {showAllLeads ? "Show less" : "View all"}
+              {showAllLeads ? 'Show less' : 'View all'}
             </button>
           )}
         </CollapsibleSection>
@@ -299,43 +287,41 @@ export function ModuleFiltersPanel({
         <CollapsibleSection
           title="Members"
           open={sectionOpen.members}
-          onToggle={() => toggleSection("members")}
+          onToggle={() => toggleSection('members')}
         >
-          {(showAllMembers ? filteredMembers : filteredMembers.slice(0, 8)).map(
-            (m) => (
-              <label
-                key={m.member_id}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-              >
-                <input
-                  type="checkbox"
-                  checked={memberIds.includes(m.member_id)}
-                  onChange={() => {
-                    setMemberIds(
-                      memberIds.includes(m.member_id)
-                        ? memberIds.filter((id) => id !== m.member_id)
-                        : [...memberIds, m.member_id],
-                    );
-                  }}
-                  className="rounded border-(--border-subtle)"
-                />
-                <Avatar
-                  name={displayName(m)}
-                  src={getImageUrl(m.member_avatar) ?? undefined}
-                  size="sm"
-                  className="h-6 w-6 shrink-0 text-xs"
-                />
-                <span className="truncate">{displayName(m)}</span>
-              </label>
-            ),
-          )}
+          {(showAllMembers ? filteredMembers : filteredMembers.slice(0, 8)).map((m) => (
+            <label
+              key={m.member_id}
+              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+            >
+              <input
+                type="checkbox"
+                checked={memberIds.includes(m.member_id)}
+                onChange={() => {
+                  setMemberIds(
+                    memberIds.includes(m.member_id)
+                      ? memberIds.filter((id) => id !== m.member_id)
+                      : [...memberIds, m.member_id],
+                  );
+                }}
+                className="rounded border-(--border-subtle)"
+              />
+              <Avatar
+                name={displayName(m)}
+                src={getImageUrl(m.member_avatar) ?? undefined}
+                size="sm"
+                className="h-6 w-6 shrink-0 text-xs"
+              />
+              <span className="truncate">{displayName(m)}</span>
+            </label>
+          ))}
           {filteredMembers.length > 8 && (
             <button
               type="button"
               onClick={() => setShowAllMembers((v) => !v)}
               className="px-3 py-1.5 text-left text-sm text-(--brand-default) hover:underline"
             >
-              {showAllMembers ? "Show less" : "View all"}
+              {showAllMembers ? 'Show less' : 'View all'}
             </button>
           )}
         </CollapsibleSection>
@@ -343,134 +329,128 @@ export function ModuleFiltersPanel({
         <CollapsibleSection
           title="Start date"
           open={sectionOpen.start_date}
-          onToggle={() => toggleSection("start_date")}
+          onToggle={() => toggleSection('start_date')}
         >
-          {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map(
-            (d) =>
-              d === "custom" ? (
-                <label
-                  key={d}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+          {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map((d) =>
+            d === 'custom' ? (
+              <label
+                key={d}
+                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (hasCustomStart) {
+                    setStartDateList([]);
+                    setStartAfter(null);
+                    setStartBefore(null);
+                  } else {
+                    openDateModal('start');
+                  }
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={hasCustomStart}
+                  readOnly
+                  tabIndex={-1}
+                  className="rounded border-(--border-subtle)"
+                />
+                <span>{DATE_PRESET_LABELS[d]}</span>
+              </label>
+            ) : (
+              <label
+                key={d}
+                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+              >
+                <input
+                  type="checkbox"
+                  checked={!hasCustomStart && startDateList.includes(d)}
+                  onChange={() => {
                     if (hasCustomStart) {
-                      setStartDateList([]);
+                      setStartDateList([d]);
                       setStartAfter(null);
                       setStartBefore(null);
                     } else {
-                      openDateModal("start");
-                    }
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={hasCustomStart}
-                    readOnly
-                    tabIndex={-1}
-                    className="rounded border-(--border-subtle)"
-                  />
-                  <span>{DATE_PRESET_LABELS[d]}</span>
-                </label>
-              ) : (
-                <label
-                  key={d}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-                >
-                  <input
-                    type="checkbox"
-                    checked={!hasCustomStart && startDateList.includes(d)}
-                    onChange={() => {
-                      if (hasCustomStart) {
-                        setStartDateList([d]);
+                      const presets = startDateList.filter((x) => x !== 'custom');
+                      const nextList = presets.includes(d)
+                        ? presets.filter((x) => x !== d)
+                        : [...presets, d];
+                      setStartDateList(nextList);
+                      if (nextList.length === 0) {
                         setStartAfter(null);
                         setStartBefore(null);
-                      } else {
-                        const presets = startDateList.filter(
-                          (x) => x !== "custom",
-                        );
-                        const nextList = presets.includes(d)
-                          ? presets.filter((x) => x !== d)
-                          : [...presets, d];
-                        setStartDateList(nextList);
-                        if (nextList.length === 0) {
-                          setStartAfter(null);
-                          setStartBefore(null);
-                        }
                       }
-                    }}
-                    className="rounded border-(--border-subtle)"
-                  />
-                  <span>{DATE_PRESET_LABELS[d]}</span>
-                </label>
-              ),
+                    }
+                  }}
+                  className="rounded border-(--border-subtle)"
+                />
+                <span>{DATE_PRESET_LABELS[d]}</span>
+              </label>
+            ),
           )}
         </CollapsibleSection>
 
         <CollapsibleSection
           title="Due date"
           open={sectionOpen.due_date}
-          onToggle={() => toggleSection("due_date")}
+          onToggle={() => toggleSection('due_date')}
         >
-          {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map(
-            (d) =>
-              d === "custom" ? (
-                <label
-                  key={d}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+          {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map((d) =>
+            d === 'custom' ? (
+              <label
+                key={d}
+                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (hasCustomDue) {
+                    setDueDateList([]);
+                    setDueAfter(null);
+                    setDueBefore(null);
+                  } else {
+                    openDateModal('due');
+                  }
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={hasCustomDue}
+                  readOnly
+                  tabIndex={-1}
+                  className="rounded border-(--border-subtle)"
+                />
+                <span>{DATE_PRESET_LABELS[d]}</span>
+              </label>
+            ) : (
+              <label
+                key={d}
+                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+              >
+                <input
+                  type="checkbox"
+                  checked={!hasCustomDue && dueDateList.includes(d)}
+                  onChange={() => {
                     if (hasCustomDue) {
-                      setDueDateList([]);
+                      setDueDateList([d]);
                       setDueAfter(null);
                       setDueBefore(null);
                     } else {
-                      openDateModal("due");
-                    }
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={hasCustomDue}
-                    readOnly
-                    tabIndex={-1}
-                    className="rounded border-(--border-subtle)"
-                  />
-                  <span>{DATE_PRESET_LABELS[d]}</span>
-                </label>
-              ) : (
-                <label
-                  key={d}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-                >
-                  <input
-                    type="checkbox"
-                    checked={!hasCustomDue && dueDateList.includes(d)}
-                    onChange={() => {
-                      if (hasCustomDue) {
-                        setDueDateList([d]);
+                      const presets = dueDateList.filter((x) => x !== 'custom');
+                      const nextList = presets.includes(d)
+                        ? presets.filter((x) => x !== d)
+                        : [...presets, d];
+                      setDueDateList(nextList);
+                      if (nextList.length === 0) {
                         setDueAfter(null);
                         setDueBefore(null);
-                      } else {
-                        const presets = dueDateList.filter(
-                          (x) => x !== "custom",
-                        );
-                        const nextList = presets.includes(d)
-                          ? presets.filter((x) => x !== d)
-                          : [...presets, d];
-                        setDueDateList(nextList);
-                        if (nextList.length === 0) {
-                          setDueAfter(null);
-                          setDueBefore(null);
-                        }
                       }
-                    }}
-                    className="rounded border-(--border-subtle)"
-                  />
-                  <span>{DATE_PRESET_LABELS[d]}</span>
-                </label>
-              ),
+                    }
+                  }}
+                  className="rounded border-(--border-subtle)"
+                />
+                <span>{DATE_PRESET_LABELS[d]}</span>
+              </label>
+            ),
           )}
         </CollapsibleSection>
       </div>

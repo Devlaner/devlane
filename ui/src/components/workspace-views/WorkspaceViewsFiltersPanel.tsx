@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { DateRangeModal } from "./DateRangeModal";
-import { CollapsibleSection } from "./WorkspaceViewsFiltersShared";
+import { useEffect, useState } from 'react';
+import { DateRangeModal } from './DateRangeModal';
+import { CollapsibleSection } from './WorkspaceViewsFiltersShared';
 import {
   PRIORITY_ICONS,
   PRIORITY_LABELS,
@@ -8,34 +8,32 @@ import {
   STATE_GROUP_LABELS,
   DATE_PRESET_LABELS,
   FILTER_ICONS,
-} from "./WorkspaceViewsFiltersData";
-import { getImageUrl } from "../../lib/utils";
-import { workspaceService } from "../../services/workspaceService";
-import { projectService } from "../../services/projectService";
-import { stateService } from "../../services/stateService";
-import { labelService } from "../../services/labelService";
-import { useAuth } from "../../contexts/AuthContext";
+} from './WorkspaceViewsFiltersData';
+import { getImageUrl } from '../../lib/utils';
+import { workspaceService } from '../../services/workspaceService';
+import { projectService } from '../../services/projectService';
+import { stateService } from '../../services/stateService';
+import { labelService } from '../../services/labelService';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   type WorkspaceViewFilters,
   PRIORITIES,
   STATE_GROUPS,
   GROUPING_OPTIONS,
   DATE_PRESETS,
-} from "../../types/workspaceViewFilters";
+} from '../../types/workspaceViewFilters';
 import type {
   WorkspaceMemberApiResponse,
   ProjectApiResponse,
   StateApiResponse,
   LabelApiResponse,
-} from "../../api/types";
+} from '../../api/types';
 
-const LONG_LIST_PANEL_STYLE = { maxHeight: "min(70vh, 28rem)" };
+const LONG_LIST_PANEL_STYLE = { maxHeight: 'min(70vh, 28rem)' };
 
 export interface WorkspaceViewsFiltersPanelProps {
   filters: WorkspaceViewFilters;
-  onFiltersChange: (
-    updater: (prev: WorkspaceViewFilters) => WorkspaceViewFilters,
-  ) => void;
+  onFiltersChange: (updater: (prev: WorkspaceViewFilters) => WorkspaceViewFilters) => void;
   workspaceSlug: string;
   /** When provided (e.g. when inside a dropdown), called before opening date range modal so parent can close */
   onCloseParent?: () => void;
@@ -52,15 +50,11 @@ export function WorkspaceViewsFiltersPanel({
 }: WorkspaceViewsFiltersPanelProps) {
   void onCloseParent; // kept for compatibility; Custom date modal intentionally keeps dropdown open
   const { user: currentUser } = useAuth();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
-  const [, setStatesByProject] = useState<Record<string, StateApiResponse[]>>(
-    {},
-  );
-  const [labelsByProject, setLabelsByProject] = useState<
-    Record<string, LabelApiResponse[]>
-  >({});
+  const [, setStatesByProject] = useState<Record<string, StateApiResponse[]>>({});
+  const [labelsByProject, setLabelsByProject] = useState<Record<string, LabelApiResponse[]>>({});
   const [sectionOpen, setSectionOpen] = useState<Record<string, boolean>>({
     priority: true,
     state_group: true,
@@ -72,17 +66,12 @@ export function WorkspaceViewsFiltersPanel({
     start_date: true,
     due_date: true,
   });
-  const [dateRangeModal, setDateRangeModal] = useState<"start" | "due" | null>(
-    null,
-  );
+  const [dateRangeModal, setDateRangeModal] = useState<'start' | 'due' | null>(null);
 
   useEffect(() => {
     if (!workspaceSlug) return;
     let cancelled = false;
-    Promise.all([
-      workspaceService.listMembers(workspaceSlug),
-      projectService.list(workspaceSlug),
-    ])
+    Promise.all([workspaceService.listMembers(workspaceSlug), projectService.list(workspaceSlug)])
       .then(([mem, proj]) => {
         if (cancelled) return;
         setMembers(mem ?? []);
@@ -132,7 +121,7 @@ export function WorkspaceViewsFiltersPanel({
     setSectionOpen((s) => ({ ...s, [key]: !s[key] }));
   };
 
-  const openDateModal = (which: "start" | "due") => {
+  const openDateModal = (which: 'start' | 'due') => {
     setDateRangeModal(which);
   };
 
@@ -142,13 +131,13 @@ export function WorkspaceViewsFiltersPanel({
 
   const content = (
     <div
-      className={compact ? "min-h-0 flex-1 overflow-y-auto py-1" : "space-y-0"}
+      className={compact ? 'min-h-0 flex-1 overflow-y-auto py-1' : 'space-y-0'}
       style={compact ? LONG_LIST_PANEL_STYLE : undefined}
     >
       <CollapsibleSection
         title="Priority"
         open={sectionOpen.priority}
-        onToggle={() => toggleSection("priority")}
+        onToggle={() => toggleSection('priority')}
       >
         {PRIORITIES.filter((p) => filterSearch(PRIORITY_LABELS[p])).map((p) => (
           <label
@@ -179,42 +168,40 @@ export function WorkspaceViewsFiltersPanel({
       <CollapsibleSection
         title="State"
         open={sectionOpen.state_group}
-        onToggle={() => toggleSection("state_group")}
+        onToggle={() => toggleSection('state_group')}
       >
-        {STATE_GROUPS.filter((g) => filterSearch(STATE_GROUP_LABELS[g])).map(
-          (g) => (
-            <label
-              key={g}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-            >
-              <input
-                type="checkbox"
-                checked={filters.stateGroup.includes(g)}
-                onChange={() => {
-                  onFiltersChange((prev) => ({
-                    ...prev,
-                    stateGroup: prev.stateGroup.includes(g)
-                      ? prev.stateGroup.filter((x) => x !== g)
-                      : [...prev.stateGroup, g],
-                  }));
-                }}
-                className="rounded border-(--border-subtle)"
-              />
-              <span className="flex size-4 shrink-0 items-center justify-center">
-                {STATE_GROUP_ICONS[g]}
-              </span>
-              <span>{STATE_GROUP_LABELS[g]}</span>
-            </label>
-          ),
-        )}
+        {STATE_GROUPS.filter((g) => filterSearch(STATE_GROUP_LABELS[g])).map((g) => (
+          <label
+            key={g}
+            className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+          >
+            <input
+              type="checkbox"
+              checked={filters.stateGroup.includes(g)}
+              onChange={() => {
+                onFiltersChange((prev) => ({
+                  ...prev,
+                  stateGroup: prev.stateGroup.includes(g)
+                    ? prev.stateGroup.filter((x) => x !== g)
+                    : [...prev.stateGroup, g],
+                }));
+              }}
+              className="rounded border-(--border-subtle)"
+            />
+            <span className="flex size-4 shrink-0 items-center justify-center">
+              {STATE_GROUP_ICONS[g]}
+            </span>
+            <span>{STATE_GROUP_LABELS[g]}</span>
+          </label>
+        ))}
       </CollapsibleSection>
 
       <CollapsibleSection
         title="Assignee"
         open={sectionOpen.assignee}
-        onToggle={() => toggleSection("assignee")}
+        onToggle={() => toggleSection('assignee')}
       >
-        {currentUser && filterSearch("You") && (
+        {currentUser && filterSearch('You') && (
           <label className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
             <input
               type="checkbox"
@@ -237,7 +224,7 @@ export function WorkspaceViewsFiltersPanel({
               />
             ) : (
               <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--brand-200) text-[10px] font-medium text-(--brand-default)">
-                {currentUser.name?.charAt(0) ?? "?"}
+                {currentUser.name?.charAt(0) ?? '?'}
               </span>
             )}
             <span>You</span>
@@ -247,9 +234,7 @@ export function WorkspaceViewsFiltersPanel({
           .filter(
             (m) =>
               m.member_id !== currentUser?.id &&
-              filterSearch(
-                m.member_display_name ?? m.member_email ?? m.member_id,
-              ),
+              filterSearch(m.member_display_name ?? m.member_email ?? m.member_id),
           )
           .map((m) => (
             <label
@@ -277,7 +262,7 @@ export function WorkspaceViewsFiltersPanel({
                 />
               ) : (
                 <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--bg-layer-2) text-[10px] text-(--txt-secondary)">
-                  {(m.member_display_name ?? m.member_email ?? "?").charAt(0)}
+                  {(m.member_display_name ?? m.member_email ?? '?').charAt(0)}
                 </span>
               )}
               <span className="truncate">
@@ -290,9 +275,9 @@ export function WorkspaceViewsFiltersPanel({
       <CollapsibleSection
         title="Created by"
         open={sectionOpen.created_by}
-        onToggle={() => toggleSection("created_by")}
+        onToggle={() => toggleSection('created_by')}
       >
-        {currentUser && filterSearch("You") && (
+        {currentUser && filterSearch('You') && (
           <label className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
             <input
               type="checkbox"
@@ -315,7 +300,7 @@ export function WorkspaceViewsFiltersPanel({
               />
             ) : (
               <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--brand-200) text-[10px] font-medium text-(--brand-default)">
-                {currentUser.name?.charAt(0) ?? "?"}
+                {currentUser.name?.charAt(0) ?? '?'}
               </span>
             )}
             <span>You</span>
@@ -325,9 +310,7 @@ export function WorkspaceViewsFiltersPanel({
           .filter(
             (m) =>
               m.member_id !== currentUser?.id &&
-              filterSearch(
-                m.member_display_name ?? m.member_email ?? m.member_id,
-              ),
+              filterSearch(m.member_display_name ?? m.member_email ?? m.member_id),
           )
           .map((m) => (
             <label
@@ -355,7 +338,7 @@ export function WorkspaceViewsFiltersPanel({
                 />
               ) : (
                 <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--bg-layer-2) text-[10px] text-(--txt-secondary)">
-                  {(m.member_display_name ?? m.member_email ?? "?").charAt(0)}
+                  {(m.member_display_name ?? m.member_email ?? '?').charAt(0)}
                 </span>
               )}
               <span className="truncate">
@@ -368,7 +351,7 @@ export function WorkspaceViewsFiltersPanel({
       <CollapsibleSection
         title="Label"
         open={sectionOpen.label}
-        onToggle={() => toggleSection("label")}
+        onToggle={() => toggleSection('label')}
       >
         {allLabels.length === 0 ? (
           <p className="px-3 py-2 text-sm text-(--txt-tertiary)">
@@ -398,7 +381,7 @@ export function WorkspaceViewsFiltersPanel({
                 <span
                   className="size-3 shrink-0 rounded-full"
                   style={{
-                    backgroundColor: l.color ?? "var(--txt-icon-tertiary)",
+                    backgroundColor: l.color ?? 'var(--txt-icon-tertiary)',
                   }}
                 />
                 <span className="truncate">{l.name}</span>
@@ -410,7 +393,7 @@ export function WorkspaceViewsFiltersPanel({
       <CollapsibleSection
         title="Project"
         open={sectionOpen.project}
-        onToggle={() => toggleSection("project")}
+        onToggle={() => toggleSection('project')}
       >
         {projects
           .filter((p) => filterSearch(p.name))
@@ -443,7 +426,7 @@ export function WorkspaceViewsFiltersPanel({
       <CollapsibleSection
         title="Work item Grouping"
         open={sectionOpen.grouping}
-        onToggle={() => toggleSection("grouping")}
+        onToggle={() => toggleSection('grouping')}
       >
         {GROUPING_OPTIONS.map((g) => (
           <label
@@ -454,17 +437,15 @@ export function WorkspaceViewsFiltersPanel({
               type="radio"
               name="grouping"
               checked={filters.grouping === g}
-              onChange={() =>
-                onFiltersChange((prev) => ({ ...prev, grouping: g }))
-              }
+              onChange={() => onFiltersChange((prev) => ({ ...prev, grouping: g }))}
               className="border-(--border-subtle)"
             />
             <span>
-              {g === "all"
-                ? "All Work items"
-                : g === "active"
-                  ? "Active Work items"
-                  : "Backlog Work items"}
+              {g === 'all'
+                ? 'All Work items'
+                : g === 'active'
+                  ? 'Active Work items'
+                  : 'Backlog Work items'}
             </span>
           </label>
         ))}
@@ -473,98 +454,96 @@ export function WorkspaceViewsFiltersPanel({
       <CollapsibleSection
         title="Start date"
         open={sectionOpen.start_date}
-        onToggle={() => toggleSection("start_date")}
+        onToggle={() => toggleSection('start_date')}
       >
-        {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map(
-          (d) =>
-            d === "custom" ? (
-              <label
-                key={d}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-                onClick={(e) => {
-                  e.preventDefault();
-                  openDateModal("start");
+        {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map((d) =>
+          d === 'custom' ? (
+            <label
+              key={d}
+              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+              onClick={(e) => {
+                e.preventDefault();
+                openDateModal('start');
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={filters.startDate.includes('custom')}
+                readOnly
+                tabIndex={-1}
+                className="rounded border-(--border-subtle)"
+              />
+              <span>{DATE_PRESET_LABELS[d]}</span>
+            </label>
+          ) : (
+            <label
+              key={d}
+              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+            >
+              <input
+                type="checkbox"
+                checked={filters.startDate.includes(d)}
+                onChange={() => {
+                  onFiltersChange((prev) => ({
+                    ...prev,
+                    startDate: prev.startDate.includes(d)
+                      ? prev.startDate.filter((x) => x !== d)
+                      : [...prev.startDate, d],
+                  }));
                 }}
-              >
-                <input
-                  type="checkbox"
-                  checked={filters.startDate.includes("custom")}
-                  readOnly
-                  tabIndex={-1}
-                  className="rounded border-(--border-subtle)"
-                />
-                <span>{DATE_PRESET_LABELS[d]}</span>
-              </label>
-            ) : (
-              <label
-                key={d}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-              >
-                <input
-                  type="checkbox"
-                  checked={filters.startDate.includes(d)}
-                  onChange={() => {
-                    onFiltersChange((prev) => ({
-                      ...prev,
-                      startDate: prev.startDate.includes(d)
-                        ? prev.startDate.filter((x) => x !== d)
-                        : [...prev.startDate, d],
-                    }));
-                  }}
-                  className="rounded border-(--border-subtle)"
-                />
-                <span>{DATE_PRESET_LABELS[d]}</span>
-              </label>
-            ),
+                className="rounded border-(--border-subtle)"
+              />
+              <span>{DATE_PRESET_LABELS[d]}</span>
+            </label>
+          ),
         )}
       </CollapsibleSection>
 
       <CollapsibleSection
         title="Due date"
         open={sectionOpen.due_date}
-        onToggle={() => toggleSection("due_date")}
+        onToggle={() => toggleSection('due_date')}
       >
-        {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map(
-          (d) =>
-            d === "custom" ? (
-              <label
-                key={d}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-                onClick={(e) => {
-                  e.preventDefault();
-                  openDateModal("due");
+        {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map((d) =>
+          d === 'custom' ? (
+            <label
+              key={d}
+              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+              onClick={(e) => {
+                e.preventDefault();
+                openDateModal('due');
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={filters.dueDate.includes('custom')}
+                readOnly
+                tabIndex={-1}
+                className="rounded border-(--border-subtle)"
+              />
+              <span>{DATE_PRESET_LABELS[d]}</span>
+            </label>
+          ) : (
+            <label
+              key={d}
+              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+            >
+              <input
+                type="checkbox"
+                checked={filters.dueDate.includes(d)}
+                onChange={() => {
+                  onFiltersChange((prev) => ({
+                    ...prev,
+                    dueDate: prev.dueDate.includes(d)
+                      ? prev.dueDate.filter((x) => x !== d)
+                      : [...prev.dueDate, d],
+                  }));
                 }}
-              >
-                <input
-                  type="checkbox"
-                  checked={filters.dueDate.includes("custom")}
-                  readOnly
-                  tabIndex={-1}
-                  className="rounded border-(--border-subtle)"
-                />
-                <span>{DATE_PRESET_LABELS[d]}</span>
-              </label>
-            ) : (
-              <label
-                key={d}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-              >
-                <input
-                  type="checkbox"
-                  checked={filters.dueDate.includes(d)}
-                  onChange={() => {
-                    onFiltersChange((prev) => ({
-                      ...prev,
-                      dueDate: prev.dueDate.includes(d)
-                        ? prev.dueDate.filter((x) => x !== d)
-                        : [...prev.dueDate, d],
-                    }));
-                  }}
-                  className="rounded border-(--border-subtle)"
-                />
-                <span>{DATE_PRESET_LABELS[d]}</span>
-              </label>
-            ),
+                className="rounded border-(--border-subtle)"
+              />
+              <span>{DATE_PRESET_LABELS[d]}</span>
+            </label>
+          ),
         )}
       </CollapsibleSection>
     </div>
@@ -592,31 +571,23 @@ export function WorkspaceViewsFiltersPanel({
       <DateRangeModal
         open={dateRangeModal !== null}
         onClose={() => setDateRangeModal(null)}
-        title={
-          dateRangeModal === "start" ? "Start date range" : "Due date range"
-        }
-        after={
-          dateRangeModal === "start" ? filters.startAfter : filters.dueAfter
-        }
-        before={
-          dateRangeModal === "start" ? filters.startBefore : filters.dueBefore
-        }
+        title={dateRangeModal === 'start' ? 'Start date range' : 'Due date range'}
+        after={dateRangeModal === 'start' ? filters.startAfter : filters.dueAfter}
+        before={dateRangeModal === 'start' ? filters.startBefore : filters.dueBefore}
         onApply={(after, before) => {
-          if (dateRangeModal === "start") {
+          if (dateRangeModal === 'start') {
             onFiltersChange((prev) => ({
               ...prev,
-              startDate: prev.startDate.includes("custom")
+              startDate: prev.startDate.includes('custom')
                 ? prev.startDate
-                : [...prev.startDate, "custom"],
+                : [...prev.startDate, 'custom'],
               startAfter: after,
               startBefore: before,
             }));
           } else {
             onFiltersChange((prev) => ({
               ...prev,
-              dueDate: prev.dueDate.includes("custom")
-                ? prev.dueDate
-                : [...prev.dueDate, "custom"],
+              dueDate: prev.dueDate.includes('custom') ? prev.dueDate : [...prev.dueDate, 'custom'],
               dueAfter: after,
               dueBefore: before,
             }));

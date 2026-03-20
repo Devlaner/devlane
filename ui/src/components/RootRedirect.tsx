@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
-import { instanceService } from "../services/instanceService";
-import { workspaceService } from "../services/workspaceService";
+import { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
+import { instanceService } from '../services/instanceService';
+import { workspaceService } from '../services/workspaceService';
 
 const PageFallback = () => (
   <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
@@ -56,9 +56,7 @@ export function RootRedirect() {
   if (noWorkspaces) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <p className="text-(--txt-secondary)">
-          You don’t have any workspaces yet.
-        </p>
+        <p className="text-(--txt-secondary)">You don’t have any workspaces yet.</p>
         <p className="text-sm text-(--txt-tertiary)">
           Create one from instance admin or use the API to get started.
         </p>

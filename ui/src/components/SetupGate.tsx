@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { instanceService } from "../services/instanceService";
+import { useEffect, useState } from 'react';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { instanceService } from '../services/instanceService';
 
 const PageFallback = () => (
   <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
@@ -17,8 +17,7 @@ export function SetupGate() {
   const location = useLocation();
   const [setupRequired, setSetupRequired] = useState<boolean | null>(null);
 
-  const isSetupPath =
-    location.pathname === "/setup" || location.pathname.startsWith("/setup/");
+  const isSetupPath = location.pathname === '/setup' || location.pathname.startsWith('/setup/');
 
   useEffect(() => {
     if (isSetupPath) {

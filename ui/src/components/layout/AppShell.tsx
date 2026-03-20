@@ -1,13 +1,13 @@
-import { Outlet, useLocation } from "react-router-dom";
-import { ModulesFilterProvider } from "../../contexts/ModulesFilterContext";
-import { ProjectSavedViewDisplayProvider } from "../../contexts/ProjectSavedViewDisplayContext";
-import { WorkspaceViewsStateProvider } from "../../contexts/WorkspaceViewsStateContext";
-import { PageHeader } from "./PageHeader";
-import { Sidebar } from "./Sidebar";
+import { Outlet, useLocation } from 'react-router-dom';
+import { ModulesFilterProvider } from '../../contexts/ModulesFilterContext';
+import { ProjectSavedViewDisplayProvider } from '../../contexts/ProjectSavedViewDisplayContext';
+import { WorkspaceViewsStateProvider } from '../../contexts/WorkspaceViewsStateContext';
+import { PageHeader } from './PageHeader';
+import { Sidebar } from './Sidebar';
 
 export function AppShell() {
   const { pathname } = useLocation();
-  const isViewsRoute = pathname.includes("/views");
+  const isViewsRoute = pathname.includes('/views');
 
   return (
     <WorkspaceViewsStateProvider>
@@ -19,7 +19,7 @@ export function AppShell() {
               <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-(--bg-canvas)">
                 <PageHeader />
                 <div
-                  className={`main-content-scroll min-h-0 flex-1 overflow-auto p-(--padding-page) ${isViewsRoute ? "pl-0" : ""}`}
+                  className={`main-content-scroll min-h-0 flex-1 overflow-auto p-(--padding-page) ${isViewsRoute ? 'pl-0' : ''}`}
                 >
                   <Outlet />
                 </div>

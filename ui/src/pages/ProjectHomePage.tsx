@@ -1,17 +1,17 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Card, CardContent, Badge, Button } from "../components/ui";
-import { workspaceService } from "../services/workspaceService";
-import { projectService } from "../services/projectService";
-import { issueService } from "../services/issueService";
-import { stateService } from "../services/stateService";
-import { recentsService } from "../services/recentsService";
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Card, CardContent, Badge, Button } from '../components/ui';
+import { workspaceService } from '../services/workspaceService';
+import { projectService } from '../services/projectService';
+import { issueService } from '../services/issueService';
+import { stateService } from '../services/stateService';
+import { recentsService } from '../services/recentsService';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
   IssueApiResponse,
   StateApiResponse,
-} from "../api/types";
+} from '../api/types';
 
 export function ProjectHomePage() {
   const { workspaceSlug, projectId } = useParams<{
@@ -47,7 +47,7 @@ export function ProjectHomePage() {
           if (workspaceSlug && projectId) {
             recentsService
               .record(workspaceSlug, {
-                entity_name: "project",
+                entity_name: 'project',
                 entity_identifier: projectId,
                 project_id: projectId,
               })
@@ -72,7 +72,7 @@ export function ProjectHomePage() {
   }, [workspaceSlug, projectId]);
 
   const getStateName = (stateId: string | null | undefined) =>
-    stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : "—";
+    stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : '—';
 
   if (loading) {
     return (
@@ -90,20 +90,14 @@ export function ProjectHomePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-(--txt-primary)">
-          {project.name}
-        </h1>
+        <h1 className="text-2xl font-semibold text-(--txt-primary)">{project.name}</h1>
         {project.description && (
-          <p className="mt-1 text-sm text-(--txt-secondary)">
-            {project.description}
-          </p>
+          <p className="mt-1 text-sm text-(--txt-secondary)">{project.description}</p>
         )}
       </div>
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-medium text-(--txt-secondary)">
-            Recent issues
-          </h2>
+          <h2 className="text-lg font-medium text-(--txt-secondary)">Recent issues</h2>
           <div className="flex items-center gap-2">
             <Link to={`${baseUrl}/issues?create=1`}>
               <Button variant="primary" size="sm">
@@ -126,20 +120,14 @@ export function ProjectHomePage() {
                     to={`${baseUrl}/issues/${issue.id}`}
                     className="flex items-center justify-between gap-4 px-4 py-3 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
                   >
-                    <span className="font-medium text-(--txt-primary)">
-                      {issue.name}
-                    </span>
-                    <Badge variant="neutral">
-                      {getStateName(issue.state_id ?? undefined)}
-                    </Badge>
+                    <span className="font-medium text-(--txt-primary)">{issue.name}</span>
+                    <Badge variant="neutral">{getStateName(issue.state_id ?? undefined)}</Badge>
                   </Link>
                 </li>
               ))}
             </ul>
             {issues.length === 0 && (
-              <p className="px-4 py-6 text-sm text-(--txt-tertiary)">
-                No issues yet.
-              </p>
+              <p className="px-4 py-6 text-sm text-(--txt-tertiary)">No issues yet.</p>
             )}
           </CardContent>
         </Card>

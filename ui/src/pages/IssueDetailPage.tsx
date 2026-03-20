@@ -1,28 +1,17 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  Avatar,
-} from "../components/ui";
-import {
-  Dropdown,
-  DatePickerTrigger,
-  CommentEditor,
-} from "../components/work-item";
-import { workspaceService } from "../services/workspaceService";
-import { projectService } from "../services/projectService";
-import { issueService } from "../services/issueService";
-import { stateService } from "../services/stateService";
-import { labelService } from "../services/labelService";
-import { cycleService } from "../services/cycleService";
-import { moduleService } from "../services/moduleService";
-import { recentsService } from "../services/recentsService";
-import { commentService } from "../services/commentService";
-import { CreateWorkItemModal } from "../components/CreateWorkItemModal";
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Badge, Button, Card, CardContent, CardHeader, Avatar } from '../components/ui';
+import { Dropdown, DatePickerTrigger, CommentEditor } from '../components/work-item';
+import { workspaceService } from '../services/workspaceService';
+import { projectService } from '../services/projectService';
+import { issueService } from '../services/issueService';
+import { stateService } from '../services/stateService';
+import { labelService } from '../services/labelService';
+import { cycleService } from '../services/cycleService';
+import { moduleService } from '../services/moduleService';
+import { recentsService } from '../services/recentsService';
+import { commentService } from '../services/commentService';
+import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
@@ -33,18 +22,15 @@ import type {
   IssueCommentApiResponse,
   CycleApiResponse,
   ModuleApiResponse,
-} from "../api/types";
-import type { Priority } from "../types";
+} from '../api/types';
+import type { Priority } from '../types';
 
-const priorityVariant: Record<
-  Priority,
-  "danger" | "warning" | "default" | "neutral"
-> = {
-  urgent: "danger",
-  high: "danger",
-  medium: "warning",
-  low: "default",
-  none: "neutral",
+const priorityVariant: Record<Priority, 'danger' | 'warning' | 'default' | 'neutral'> = {
+  urgent: 'danger',
+  high: 'danger',
+  medium: 'warning',
+  low: 'default',
+  none: 'neutral',
 };
 
 const IconPlus = () => (
@@ -170,12 +156,8 @@ export function IssueDetailPage() {
   const [postingComment, setPostingComment] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [updatingCommentId, setUpdatingCommentId] = useState<string | null>(
-    null,
-  );
-  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(
-    null,
-  );
+  const [updatingCommentId, setUpdatingCommentId] = useState<string | null>(null);
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!workspaceSlug || !projectId || !issueId) {
@@ -211,7 +193,7 @@ export function IssueDetailPage() {
           if (workspaceSlug && i) {
             recentsService
               .record(workspaceSlug, {
-                entity_name: "issue",
+                entity_name: 'issue',
                 entity_identifier: issueId,
                 project_id: projectId,
               })
@@ -242,15 +224,15 @@ export function IssueDetailPage() {
   }, [workspaceSlug, projectId, issueId]);
 
   const getStateName = (stateId: string | null | undefined) =>
-    stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : "—";
+    stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : '—';
   const getMemberLabel = (memberId: string | null | undefined) => {
-    if (!memberId) return "—";
+    if (!memberId) return '—';
     const m = members.find((x) => x.member_id === memberId);
     const display = m?.member_display_name?.trim();
     if (display) return display;
-    const emailUser = m?.member_email?.split("@")[0]?.trim();
+    const emailUser = m?.member_email?.split('@')[0]?.trim();
     if (emailUser) return emailUser;
-    return "Member";
+    return 'Member';
   };
 
   const assigneeIds = issue?.assignee_ids ?? [];
@@ -272,31 +254,22 @@ export function IssueDetailPage() {
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
   const displayId = `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`;
   const descriptionHtml =
-    issue.description_html && typeof issue.description_html === "string"
+    issue.description_html && typeof issue.description_html === 'string'
       ? issue.description_html
-      : "";
+      : '';
 
   const updateIssue = async (patch: Record<string, unknown>) => {
     if (!workspaceSlug || !projectId || !issueId) return;
     setErrorMessage(null);
     try {
-      const updated = await issueService.update(
-        workspaceSlug,
-        projectId,
-        issueId,
-        patch as never,
-      );
+      const updated = await issueService.update(workspaceSlug, projectId, issueId, patch as never);
       setIssue(updated);
     } catch (err) {
-      setErrorMessage(
-        err instanceof Error ? err.message : "Failed to update work item.",
-      );
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to update work item.');
     }
   };
 
-  const selectedCycle = cycleIds.length
-    ? (cycles.find((c) => c.id === cycleIds[0]) ?? null)
-    : null;
+  const selectedCycle = cycleIds.length ? (cycles.find((c) => c.id === cycleIds[0]) ?? null) : null;
   const selectedModule = moduleIds.length
     ? (modules.find((m) => m.id === moduleIds[0]) ?? null)
     : null;
@@ -308,9 +281,7 @@ export function IssueDetailPage() {
     setErrorMessage(null);
     try {
       const removals = cycleIds.map((cid) =>
-        cycleService
-          .removeIssue(workspaceSlug, project.id, cid, issue.id)
-          .catch(() => {}),
+        cycleService.removeIssue(workspaceSlug, project.id, cid, issue.id).catch(() => {}),
       );
       await Promise.all(removals);
       if (cycleIdToSet) {
@@ -323,9 +294,7 @@ export function IssueDetailPage() {
         .catch(() => null);
       if (refreshed) setIssue(refreshed);
     } catch (err) {
-      setErrorMessage(
-        err instanceof Error ? err.message : "Failed to update cycle.",
-      );
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to update cycle.');
     }
   };
 
@@ -334,9 +303,7 @@ export function IssueDetailPage() {
     setErrorMessage(null);
     try {
       const removals = moduleIds.map((mid) =>
-        moduleService
-          .removeIssue(workspaceSlug, project.id, mid, issue.id)
-          .catch(() => {}),
+        moduleService.removeIssue(workspaceSlug, project.id, mid, issue.id).catch(() => {}),
       );
       await Promise.all(removals);
       if (moduleIdToSet) {
@@ -349,9 +316,7 @@ export function IssueDetailPage() {
         .catch(() => null);
       if (refreshed) setIssue(refreshed);
     } catch (err) {
-      setErrorMessage(
-        err instanceof Error ? err.message : "Failed to update module.",
-      );
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to update module.');
     }
   };
 
@@ -367,10 +332,10 @@ export function IssueDetailPage() {
     const minutes = Math.floor(diffMs / 60000);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
-    if (days > 0) return `${days} day${days === 1 ? "" : "s"} ago`;
-    if (hours > 0) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-    if (minutes > 0) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
-    return "just now";
+    if (days > 0) return `${days} day${days === 1 ? '' : 's'} ago`;
+    if (hours > 0) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    if (minutes > 0) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+    return 'just now';
   };
 
   const postComment = async (contentHtml: string) => {
@@ -386,9 +351,7 @@ export function IssueDetailPage() {
       );
       setComments((prev) => [...prev, created]);
     } catch (err) {
-      setErrorMessage(
-        err instanceof Error ? err.message : "Failed to post comment.",
-      );
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to post comment.');
     } finally {
       setPostingComment(false);
     }
@@ -406,14 +369,10 @@ export function IssueDetailPage() {
         commentId,
         contentHtml.trim(),
       );
-      setComments((prev) =>
-        prev.map((c) => (c.id === commentId ? updated : c)),
-      );
+      setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
       setEditingCommentId(null);
     } catch (err) {
-      setErrorMessage(
-        err instanceof Error ? err.message : "Failed to update comment.",
-      );
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to update comment.');
     } finally {
       setUpdatingCommentId(null);
     }
@@ -421,22 +380,15 @@ export function IssueDetailPage() {
 
   const deleteComment = async (commentId: string) => {
     if (!workspaceSlug) return;
-    const confirmed = window.confirm("Delete this comment?");
+    const confirmed = window.confirm('Delete this comment?');
     if (!confirmed) return;
     setErrorMessage(null);
     setDeletingCommentId(commentId);
     try {
-      await commentService.delete(
-        workspaceSlug,
-        project.id,
-        issue.id,
-        commentId,
-      );
+      await commentService.delete(workspaceSlug, project.id, issue.id, commentId);
       setComments((prev) => prev.filter((c) => c.id !== commentId));
     } catch (err) {
-      setErrorMessage(
-        err instanceof Error ? err.message : "Failed to delete comment.",
-      );
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to delete comment.');
     } finally {
       setDeletingCommentId(null);
     }
@@ -450,17 +402,11 @@ export function IssueDetailPage() {
         </div>
       )}
       <div className="flex items-center gap-2 text-sm text-(--txt-tertiary)">
-        <Link
-          to={baseUrl}
-          className="text-(--txt-accent-primary) hover:underline"
-        >
+        <Link to={baseUrl} className="text-(--txt-accent-primary) hover:underline">
           {project.name}
         </Link>
         <span>/</span>
-        <Link
-          to={`${baseUrl}/issues`}
-          className="text-(--txt-accent-primary) hover:underline"
-        >
+        <Link to={`${baseUrl}/issues`} className="text-(--txt-accent-primary) hover:underline">
           Issues
         </Link>
         <span>/</span>
@@ -468,19 +414,13 @@ export function IssueDetailPage() {
       </div>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-semibold text-(--txt-primary)">
-            {issue.name}
-          </h1>
+          <h1 className="truncate text-2xl font-semibold text-(--txt-primary)">{issue.name}</h1>
           <p className="mt-1 text-xs text-(--txt-tertiary)">
             Last edited {new Date(issue.updated_at).toLocaleDateString()}
           </p>
         </div>
         <div className="shrink-0">
-          <Button
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setSubCreateOpen(true)}
-          >
+          <Button size="sm" className="gap-1.5" onClick={() => setSubCreateOpen(true)}>
             <IconPlus />
             Add sub-work item
           </Button>
@@ -500,21 +440,15 @@ export function IssueDetailPage() {
                   dangerouslySetInnerHTML={{ __html: descriptionHtml }}
                 />
               ) : (
-                <p className="text-sm text-(--txt-tertiary)">
-                  Click to add description.
-                </p>
+                <p className="text-sm text-(--txt-tertiary)">Click to add description.</p>
               )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex items-center justify-between">
-              <span className="text-sm font-medium text-(--txt-secondary)">
-                Activity
-              </span>
-              <span className="text-xs text-(--txt-tertiary)">
-                Comments {comments.length}
-              </span>
+              <span className="text-sm font-medium text-(--txt-secondary)">Activity</span>
+              <span className="text-xs text-(--txt-tertiary)">Comments {comments.length}</span>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
@@ -529,7 +463,7 @@ export function IssueDetailPage() {
                     <p className="text-(--txt-secondary)">
                       <span className="font-medium text-(--txt-primary)">
                         {getMemberLabel(issue.created_by_id)}
-                      </span>{" "}
+                      </span>{' '}
                       created this work item.
                       <span className="ml-2 text-xs text-(--txt-tertiary)">
                         {new Date(issue.created_at).toLocaleDateString()}
@@ -539,9 +473,7 @@ export function IssueDetailPage() {
                 </div>
 
                 {comments.length === 0 ? (
-                  <p className="text-sm text-(--txt-tertiary)">
-                    No comments yet.
-                  </p>
+                  <p className="text-sm text-(--txt-tertiary)">No comments yet.</p>
                 ) : (
                   comments.map((c) => {
                     const isEditing = editingCommentId === c.id;
@@ -566,8 +498,7 @@ export function IssueDetailPage() {
                                   className="hover:text-(--txt-secondary)"
                                   onClick={() => setEditingCommentId(c.id)}
                                   disabled={
-                                    updatingCommentId === c.id ||
-                                    deletingCommentId === c.id
+                                    updatingCommentId === c.id || deletingCommentId === c.id
                                   }
                                 >
                                   Edit
@@ -577,13 +508,10 @@ export function IssueDetailPage() {
                                   className="hover:text-(--txt-secondary)"
                                   onClick={() => void deleteComment(c.id)}
                                   disabled={
-                                    deletingCommentId === c.id ||
-                                    updatingCommentId === c.id
+                                    deletingCommentId === c.id || updatingCommentId === c.id
                                   }
                                 >
-                                  {deletingCommentId === c.id
-                                    ? "Deleting…"
-                                    : "Delete"}
+                                  {deletingCommentId === c.id ? 'Deleting…' : 'Delete'}
                                 </button>
                               </div>
                             </div>
@@ -591,9 +519,7 @@ export function IssueDetailPage() {
                               <div className="mt-2">
                                 <CommentEditor
                                   initialHtml={c.comment}
-                                  onSubmit={(html) =>
-                                    void updateComment(c.id, html)
-                                  }
+                                  onSubmit={(html) => void updateComment(c.id, html)}
                                   isSubmitting={updatingCommentId === c.id}
                                   onCancel={() => setEditingCommentId(null)}
                                   showShortcutHint
@@ -672,13 +598,9 @@ export function IssueDetailPage() {
                         updateIssue({ state_id: s.id });
                       }}
                     >
-                      <span className="truncate text-(--txt-primary)">
-                        {s.name}
-                      </span>
+                      <span className="truncate text-(--txt-primary)">{s.name}</span>
                       {issue.state_id === s.id && (
-                        <span className="text-xs text-(--txt-tertiary)">
-                          Selected
-                        </span>
+                        <span className="text-xs text-(--txt-tertiary)">Selected</span>
                       )}
                     </button>
                   ))}
@@ -694,18 +616,14 @@ export function IssueDetailPage() {
                   label="Assignees"
                   icon={<IconUser />}
                   displayValue={
-                    assigneeIds.length
-                      ? `${assigneeIds.length} selected`
-                      : "Unassigned"
+                    assigneeIds.length ? `${assigneeIds.length} selected` : 'Unassigned'
                   }
                   compact
                   align="right"
                   panelClassName="max-h-72 min-w-[220px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
                 >
                   {members.length === 0 ? (
-                    <div className="px-3 py-2 text-sm text-(--txt-tertiary)">
-                      No members.
-                    </div>
+                    <div className="px-3 py-2 text-sm text-(--txt-tertiary)">No members.</div>
                   ) : (
                     members.map((m) => {
                       const checked = assigneeIds.includes(m.member_id);
@@ -722,7 +640,7 @@ export function IssueDetailPage() {
                           }}
                         >
                           <span className="inline-flex size-4 items-center justify-center rounded border border-(--border-subtle) text-[10px] text-(--txt-tertiary)">
-                            {checked ? "✓" : ""}
+                            {checked ? '✓' : ''}
                           </span>
                           <span className="truncate text-(--txt-primary)">
                             {getMemberLabel(m.member_id)}
@@ -742,13 +660,11 @@ export function IssueDetailPage() {
                   onOpen={setOpenDropdown}
                   label="Priority"
                   icon={<IconFlag />}
-                  displayValue={issue.priority ?? "none"}
+                  displayValue={issue.priority ?? 'none'}
                   compact
                   align="right"
                 >
-                  {(
-                    ["urgent", "high", "medium", "low", "none"] as Priority[]
-                  ).map((p) => (
+                  {(['urgent', 'high', 'medium', 'low', 'none'] as Priority[]).map((p) => (
                     <button
                       key={p}
                       type="button"
@@ -759,10 +675,7 @@ export function IssueDetailPage() {
                       }}
                     >
                       <span className="truncate text-(--txt-primary)">{p}</span>
-                      <Badge
-                        variant={priorityVariant[p]}
-                        className="text-[10px]"
-                      >
+                      <Badge variant={priorityVariant[p]} className="text-[10px]">
                         {p}
                       </Badge>
                     </button>
@@ -772,9 +685,7 @@ export function IssueDetailPage() {
 
               <div className="flex items-center justify-between gap-3">
                 <span className="text-(--txt-secondary)">Created by</span>
-                <span className="text-(--txt-tertiary)">
-                  {getMemberLabel(issue.created_by_id)}
-                </span>
+                <span className="text-(--txt-tertiary)">{getMemberLabel(issue.created_by_id)}</span>
               </div>
 
               <div className="flex items-center justify-between gap-3">
@@ -782,7 +693,7 @@ export function IssueDetailPage() {
                 <DatePickerTrigger
                   label="Start date"
                   icon={<IconCalendar />}
-                  value={issue.start_date ?? ""}
+                  value={issue.start_date ?? ''}
                   placeholder="Add start date"
                   onChange={(v) => updateIssue({ start_date: v })}
                 />
@@ -792,7 +703,7 @@ export function IssueDetailPage() {
                 <DatePickerTrigger
                   label="Due date"
                   icon={<IconCalendar />}
-                  value={issue.target_date ?? ""}
+                  value={issue.target_date ?? ''}
                   placeholder="Add due date"
                   onChange={(v) => updateIssue({ target_date: v })}
                 />
@@ -806,7 +717,7 @@ export function IssueDetailPage() {
                   onOpen={setOpenDropdown}
                   label="Modules"
                   icon={<IconStack />}
-                  displayValue={selectedModule?.name ?? "No module"}
+                  displayValue={selectedModule?.name ?? 'No module'}
                   compact
                   align="right"
                 >
@@ -832,9 +743,7 @@ export function IssueDetailPage() {
                     >
                       <span className="truncate">{m.name}</span>
                       {moduleIds.includes(m.id) && (
-                        <span className="text-xs text-(--txt-tertiary)">
-                          Selected
-                        </span>
+                        <span className="text-xs text-(--txt-tertiary)">Selected</span>
                       )}
                     </button>
                   ))}
@@ -849,7 +758,7 @@ export function IssueDetailPage() {
                   onOpen={setOpenDropdown}
                   label="Cycle"
                   icon={<IconCycle />}
-                  displayValue={selectedCycle?.name ?? "No cycle"}
+                  displayValue={selectedCycle?.name ?? 'No cycle'}
                   compact
                   align="right"
                 >
@@ -875,9 +784,7 @@ export function IssueDetailPage() {
                     >
                       <span className="truncate">{c.name}</span>
                       {cycleIds.includes(c.id) && (
-                        <span className="text-xs text-(--txt-tertiary)">
-                          Selected
-                        </span>
+                        <span className="text-xs text-(--txt-tertiary)">Selected</span>
                       )}
                     </button>
                   ))}
@@ -892,9 +799,7 @@ export function IssueDetailPage() {
                   onOpen={setOpenDropdown}
                   label="Parent"
                   icon={<IconStack />}
-                  displayValue={
-                    parentIssue ? parentIssue.name : "Add parent work item"
-                  }
+                  displayValue={parentIssue ? parentIssue.name : 'Add parent work item'}
                   compact
                   align="right"
                   panelClassName="max-h-72 min-w-[260px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
@@ -909,9 +814,7 @@ export function IssueDetailPage() {
                         updateIssue({ parent_id: pi.id });
                       }}
                     >
-                      <span className="truncate text-(--txt-primary)">
-                        {pi.name}
-                      </span>
+                      <span className="truncate text-(--txt-primary)">{pi.name}</span>
                     </button>
                   ))}
                 </Dropdown>
@@ -925,19 +828,13 @@ export function IssueDetailPage() {
                   onOpen={setOpenDropdown}
                   label="Labels"
                   icon={<IconTag />}
-                  displayValue={
-                    labelIds.length
-                      ? `${labelIds.length} selected`
-                      : "Select label"
-                  }
+                  displayValue={labelIds.length ? `${labelIds.length} selected` : 'Select label'}
                   compact
                   align="right"
                   panelClassName="max-h-72 min-w-[220px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
                 >
                   {labels.length === 0 ? (
-                    <div className="px-3 py-2 text-sm text-(--txt-tertiary)">
-                      No labels.
-                    </div>
+                    <div className="px-3 py-2 text-sm text-(--txt-tertiary)">No labels.</div>
                   ) : (
                     labels.map((l) => {
                       const checked = labelIds.includes(l.id);
@@ -954,11 +851,9 @@ export function IssueDetailPage() {
                           }}
                         >
                           <span className="inline-flex size-4 items-center justify-center rounded border border-(--border-subtle) text-[10px] text-(--txt-tertiary)">
-                            {checked ? "✓" : ""}
+                            {checked ? '✓' : ''}
                           </span>
-                          <span className="truncate text-(--txt-primary)">
-                            {l.name}
-                          </span>
+                          <span className="truncate text-(--txt-primary)">{l.name}</span>
                         </button>
                       );
                     })
@@ -992,23 +887,17 @@ export function IssueDetailPage() {
           if (!workspaceSlug) return;
           setCreateError(null);
           try {
-            const created = await issueService.create(
-              workspaceSlug,
-              project.id,
-              {
-                name: data.title.trim(),
-                description: data.description || undefined,
-                state_id: data.stateId || undefined,
-                priority: data.priority,
-                assignee_ids: data.assigneeIds?.length
-                  ? data.assigneeIds
-                  : undefined,
-                label_ids: data.labelIds?.length ? data.labelIds : undefined,
-                start_date: data.startDate || undefined,
-                target_date: data.dueDate || undefined,
-                parent_id: issue.id,
-              },
-            );
+            const created = await issueService.create(workspaceSlug, project.id, {
+              name: data.title.trim(),
+              description: data.description || undefined,
+              state_id: data.stateId || undefined,
+              priority: data.priority,
+              assignee_ids: data.assigneeIds?.length ? data.assigneeIds : undefined,
+              label_ids: data.labelIds?.length ? data.labelIds : undefined,
+              start_date: data.startDate || undefined,
+              target_date: data.dueDate || undefined,
+              parent_id: issue.id,
+            });
             if (data.cycleId) {
               await cycleService
                 .addIssue(workspaceSlug, project.id, data.cycleId, created.id)
@@ -1025,11 +914,7 @@ export function IssueDetailPage() {
             if (refreshedAll) setAllIssues(refreshedAll);
             setSubCreateOpen(false);
           } catch (err) {
-            setCreateError(
-              err instanceof Error
-                ? err.message
-                : "Failed to create sub-work item",
-            );
+            setCreateError(err instanceof Error ? err.message : 'Failed to create sub-work item');
           }
         }}
       />

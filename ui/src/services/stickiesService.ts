@@ -1,5 +1,5 @@
-import { apiClient } from "../api/client";
-import type { StickyApiResponse, CreateStickyRequest } from "../api/types";
+import { apiClient } from '../api/client';
+import type { StickyApiResponse, CreateStickyRequest } from '../api/types';
 
 /**
  * Stickies API (workspace-scoped).
@@ -12,10 +12,7 @@ export const stickiesService = {
     return data;
   },
 
-  async create(
-    workspaceSlug: string,
-    payload: CreateStickyRequest,
-  ): Promise<StickyApiResponse> {
+  async create(workspaceSlug: string, payload: CreateStickyRequest): Promise<StickyApiResponse> {
     const { data } = await apiClient.post<StickyApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/stickies/`,
       payload,

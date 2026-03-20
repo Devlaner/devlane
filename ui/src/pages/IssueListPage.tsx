@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Badge, Avatar, Button } from "../components/ui";
-import { CreateWorkItemModal } from "../components/CreateWorkItemModal";
-import { workspaceService } from "../services/workspaceService";
-import { projectService } from "../services/projectService";
-import { issueService } from "../services/issueService";
-import { stateService } from "../services/stateService";
-import { labelService } from "../services/labelService";
-import { cycleService } from "../services/cycleService";
-import { moduleService } from "../services/moduleService";
+import { useEffect, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Badge, Avatar, Button } from '../components/ui';
+import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
+import { workspaceService } from '../services/workspaceService';
+import { projectService } from '../services/projectService';
+import { issueService } from '../services/issueService';
+import { stateService } from '../services/stateService';
+import { labelService } from '../services/labelService';
+import { cycleService } from '../services/cycleService';
+import { moduleService } from '../services/moduleService';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
@@ -16,19 +16,16 @@ import type {
   StateApiResponse,
   LabelApiResponse,
   WorkspaceMemberApiResponse,
-} from "../api/types";
-import type { Priority } from "../types";
-import { getImageUrl } from "../lib/utils";
+} from '../api/types';
+import type { Priority } from '../types';
+import { getImageUrl } from '../lib/utils';
 
-const priorityVariant: Record<
-  Priority,
-  "danger" | "warning" | "default" | "neutral"
-> = {
-  urgent: "danger",
-  high: "danger",
-  medium: "warning",
-  low: "default",
-  none: "neutral",
+const priorityVariant: Record<Priority, 'danger' | 'warning' | 'default' | 'neutral'> = {
+  urgent: 'danger',
+  high: 'danger',
+  medium: 'warning',
+  low: 'default',
+  none: 'neutral',
 };
 
 const IconCalendar = () => (
@@ -89,13 +86,7 @@ const IconEye = () => (
   </svg>
 );
 const IconMoreVertical = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    aria-hidden
-  >
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
     <circle cx="12" cy="5" r="1.5" />
     <circle cx="12" cy="12" r="1.5" />
     <circle cx="12" cy="19" r="1.5" />
@@ -186,7 +177,7 @@ export function IssueListPage() {
   }, [workspaceSlug, projectId]);
 
   const getStateName = (stateId: string | null | undefined) =>
-    stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : "—";
+    stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : '—';
   const getLabelNames = (labelIds: string[] = []) =>
     labelIds
       .map((id) => labels.find((l) => l.id === id)?.name)
@@ -195,13 +186,13 @@ export function IssueListPage() {
     if (!userId) return null;
     const m = members.find((x) => x.member_id === userId);
     const display = m?.member_display_name?.trim();
-    const emailUser = m?.member_email?.split("@")[0]?.trim();
-    const name = display || emailUser || "Member";
+    const emailUser = m?.member_email?.split('@')[0]?.trim();
+    const name = display || emailUser || 'Member';
     const avatarUrl = m?.member_avatar ?? null;
     return { id: userId, name, avatarUrl };
   };
 
-  const createParam = searchParams.get("create") === "1";
+  const createParam = searchParams.get('create') === '1';
 
   useEffect(() => {
     if (createParam && projectId) {
@@ -213,7 +204,7 @@ export function IssueListPage() {
   const handleCloseCreate = () => {
     setCreateOpen(false);
     setCreateError(null);
-    searchParams.delete("create");
+    searchParams.delete('create');
     setSearchParams(searchParams, { replace: true });
   };
 
@@ -222,7 +213,7 @@ export function IssueListPage() {
     description?: string;
     projectId: string;
     stateId?: string;
-    priority?: import("../types").Priority;
+    priority?: import('../types').Priority;
     assigneeIds?: string[];
     labelIds?: string[];
     startDate?: string;
@@ -247,28 +238,16 @@ export function IssueListPage() {
       });
       if (created?.id) {
         if (data.cycleId) {
-          await cycleService.addIssue(
-            workspaceSlug,
-            data.projectId,
-            data.cycleId,
-            created.id,
-          );
+          await cycleService.addIssue(workspaceSlug, data.projectId, data.cycleId, created.id);
         }
         if (data.moduleId) {
-          await moduleService.addIssue(
-            workspaceSlug,
-            data.projectId,
-            data.moduleId,
-            created.id,
-          );
+          await moduleService.addIssue(workspaceSlug, data.projectId, data.moduleId, created.id);
         }
       }
       refetchIssues();
       handleCloseCreate();
     } catch (err) {
-      setCreateError(
-        err instanceof Error ? err.message : "Failed to create work item",
-      );
+      setCreateError(err instanceof Error ? err.message : 'Failed to create work item');
     }
   };
 
@@ -295,7 +274,7 @@ export function IssueListPage() {
             type="button"
             className="flex size-7 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
             aria-label="Add work item"
-            onClick={() => setSearchParams({ create: "1" })}
+            onClick={() => setSearchParams({ create: '1' })}
           >
             <IconPlus />
           </button>
@@ -307,11 +286,7 @@ export function IssueListPage() {
         {issues.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 px-4 py-12">
             <p className="text-sm text-(--txt-tertiary)">No work items yet.</p>
-            <Button
-              size="sm"
-              className="gap-1.5"
-              onClick={() => setSearchParams({ create: "1" })}
-            >
+            <Button size="sm" className="gap-1.5" onClick={() => setSearchParams({ create: '1' })}>
               <IconPlus />
               New work item
             </Button>
@@ -320,9 +295,7 @@ export function IssueListPage() {
           <ul className="divide-y divide-(--border-subtle)">
             {issues.map((issue) => {
               const primaryAssigneeId =
-                issue.assignee_ids && issue.assignee_ids.length > 0
-                  ? issue.assignee_ids[0]
-                  : null;
+                issue.assignee_ids && issue.assignee_ids.length > 0 ? issue.assignee_ids[0] : null;
               const assignee = getUser(primaryAssigneeId);
               const labelNames = getLabelNames(issue.label_ids ?? []);
               const displayId = `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`;
@@ -333,46 +306,32 @@ export function IssueListPage() {
                     className="flex min-h-12 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
                   >
                     <span className="min-w-0 flex-1 truncate text-sm">
-                      <span className="font-medium text-(--txt-accent-primary)">
-                        {displayId}
-                      </span>
-                      <span className="ml-2 text-(--txt-primary)">
-                        {issue.name}
-                      </span>
+                      <span className="font-medium text-(--txt-accent-primary)">{displayId}</span>
+                      <span className="ml-2 text-(--txt-primary)">{issue.name}</span>
                     </span>
                     <div className="flex shrink-0 items-center gap-2 text-(--txt-icon-tertiary)">
                       <span title={getStateName(issue.state_id ?? undefined)}>
-                        <Badge
-                          variant="neutral"
-                          className="text-xs font-medium"
-                        >
+                        <Badge variant="neutral" className="text-xs font-medium">
                           {getStateName(issue.state_id ?? undefined)}
                         </Badge>
                       </span>
                       <span
-                        title={issue.priority ?? ""}
+                        title={issue.priority ?? ''}
                         className="flex size-6 items-center justify-center"
                       >
                         <Badge
-                          variant={
-                            priorityVariant[
-                              (issue.priority as Priority) ?? "none"
-                            ]
-                          }
+                          variant={priorityVariant[(issue.priority as Priority) ?? 'none']}
                           className="!px-1.5 !py-0 text-[10px]"
                         >
-                          {issue.priority ?? "—"}
+                          {issue.priority ?? '—'}
                         </Badge>
                       </span>
-                      <span
-                        className="flex size-6 items-center justify-center"
-                        title="Due date"
-                      >
+                      <span className="flex size-6 items-center justify-center" title="Due date">
                         <IconCalendar />
                       </span>
                       <span
                         className="flex size-6 items-center justify-center"
-                        title={assignee?.name ?? "Unassigned"}
+                        title={assignee?.name ?? 'Unassigned'}
                       >
                         {assignee ? (
                           <Avatar
@@ -387,9 +346,7 @@ export function IssueListPage() {
                       </span>
                       <span
                         className="flex size-6 items-center justify-center"
-                        title={
-                          labelNames.length ? labelNames.join(", ") : "Labels"
-                        }
+                        title={labelNames.length ? labelNames.join(', ') : 'Labels'}
                       >
                         {labelNames.length > 0 ? (
                           <IconTag />
@@ -399,10 +356,7 @@ export function IssueListPage() {
                           </span>
                         )}
                       </span>
-                      <span
-                        className="flex size-6 items-center justify-center"
-                        title="Visibility"
-                      >
+                      <span className="flex size-6 items-center justify-center" title="Visibility">
                         <IconEye />
                       </span>
                       <button
@@ -429,7 +383,7 @@ export function IssueListPage() {
             <button
               type="button"
               className="flex items-center gap-1.5 rounded-md border border-dashed border-(--border-subtle) bg-transparent px-3 py-2 text-sm font-medium text-(--txt-secondary) hover:border-(--border-strong) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
-              onClick={() => setSearchParams({ create: "1" })}
+              onClick={() => setSearchParams({ create: '1' })}
             >
               <IconPlus />
               New work item

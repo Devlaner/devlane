@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
-import { Button, Modal } from "./ui";
-import { uploadImage } from "../services/uploadService";
+import { useCallback, useEffect, useState } from 'react';
+import { Button, Modal } from './ui';
+import { uploadImage } from '../services/uploadService';
 
 export interface UploadImageModalProps {
   open: boolean;
@@ -13,7 +13,7 @@ export function UploadImageModal({
   open,
   onClose,
   onSave,
-  title = "Upload image",
+  title = 'Upload image',
 }: UploadImageModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -28,31 +28,12 @@ export function UploadImageModal({
     }
   }, [open]);
 
-  const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const f = e.target.files?.[0];
-      if (!f) return;
-      const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-      if (!allowed.includes(f.type)) {
-        setError("Invalid file type. Supported: .jpeg, .jpg, .png, .webp");
-        return;
-      }
-      setError(null);
-      setFile(f);
-      const reader = new FileReader();
-      reader.onload = () => setPreview(reader.result as string);
-      reader.readAsDataURL(f);
-    },
-    [],
-  );
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    const f = e.dataTransfer.files?.[0];
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
     if (!f) return;
-    const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowed.includes(f.type)) {
-      setError("Invalid file type. Supported: .jpeg, .jpg, .png, .webp");
+      setError('Invalid file type. Supported: .jpeg, .jpg, .png, .webp');
       return;
     }
     setError(null);
@@ -62,10 +43,23 @@ export function UploadImageModal({
     reader.readAsDataURL(f);
   }, []);
 
-  const handleDragOver = useCallback(
-    (e: React.DragEvent) => e.preventDefault(),
-    [],
-  );
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const f = e.dataTransfer.files?.[0];
+    if (!f) return;
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowed.includes(f.type)) {
+      setError('Invalid file type. Supported: .jpeg, .jpg, .png, .webp');
+      return;
+    }
+    setError(null);
+    setFile(f);
+    const reader = new FileReader();
+    reader.onload = () => setPreview(reader.result as string);
+    reader.readAsDataURL(f);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => e.preventDefault(), []);
 
   const handleRemove = useCallback(() => {
     setFile(null);
@@ -82,7 +76,7 @@ export function UploadImageModal({
       onSave(url);
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed");
+      setError(e instanceof Error ? e.message : 'Upload failed');
     } finally {
       setLoading(false);
     }
@@ -91,11 +85,7 @@ export function UploadImageModal({
   const footer = (
     <>
       {preview && (
-        <Button
-          variant="secondary"
-          className="text-(--txt-danger-primary)"
-          onClick={handleRemove}
-        >
+        <Button variant="secondary" className="text-(--txt-danger-primary)" onClick={handleRemove}>
           Remove
         </Button>
       )}
@@ -103,19 +93,13 @@ export function UploadImageModal({
         Cancel
       </Button>
       <Button disabled={!file || loading} onClick={handleUploadSave}>
-        {loading ? "Uploading…" : "Upload & Save"}
+        {loading ? 'Uploading…' : 'Upload & Save'}
       </Button>
     </>
   );
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={title}
-      footer={footer}
-      className="max-w-md"
-    >
+    <Modal open={open} onClose={onClose} title={title} footer={footer} className="max-w-md">
       <div className="space-y-3">
         {!preview ? (
           <div
@@ -123,9 +107,7 @@ export function UploadImageModal({
             onDragOver={handleDragOver}
             className="flex flex-col items-center justify-center rounded-(--radius-md) border-2 border-dashed border-(--border-subtle) bg-(--bg-layer-2) py-12 px-4"
           >
-            <p className="text-sm text-(--txt-secondary) mb-2">
-              Drag & drop image here
-            </p>
+            <p className="text-sm text-(--txt-secondary) mb-2">Drag & drop image here</p>
             <label className="cursor-pointer">
               <span className="text-sm font-medium text-(--txt-accent-primary) hover:underline">
                 Browse
@@ -140,11 +122,7 @@ export function UploadImageModal({
           </div>
         ) : (
           <div className="relative rounded-(--radius-md) border border-(--border-subtle) overflow-hidden bg-(--bg-layer-2)">
-            <img
-              src={preview}
-              alt="Preview"
-              className="w-full max-h-64 object-contain"
-            />
+            <img src={preview} alt="Preview" className="w-full max-h-64 object-contain" />
             <div className="absolute top-2 right-2">
               <button
                 type="button"
@@ -159,9 +137,7 @@ export function UploadImageModal({
         <p className="text-xs text-(--txt-tertiary)">
           File formats supported: .jpeg, .jpg, .png, .webp
         </p>
-        {error && (
-          <p className="text-sm text-(--txt-danger-primary)">{error}</p>
-        )}
+        {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
       </div>
     </Modal>
   );

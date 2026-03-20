@@ -1,144 +1,124 @@
 /* eslint-disable react-refresh/only-export-components -- routes file exports router + layout components; keep for future use */
-import { lazy, Suspense } from "react";
-import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
-import { AppShell, InstanceAdminLayout } from "../components/layout";
-import { RootRedirect } from "../components/RootRedirect";
-import { SetupGate } from "../components/SetupGate";
-import { InstanceAdminProtectedRoute } from "./InstanceAdminProtectedRoute";
-import { ProtectedRoute } from "./ProtectedRoute";
+import { lazy, Suspense } from 'react';
+import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
+import { AppShell, InstanceAdminLayout } from '../components/layout';
+import { RootRedirect } from '../components/RootRedirect';
+import { SetupGate } from '../components/SetupGate';
+import { InstanceAdminProtectedRoute } from './InstanceAdminProtectedRoute';
+import { ProtectedRoute } from './ProtectedRoute';
 
 const page = (m: { [k: string]: React.ComponentType }) => ({
   default: Object.values(m)[0],
 });
 
 const LoginPage = lazy(() =>
-  import("../pages/LoginPage").then((m) => page({ LoginPage: m.LoginPage })),
+  import('../pages/LoginPage').then((m) => page({ LoginPage: m.LoginPage })),
 );
 const WorkspaceHomePage = lazy(() =>
-  import("../pages/WorkspaceHomePage").then((m) =>
+  import('../pages/WorkspaceHomePage').then((m) =>
     page({ WorkspaceHomePage: m.WorkspaceHomePage }),
   ),
 );
 const NotificationsPage = lazy(() =>
-  import("../pages/NotificationsPage").then((m) =>
+  import('../pages/NotificationsPage').then((m) =>
     page({ NotificationsPage: m.NotificationsPage }),
   ),
 );
 const ProfilePage = lazy(() =>
-  import("../pages/ProfilePage").then((m) =>
-    page({ ProfilePage: m.ProfilePage }),
-  ),
+  import('../pages/ProfilePage').then((m) => page({ ProfilePage: m.ProfilePage })),
 );
 const ProjectsListPage = lazy(() =>
-  import("../pages/ProjectsListPage").then((m) =>
-    page({ ProjectsListPage: m.ProjectsListPage }),
-  ),
+  import('../pages/ProjectsListPage').then((m) => page({ ProjectsListPage: m.ProjectsListPage })),
 );
 const WorkspaceViewsPage = lazy(() =>
-  import("../pages/WorkspaceViewsPage").then((m) =>
+  import('../pages/WorkspaceViewsPage').then((m) =>
     page({ WorkspaceViewsPage: m.WorkspaceViewsPage }),
   ),
 );
 const DraftsPage = lazy(() =>
-  import("../pages/DraftsPage").then((m) => page({ DraftsPage: m.DraftsPage })),
+  import('../pages/DraftsPage').then((m) => page({ DraftsPage: m.DraftsPage })),
 );
 const ArchivesPage = lazy(() =>
-  import("../pages/ArchivesPage").then((m) =>
-    page({ ArchivesPage: m.ArchivesPage }),
-  ),
+  import('../pages/ArchivesPage').then((m) => page({ ArchivesPage: m.ArchivesPage })),
 );
 const AnalyticsOverviewPage = lazy(() =>
-  import("../pages/AnalyticsOverviewPage").then((m) =>
+  import('../pages/AnalyticsOverviewPage').then((m) =>
     page({ AnalyticsOverviewPage: m.AnalyticsOverviewPage }),
   ),
 );
 const AnalyticsWorkItemsPage = lazy(() =>
-  import("../pages/AnalyticsWorkItemsPage").then((m) =>
+  import('../pages/AnalyticsWorkItemsPage').then((m) =>
     page({ AnalyticsWorkItemsPage: m.AnalyticsWorkItemsPage }),
   ),
 );
 const ProjectHomePage = lazy(() =>
-  import("../pages/ProjectHomePage").then((m) =>
-    page({ ProjectHomePage: m.ProjectHomePage }),
-  ),
+  import('../pages/ProjectHomePage').then((m) => page({ ProjectHomePage: m.ProjectHomePage })),
 );
 const IssueListPage = lazy(() =>
-  import("../pages/IssueListPage").then((m) =>
-    page({ IssueListPage: m.IssueListPage }),
-  ),
+  import('../pages/IssueListPage').then((m) => page({ IssueListPage: m.IssueListPage })),
 );
 const IssueDetailPage = lazy(() =>
-  import("../pages/IssueDetailPage").then((m) =>
-    page({ IssueDetailPage: m.IssueDetailPage }),
-  ),
+  import('../pages/IssueDetailPage').then((m) => page({ IssueDetailPage: m.IssueDetailPage })),
 );
 const BoardPage = lazy(() =>
-  import("../pages/BoardPage").then((m) => page({ BoardPage: m.BoardPage })),
+  import('../pages/BoardPage').then((m) => page({ BoardPage: m.BoardPage })),
 );
 const CyclesPage = lazy(() =>
-  import("../pages/CyclesPage").then((m) => page({ CyclesPage: m.CyclesPage })),
+  import('../pages/CyclesPage').then((m) => page({ CyclesPage: m.CyclesPage })),
 );
 const ModulesPage = lazy(() =>
-  import("../pages/ModulesPage").then((m) =>
-    page({ ModulesPage: m.ModulesPage }),
-  ),
+  import('../pages/ModulesPage').then((m) => page({ ModulesPage: m.ModulesPage })),
 );
 const ModuleDetailPage = lazy(() =>
-  import("../pages/ModuleDetailPage").then((m) =>
-    page({ ModuleDetailPage: m.ModuleDetailPage }),
-  ),
+  import('../pages/ModuleDetailPage').then((m) => page({ ModuleDetailPage: m.ModuleDetailPage })),
 );
 const SettingsPage = lazy(() =>
-  import("../pages/SettingsPage").then((m) =>
-    page({ SettingsPage: m.SettingsPage }),
-  ),
+  import('../pages/SettingsPage').then((m) => page({ SettingsPage: m.SettingsPage })),
 );
 const ViewsPage = lazy(() =>
-  import("../pages/ViewsPage").then((m) => page({ ViewsPage: m.ViewsPage })),
+  import('../pages/ViewsPage').then((m) => page({ ViewsPage: m.ViewsPage })),
 );
 const ViewDetailPage = lazy(() =>
-  import("../pages/ViewDetailPage").then((m) =>
-    page({ ViewDetailPage: m.ViewDetailPage }),
-  ),
+  import('../pages/ViewDetailPage').then((m) => page({ ViewDetailPage: m.ViewDetailPage })),
 );
 const PagesPage = lazy(() =>
-  import("../pages/PagesPage").then((m) => page({ PagesPage: m.PagesPage })),
+  import('../pages/PagesPage').then((m) => page({ PagesPage: m.PagesPage })),
 );
 
 const InstanceAdminGeneralPage = lazy(() =>
-  import("../pages/instance-admin").then((m) =>
+  import('../pages/instance-admin').then((m) =>
     page({ InstanceAdminGeneralPage: m.InstanceAdminGeneralPage }),
   ),
 );
 const InstanceAdminWorkspacePage = lazy(() =>
-  import("../pages/instance-admin").then((m) =>
+  import('../pages/instance-admin').then((m) =>
     page({ InstanceAdminWorkspacePage: m.InstanceAdminWorkspacePage }),
   ),
 );
 const InstanceAdminEmailPage = lazy(() =>
-  import("../pages/instance-admin").then((m) =>
+  import('../pages/instance-admin').then((m) =>
     page({ InstanceAdminEmailPage: m.InstanceAdminEmailPage }),
   ),
 );
 const InstanceAdminAuthenticationPage = lazy(() =>
-  import("../pages/instance-admin").then((m) =>
+  import('../pages/instance-admin').then((m) =>
     page({
       InstanceAdminAuthenticationPage: m.InstanceAdminAuthenticationPage,
     }),
   ),
 );
 const InstanceAdminAIPage = lazy(() =>
-  import("../pages/instance-admin").then((m) =>
+  import('../pages/instance-admin').then((m) =>
     page({ InstanceAdminAIPage: m.InstanceAdminAIPage }),
   ),
 );
 const InstanceAdminImagePage = lazy(() =>
-  import("../pages/instance-admin").then((m) =>
+  import('../pages/instance-admin').then((m) =>
     page({ InstanceAdminImagePage: m.InstanceAdminImagePage }),
   ),
 );
 const InstanceAdminCreateWorkspacePage = lazy(() =>
-  import("../pages/instance-admin").then((m) =>
+  import('../pages/instance-admin').then((m) =>
     page({
       InstanceAdminCreateWorkspacePage: m.InstanceAdminCreateWorkspacePage,
     }),
@@ -148,29 +128,25 @@ const InstanceAdminCreateWorkspacePage = lazy(() =>
 // const InstanceAdminLoginPage = lazy(() => import("../pages/instance-admin").then((m) => page({ InstanceAdminLoginPage: m.InstanceAdminLoginPage })));
 
 const InstanceSetupWelcomePage = lazy(() =>
-  import("../pages/setup").then((m) =>
+  import('../pages/setup').then((m) =>
     page({ InstanceSetupWelcomePage: m.InstanceSetupWelcomePage }),
   ),
 );
 const InstanceSetupConfigurePage = lazy(() =>
-  import("../pages/setup").then((m) =>
+  import('../pages/setup').then((m) =>
     page({ InstanceSetupConfigurePage: m.InstanceSetupConfigurePage }),
   ),
 );
 const InstanceSetupCompletePage = lazy(() =>
-  import("../pages/setup").then((m) =>
+  import('../pages/setup').then((m) =>
     page({ InstanceSetupCompletePage: m.InstanceSetupCompletePage }),
   ),
 );
 const InviteAcceptPage = lazy(() =>
-  import("../pages/InviteAcceptPage").then((m) =>
-    page({ InviteAcceptPage: m.InviteAcceptPage }),
-  ),
+  import('../pages/InviteAcceptPage').then((m) => page({ InviteAcceptPage: m.InviteAcceptPage })),
 );
 const InviteSignUpPage = lazy(() =>
-  import("../pages/InviteSignUpPage").then((m) =>
-    page({ InviteSignUpPage: m.InviteSignUpPage }),
-  ),
+  import('../pages/InviteSignUpPage').then((m) => page({ InviteSignUpPage: m.InviteSignUpPage })),
 );
 
 const PageFallback = () => (
@@ -197,11 +173,11 @@ function ProjectLayout() {
 
 const router = createBrowserRouter([
   {
-    path: "/",
+    path: '/',
     element: <SetupGate />,
     children: [
       {
-        path: "setup",
+        path: 'setup',
         element: (
           <Suspense fallback={<PageFallback />}>
             <InstanceSetupWelcomePage />
@@ -209,7 +185,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "setup/configure",
+        path: 'setup/configure',
         element: (
           <Suspense fallback={<PageFallback />}>
             <InstanceSetupConfigurePage />
@@ -217,7 +193,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "setup/complete",
+        path: 'setup/complete',
         element: (
           <Suspense fallback={<PageFallback />}>
             <InstanceSetupCompletePage />
@@ -225,17 +201,11 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "instance-admin/login",
-        element: (
-          <Navigate
-            to="/login"
-            state={{ from: { pathname: "/instance-admin" } }}
-            replace
-          />
-        ),
+        path: 'instance-admin/login',
+        element: <Navigate to="/login" state={{ from: { pathname: '/instance-admin' } }} replace />,
       },
       {
-        path: "instance-admin",
+        path: 'instance-admin',
         element: (
           <InstanceAdminProtectedRoute>
             <InstanceAdminLayout />
@@ -244,7 +214,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="general" replace /> },
           {
-            path: "general",
+            path: 'general',
             element: (
               <Suspense fallback={<PageFallback />}>
                 <InstanceAdminGeneralPage />
@@ -252,7 +222,7 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "workspace",
+            path: 'workspace',
             element: (
               <Suspense fallback={<PageFallback />}>
                 <InstanceAdminWorkspacePage />
@@ -260,7 +230,7 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "workspace/create",
+            path: 'workspace/create',
             element: (
               <Suspense fallback={<PageFallback />}>
                 <InstanceAdminCreateWorkspacePage />
@@ -268,7 +238,7 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "email",
+            path: 'email',
             element: (
               <Suspense fallback={<PageFallback />}>
                 <InstanceAdminEmailPage />
@@ -276,7 +246,7 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "authentication",
+            path: 'authentication',
             element: (
               <Suspense fallback={<PageFallback />}>
                 <InstanceAdminAuthenticationPage />
@@ -284,7 +254,7 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "ai",
+            path: 'ai',
             element: (
               <Suspense fallback={<PageFallback />}>
                 <InstanceAdminAIPage />
@@ -292,7 +262,7 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "image",
+            path: 'image',
             element: (
               <Suspense fallback={<PageFallback />}>
                 <InstanceAdminImagePage />
@@ -302,7 +272,7 @@ const router = createBrowserRouter([
         ],
       },
       {
-        path: "login",
+        path: 'login',
         element: (
           <Suspense fallback={<PageFallback />}>
             <LoginPage />
@@ -310,7 +280,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "invite",
+        path: 'invite',
         element: (
           <Suspense fallback={<PageFallback />}>
             <Outlet />
@@ -319,7 +289,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <InviteAcceptPage /> },
           {
-            path: "sign-up",
+            path: 'sign-up',
             element: <InviteSignUpPage />,
           },
         ],
@@ -329,7 +299,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <RootRedirect /> },
           {
-            path: ":workspaceSlug",
+            path: ':workspaceSlug',
             element: <WorkspaceLayout />,
             children: [
               {
@@ -341,7 +311,7 @@ const router = createBrowserRouter([
                 ),
               },
               {
-                path: "notifications",
+                path: 'notifications',
                 element: (
                   <Suspense fallback={<PageFallback />}>
                     <NotificationsPage />
@@ -349,7 +319,7 @@ const router = createBrowserRouter([
                 ),
               },
               {
-                path: "profile/:userId",
+                path: 'profile/:userId',
                 element: (
                   <Suspense fallback={<PageFallback />}>
                     <ProfilePage />
@@ -357,7 +327,7 @@ const router = createBrowserRouter([
                 ),
               },
               {
-                path: "projects",
+                path: 'projects',
                 element: <Outlet />,
                 children: [
                   {
@@ -369,7 +339,7 @@ const router = createBrowserRouter([
                     ),
                   },
                   {
-                    path: ":projectId",
+                    path: ':projectId',
                     element: <ProjectLayout />,
                     children: [
                       {
@@ -381,7 +351,7 @@ const router = createBrowserRouter([
                         ),
                       },
                       {
-                        path: "issues",
+                        path: 'issues',
                         element: (
                           <Suspense fallback={<PageFallback />}>
                             <IssueListPage />
@@ -389,7 +359,7 @@ const router = createBrowserRouter([
                         ),
                       },
                       {
-                        path: "issues/:issueId",
+                        path: 'issues/:issueId',
                         element: (
                           <Suspense fallback={<PageFallback />}>
                             <IssueDetailPage />
@@ -397,7 +367,7 @@ const router = createBrowserRouter([
                         ),
                       },
                       {
-                        path: "board",
+                        path: 'board',
                         element: (
                           <Suspense fallback={<PageFallback />}>
                             <BoardPage />
@@ -405,7 +375,7 @@ const router = createBrowserRouter([
                         ),
                       },
                       {
-                        path: "cycles",
+                        path: 'cycles',
                         element: (
                           <Suspense fallback={<PageFallback />}>
                             <CyclesPage />
@@ -413,7 +383,7 @@ const router = createBrowserRouter([
                         ),
                       },
                       {
-                        path: "modules",
+                        path: 'modules',
                         element: (
                           <Suspense fallback={<PageFallback />}>
                             <ModulesPage />
@@ -421,7 +391,7 @@ const router = createBrowserRouter([
                         ),
                       },
                       {
-                        path: "modules/:moduleId",
+                        path: 'modules/:moduleId',
                         element: (
                           <Suspense fallback={<PageFallback />}>
                             <ModuleDetailPage />
@@ -429,7 +399,7 @@ const router = createBrowserRouter([
                         ),
                       },
                       {
-                        path: "views",
+                        path: 'views',
                         element: (
                           <Suspense fallback={<PageFallback />}>
                             <ViewsPage />
@@ -437,7 +407,7 @@ const router = createBrowserRouter([
                         ),
                       },
                       {
-                        path: "views/:viewId",
+                        path: 'views/:viewId',
                         element: (
                           <Suspense fallback={<PageFallback />}>
                             <ViewDetailPage />
@@ -445,7 +415,7 @@ const router = createBrowserRouter([
                         ),
                       },
                       {
-                        path: "pages",
+                        path: 'pages',
                         element: (
                           <Suspense fallback={<PageFallback />}>
                             <PagesPage />
@@ -453,7 +423,7 @@ const router = createBrowserRouter([
                         ),
                       },
                       {
-                        path: "settings",
+                        path: 'settings',
                         element: (
                           <Suspense fallback={<PageFallback />}>
                             <SettingsPage />
@@ -465,12 +435,12 @@ const router = createBrowserRouter([
                 ],
               },
               {
-                path: "analytics",
+                path: 'analytics',
                 element: <Outlet />,
                 children: [
                   { index: true, element: <Navigate to="overview" replace /> },
                   {
-                    path: "overview",
+                    path: 'overview',
                     element: (
                       <Suspense fallback={<PageFallback />}>
                         <AnalyticsOverviewPage />
@@ -478,7 +448,7 @@ const router = createBrowserRouter([
                     ),
                   },
                   {
-                    path: "work-items",
+                    path: 'work-items',
                     element: (
                       <Suspense fallback={<PageFallback />}>
                         <AnalyticsWorkItemsPage />
@@ -488,11 +458,11 @@ const router = createBrowserRouter([
                 ],
               },
               {
-                path: "views",
+                path: 'views',
                 element: <Navigate to="all-issues" replace />,
               },
               {
-                path: "views/:viewId",
+                path: 'views/:viewId',
                 element: (
                   <Suspense fallback={<PageFallback />}>
                     <WorkspaceViewsPage />
@@ -500,7 +470,7 @@ const router = createBrowserRouter([
                 ),
               },
               {
-                path: "drafts",
+                path: 'drafts',
                 element: (
                   <Suspense fallback={<PageFallback />}>
                     <DraftsPage />
@@ -508,7 +478,7 @@ const router = createBrowserRouter([
                 ),
               },
               {
-                path: "archives",
+                path: 'archives',
                 element: (
                   <Suspense fallback={<PageFallback />}>
                     <ArchivesPage />
@@ -516,7 +486,7 @@ const router = createBrowserRouter([
                 ),
               },
               {
-                path: "settings",
+                path: 'settings',
                 element: <Outlet />,
                 children: [
                   {
@@ -528,7 +498,7 @@ const router = createBrowserRouter([
                     ),
                   },
                   {
-                    path: "account",
+                    path: 'account',
                     element: (
                       <Suspense fallback={<PageFallback />}>
                         <SettingsPage />
@@ -536,7 +506,7 @@ const router = createBrowserRouter([
                     ),
                   },
                   {
-                    path: "projects",
+                    path: 'projects',
                     element: (
                       <Suspense fallback={<PageFallback />}>
                         <SettingsPage />
@@ -544,7 +514,7 @@ const router = createBrowserRouter([
                     ),
                   },
                   {
-                    path: "projects/:projectId",
+                    path: 'projects/:projectId',
                     element: (
                       <Suspense fallback={<PageFallback />}>
                         <SettingsPage />
@@ -559,7 +529,7 @@ const router = createBrowserRouter([
       },
     ],
   },
-  { path: "*", element: <Navigate to="/" replace /> },
+  { path: '*', element: <Navigate to="/" replace /> },
 ]);
 
 export { router };

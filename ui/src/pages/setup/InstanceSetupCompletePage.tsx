@@ -1,5 +1,5 @@
-import { useNavigate } from "react-router-dom";
-import { Button, Card, CardContent } from "../../components/ui";
+import { useNavigate } from 'react-router-dom';
+import { Button, Card, CardContent } from '../../components/ui';
 
 const IconWorkspace = () => (
   <svg
@@ -23,14 +23,14 @@ export function InstanceSetupCompletePage() {
   const navigate = useNavigate();
 
   const handleCreateWorkspace = () => {
-    navigate("/instance-admin/workspace/create", {
+    navigate('/instance-admin/workspace/create', {
       replace: true,
       state: { fromSetup: true },
     });
   };
 
   const handleClose = () => {
-    navigate("/instance-admin", { replace: true });
+    navigate('/instance-admin', { replace: true });
   };
 
   return (
@@ -39,23 +39,16 @@ export function InstanceSetupCompletePage() {
         <CardContent className="p-6">
           <div className="flex gap-6">
             <div className="min-w-0 flex-1">
-              <h2 className="text-xl font-semibold text-(--txt-primary)">
-                Create workspace
-              </h2>
+              <h2 className="text-xl font-semibold text-(--txt-primary)">Create workspace</h2>
               <p className="mt-2 text-sm text-(--txt-secondary)">
-                Instance setup is complete. Welcome to your Devlane instance.
-                Start your journey by creating your first workspace.
+                Instance setup is complete. Welcome to your Devlane instance. Start your journey by
+                creating your first workspace.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Button type="button" onClick={handleCreateWorkspace} size="lg">
                   Create workspace
                 </Button>
-                <Button
-                  variant="secondary"
-                  onClick={handleClose}
-                  size="lg"
-                  type="button"
-                >
+                <Button variant="secondary" onClick={handleClose} size="lg" type="button">
                   Close
                 </Button>
               </div>

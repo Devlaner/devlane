@@ -1,9 +1,9 @@
-import { useRef } from "react";
+import { useRef } from 'react';
 
 /* eslint-disable react-refresh/only-export-components -- formatDateForDisplay shared util; keep in same file for future use */
 export function formatDateForDisplay(isoDate: string): string {
-  if (!isoDate) return "";
-  const [y, m, d] = isoDate.split("-");
+  if (!isoDate) return '';
+  const [y, m, d] = isoDate.split('-');
   if (!m || !d) return isoDate;
   const month = parseInt(m, 10);
   const day = parseInt(d, 10);
@@ -28,7 +28,7 @@ export function DatePickerTrigger({
   compact: _compact = true, // eslint-disable-line @typescript-eslint/no-unused-vars -- kept for future compact layout
 }: DatePickerTriggerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const displayValue = value ? formatDateForDisplay(value) : "";
+  const displayValue = value ? formatDateForDisplay(value) : '';
 
   return (
     <div className="relative inline-flex min-w-0 shrink-0 items-center gap-1 rounded border border-(--border-subtle) bg-(--bg-layer-2) px-1.5 py-1 text-xs text-(--txt-secondary) [&_svg]:size-3">

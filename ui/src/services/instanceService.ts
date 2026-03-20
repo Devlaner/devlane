@@ -1,11 +1,11 @@
-import { apiClient } from "../api/client";
+import { apiClient } from '../api/client';
 import type {
   InstanceSetupStatusResponse,
   InstanceSetupRequest,
   UserApiResponse,
   InstanceSettingsResponse,
   InstanceSettingSectionValue,
-} from "../api/types";
+} from '../api/types';
 
 /**
  * Instance setup API (first-run flow). No auth required.
@@ -13,16 +13,13 @@ import type {
 export const instanceService = {
   async getSetupStatus(): Promise<InstanceSetupStatusResponse> {
     const { data } = await apiClient.get<InstanceSetupStatusResponse>(
-      "/api/instance/setup-status/",
+      '/api/instance/setup-status/',
     );
     return data;
   },
 
   async completeSetup(payload: InstanceSetupRequest): Promise<UserApiResponse> {
-    const { data } = await apiClient.post<UserApiResponse>(
-      "/api/instance/setup/",
-      payload,
-    );
+    const { data } = await apiClient.post<UserApiResponse>('/api/instance/setup/', payload);
     return data;
   },
 };
@@ -37,9 +34,7 @@ export interface UnsplashSearchResult {
 /** Instance admin settings (requires auth). */
 export const instanceSettingsService = {
   async getSettings(): Promise<InstanceSettingsResponse> {
-    const { data } = await apiClient.get<InstanceSettingsResponse>(
-      "/api/instance/settings/",
-    );
+    const { data } = await apiClient.get<InstanceSettingsResponse>('/api/instance/settings/');
     return data;
   },
 
@@ -55,11 +50,9 @@ export const instanceSettingsService = {
   },
 
   /** Search Unsplash (uses instance image API key). GET /api/instance/unsplash/search?q= */
-  async unsplashSearch(
-    q: string,
-  ): Promise<{ results: UnsplashSearchResult[] }> {
+  async unsplashSearch(q: string): Promise<{ results: UnsplashSearchResult[] }> {
     const { data } = await apiClient.get<{ results: UnsplashSearchResult[] }>(
-      "/api/instance/unsplash/search",
+      '/api/instance/unsplash/search',
       { params: { q: q.trim() } },
     );
     return data;

@@ -1,5 +1,5 @@
-import axios, { type AxiosError } from "axios";
-import { config } from "../config/env";
+import axios, { type AxiosError } from 'axios';
+import { config } from '../config/env';
 
 /**
  * Shared Axios instance for all API requests.
@@ -11,7 +11,7 @@ export const apiClient = axios.create({
   baseURL: config.apiBaseUrl,
   withCredentials: true,
   headers: {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   },
 });
 
@@ -21,7 +21,7 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   if (config.data instanceof FormData && config.headers) {
     const h = config.headers as Record<string, unknown>;
-    delete h["Content-Type"];
+    delete h['Content-Type'];
   }
   return config;
 });
@@ -46,7 +46,7 @@ export function getApiErrorMessage(err: unknown): string {
     if (ax.response?.status) return `Request failed (${ax.response.status}).`;
   }
   if (err instanceof Error) return err.message;
-  return "An unexpected error occurred.";
+  return 'An unexpected error occurred.';
 }
 
 apiClient.interceptors.response.use(

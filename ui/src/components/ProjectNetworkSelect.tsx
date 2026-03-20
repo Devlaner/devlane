@@ -1,26 +1,20 @@
-import type { ChangeEvent } from "react";
+import type { ChangeEvent } from 'react';
 
 interface ProjectNetworkSelectProps {
   value: string;
-  onChange: (value: "public" | "private") => void;
+  onChange: (value: 'public' | 'private') => void;
   disabled?: boolean;
 }
 
-export function ProjectNetworkSelect({
-  value,
-  onChange,
-  disabled,
-}: ProjectNetworkSelectProps) {
+export function ProjectNetworkSelect({ value, onChange, disabled }: ProjectNetworkSelectProps) {
   const handleChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    const v = e.target.value === "private" ? "private" : "public";
+    const v = e.target.value === 'private' ? 'private' : 'public';
     onChange(v);
   };
 
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-        Network
-      </label>
+      <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">Network</label>
       <div className="relative">
         <select
           value={value}

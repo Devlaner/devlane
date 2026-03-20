@@ -1,16 +1,16 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Modal } from "../ui";
-import { Button, Input } from "../ui";
-import { Dropdown } from "../work-item";
-import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
-import { viewService } from "../../services/viewService";
-import { workspaceViewFiltersToSearchParams } from "../../types/workspaceViewFilters";
-import type { DisplayPropertyKey } from "../../types/workspaceViewDisplay";
-import type { WorkspaceViewFilters } from "../../types/workspaceViewFilters";
-import type { WorkspaceViewDisplay } from "../../types/workspaceViewDisplay";
-import { WorkspaceViewsFiltersPanel } from "./WorkspaceViewsFiltersPanel";
-import { WorkspaceViewsDisplayPanel } from "./WorkspaceViewsDisplayPanel";
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Modal } from '../ui';
+import { Button, Input } from '../ui';
+import { Dropdown } from '../work-item';
+import { useWorkspaceViewsState } from '../../contexts/WorkspaceViewsStateContext';
+import { viewService } from '../../services/viewService';
+import { workspaceViewFiltersToSearchParams } from '../../types/workspaceViewFilters';
+import type { DisplayPropertyKey } from '../../types/workspaceViewDisplay';
+import type { WorkspaceViewFilters } from '../../types/workspaceViewFilters';
+import type { WorkspaceViewDisplay } from '../../types/workspaceViewDisplay';
+import { WorkspaceViewsFiltersPanel } from './WorkspaceViewsFiltersPanel';
+import { WorkspaceViewsDisplayPanel } from './WorkspaceViewsDisplayPanel';
 
 export interface CreateViewModalProps {
   open: boolean;
@@ -18,24 +18,17 @@ export interface CreateViewModalProps {
   onCreated?: () => void;
 }
 
-export function CreateViewModal({
-  open,
-  onClose,
-  onCreated,
-}: CreateViewModalProps) {
+export function CreateViewModal({ open, onClose, onCreated }: CreateViewModalProps) {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const navigate = useNavigate();
-  const { filters: contextFilters, display: contextDisplay } =
-    useWorkspaceViewsState();
-  const [openPanel, setOpenPanel] = useState<
-    "create-view-filters" | "create-view-display" | null
-  >(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [localFilters, setLocalFilters] =
-    useState<WorkspaceViewFilters>(contextFilters);
-  const [localDisplay, setLocalDisplay] =
-    useState<WorkspaceViewDisplay>(contextDisplay);
+  const { filters: contextFilters, display: contextDisplay } = useWorkspaceViewsState();
+  const [openPanel, setOpenPanel] = useState<'create-view-filters' | 'create-view-display' | null>(
+    null,
+  );
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [localFilters, setLocalFilters] = useState<WorkspaceViewFilters>(contextFilters);
+  const [localDisplay, setLocalDisplay] = useState<WorkspaceViewDisplay>(contextDisplay);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +42,7 @@ export function CreateViewModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!workspaceSlug?.trim() || !title.trim()) {
-      setError("Title is required.");
+      setError('Title is required.');
       return;
     }
     setError(null);
@@ -71,13 +64,13 @@ export function CreateViewModal({
         display_filters,
         display_properties,
       });
-      setTitle("");
-      setDescription("");
+      setTitle('');
+      setDescription('');
       onClose();
       onCreated?.();
       navigate(`/${workspaceSlug}/views/${created.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create view.");
+      setError(err instanceof Error ? err.message : 'Failed to create view.');
     } finally {
       setSubmitting(false);
     }
@@ -94,11 +87,7 @@ export function CreateViewModal({
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            form="create-view-form"
-            disabled={submitting || !title.trim()}
-          >
+          <Button type="submit" form="create-view-form" disabled={submitting || !title.trim()}>
             Create View
           </Button>
         </>
@@ -129,9 +118,7 @@ export function CreateViewModal({
             id="create-view-filters"
             openId={openPanel}
             onOpen={(id) =>
-              setOpenPanel(
-                id as "create-view-filters" | "create-view-display" | null,
-              )
+              setOpenPanel(id as 'create-view-filters' | 'create-view-display' | null)
             }
             label="Filters"
             icon={null}
@@ -155,9 +142,7 @@ export function CreateViewModal({
             id="create-view-display"
             openId={openPanel}
             onOpen={(id) =>
-              setOpenPanel(
-                id as "create-view-filters" | "create-view-display" | null,
-              )
+              setOpenPanel(id as 'create-view-filters' | 'create-view-display' | null)
             }
             label="Display"
             icon={null}
@@ -167,15 +152,10 @@ export function CreateViewModal({
             panelClassName="flex min-w-[280px] max-w-[320px] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
             align="left"
           >
-            <WorkspaceViewsDisplayPanel
-              display={localDisplay}
-              onDisplayChange={setLocalDisplay}
-            />
+            <WorkspaceViewsDisplayPanel display={localDisplay} onDisplayChange={setLocalDisplay} />
           </Dropdown>
         </div>
-        {error && (
-          <p className="text-sm text-(--txt-danger-primary)">{error}</p>
-        )}
+        {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
       </form>
     </Modal>
   );

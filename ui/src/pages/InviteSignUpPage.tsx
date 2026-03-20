@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import { Card, CardContent, Button } from "../components/ui";
-import { useAuth } from "../contexts/AuthContext";
-import { authService } from "../services/authService";
-import { workspaceService } from "../services/workspaceService";
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { Card, CardContent, Button } from '../components/ui';
+import { useAuth } from '../contexts/AuthContext';
+import { authService } from '../services/authService';
+import { workspaceService } from '../services/workspaceService';
 
 const IconGlobe = () => (
   <svg
@@ -95,8 +95,8 @@ function PasswordRequirement({ met, label }: { met: boolean; label: string }) {
       <span
         className={`flex size-5 shrink-0 items-center justify-center rounded-full ${
           met
-            ? "bg-(--bg-success-primary) text-(--txt-on-color)"
-            : "bg-(--bg-layer-1) text-(--txt-placeholder)"
+            ? 'bg-(--bg-success-primary) text-(--txt-on-color)'
+            : 'bg-(--bg-layer-1) text-(--txt-placeholder)'
         }`}
         aria-hidden
       >
@@ -119,45 +119,43 @@ export function InviteSignUpPage() {
     workspaceSlug?: string;
   } | null;
 
-  const email = (state?.email ?? "").trim();
-  const token = (state?.token ?? "").trim();
-  const workspaceName = state?.workspaceName ?? "the workspace";
-  const workspaceSlug = (state?.workspaceSlug ?? "").trim();
+  const email = (state?.email ?? '').trim();
+  const token = (state?.token ?? '').trim();
+  const workspaceName = state?.workspaceName ?? 'the workspace';
+  const workspaceSlug = (state?.workspaceSlug ?? '').trim();
 
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const req = usePasswordRequirements(password);
-  const allMet =
-    req.minLength && req.upper && req.lower && req.number && req.special;
-  const passwordsMatch =
-    password === confirmPassword && confirmPassword.length > 0;
+  const allMet = req.minLength && req.upper && req.lower && req.number && req.special;
+  const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
 
   useEffect(() => {
     if (!email || !token) {
-      navigate("/", { replace: true });
+      navigate('/', { replace: true });
     }
   }, [email, token, navigate]);
 
   useEffect(() => {
     if (user) {
-      navigate("/", { replace: true });
+      navigate('/', { replace: true });
     }
   }, [user, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
+    setError('');
     if (!allMet) {
-      setError("Please meet all password requirements.");
+      setError('Please meet all password requirements.');
       return;
     }
     if (!passwordsMatch) {
-      setError("Passwords do not match.");
+      setError('Passwords do not match.');
       return;
     }
     setIsSubmitting(true);
@@ -172,11 +170,10 @@ export function InviteSignUpPage() {
       navigate(`/${workspaceSlug}`, { replace: true });
     } catch (err: unknown) {
       const message =
-        err && typeof err === "object" && "response" in err
-          ? (err as { response?: { data?: { error?: string } } }).response?.data
-              ?.error
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
           : null;
-      setError(message ?? "Something went wrong. Please try again.");
+      setError(message ?? 'Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -205,9 +202,7 @@ export function InviteSignUpPage() {
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                Email
-              </label>
+              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">Email</label>
               <input
                 type="email"
                 value={email}
@@ -227,7 +222,7 @@ export function InviteSignUpPage() {
               <div className="relative">
                 <input
                   id="invite-signup-password"
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Create a password"
@@ -238,16 +233,13 @@ export function InviteSignUpPage() {
                   type="button"
                   onClick={() => setShowPassword((p) => !p)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary) hover:text-(--txt-secondary)"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <IconEyeOff /> : <IconEye />}
                 </button>
               </div>
               <div className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">
-                <PasswordRequirement
-                  met={req.minLength}
-                  label="Min 8 characters"
-                />
+                <PasswordRequirement met={req.minLength} label="Min 8 characters" />
                 <PasswordRequirement met={req.upper} label="One uppercase" />
                 <PasswordRequirement met={req.lower} label="One lowercase" />
                 <PasswordRequirement met={req.number} label="Min 1 number" />
@@ -265,7 +257,7 @@ export function InviteSignUpPage() {
               <div className="relative">
                 <input
                   id="invite-signup-confirm"
-                  type={showConfirmPassword ? "text" : "password"}
+                  type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm password"
@@ -276,34 +268,30 @@ export function InviteSignUpPage() {
                   type="button"
                   onClick={() => setShowConfirmPassword((p) => !p)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary) hover:text-(--txt-secondary)"
-                  aria-label={
-                    showConfirmPassword ? "Hide password" : "Show password"
-                  }
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                 >
                   {showConfirmPassword ? <IconEyeOff /> : <IconEye />}
                 </button>
               </div>
             </div>
 
-            {error && (
-              <p className="text-sm text-(--txt-destructive)">{error}</p>
-            )}
+            {error && <p className="text-sm text-(--txt-destructive)">{error}</p>}
 
             <Button
               type="submit"
               className="w-full"
               disabled={isSubmitting || !allMet || !passwordsMatch}
             >
-              {isSubmitting ? "Creating account…" : "Create account"}
+              {isSubmitting ? 'Creating account…' : 'Create account'}
             </Button>
           </form>
 
           <p className="mt-6 text-center text-sm text-(--txt-secondary)">
-            Already have an account?{" "}
+            Already have an account?{' '}
             <Link
               to="/login"
               state={{
-                from: { pathname: "/invite", search: `?token=${token}` },
+                from: { pathname: '/invite', search: `?token=${token}` },
                 email,
               }}
               className="font-medium text-(--txt-accent) hover:underline"
