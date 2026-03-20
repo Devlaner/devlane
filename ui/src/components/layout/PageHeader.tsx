@@ -21,6 +21,7 @@ import { projectService } from '../../services/projectService';
 import { issueService } from '../../services/issueService';
 import { viewService } from '../../services/viewService';
 import { moduleService } from '../../services/moduleService';
+import { ProjectIconDisplay } from '../ProjectIconModal';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
@@ -519,7 +520,7 @@ function ProjectSectionDropdown({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
+        className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover)"
       >
         <span className="flex size-5 items-center justify-center text-(--txt-icon-secondary)">
           {currentIcon}
@@ -749,24 +750,31 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
 }
 
 function ProjectDetailHeader({
+  project,
   title,
 }: {
   workspaceSlug: string;
   projectId: string;
+  project: ProjectApiResponse;
   title: string;
 }) {
   return (
     <>
       <div className="flex items-center gap-2 text-sm font-semibold text-(--txt-primary)">
-        <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
-          <IconBriefcase />
+        <span className="flex size-5 shrink-0 items-center justify-center">
+          <ProjectIconDisplay
+            emoji={project.emoji}
+            icon_prop={project.icon_prop}
+            size={16}
+            className="leading-none"
+          />
         </span>
         {title}
       </div>
       <div className="flex items-center gap-2">
         <button
           type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
+          className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
           aria-label="Search"
         >
           <IconSearch />
@@ -843,11 +851,13 @@ const IconSliders = () => (
 function ModuleDetailHeader({
   workspaceSlug,
   projectId,
+  project,
   projectName,
   moduleName,
 }: {
   workspaceSlug: string;
   projectId: string;
+  project: ProjectApiResponse;
   projectName: string;
   moduleId: string;
   moduleName: string;
@@ -884,8 +894,16 @@ function ModuleDetailHeader({
       <div className="flex min-w-0 flex-1 items-center gap-2 text-sm text-(--txt-primary)">
         <Link
           to={baseUrl}
-          className="shrink-0 truncate font-medium text-(--txt-secondary) hover:text-(--txt-primary) hover:underline"
+          className="flex shrink-0 items-center gap-1.5 truncate font-medium text-(--txt-secondary) hover:text-(--txt-primary) hover:underline"
         >
+          <span className="flex size-5 shrink-0 items-center justify-center">
+            <ProjectIconDisplay
+              emoji={project.emoji}
+              icon_prop={project.icon_prop}
+              size={16}
+              className="leading-none"
+            />
+          </span>
           {projectName}
         </Link>
         <span className="shrink-0 text-(--txt-icon-tertiary)">/</span>
@@ -900,7 +918,7 @@ function ModuleDetailHeader({
           <button
             type="button"
             onClick={() => setModuleDropdownOpen((o) => !o)}
-            className="flex items-center gap-1 truncate rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
+            className="flex items-center gap-1 truncate rounded-md px-2.5 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover)"
           >
             <span className="min-w-0 truncate">{moduleName}</span>
             <span className="shrink-0 text-(--txt-icon-tertiary)">
@@ -980,12 +998,14 @@ function ModuleDetailHeader({
 function ProjectSectionHeader({
   workspaceSlug,
   projectId,
+  project,
   projectName,
   section,
   issueCount,
 }: {
   workspaceSlug: string;
   projectId: string;
+  project: ProjectApiResponse;
   projectName: string;
   section: ProjectSection;
   issueCount: number;
@@ -2124,14 +2144,22 @@ function ProjectSectionHeader({
       <div className="relative flex items-center gap-2 text-sm" ref={projectDropdownRef}>
         <Link
           to={issuesUrl}
-          className="flex items-center gap-1.5 rounded-l-md border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
+          className="flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
         >
+          <span className="flex size-5 shrink-0 items-center justify-center">
+            <ProjectIconDisplay
+              emoji={project.emoji}
+              icon_prop={project.icon_prop}
+              size={16}
+              className="leading-none"
+            />
+          </span>
           {projectName}
         </Link>
         <button
           type="button"
           onClick={() => setProjectDropdownOpen((o) => !o)}
-          className="flex h-8.5 w-8 items-center justify-center rounded-r-md border border-l-0 border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
+          className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
           aria-label="Select project"
         >
           <IconChevronDown />
@@ -2517,12 +2545,14 @@ function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
 function ProjectSavedViewDetailHeader({
   workspaceSlug,
   projectId,
+  project,
   projectName,
   viewId,
   issueCount: _issueCount,
 }: {
   workspaceSlug: string;
   projectId: string;
+  project: ProjectApiResponse;
   projectName: string;
   viewId: string;
   issueCount: number;
@@ -2620,14 +2650,22 @@ function ProjectSavedViewDetailHeader({
       >
         <Link
           to={issuesUrl}
-          className="flex max-w-[40vw] items-center gap-1.5 truncate rounded-l-md border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
+          className="flex max-w-[40vw] items-center gap-1.5 truncate rounded-md px-3 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
         >
+          <span className="flex size-5 shrink-0 items-center justify-center">
+            <ProjectIconDisplay
+              emoji={project.emoji}
+              icon_prop={project.icon_prop}
+              size={16}
+              className="leading-none"
+            />
+          </span>
           {projectName}
         </Link>
         <button
           type="button"
           onClick={() => setProjectDropdownOpen((o) => !o)}
-          className="flex h-8.5 w-8 shrink-0 items-center justify-center rounded-r-md border border-l-0 border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
           aria-label="Select project"
         >
           <IconChevronDown />
@@ -2670,7 +2708,7 @@ function ProjectSavedViewDetailHeader({
         </span>
         <Link
           to={`${baseUrl}/views`}
-          className="flex max-w-[28vw] shrink-0 items-center gap-1.5 truncate rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
+          className="flex max-w-[28vw] shrink-0 items-center gap-1.5 truncate rounded-md px-2.5 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
         >
           <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
             <IconViewsPlane />
@@ -2680,7 +2718,7 @@ function ProjectSavedViewDetailHeader({
         <span className="shrink-0 text-(--txt-tertiary)" aria-hidden>
           /
         </span>
-        <div className="flex min-w-0 max-w-[36vw] items-center gap-1.5 truncate rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 font-medium text-(--txt-primary)">
+        <div className="flex min-w-0 max-w-[36vw] items-center gap-1.5 truncate rounded-md px-2.5 py-1.5 font-medium text-(--txt-primary)">
           <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
             <IconViewsPlane />
           </span>
@@ -2918,6 +2956,7 @@ export function PageHeader() {
       <ModuleDetailHeader
         workspaceSlug={workspaceSlug}
         projectId={projectId}
+        project={project}
         projectName={project.name}
         moduleId={module.id}
         moduleName={module.name}
@@ -2928,6 +2967,7 @@ export function PageHeader() {
       <ProjectSavedViewDetailHeader
         workspaceSlug={workspaceSlug}
         projectId={projectId}
+        project={project}
         projectName={project.name}
         viewId={viewId}
         issueCount={projectIssueCount}
@@ -2938,6 +2978,7 @@ export function PageHeader() {
       <ProjectSectionHeader
         workspaceSlug={workspaceSlug}
         projectId={projectId}
+        project={project}
         projectName={project.name}
         section={projectSection}
         issueCount={projectIssueCount}
@@ -2948,6 +2989,7 @@ export function PageHeader() {
       <ProjectDetailHeader
         workspaceSlug={workspaceSlug}
         projectId={projectId}
+        project={project}
         title={project.name}
       />
     );
@@ -2956,6 +2998,7 @@ export function PageHeader() {
       <ProjectDetailHeader
         workspaceSlug={workspaceSlug}
         projectId={projectId}
+        project={project}
         title={project.name}
       />
     );
