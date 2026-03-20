@@ -15,6 +15,7 @@ import { ProjectSavedViewDisplayDropdown } from '../project-saved-view/ProjectSa
 import { ProjectSavedViewMoreMenu } from '../project-saved-view/ProjectSavedViewMoreMenu';
 import { DateRangeModal } from '../workspace-views/DateRangeModal';
 import { CreateModuleModal } from '../CreateModuleModal';
+import { CreateCycleModal } from '../CreateCycleModal';
 import { workspaceService } from '../../services/workspaceService';
 import { projectService } from '../../services/projectService';
 import { issueService } from '../../services/issueService';
@@ -27,7 +28,10 @@ import type {
   ModuleApiResponse,
   WorkspaceMemberApiResponse,
 } from '../../api/types';
-import { PROJECT_CYCLES_FILTER_EVENT } from '../../lib/projectCyclesEvents';
+import {
+  PROJECT_CYCLES_FILTER_EVENT,
+  PROJECT_CYCLES_REFRESH_EVENT,
+} from '../../lib/projectCyclesEvents';
 import { PROJECT_VIEWS_FILTER_EVENT } from '../../lib/projectViewsEvents';
 
 export type ProjectSection = 'issues' | 'cycles' | 'modules' | 'views' | 'pages';
@@ -1011,6 +1015,7 @@ function ProjectSectionHeader({
   const [viewsCreatedBy, setViewsCreatedBy] = useState<string[]>([]);
   const [viewsMembers, setViewsMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [modulesDateRangeModal, setModulesDateRangeModal] = useState<'start' | 'due' | null>(null);
+  const [createCycleOpen, setCreateCycleOpen] = useState(false);
   const [cyclesFiltersDropdownOpen, setCyclesFiltersDropdownOpen] = useState<string | null>(null);
   const [cyclesStatusSectionOpen, setCyclesStatusSectionOpen] = useState(true);
   const [cyclesStartSectionOpen, setCyclesStartSectionOpen] = useState(true);
@@ -1255,7 +1260,7 @@ function ProjectSectionHeader({
               </span>
             }
             panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
-            align="left"
+            align="right"
           >
             <div className="sticky top-0 shrink-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-2">
               <div className="flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
@@ -1444,7 +1449,11 @@ function ProjectSectionHeader({
               </div>
             </div>
           </Dropdown>
-          <Button size="sm" className="gap-1.5 text-[13px] font-medium">
+          <Button
+            size="sm"
+            className="gap-1.5 text-[13px] font-medium"
+            onClick={() => setCreateCycleOpen(true)}
+          >
             <IconPlus /> Add cycle
           </Button>
         </>
@@ -2167,23 +2176,42 @@ function ProjectSectionHeader({
         </>
       )}
       {section === 'cycles' && (
-        <DateRangeModal
-          open={cyclesDateRangeModal !== null}
-          onClose={() => setCyclesDateRangeModal(null)}
-          title={cyclesDateRangeModal === 'start' ? 'Start date range' : 'Due date range'}
-          after={cyclesDateRangeModal === 'start' ? cyclesStartAfter : cyclesDueAfter}
-          before={cyclesDateRangeModal === 'start' ? cyclesStartBefore : cyclesDueBefore}
-          onApply={(after, before) => {
-            if (cyclesDateRangeModal === 'start') {
-              setCyclesStartAfter(after);
-              setCyclesStartBefore(before);
-            } else {
-              setCyclesDueAfter(after);
-              setCyclesDueBefore(before);
-            }
-            setCyclesDateRangeModal(null);
-          }}
-        />
+        <>
+          <DateRangeModal
+            open={cyclesDateRangeModal !== null}
+            onClose={() => setCyclesDateRangeModal(null)}
+            title={cyclesDateRangeModal === 'start' ? 'Start date range' : 'Due date range'}
+            after={cyclesDateRangeModal === 'start' ? cyclesStartAfter : cyclesDueAfter}
+            before={cyclesDateRangeModal === 'start' ? cyclesStartBefore : cyclesDueBefore}
+            onApply={(after, before) => {
+              if (cyclesDateRangeModal === 'start') {
+                setCyclesStartAfter(after);
+                setCyclesStartBefore(before);
+              } else {
+                setCyclesDueAfter(after);
+                setCyclesDueBefore(before);
+              }
+              setCyclesDateRangeModal(null);
+            }}
+          />
+          <CreateCycleModal
+            open={createCycleOpen}
+            onClose={() => setCreateCycleOpen(false)}
+            workspaceSlug={workspaceSlug}
+            projectId={projectId}
+            onCreated={(_created, targetProjectId) => {
+              setCreateCycleOpen(false);
+              if (targetProjectId !== projectId) {
+                navigate(`/${workspaceSlug}/projects/${targetProjectId}/cycles`);
+              }
+              window.dispatchEvent(
+                new CustomEvent(PROJECT_CYCLES_REFRESH_EVENT, {
+                  detail: { workspaceSlug, projectId: targetProjectId },
+                }),
+              );
+            }}
+          />
+        </>
       )}
     </>
   );

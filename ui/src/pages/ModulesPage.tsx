@@ -409,9 +409,7 @@ export function ModulesPage() {
             <ModuleProgressCircle progress={progress} />
             <div className="min-w-0 flex-1">
               <Link to={modulePath(mod)} className="min-w-0 no-underline" title={mod.name}>
-                <p className="truncate font-medium text-(--txt-primary) hover:underline">
-                  {mod.name}
-                </p>
+                <p className="truncate font-medium text-(--txt-primary)">{mod.name}</p>
               </Link>
             </div>
             <button

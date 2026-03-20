@@ -19,7 +19,12 @@ func parseOptionalTime(s string) *time.Time {
 	if s == "" {
 		return nil
 	}
+	// Try RFC3339 first (full timestamp), then date-only YYYY-MM-DD
 	t, err := time.Parse(time.RFC3339, s)
+	if err == nil {
+		return &t
+	}
+	t, err = time.Parse("2006-01-02", s)
 	if err != nil {
 		return nil
 	}
