@@ -409,20 +409,13 @@ export function ViewDetailPage() {
     // Only apply start date filter when we have a valid range for "custom".
     const startDateEffective =
       f.startDate.length &&
-      !(
-        f.startDate.includes("custom") &&
-        (!f.startAfter || !f.startBefore)
-      );
+      !(f.startDate.includes("custom") && (!f.startAfter || !f.startBefore));
     if (startDateEffective) {
       list = list.filter((i) => {
         const sd = i.start_date ? new Date(i.start_date) : null;
         if (!sd) return false;
         return f.startDate.some((preset) => {
-          if (
-            preset === "custom" &&
-            f.startAfter &&
-            f.startBefore
-          ) {
+          if (preset === "custom" && f.startAfter && f.startBefore) {
             const after = new Date(f.startAfter);
             const before = new Date(f.startBefore);
             return sd >= after && sd <= before;
@@ -445,20 +438,13 @@ export function ViewDetailPage() {
 
     const dueDateEffective =
       f.dueDate.length &&
-      !(
-        f.dueDate.includes("custom") &&
-        (!f.dueAfter || !f.dueBefore)
-      );
+      !(f.dueDate.includes("custom") && (!f.dueAfter || !f.dueBefore));
     if (dueDateEffective) {
       list = list.filter((i) => {
         const td = i.target_date ? new Date(i.target_date) : null;
         if (!td) return false;
         return f.dueDate.some((preset) => {
-          if (
-            preset === "custom" &&
-            f.dueAfter &&
-            f.dueBefore
-          ) {
+          if (preset === "custom" && f.dueAfter && f.dueBefore) {
             const after = new Date(f.dueAfter);
             const before = new Date(f.dueBefore);
             return td >= after && td <= before;

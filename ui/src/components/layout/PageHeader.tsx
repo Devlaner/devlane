@@ -2460,12 +2460,6 @@ function ProjectSavedViewDetailHeader({
           onOpen={setFiltersDropdownOpen}
         />
         <ProjectSavedViewDisplayDropdown />
-        <Link
-          to={`/${workspaceSlug}/analytics/work-items`}
-          className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
-        >
-          <IconBarChart /> Analytics
-        </Link>
         <Link to={`${baseUrl}/views/${viewId}?create=1`}>
           <Button size="sm" className="gap-1.5 text-[13px] font-medium">
             <IconPlus /> Add work item
