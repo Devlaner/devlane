@@ -17,6 +17,8 @@ import {
   CreateViewModal,
   ModuleFiltersPanel,
 } from "../workspace-views";
+import { ProjectSavedViewDisplayDropdown } from "../project-saved-view/ProjectSavedViewDisplayDropdown";
+import { ProjectSavedViewMoreMenu } from "../project-saved-view/ProjectSavedViewMoreMenu";
 import { DateRangeModal } from "../workspace-views/DateRangeModal";
 import { CreateModuleModal } from "../CreateModuleModal";
 import { workspaceService } from "../../services/workspaceService";
@@ -31,8 +33,7 @@ import type {
   ModuleApiResponse,
   WorkspaceMemberApiResponse,
 } from "../../api/types";
-
-const PROJECT_VIEWS_FILTER_EVENT = "project-views-filter-change";
+import { PROJECT_VIEWS_FILTER_EVENT } from "../../lib/projectViewsEvents";
 
 export type ProjectSection =
   | "issues"
@@ -2253,15 +2254,241 @@ function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Project saved view detail (Plane-style: work items + issues toolbar + breadcrumb)
+// ---------------------------------------------------------------------------
+
+function ProjectSavedViewDetailHeader({
+  workspaceSlug,
+  projectId,
+  projectName,
+  viewId,
+  issueCount: _issueCount,
+}: {
+  workspaceSlug: string;
+  projectId: string;
+  projectName: string;
+  viewId: string;
+  issueCount: number;
+}) {
+  void _issueCount;
+  const navigate = useNavigate();
+  const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
+  const issuesUrl = `${baseUrl}/issues`;
+  const [viewTitle, setViewTitle] = useState<string>("…");
+  const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
+  const [projectSearch, setProjectSearch] = useState("");
+  const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
+  const projectDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const v = await viewService.get(workspaceSlug, viewId);
+        if (!cancelled) setViewTitle(v?.name?.trim() ? v.name : "View");
+      } catch {
+        if (!cancelled) setViewTitle("View");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug, viewId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    projectService
+      .list(workspaceSlug)
+      .then((list) => {
+        if (!cancelled) setProjects(list ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setProjects([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        projectDropdownRef.current &&
+        !projectDropdownRef.current.contains(e.target as Node)
+      ) {
+        setProjectDropdownOpen(false);
+      }
+    };
+    if (projectDropdownOpen) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [projectDropdownOpen]);
+
+  const handleSelectProject = (targetProjectId: string) => {
+    setProjectDropdownOpen(false);
+    if (targetProjectId === projectId) return;
+    const targetBase = `/${workspaceSlug}/projects/${targetProjectId}`;
+    navigate(`${targetBase}/views`);
+  };
+
+  const q = (s: string) => s.trim().toLowerCase();
+  const filteredProjects = projects.filter((p) => q(p.name).includes(q(projectSearch)));
+
+  return (
+    <>
+      <div
+        className="relative flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm"
+        ref={projectDropdownRef}
+      >
+        <Link
+          to={issuesUrl}
+          className="flex max-w-[40vw] items-center gap-1.5 truncate rounded-l-md border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
+        >
+          {projectName}
+        </Link>
+        <button
+          type="button"
+          onClick={() => setProjectDropdownOpen((o) => !o)}
+          className="flex h-8.5 w-8 shrink-0 items-center justify-center rounded-r-md border border-l-0 border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
+          aria-label="Select project"
+        >
+          <IconChevronDown />
+        </button>
+        {projectDropdownOpen && (
+          <div className="absolute left-0 top-full z-20 mt-1.5 w-64 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-1.5 shadow-(--shadow-raised)">
+            <div className="mb-1.5 flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
+              <span className="shrink-0 text-(--txt-icon-tertiary)">
+                <IconSearch />
+              </span>
+              <input
+                type="text"
+                placeholder="Search"
+                value={projectSearch}
+                onChange={(e) => setProjectSearch(e.target.value)}
+                className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
+              />
+            </div>
+            <div className="max-h-64 overflow-y-auto py-0.5">
+              {filteredProjects.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => handleSelectProject(p.id)}
+                  className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                >
+                  <span className="truncate">{p.name}</span>
+                  {p.id === projectId && (
+                    <span className="shrink-0 text-(--txt-primary)">
+                      <IconCheck />
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <span className="shrink-0 text-(--txt-tertiary)" aria-hidden>
+          /
+        </span>
+        <Link
+          to={`${baseUrl}/views`}
+          className="flex max-w-[28vw] shrink-0 items-center gap-1.5 truncate rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
+        >
+          <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
+            <IconViewsPlane />
+          </span>
+          Views
+        </Link>
+        <span className="shrink-0 text-(--txt-tertiary)" aria-hidden>
+          /
+        </span>
+        <div className="flex min-w-0 max-w-[36vw] items-center gap-1.5 truncate rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 font-medium text-(--txt-primary)">
+          <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
+            <IconViewsPlane />
+          </span>
+          <span className="truncate">{viewTitle}</span>
+        </div>
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-1">
+        <button
+          type="button"
+          className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--brand-default) hover:bg-(--bg-layer-2-hover)"
+          aria-label="List view"
+          title="List view"
+        >
+          <IconList />
+        </button>
+        <button
+          type="button"
+          className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+          aria-label="Kanban"
+          title="Kanban"
+        >
+          <IconColumns />
+        </button>
+        <Link
+          to={`${baseUrl}/board`}
+          className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+          aria-label="Board"
+          title="Board"
+        >
+          <IconLayoutGrid />
+        </Link>
+        <button
+          type="button"
+          className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+          aria-label="Calendar"
+          title="Calendar"
+        >
+          <IconCalendar />
+        </button>
+        <button
+          type="button"
+          className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+          aria-label="Gallery"
+          title="Gallery"
+        >
+          <IconGrid />
+        </button>
+        <div className="mx-1 w-px self-stretch bg-(--border-subtle)" />
+        <button
+          type="button"
+          className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+        >
+          <IconFilter /> Filters <IconChevronDown />
+        </button>
+        <ProjectSavedViewDisplayDropdown />
+        <Link
+          to={`/${workspaceSlug}/analytics/work-items`}
+          className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
+        >
+          <IconBarChart /> Analytics
+        </Link>
+        <Link to={`${baseUrl}/views/${viewId}?create=1`}>
+          <Button size="sm" className="gap-1.5 text-[13px] font-medium">
+            <IconPlus /> Add work item
+          </Button>
+        </Link>
+        <ProjectSavedViewMoreMenu
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
+          viewId={viewId}
+        />
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // PageHeader
 // ---------------------------------------------------------------------------
 
 export function PageHeader() {
   const location = useLocation();
-  const { workspaceSlug, projectId, moduleId } = useParams<{
+  const { workspaceSlug, projectId, moduleId, viewId } = useParams<{
     workspaceSlug?: string;
     projectId?: string;
     moduleId?: string;
+    viewId?: string;
   }>();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
@@ -2368,13 +2595,20 @@ export function PageHeader() {
     projectBase &&
     moduleId &&
     pathname === `${projectBase}/modules/${moduleId}`;
-  const isViewsPage =
+  const pathNoTrailingSlash = pathname.replace(/\/+$/, "") || pathname;
+  const isViewsListPage =
+    projectBase && pathNoTrailingSlash === `${projectBase}/views`;
+  const isProjectSavedViewDetailPage =
     projectBase &&
-    (pathname === `${projectBase}/views` ||
-      pathname.startsWith(`${projectBase}/views/`));
+    !!viewId &&
+    pathNoTrailingSlash === `${projectBase}/views/${viewId}`;
   const isPagesPage = projectBase && pathname === `${projectBase}/pages`;
   const isProjectSection =
-    isIssuesPage || isCyclesPage || isModulesPage || isViewsPage || isPagesPage;
+    isIssuesPage ||
+    isCyclesPage ||
+    isModulesPage ||
+    isViewsListPage ||
+    isPagesPage;
   const isProjectDetail =
     workspaceSlug &&
     projectId &&
@@ -2396,11 +2630,11 @@ export function PageHeader() {
     ? "issues"
     : isCyclesPage
       ? "cycles"
-      : isModulesPage
-        ? "modules"
-        : isViewsPage
-          ? "views"
-          : isPagesPage
+        : isModulesPage
+          ? "modules"
+          : isViewsListPage
+            ? "views"
+            : isPagesPage
             ? "pages"
             : null;
 
@@ -2433,6 +2667,22 @@ export function PageHeader() {
         projectName={project.name}
         moduleId={module.id}
         moduleName={module.name}
+      />
+    );
+  } else if (
+    isProjectSavedViewDetailPage &&
+    workspaceSlug &&
+    projectId &&
+    viewId &&
+    project
+  ) {
+    content = (
+      <ProjectSavedViewDetailHeader
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        projectName={project.name}
+        viewId={viewId}
+        issueCount={projectIssueCount}
       />
     );
   } else if (
