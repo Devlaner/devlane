@@ -28,10 +28,7 @@ export function countSavedViewFilters(view: IssueViewApiResponse): number {
 
       const startEffective =
         f.startDate.length > 0 &&
-        !(
-          f.startDate.includes("custom") &&
-          (!f.startAfter || !f.startBefore)
-        );
+        !(f.startDate.includes("custom") && (!f.startAfter || !f.startBefore));
       if (startEffective) count++;
 
       const dueEffective =

@@ -361,7 +361,10 @@ export function ViewsPage() {
       void loadPageData();
     };
     window.addEventListener(PROJECT_VIEWS_CREATE_EVENT, handleOpenCreate);
-    window.addEventListener(PROJECT_VIEWS_EDIT_EVENT, handleOpenEdit as EventListener);
+    window.addEventListener(
+      PROJECT_VIEWS_EDIT_EVENT,
+      handleOpenEdit as EventListener,
+    );
     window.addEventListener(PROJECT_VIEWS_REFRESH_EVENT, handleRefresh);
     return () => {
       window.removeEventListener(PROJECT_VIEWS_CREATE_EVENT, handleOpenCreate);

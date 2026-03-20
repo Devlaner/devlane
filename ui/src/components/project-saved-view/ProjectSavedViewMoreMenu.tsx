@@ -127,11 +127,7 @@ export function ProjectSavedViewMoreMenu({
 
   const deleteView = async () => {
     setOpen(false);
-    if (
-      !window.confirm(
-        "Delete this view? This cannot be undone.",
-      )
-    ) {
+    if (!window.confirm("Delete this view? This cannot be undone.")) {
       return;
     }
     setBusy(true);

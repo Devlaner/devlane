@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components -- Context file exports hooks + provider */
+
 import {
   createContext,
   useContext,
@@ -25,7 +27,11 @@ type ProjectSavedViewDisplayContextValue = {
 const ProjectSavedViewDisplayContext =
   createContext<ProjectSavedViewDisplayContextValue | null>(null);
 
-export function ProjectSavedViewDisplayProvider({ children }: { children: ReactNode }) {
+export function ProjectSavedViewDisplayProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const { workspaceSlug, projectId, viewId } = useParams<{
     workspaceSlug?: string;
     projectId?: string;
@@ -56,9 +62,9 @@ export function ProjectSavedViewDisplayProvider({ children }: { children: ReactN
     try {
       const raw = localStorage.getItem(storageKey);
       const parsed = parsePersistedSavedViewDisplay(raw);
-      setSettings(parsed ?? cloneDefaultSettings());
+      queueMicrotask(() => setSettings(parsed ?? cloneDefaultSettings()));
     } catch {
-      setSettings(cloneDefaultSettings());
+      queueMicrotask(() => setSettings(cloneDefaultSettings()));
     }
   }, [storageKey]);
 

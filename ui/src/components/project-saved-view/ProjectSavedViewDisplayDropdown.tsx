@@ -205,9 +205,7 @@ export function ProjectSavedViewDisplayDropdown() {
                     value={opt.value}
                     label={opt.label}
                     selected={settings.groupBy === opt.value}
-                    onSelect={(v) =>
-                      setSettings((p) => ({ ...p, groupBy: v }))
-                    }
+                    onSelect={(v) => setSettings((p) => ({ ...p, groupBy: v }))}
                   />
                 ))}
               </div>
@@ -226,9 +224,7 @@ export function ProjectSavedViewDisplayDropdown() {
                     value={opt.value}
                     label={opt.label}
                     selected={settings.orderBy === opt.value}
-                    onSelect={(v) =>
-                      setSettings((p) => ({ ...p, orderBy: v }))
-                    }
+                    onSelect={(v) => setSettings((p) => ({ ...p, orderBy: v }))}
                   />
                 ))}
               </div>

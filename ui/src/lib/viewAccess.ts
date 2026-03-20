@@ -8,7 +8,9 @@ export type ViewAccessMeta = {
 };
 
 // Normalize different backend representations (string enums or ints).
-export function getViewAccessMeta(view: IssueViewApiResponse): ViewAccessMeta | null {
+export function getViewAccessMeta(
+  view: IssueViewApiResponse,
+): ViewAccessMeta | null {
   if (typeof view.access === "string") {
     const normalized = view.access.toLowerCase();
     if (normalized === "public") return { label: "Public", tone: "public" };

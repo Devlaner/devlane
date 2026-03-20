@@ -82,7 +82,10 @@ export const viewService = {
     );
   },
 
-  async publish(workspaceSlug: string, viewId: string): Promise<IssueViewApiResponse> {
+  async publish(
+    workspaceSlug: string,
+    viewId: string,
+  ): Promise<IssueViewApiResponse> {
     try {
       const { data } = await apiClient.post<IssueViewApiResponse>(
         `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/publish/`,
