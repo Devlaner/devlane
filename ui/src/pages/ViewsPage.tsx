@@ -1,16 +1,24 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type SVGProps,
+} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Input, Modal } from "../components/ui";
+import { Dropdown } from "../components/work-item";
 import { useWorkspaceViewsState } from "../contexts/WorkspaceViewsStateContext";
 import { useAuth } from "../contexts/AuthContext";
 import { workspaceService } from "../services/workspaceService";
 import { projectService } from "../services/projectService";
 import { viewService } from "../services/viewService";
+import { getViewAccessMeta } from "../lib/viewAccess";
+import { countSavedViewFilters } from "../lib/viewFilterCount";
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
   IssueViewApiResponse,
-  ProjectMemberApiResponse,
   WorkspaceMemberApiResponse,
 } from "../api/types";
 
@@ -26,7 +34,190 @@ type ProjectViewsFilters = {
 };
 
 const PROJECT_VIEWS_FILTER_EVENT = "project-views-filter-change";
-const PROJECT_MEMBER_ROLE_MIN_CREATE = 10;
+const PROJECT_VIEWS_CREATE_EVENT = "project-views-create-open";
+const PROJECT_VIEWS_EDIT_EVENT = "project-views-edit-open";
+const PROJECT_VIEWS_REFRESH_EVENT = "project-views-refresh";
+
+function IconLayers(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      {...props}
+    >
+      <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
+      <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" />
+      <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" />
+    </svg>
+  );
+}
+
+function IconGlobe(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      {...props}
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+      <path d="M2 12h20" />
+    </svg>
+  );
+}
+
+function IconLock(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      {...props}
+    >
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+}
+
+function IconMoreVertical(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+      {...props}
+    >
+      <circle cx="12" cy="5" r="1.5" />
+      <circle cx="12" cy="12" r="1.5" />
+      <circle cx="12" cy="19" r="1.5" />
+    </svg>
+  );
+}
+
+function IconPencil(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      {...props}
+    >
+      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+      <path d="m15 5 4 4" />
+    </svg>
+  );
+}
+
+function IconExternalTab(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      {...props}
+    >
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
+}
+
+function IconLinkChain(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      {...props}
+    >
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  );
+}
+
+function IconTrash(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      {...props}
+    >
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  );
+}
+
+function IconStar(props: SVGProps<SVGSVGElement> & { filled?: boolean }) {
+  const { filled, ...rest } = props;
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      {...rest}
+    >
+      <polygon points="12 2 15 9 22 9 17 14 19 21 12 17 5 21 7 14 2 9 9 9" />
+    </svg>
+  );
+}
 
 function getProjectViewsFavoritesKey(workspaceId: string, projectId: string) {
   return `project-view-favorites:${workspaceId}:${projectId}`;
@@ -42,25 +233,6 @@ function readFavorites(key: string): string[] {
   } catch {
     return [];
   }
-}
-
-type AccessBadge = {
-  label: "Public" | "Private";
-  tone: "public" | "private";
-};
-
-function resolveAccessBadge(view: IssueViewApiResponse): AccessBadge | null {
-  if (typeof view.access === "string") {
-    if (view.access.toLowerCase() === "public")
-      return { label: "Public", tone: "public" };
-    if (view.access.toLowerCase() === "private")
-      return { label: "Private", tone: "private" };
-  }
-  if (typeof view.access === "number") {
-    if (view.access === 1) return { label: "Public", tone: "public" };
-    if (view.access === 0) return { label: "Private", tone: "private" };
-  }
-  return null;
 }
 
 function userInitial(name: string): string {
@@ -92,6 +264,8 @@ export function ViewsPage() {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [copyingId, setCopyingId] = useState<string | null>(null);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [viewMenuOpenId, setViewMenuOpenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ProjectViewsFilters>({
     query: "",
@@ -102,9 +276,6 @@ export function ViewsPage() {
     createdByIds: [],
   });
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
-  const [projectMembers, setProjectMembers] = useState<
-    ProjectMemberApiResponse[]
-  >([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
   const loadPageData = useCallback(() => {
@@ -126,7 +297,7 @@ export function ViewsPage() {
         setProject(p ?? null);
         setViews(list ?? []);
         setMembers(mem ?? []);
-        setProjectMembers(projectMem ?? []);
+        void projectMem;
         const serverFavorites = (list ?? [])
           .filter((v) => v.is_favorite)
           .map((v) => v.id);
@@ -139,7 +310,6 @@ export function ViewsPage() {
         setProject(null);
         setViews([]);
         setMembers([]);
-        setProjectMembers([]);
         setLoadError(
           "Unable to load project views right now. Please refresh and try again.",
         );
@@ -149,17 +319,41 @@ export function ViewsPage() {
       });
   }, [workspaceSlug, projectId]);
 
+  const openEdit = useCallback((view: IssueViewApiResponse) => {
+    setEditOpenId(view.id);
+    setEditTitle(view.name ?? "");
+    setEditDescription(view.description ?? "");
+    setError(null);
+  }, []);
+
   useEffect(() => {
     void loadPageData();
   }, [loadPageData]);
 
   useEffect(() => {
     const handleOpenCreate = () => setCreateOpen(true);
-    window.addEventListener("project-views-create-open", handleOpenCreate);
-    return () => {
-      window.removeEventListener("project-views-create-open", handleOpenCreate);
+    const handleOpenEdit = (e: Event) => {
+      const ce = e as CustomEvent<{ viewId?: string }>;
+      const id = ce.detail?.viewId;
+      if (!id) return;
+      const target = views.find((v) => v.id === id);
+      if (target) openEdit(target);
     };
-  }, []);
+    const handleRefresh = () => {
+      void loadPageData();
+    };
+    window.addEventListener(PROJECT_VIEWS_CREATE_EVENT, handleOpenCreate);
+    window.addEventListener(PROJECT_VIEWS_EDIT_EVENT, handleOpenEdit as EventListener);
+    window.addEventListener(PROJECT_VIEWS_REFRESH_EVENT, handleRefresh);
+    return () => {
+      window.removeEventListener(PROJECT_VIEWS_CREATE_EVENT, handleOpenCreate);
+      window.removeEventListener(
+        PROJECT_VIEWS_EDIT_EVENT,
+        handleOpenEdit as EventListener,
+      );
+      window.removeEventListener(PROJECT_VIEWS_REFRESH_EVENT, handleRefresh);
+    };
+  }, [views, loadPageData, openEdit]);
 
   useEffect(() => {
     if (!workspace?.id || !projectId) return;
@@ -190,25 +384,51 @@ export function ViewsPage() {
     };
   }, []);
 
-  const toggleFavorite = (viewId: string) => {
+  const toggleFavorite = async (viewId: string) => {
     if (!workspace?.id || !projectId || !workspaceSlug) return;
     const key = getProjectViewsFavoritesKey(workspace.id, projectId);
-    const isRemoving = favoriteIds.includes(viewId);
-    const next = isRemoving
-      ? favoriteIds.filter((id) => id !== viewId)
-      : [...favoriteIds, viewId];
-    setFavoriteIds(next);
+
+    const prevFavoriteIds = favoriteIds;
+    const wasFavorited = prevFavoriteIds.includes(viewId);
+    const nextFavoriteIds = wasFavorited
+      ? prevFavoriteIds.filter((id) => id !== viewId)
+      : [...prevFavoriteIds, viewId];
+    const nextIsFavorite = !wasFavorited;
+
+    // Optimistic UI update so the star responds immediately.
+    setFavoriteIds(nextFavoriteIds);
+    setViews((prev) =>
+      prev.map((v) =>
+        v.id === viewId ? { ...v, is_favorite: nextIsFavorite } : v,
+      ),
+    );
     try {
-      localStorage.setItem(key, JSON.stringify(next));
+      localStorage.setItem(key, JSON.stringify(nextFavoriteIds));
     } catch {
       // ignore local storage issues
     }
-    const action = isRemoving
-      ? viewService.removeFavorite(workspaceSlug, viewId)
-      : viewService.addFavorite(workspaceSlug, viewId);
-    void action.catch(() => {
-      // keep local favorite as fallback if server endpoint is unavailable
-    });
+
+    try {
+      if (wasFavorited) {
+        await viewService.removeFavorite(workspaceSlug, viewId);
+      } else {
+        await viewService.addFavorite(workspaceSlug, viewId);
+      }
+    } catch {
+      // Roll back optimistic UI if the server update fails.
+      setError("Unable to update favorite view.");
+      setFavoriteIds(prevFavoriteIds);
+      setViews((prev) =>
+        prev.map((v) =>
+          v.id === viewId ? { ...v, is_favorite: wasFavorited } : v,
+        ),
+      );
+      try {
+        localStorage.setItem(key, JSON.stringify(prevFavoriteIds));
+      } catch {
+        // ignore local storage issues
+      }
+    }
   };
 
   const filteredViews = useMemo(() => {
@@ -297,6 +517,7 @@ export function ViewsPage() {
       setTitle("");
       setDescription("");
       await loadPageData();
+      window.dispatchEvent(new CustomEvent(PROJECT_VIEWS_REFRESH_EVENT));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create view.");
     } finally {
@@ -313,13 +534,6 @@ export function ViewsPage() {
     [views, deleteOpenId],
   );
 
-  const openEdit = (view: IssueViewApiResponse) => {
-    setEditOpenId(view.id);
-    setEditTitle(view.name ?? "");
-    setEditDescription(view.description ?? "");
-    setError(null);
-  };
-
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!workspaceSlug || !activeView || !editTitle.trim()) return;
@@ -332,6 +546,7 @@ export function ViewsPage() {
       });
       setEditOpenId(null);
       await loadPageData();
+      window.dispatchEvent(new CustomEvent(PROJECT_VIEWS_REFRESH_EVENT));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update view.");
     } finally {
@@ -347,6 +562,7 @@ export function ViewsPage() {
       await viewService.remove(workspaceSlug, deleteView.id);
       setDeleteOpenId(null);
       await loadPageData();
+      window.dispatchEvent(new CustomEvent(PROJECT_VIEWS_REFRESH_EVENT));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete view.");
     } finally {
@@ -368,30 +584,23 @@ export function ViewsPage() {
     }
   };
 
-  const formatDate = (value?: string) =>
-    value
-      ? new Date(value).toLocaleDateString("en-US", {
-          month: "short",
-          day: "2-digit",
-          year: "numeric",
-        })
-      : "—";
-
-  const IconStar = ({ filled }: { filled: boolean }) => (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill={filled ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <polygon points="12 2 15 9 22 9 17 14 19 21 12 17 5 21 7 14 2 9 9 9" />
-    </svg>
-  );
+  const handleTogglePublish = async (view: IssueViewApiResponse) => {
+    if (!workspaceSlug) return;
+    setPublishingId(view.id);
+    setError(null);
+    try {
+      if (view.anchor) {
+        await viewService.unpublish(workspaceSlug, view.id);
+      } else {
+        await viewService.publish(workspaceSlug, view.id);
+      }
+      await loadPageData();
+    } catch {
+      setError("Unable to update publish status for this view.");
+    } finally {
+      setPublishingId(null);
+    }
+  };
 
   const memberNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -413,21 +622,32 @@ export function ViewsPage() {
     return map;
   }, [members]);
 
-  const myProjectRole = useMemo(() => {
-    if (!user) return null;
-    const current = projectMembers.find((m) => m.member_id === user.id);
-    return current?.role ?? null;
-  }, [projectMembers, user]);
-
   const viewsFeatureEnabled = project?.issue_views_view !== false;
-  const canCreateViews =
-    !!user &&
-    viewsFeatureEnabled &&
-    typeof myProjectRole === "number" &&
-    myProjectRole >= PROJECT_MEMBER_ROLE_MIN_CREATE;
+  const canCreateViews = !!user && viewsFeatureEnabled;
 
   const noViewsAtAll = views.length === 0;
   const hasFilteredOutResults = views.length > 0 && sortedViews.length === 0;
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isTyping =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable;
+      if (isTyping) return;
+      if (e.key.toLowerCase() === "c" && canCreateViews) {
+        e.preventDefault();
+        setCreateOpen(true);
+      }
+      if (e.key.toLowerCase() === "r" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent(PROJECT_VIEWS_REFRESH_EVENT));
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [canCreateViews]);
 
   if (loading) {
     return (
@@ -510,129 +730,190 @@ export function ViewsPage() {
         ) : (
           <div className="min-h-0 flex-1 overflow-auto">
             <div className="divide-y divide-(--border-subtle)">
-              {sortedViews.map((v) => (
-                <div
-                  key={v.id}
-                  className="flex items-center justify-between px-6 py-4 hover:bg-(--bg-layer-1-hover)"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+              {sortedViews.map((v) => {
+                const accessMeta = getViewAccessMeta(v);
+                const filterCount = countSavedViewFilters(v);
+                const filterLabel =
+                  filterCount === 1 ? "1 filter" : `${filterCount} filters`;
+                const creatorLabel =
+                  memberNameById.get(v.owned_by_id) ??
+                  v.owned_by?.trim() ??
+                  "Member";
+                const creatorAvatar = memberAvatarById.get(v.owned_by_id);
+                const isFav =
+                  typeof v.is_favorite === "boolean"
+                    ? v.is_favorite
+                    : favoriteIds.includes(v.id);
+                const isPublic = accessMeta?.tone === "public";
+
+                return (
+                  <div
+                    key={v.id}
+                    className="group flex items-center justify-between gap-4 px-6 py-3.5 transition-colors duration-150 hover:bg-(--bg-layer-1-hover)"
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                      <span
+                        className="shrink-0 text-(--txt-icon-tertiary)"
+                        aria-hidden
+                      >
+                        <IconLayers className="size-4" />
+                      </span>
                       <button
                         type="button"
-                        className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
-                        aria-label={
-                          favoriteIds.includes(v.id)
-                            ? "Unfavorite view"
-                            : "Favorite view"
+                        onClick={() =>
+                          navigate(
+                            `/${workspaceSlug}/projects/${projectId}/views/${v.id}`,
+                          )
                         }
-                        onClick={() => toggleFavorite(v.id)}
+                        className="min-w-0 truncate text-left text-sm font-medium text-(--txt-primary) hover:underline"
                       >
-                        <IconStar filled={favoriteIds.includes(v.id)} />
+                        {v.name}
                       </button>
-                      <div className="min-w-0">
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
+                      <span
+                        className="pointer-events-none shrink-0 select-none rounded-full border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-0.5 text-[11px] font-medium text-(--txt-secondary) shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-opacity duration-150 max-sm:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                        title={filterLabel}
+                      >
+                        {filterLabel}
+                      </span>
+                      <span
+                        className="shrink-0 text-(--txt-icon-tertiary)"
+                        title={
+                          isPublic
+                            ? "Public"
+                            : accessMeta
+                              ? accessMeta.tone === "restricted"
+                                ? "Restricted"
+                                : "Private"
+                              : "Access"
+                        }
+                      >
+                        {isPublic ? (
+                          <IconGlobe className="size-4" strokeWidth={1.75} />
+                        ) : (
+                          <IconLock className="size-4" strokeWidth={1.75} />
+                        )}
+                      </span>
+                      <span
+                        className="shrink-0"
+                        title={`Created by ${creatorLabel}`}
+                      >
+                        {creatorAvatar ? (
+                          <img
+                            src={creatorAvatar}
+                            alt=""
+                            className="size-6 rounded-full object-cover ring-1 ring-(--border-subtle)"
+                          />
+                        ) : (
+                          <span className="inline-flex size-6 items-center justify-center rounded-full bg-teal-600/90 text-[11px] font-semibold text-white ring-1 ring-teal-700/30 dark:bg-teal-500/85">
+                            {userInitial(creatorLabel)}
+                          </span>
+                        )}
+                      </span>
+                      <button
+                        type="button"
+                        className="inline-flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
+                        aria-label={isFav ? "Unfavorite view" : "Favorite view"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void toggleFavorite(v.id);
+                        }}
+                      >
+                        <IconStar filled={isFav} className="size-4.5" />
+                      </button>
+                      <Dropdown
+                        id={`project-view-row-${v.id}`}
+                        openId={viewMenuOpenId}
+                        onOpen={setViewMenuOpenId}
+                        label="View actions"
+                        icon={<IconMoreVertical className="size-4" />}
+                        displayValue=""
+                        align="right"
+                        triggerClassName="inline-flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
+                        triggerContent={
+                          <>
+                            <span className="sr-only">View actions</span>
+                            <IconMoreVertical className="size-4" />
+                          </>
+                        }
+                        panelClassName="min-w-[220px] overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
+                      >
                         <button
                           type="button"
-                          onClick={() =>
-                            navigate(
-                              `/${workspaceSlug}/projects/${projectId}/views/${v.id}`,
-                            )
-                          }
-                          className="max-w-120 truncate text-left text-sm font-medium text-(--txt-primary) hover:underline"
+                          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                          onClick={() => {
+                            setViewMenuOpenId(null);
+                            openEdit(v);
+                          }}
                         >
-                          {v.name}
+                          <IconPencil className="shrink-0 text-(--txt-icon-tertiary)" />
+                          Edit
                         </button>
-                        <p className="mt-0.5 truncate text-xs text-(--txt-secondary)">
-                          {v.description || "Saved project view"}
-                        </p>
-                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                          {(() => {
-                            const accessBadge = resolveAccessBadge(v);
-                            if (!accessBadge) return null;
-                            return (
-                              <span
-                                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${
-                                  accessBadge.tone === "public"
-                                    ? "border-emerald-300/60 bg-emerald-500/10 text-emerald-700"
-                                    : "border-slate-300/70 bg-slate-500/10 text-slate-700"
-                                }`}
-                              >
-                                {accessBadge.label}
-                              </span>
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                          onClick={() => {
+                            setViewMenuOpenId(null);
+                            window.open(
+                              `/${workspaceSlug}/projects/${projectId}/views/${v.id}`,
+                              "_blank",
                             );
-                          })()}
-                          {v.anchor ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-fuchsia-300/60 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] font-medium text-fuchsia-700">
-                              <span className="size-1.5 rounded-full bg-fuchsia-600" />
-                              Live
-                            </span>
-                          ) : null}
-                          {favoriteIds.includes(v.id) ? (
-                            <span className="inline-flex items-center rounded-full border border-amber-300/60 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-                              Favorite
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="mt-1 flex items-center gap-2 text-xs text-(--txt-tertiary)">
-                          {memberAvatarById.get(v.owned_by_id) ? (
-                            <img
-                              src={memberAvatarById.get(v.owned_by_id)}
-                              alt=""
-                              className="size-4 rounded-full object-cover"
-                            />
-                          ) : (
-                            <span className="inline-flex size-4 items-center justify-center rounded-full bg-(--bg-layer-2) text-[9px] font-semibold text-(--txt-secondary)">
-                              {userInitial(
-                                memberNameById.get(v.owned_by_id) ?? "Member",
-                              )}
-                            </span>
-                          )}
-                          <span>
-                            Created by {memberNameById.get(v.owned_by_id) ?? "Member"}
+                          }}
+                        >
+                          <IconExternalTab className="shrink-0 text-(--txt-icon-tertiary)" />
+                          Open in new tab
+                        </button>
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                          onClick={() => {
+                            setViewMenuOpenId(null);
+                            void copyViewLink(v.id);
+                          }}
+                        >
+                          <IconLinkChain className="shrink-0 text-(--txt-icon-tertiary)" />
+                          {copyingId === v.id ? "Copied!" : "Copy link"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!canCreateViews || publishingId === v.id}
+                          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover) disabled:cursor-not-allowed disabled:opacity-50"
+                          onClick={() => {
+                            setViewMenuOpenId(null);
+                            void handleTogglePublish(v);
+                          }}
+                        >
+                          <span className="inline-flex w-3.5 shrink-0 justify-center text-xs text-(--txt-icon-tertiary)">
+                            ●
                           </span>
-                        </div>
-                      </div>
+                          {publishingId === v.id
+                            ? "Updating…"
+                            : v.anchor
+                              ? "Unpublish"
+                              : "Publish"}
+                        </button>
+                        <div
+                          className="my-0.5 h-px bg-(--border-subtle)"
+                          role="separator"
+                        />
+                        <button
+                          type="button"
+                          disabled={!canCreateViews}
+                          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-(--txt-danger-primary) hover:bg-(--bg-layer-1-hover) disabled:cursor-not-allowed disabled:opacity-50"
+                          onClick={() => {
+                            setViewMenuOpenId(null);
+                            setDeleteOpenId(v.id);
+                          }}
+                        >
+                          <IconTrash className="shrink-0" />
+                          Delete
+                        </button>
+                      </Dropdown>
                     </div>
                   </div>
-                  <div className="ml-4 flex shrink-0 items-center gap-2 text-xs text-(--txt-tertiary)">
-                    <span>Updated {formatDate(v.updated_at)}</span>
-                    <button
-                      type="button"
-                      onClick={() => copyViewLink(v.id)}
-                      className="rounded px-2 py-1 text-(--txt-secondary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-primary)"
-                    >
-                      {copyingId === v.id ? "Copied" : "Copy link"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        window.open(
-                          `/${workspaceSlug}/projects/${projectId}/views/${v.id}`,
-                          "_blank",
-                        )
-                      }
-                      className="rounded px-2 py-1 text-(--txt-secondary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-primary)"
-                    >
-                      Open
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!canCreateViews}
-                      onClick={() => openEdit(v)}
-                      className="rounded px-2 py-1 text-(--txt-secondary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-primary) disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!canCreateViews}
-                      onClick={() => setDeleteOpenId(v.id)}
-                      className="rounded px-2 py-1 text-(--txt-danger-primary) hover:bg-(--bg-layer-2-hover) disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

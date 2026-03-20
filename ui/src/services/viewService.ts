@@ -73,4 +73,35 @@ export const viewService = {
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/favorite`,
     );
   },
+
+  async publish(workspaceSlug: string, viewId: string): Promise<IssueViewApiResponse> {
+    try {
+      const { data } = await apiClient.post<IssueViewApiResponse>(
+        `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/publish/`,
+      );
+      return data;
+    } catch {
+      const { data } = await apiClient.post<IssueViewApiResponse>(
+        `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/publish`,
+      );
+      return data;
+    }
+  },
+
+  async unpublish(
+    workspaceSlug: string,
+    viewId: string,
+  ): Promise<IssueViewApiResponse> {
+    try {
+      const { data } = await apiClient.post<IssueViewApiResponse>(
+        `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/unpublish/`,
+      );
+      return data;
+    } catch {
+      const { data } = await apiClient.post<IssueViewApiResponse>(
+        `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/unpublish`,
+      );
+      return data;
+    }
+  },
 };

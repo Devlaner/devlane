@@ -162,3 +162,53 @@ func (h *IssueViewHandler) Delete(c *gin.Context) {
 	}
 	c.Status(http.StatusNoContent)
 }
+
+// AddFavorite favorites a saved view for the current user.
+// POST /api/workspaces/:slug/views/:viewId/favorite
+func (h *IssueViewHandler) AddFavorite(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	slug := c.Param("slug")
+	viewID, err := uuid.Parse(c.Param("viewId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid view ID"})
+		return
+	}
+	if err := h.IssueView.AddFavorite(c.Request.Context(), slug, viewID, user.ID); err != nil {
+		if err == service.ErrIssueViewNotFound || err == service.ErrProjectForbidden {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to favorite view"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// RemoveFavorite removes the current user's favorite on a saved view.
+// DELETE /api/workspaces/:slug/views/:viewId/favorite
+func (h *IssueViewHandler) RemoveFavorite(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	slug := c.Param("slug")
+	viewID, err := uuid.Parse(c.Param("viewId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid view ID"})
+		return
+	}
+	if err := h.IssueView.RemoveFavorite(c.Request.Context(), slug, viewID, user.ID); err != nil {
+		if err == service.ErrIssueViewNotFound || err == service.ErrProjectForbidden {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove favorite"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}

@@ -1,19 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { viewService } from "../services/viewService";
-import type { IssueViewApiResponse } from "../api/types";
-
-function resolveAccessLabel(view: IssueViewApiResponse): string | null {
-  if (typeof view.access === "string") {
-    if (view.access.toLowerCase() === "public") return "Public";
-    if (view.access.toLowerCase() === "private") return "Private";
-  }
-  if (typeof view.access === "number") {
-    if (view.access === 1) return "Public";
-    if (view.access === 0) return "Private";
-  }
-  return null;
-}
+import { issueService } from "../services/issueService";
+import type { IssueApiResponse, IssueViewApiResponse } from "../api/types";
+import { getViewAccessMeta } from "../lib/viewAccess";
 
 export function ViewDetailPage() {
   const { workspaceSlug, projectId, viewId } = useParams<{
@@ -22,18 +12,24 @@ export function ViewDetailPage() {
     viewId: string;
   }>();
   const [view, setView] = useState<IssueViewApiResponse | null>(null);
+  const [issues, setIssues] = useState<IssueApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [issuesLoading, setIssuesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!workspaceSlug || !viewId) {
-      setLoading(false);
-      setError("View not found.");
+      queueMicrotask(() => {
+        setLoading(false);
+        setError("View not found.");
+      });
       return;
     }
     let cancelled = false;
-    setLoading(true);
-    setError(null);
+    queueMicrotask(() => {
+      setLoading(true);
+      setError(null);
+    });
     viewService
       .get(workspaceSlug, viewId)
       .then((data) => {
@@ -52,6 +48,87 @@ export function ViewDetailPage() {
       cancelled = true;
     };
   }, [workspaceSlug, viewId]);
+
+  useEffect(() => {
+    if (!workspaceSlug || !projectId) return;
+    let cancelled = false;
+    queueMicrotask(() => setIssuesLoading(true));
+    issueService
+      .list(workspaceSlug, projectId, { limit: 200 })
+      .then((data) => {
+        if (!cancelled) setIssues(data ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setIssues([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIssuesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug, projectId]);
+
+  const filteredIssues = useMemo(() => {
+    if (!view) return [];
+    let list = [...issues];
+    const rawFilters = view.filters;
+    const filters =
+      rawFilters && typeof rawFilters === "object"
+        ? (rawFilters as Record<string, unknown>)
+        : {};
+
+    const readList = (key: string) => {
+      const value = filters[key];
+      if (Array.isArray(value)) return value.map(String);
+      if (typeof value === "string" && value.trim().length > 0)
+        return value
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      return [] as string[];
+    };
+
+    const stateIds = readList("state");
+    const assigneeIds = readList("assignee");
+    const createdByIds = readList("created_by");
+    const labelIds = readList("label");
+    const priority = readList("priority");
+
+    if (stateIds.length) {
+      list = list.filter((i) => i.state_id && stateIds.includes(i.state_id));
+    }
+    if (assigneeIds.length) {
+      list = list.filter((i) =>
+        i.assignee_ids?.some((id) => assigneeIds.includes(id)),
+      );
+    }
+    if (createdByIds.length) {
+      list = list.filter(
+        (i) => i.created_by_id && createdByIds.includes(i.created_by_id),
+      );
+    }
+    if (labelIds.length) {
+      list = list.filter((i) => i.label_ids?.some((id) => labelIds.includes(id)));
+    }
+    if (priority.length) {
+      list = list.filter((i) => i.priority && priority.includes(i.priority));
+    }
+
+    const queryText =
+      (view.query &&
+      typeof view.query === "object" &&
+      typeof (view.query as Record<string, unknown>).search === "string"
+        ? ((view.query as Record<string, unknown>).search as string)
+        : null) ??
+      null;
+    if (queryText && queryText.trim()) {
+      const q = queryText.trim().toLowerCase();
+      list = list.filter((i) => i.name.toLowerCase().includes(q));
+    }
+
+    return list;
+  }, [issues, view]);
 
   if (loading) {
     return (
@@ -89,15 +166,17 @@ export function ViewDetailPage() {
           {view.description || "No description"}
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          {resolveAccessLabel(view) ? (
+          {getViewAccessMeta(view) ? (
             <span
               className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${
-                resolveAccessLabel(view) === "Public"
+                getViewAccessMeta(view)?.tone === "public"
                   ? "border-emerald-300/60 bg-emerald-500/10 text-emerald-700"
-                  : "border-slate-300/70 bg-slate-500/10 text-slate-700"
+                  : getViewAccessMeta(view)?.tone === "private"
+                    ? "border-slate-300/70 bg-slate-500/10 text-slate-700"
+                    : "border-violet-300/60 bg-violet-500/10 text-violet-700"
               }`}
             >
-              {resolveAccessLabel(view)}
+              {getViewAccessMeta(view)?.label}
             </span>
           ) : null}
           {view.anchor ? (
@@ -125,7 +204,42 @@ export function ViewDetailPage() {
               {new Date(view.updated_at).toLocaleString()}
             </span>
           </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-(--txt-tertiary)">Filtered work items</span>
+            <span className="text-(--txt-primary)">
+              {issuesLoading ? "Loading..." : filteredIssues.length}
+            </span>
+          </div>
         </div>
+        {filteredIssues.length > 0 && (
+          <div className="mt-5 overflow-hidden rounded-lg border border-(--border-subtle)">
+            <div className="max-h-80 overflow-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead className="sticky top-0 bg-(--bg-layer-1)">
+                  <tr className="text-left text-(--txt-tertiary)">
+                    <th className="px-3 py-2 font-medium">Name</th>
+                    <th className="px-3 py-2 font-medium">Priority</th>
+                    <th className="px-3 py-2 font-medium">Updated</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredIssues.slice(0, 50).map((issue) => (
+                    <tr
+                      key={issue.id}
+                      className="border-t border-(--border-subtle) text-(--txt-primary)"
+                    >
+                      <td className="px-3 py-2">{issue.name}</td>
+                      <td className="px-3 py-2">{issue.priority ?? "none"}</td>
+                      <td className="px-3 py-2">
+                        {new Date(issue.updated_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
         {workspaceSlug && projectId && (
           <Link
             to={`/${workspaceSlug}/projects/${projectId}/views`}
