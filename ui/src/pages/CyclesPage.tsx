@@ -850,7 +850,7 @@ export function CyclesPage() {
         <button
           type="button"
           onClick={() => setActiveCycleExpanded((e) => !e)}
-          className="flex w-full min-h-[44px] items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+          className="flex w-full min-h-[44px] items-center gap-2 bg-(--bg-layer-1-hover) px-4 py-2.5 text-left text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
         >
           <IconCycle />
           Active cycle
@@ -1270,7 +1270,7 @@ export function CyclesPage() {
         <button
           type="button"
           onClick={() => setUpcomingOpen((o) => !o)}
-          className="flex min-h-[44px] w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+          className="flex min-h-[44px] w-full items-center gap-2 bg-(--bg-layer-1-hover) px-4 py-2.5 text-left text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
         >
           <span className="flex h-2 w-2 rounded-full border-2 border-dashed border-(--brand-default) bg-transparent" />
           Upcoming cycle {upcomingCycles.length}
@@ -1292,7 +1292,7 @@ export function CyclesPage() {
         <button
           type="button"
           onClick={() => setCompletedOpen((o) => !o)}
-          className="flex min-h-[44px] w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+          className="flex min-h-[44px] w-full items-center gap-2 bg-(--bg-layer-1-hover) px-4 py-2.5 text-left text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
         >
           <span className="flex h-2 w-2 rounded-full bg-(--success-default)" />
           Completed cycle {completedCycles.length}
