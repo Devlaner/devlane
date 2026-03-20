@@ -5,7 +5,7 @@ import {
   useState,
   type SVGProps,
 } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button, Input, Modal } from "../components/ui";
 import { Dropdown } from "../components/work-item";
 import { useWorkspaceViewsState } from "../contexts/WorkspaceViewsStateContext";
@@ -14,7 +14,14 @@ import { workspaceService } from "../services/workspaceService";
 import { projectService } from "../services/projectService";
 import { viewService } from "../services/viewService";
 import { getViewAccessMeta } from "../lib/viewAccess";
+import { ISSUE_VIEW_FAVORITES_CHANGED_EVENT } from "../lib/issueViewFavoritesEvents";
 import { countSavedViewFilters } from "../lib/viewFilterCount";
+import {
+  PROJECT_VIEWS_CREATE_EVENT,
+  PROJECT_VIEWS_EDIT_EVENT,
+  PROJECT_VIEWS_FILTER_EVENT,
+  PROJECT_VIEWS_REFRESH_EVENT,
+} from "../lib/projectViewsEvents";
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
@@ -32,11 +39,6 @@ type ProjectViewsFilters = {
   createdBefore: string | null;
   createdByIds: string[];
 };
-
-const PROJECT_VIEWS_FILTER_EVENT = "project-views-filter-change";
-const PROJECT_VIEWS_CREATE_EVENT = "project-views-create-open";
-const PROJECT_VIEWS_EDIT_EVENT = "project-views-edit-open";
-const PROJECT_VIEWS_REFRESH_EVENT = "project-views-refresh";
 
 function IconLayers(props: SVGProps<SVGSVGElement>) {
   return (
@@ -223,18 +225,6 @@ function getProjectViewsFavoritesKey(workspaceId: string, projectId: string) {
   return `project-view-favorites:${workspaceId}:${projectId}`;
 }
 
-function readFavorites(key: string): string[] {
-  try {
-    const raw = localStorage.getItem(key);
-    const arr = raw ? (JSON.parse(raw) as unknown) : [];
-    return Array.isArray(arr)
-      ? arr.filter((x): x is string => typeof x === "string")
-      : [];
-  } catch {
-    return [];
-  }
-}
-
 function userInitial(name: string): string {
   const trimmed = name.trim();
   return trimmed ? trimmed.charAt(0).toUpperCase() : "?";
@@ -242,6 +232,7 @@ function userInitial(name: string): string {
 
 export function ViewsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { workspaceSlug, projectId } = useParams<{
     workspaceSlug: string;
     projectId: string;
@@ -267,6 +258,9 @@ export function ViewsPage() {
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [viewMenuOpenId, setViewMenuOpenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [favoriteActionError, setFavoriteActionError] = useState<string | null>(
+    null,
+  );
   const [filters, setFilters] = useState<ProjectViewsFilters>({
     query: "",
     favoritesOnly: false,
@@ -298,11 +292,21 @@ export function ViewsPage() {
         setViews(list ?? []);
         setMembers(mem ?? []);
         void projectMem;
-        const serverFavorites = (list ?? [])
-          .filter((v) => v.is_favorite)
+        setFavoriteActionError(null);
+        // Server is source of truth (omit `is_favorite` for non-favorites → treat as false).
+        const serverFavoriteIds = (list ?? [])
+          .filter((v) => v.is_favorite === true)
           .map((v) => v.id);
-        if (serverFavorites.length > 0) {
-          setFavoriteIds(serverFavorites);
+        setFavoriteIds(serverFavoriteIds);
+        if (w?.id) {
+          try {
+            localStorage.setItem(
+              getProjectViewsFavoritesKey(w.id, projectId),
+              JSON.stringify(serverFavoriteIds),
+            );
+          } catch {
+            // ignore
+          }
         }
       })
       .catch(() => {
@@ -325,6 +329,20 @@ export function ViewsPage() {
     setEditDescription(view.description ?? "");
     setError(null);
   }, []);
+
+  const editFromUrl = searchParams.get("edit");
+  useEffect(() => {
+    if (!editFromUrl || views.length === 0) return;
+    const target = views.find((v) => v.id === editFromUrl);
+    const next = new URLSearchParams(searchParams);
+    next.delete("edit");
+    if (!target) {
+      setSearchParams(next, { replace: true });
+      return;
+    }
+    openEdit(target);
+    setSearchParams(next, { replace: true });
+  }, [editFromUrl, views, openEdit, searchParams, setSearchParams]);
 
   useEffect(() => {
     void loadPageData();
@@ -356,17 +374,6 @@ export function ViewsPage() {
   }, [views, loadPageData, openEdit]);
 
   useEffect(() => {
-    if (!workspace?.id || !projectId) return;
-    const key = getProjectViewsFavoritesKey(workspace.id, projectId);
-    setFavoriteIds((prev) => {
-      const local = readFavorites(key);
-      if (prev.length === 0) return local;
-      const merged = Array.from(new Set([...prev, ...local]));
-      return merged;
-    });
-  }, [workspace?.id, projectId, views]);
-
-  useEffect(() => {
     const handler = (e: Event) => {
       const ce = e as CustomEvent<ProjectViewsFilters>;
       if (!ce.detail) return;
@@ -395,6 +402,7 @@ export function ViewsPage() {
       : [...prevFavoriteIds, viewId];
     const nextIsFavorite = !wasFavorited;
 
+    setFavoriteActionError(null);
     // Optimistic UI update so the star responds immediately.
     setFavoriteIds(nextFavoriteIds);
     setViews((prev) =>
@@ -414,9 +422,14 @@ export function ViewsPage() {
       } else {
         await viewService.addFavorite(workspaceSlug, viewId);
       }
+      window.dispatchEvent(
+        new CustomEvent(ISSUE_VIEW_FAVORITES_CHANGED_EVENT, {
+          detail: { workspaceSlug },
+        }),
+      );
     } catch {
       // Roll back optimistic UI if the server update fails.
-      setError("Unable to update favorite view.");
+      setFavoriteActionError("Unable to update favorite. Please try again.");
       setFavoriteIds(prevFavoriteIds);
       setViews((prev) =>
         prev.map((v) =>
@@ -682,6 +695,11 @@ export function ViewsPage() {
   return (
     <>
       <div className="-mt-(--padding-page) -mr-(--padding-page) -mb-(--padding-page) flex min-h-0 flex-1 flex-col">
+        {favoriteActionError ? (
+          <div className="mx-6 mt-3 rounded-md border border-(--border-danger) bg-(--bg-danger-subtle) px-3 py-2 text-sm text-(--txt-danger-primary)">
+            {favoriteActionError}
+          </div>
+        ) : null}
         {noViewsAtAll ? (
           <div className="flex min-h-0 flex-1 items-start justify-center overflow-auto px-8 py-10">
             <div className="w-full max-w-5xl">
