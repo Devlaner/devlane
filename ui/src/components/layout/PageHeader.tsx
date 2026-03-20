@@ -891,7 +891,7 @@ function ModuleDetailHeader({
 
   return (
     <>
-      <div className="flex min-w-0 flex-1 items-center gap-2 text-sm text-(--txt-primary)">
+      <div className="flex min-w-0 flex-1 items-center gap-1 text-sm text-(--txt-primary)">
         <Link
           to={baseUrl}
           className="flex shrink-0 items-center gap-1.5 truncate font-medium text-(--txt-secondary) hover:text-(--txt-primary) hover:underline"
@@ -2141,7 +2141,7 @@ function ProjectSectionHeader({
 
   return (
     <>
-      <div className="relative flex items-center gap-2 text-sm" ref={projectDropdownRef}>
+      <div className="relative flex items-center gap-1 text-sm" ref={projectDropdownRef}>
         <Link
           to={issuesUrl}
           className="flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
@@ -2645,7 +2645,7 @@ function ProjectSavedViewDetailHeader({
   return (
     <>
       <div
-        className="relative flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm"
+        className="relative flex min-w-0 flex-1 flex-wrap items-center gap-1 text-sm"
         ref={projectDropdownRef}
       >
         <Link
