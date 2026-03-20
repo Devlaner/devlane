@@ -12,6 +12,19 @@ export function parseISODateLocal(iso: string): Date {
   return new Date(y, mo, d);
 }
 
+/**
+ * Parse ISO date string (YYYY-MM-DD or RFC3339) as a local date for display.
+ * Extracts the date part and treats it as date-only to avoid timezone off-by-one
+ * when the backend sends midnight-UTC timestamps.
+ */
+export function parseISODateForDisplay(iso: string | null | undefined): Date | null {
+  const s = iso?.trim();
+  if (!s) return null;
+  const datePart = s.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return null;
+  return parseISODateLocal(datePart);
+}
+
 /** Format a Date (local) as YYYY-MM-DD (date-only). */
 export function toISODateLocal(date: Date): string {
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;

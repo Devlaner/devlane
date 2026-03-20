@@ -602,18 +602,23 @@ export function Sidebar() {
     }
     let cancelled = false;
     const run = async () => {
-      const entries: Array<{ projectId: string; cycle: CycleApiResponse }> = [];
-      for (const proj of projects) {
-        const favIds = loadCycleFavoriteIds(workspaceSlug, proj.id);
-        if (!favIds.length) continue;
-        const cycles = await cycleService.list(workspaceSlug, proj.id);
-        const favSet = new Set(favIds);
-        for (const c of cycles ?? []) {
-          if (favSet.has(c.id)) {
-            entries.push({ projectId: proj.id, cycle: c });
-          }
-        }
-      }
+      const projectsWithFavs = projects
+        .map((proj) => ({
+          proj,
+          favIds: loadCycleFavoriteIds(workspaceSlug, proj.id),
+        }))
+        .filter(({ favIds }) => favIds.length > 0);
+
+      const results = await Promise.all(
+        projectsWithFavs.map(async ({ proj, favIds }) => {
+          const cycles = await cycleService.list(workspaceSlug, proj.id);
+          const favSet = new Set(favIds);
+          return (cycles ?? [])
+            .filter((c) => favSet.has(c.id))
+            .map((c) => ({ projectId: proj.id, cycle: c }));
+        }),
+      );
+      const entries = results.flat();
       if (!cancelled) setFavoriteCycles(entries);
     };
     void run();

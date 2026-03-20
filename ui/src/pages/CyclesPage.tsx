@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Avatar, Badge } from '../components/ui';
+import { Avatar, Badge, Button, Modal } from '../components/ui';
 import { UpdateCycleModal } from '../components/UpdateCycleModal';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
@@ -23,7 +23,7 @@ import {
   PROJECT_CYCLES_REFRESH_EVENT,
 } from '../lib/projectCyclesEvents';
 import { useCycleFavorites } from '../hooks/useCycleFavorites';
-import { parseISODateLocal } from '../lib/dateOnly';
+import { parseISODateForDisplay, parseISODateLocal } from '../lib/dateOnly';
 import { cn, getImageUrl } from '../lib/utils';
 
 function pad2(n: number): string {
@@ -49,12 +49,14 @@ function formatCycleDateRange(c: CycleApiResponse): string | null {
   const endRaw = c.end_date?.trim();
   if (!startRaw && !endRaw) return null;
   const parse = (iso: string) => {
-    const d = parseISODateLocal(iso);
+    const d = parseISODateForDisplay(iso);
+    if (!d) return null;
     return { m: d.getMonth(), d: d.getDate(), y: d.getFullYear() };
   };
   if (startRaw && endRaw) {
     const s = parse(startRaw);
     const e = parse(endRaw);
+    if (!s || !e) return null;
     if (s.y === e.y && s.m === e.m) {
       return `${MONTH_ABBR[s.m]} ${pad2(s.d)} - ${pad2(e.d)}, ${s.y}`;
     }
@@ -64,6 +66,7 @@ function formatCycleDateRange(c: CycleApiResponse): string | null {
     return `${MONTH_ABBR[s.m]} ${pad2(s.d)}, ${s.y} - ${MONTH_ABBR[e.m]} ${pad2(e.d)}, ${e.y}`;
   }
   const single = parse((startRaw ?? endRaw)!);
+  if (!single) return null;
   return `${MONTH_ABBR[single.m]} ${pad2(single.d)}, ${single.y}`;
 }
 
@@ -543,7 +546,11 @@ export function CyclesPage() {
     });
   }, [filteredCycles]);
 
-  const activeCycle = filteredCycles.find((c) => c.status === 'started' || c.status === 'current');
+  const activeCycles = useMemo(
+    () => filteredCycles.filter((c) => c.status === 'started' || c.status === 'current'),
+    [filteredCycles],
+  );
+  const activeCycle = activeCycles[0] ?? null; // First one for backward compat with stats/cards
   const activeCycleIssues = useMemo(() => {
     if (!activeCycle) return [];
     return issues.filter((i) => i.cycle_ids?.includes(activeCycle.id));
@@ -836,10 +843,8 @@ export function CyclesPage() {
     stateId ? (states.find((s) => s.id === stateId)?.name ?? '—') : '—';
 
   function formatShortDate(iso: string | null | undefined): string | null {
-    if (!iso?.trim()) return null;
-    const t = Date.parse(iso);
-    if (Number.isNaN(t)) return null;
-    const d = new Date(t);
+    const d = parseISODateForDisplay(iso);
+    if (!d) return null;
     return `${MONTH_ABBR[d.getMonth()]} ${pad2(d.getDate())}`;
   }
 
@@ -853,12 +858,12 @@ export function CyclesPage() {
           className="flex w-full min-h-[44px] items-center gap-2 bg-(--bg-layer-1-hover) px-4 py-2.5 text-left text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
         >
           <IconCycle />
-          Active cycle
+          {activeCycles.length === 1 ? 'Active cycle' : 'Active cycles'}
           <span className="ml-auto flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
             {activeCycleExpanded ? <IconChevronUp /> : <IconChevronDown />}
           </span>
         </button>
-        {activeCycleExpanded && activeCycle && (
+        {activeCycleExpanded && activeCycles.length > 0 && (
           <>
             {/* Sub-header: progress ring, cycle name, More details, date range, timezone, avatar, favorite, menu */}
             <div className="flex flex-wrap items-center gap-3 border-t border-(--border-subtle) px-4 py-3">
@@ -1256,12 +1261,29 @@ export function CyclesPage() {
                 </div>
               </div>
             </div>
+            {activeCycles.length > 1 && (
+              <div className="border-t border-(--border-subtle) px-4 py-3">
+                <p className="mb-2 text-[13px] font-medium text-(--txt-secondary)">
+                  Also in progress:
+                </p>
+                <ul className="space-y-1.5">
+                  {activeCycles.slice(1).map((c) => (
+                    <li key={c.id}>
+                      <Link
+                        to={cyclePath(c)}
+                        className="flex items-center gap-2 text-sm text-(--txt-secondary) hover:text-(--txt-primary)"
+                      >
+                        <span>{c.name}</span>
+                        <span className="text-[12px] text-(--txt-tertiary)">
+                          {formatCycleDateRange(c) ?? 'No dates'}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </>
-        )}
-        {activeCycleExpanded && !activeCycle && (
-          <p className="border-t border-(--border-subtle) px-4 py-3 text-sm text-(--txt-tertiary)">
-            No active cycle.
-          </p>
         )}
       </section>
 
@@ -1325,59 +1347,55 @@ export function CyclesPage() {
         }}
       />
 
-      {deleteCycleId && (
-        <DeleteCycleConfirm
-          cycleName={cycles.find((c) => c.id === deleteCycleId)?.name ?? 'Cycle'}
-          onClose={() => setDeleteCycleId(null)}
-          onConfirm={async () => {
-            if (!workspaceSlug || !projectId || !deleteCycleId) return;
-            try {
-              await cycleService.delete(workspaceSlug, projectId, deleteCycleId);
-              setCycles((prev) => prev.filter((c) => c.id !== deleteCycleId));
-              window.dispatchEvent(
-                new CustomEvent(PROJECT_CYCLES_REFRESH_EVENT, {
-                  detail: { workspaceSlug, projectId },
-                }),
-              );
-            } catch {
-              // ignore
-            }
-            setDeleteCycleId(null);
-          }}
-        />
-      )}
+      <DeleteCycleConfirm
+        open={!!deleteCycleId}
+        cycleName={cycles.find((c) => c.id === deleteCycleId)?.name ?? 'Cycle'}
+        onClose={() => setDeleteCycleId(null)}
+        onConfirm={async () => {
+          if (!workspaceSlug || !projectId || !deleteCycleId) return;
+          try {
+            await cycleService.delete(workspaceSlug, projectId, deleteCycleId);
+            setCycles((prev) => prev.filter((c) => c.id !== deleteCycleId));
+            window.dispatchEvent(
+              new CustomEvent(PROJECT_CYCLES_REFRESH_EVENT, {
+                detail: { workspaceSlug, projectId },
+              }),
+            );
+          } catch {
+            // ignore
+          }
+          setDeleteCycleId(null);
+        }}
+      />
     </div>
   );
 }
 
 function DeleteCycleConfirm({
+  open,
   cycleName,
   onClose,
   onConfirm,
 }: {
+  open: boolean;
   cycleName: string;
   onClose: () => void;
   onConfirm: () => Promise<void>;
 }) {
   const [deleting, setDeleting] = useState(false);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog">
-      <div className="mx-4 w-full max-w-sm rounded-lg border border-(--border-subtle) bg-(--bg-surface-1) p-4 shadow-lg">
-        <p className="text-sm text-(--txt-primary)">
-          Delete &quot;{cycleName}&quot;? This cannot be undone.
-        </p>
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            type="button"
-            className="rounded-md border border-(--border-subtle) px-3 py-1.5 text-sm font-medium text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)"
-            onClick={onClose}
-            disabled={deleting}
-          >
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={`Delete "${cycleName}"?`}
+      className="max-w-sm"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={deleting}>
             Cancel
-          </button>
-          <button
-            type="button"
-            className="rounded-md bg-(--bg-danger-primary) px-3 py-1.5 text-sm font-medium text-(--txt-on-color) hover:bg-(--bg-danger-primary-hover) disabled:opacity-50"
+          </Button>
+          <Button
+            variant="danger"
             onClick={async () => {
               setDeleting(true);
               await onConfirm();
@@ -1386,9 +1404,11 @@ function DeleteCycleConfirm({
             disabled={deleting}
           >
             {deleting ? 'Deleting…' : 'Delete'}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </>
+      }
+    >
+      <p className="text-sm text-(--txt-secondary)">This cannot be undone.</p>
+    </Modal>
   );
 }
