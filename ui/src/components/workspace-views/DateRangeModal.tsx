@@ -1,27 +1,27 @@
-import { useState, useEffect } from "react";
-import { Modal } from "../ui";
-import { parseISODateLocal, toISODateLocal } from "../../lib/dateOnly";
+import { useState, useEffect } from 'react';
+import { Modal } from '../ui';
+import { parseISODateLocal, toISODateLocal } from '../../lib/dateOnly';
 
 const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 function formatDisplay(d: Date): string {
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   });
 }
 
@@ -77,16 +77,8 @@ export function DateRangeModal({
   const rightYear = leftMonth === 11 ? leftYear + 1 : leftYear;
 
   const handleApply = () => {
-    const a = new Date(
-      startDate.getFullYear(),
-      startDate.getMonth(),
-      startDate.getDate(),
-    );
-    const b = new Date(
-      endDate.getFullYear(),
-      endDate.getMonth(),
-      endDate.getDate(),
-    );
+    const a = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const b = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
     if (a.getTime() > b.getTime()) {
       setStartDate(b);
       setEndDate(a);
@@ -97,22 +89,15 @@ export function DateRangeModal({
     onClose();
   };
 
-  const daysInMonth = (year: number, month: number) =>
-    new Date(year, month + 1, 0).getDate();
-  const firstDay = (year: number, month: number) =>
-    new Date(year, month, 1).getDay();
+  const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+  const firstDay = (year: number, month: number) => new Date(year, month, 1).getDay();
 
   const renderCalendar = (year: number, month: number, isStart: boolean) => {
     const days = daysInMonth(year, month);
     const first = firstDay(year, month);
     const cells: React.ReactNode[] = [];
     for (let i = 0; i < first; i++)
-      cells.push(
-        <td
-          key={`empty-${i}`}
-          className="w-[2rem] min-w-[2rem] max-w-[2rem] p-0.5"
-        />,
-      );
+      cells.push(<td key={`empty-${i}`} className="w-[2rem] min-w-[2rem] max-w-[2rem] p-0.5" />);
     for (let d = 1; d <= days; d++) {
       const date = new Date(year, month, d);
       const iso = toISODateLocal(date);
@@ -120,32 +105,19 @@ export function DateRangeModal({
         ? toISODateLocal(startDate) === iso
         : toISODateLocal(endDate) === iso;
       const inRange =
-        date >=
-          new Date(
-            startDate.getFullYear(),
-            startDate.getMonth(),
-            startDate.getDate(),
-          ) &&
-        date <=
-          new Date(
-            endDate.getFullYear(),
-            endDate.getMonth(),
-            endDate.getDate(),
-          );
+        date >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) &&
+        date <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
       cells.push(
-        <td
-          key={d}
-          className="w-[2rem] min-w-[2rem] max-w-[2rem] p-0.5 align-middle"
-        >
+        <td key={d} className="w-[2rem] min-w-[2rem] max-w-[2rem] p-0.5 align-middle">
           <button
             type="button"
             onClick={() => (isStart ? setStartDate(date) : setEndDate(date))}
             className={`flex h-8 w-8 min-h-8 min-w-8 shrink-0 items-center justify-center rounded-full text-sm leading-none overflow-hidden ${
               selected
-                ? "bg-(--brand-default) text-white"
+                ? 'bg-(--brand-default) text-white'
                 : inRange
-                  ? "bg-(--brand-200) text-(--brand-default)"
-                  : "text-(--txt-primary) hover:bg-(--bg-layer-2)"
+                  ? 'bg-(--brand-200) text-(--brand-default)'
+                  : 'text-(--txt-primary) hover:bg-(--bg-layer-2)'
             }`}
           >
             <span className="truncate">{d}</span>
@@ -198,7 +170,7 @@ export function DateRangeModal({
         <table className="table-fixed w-full min-w-[14rem] text-left text-sm">
           <thead>
             <tr className="text-(--txt-tertiary)">
-              {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
+              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
                 <th
                   key={day}
                   className="w-[2rem] min-w-[2rem] max-w-[2rem] p-0.5 text-center font-normal text-xs"
@@ -241,12 +213,8 @@ export function DateRangeModal({
     >
       <div className="px-5 py-4">
         <div className="flex gap-6">
-          <div className="min-w-[14rem]">
-            {renderCalendar(leftYear, leftMonth, true)}
-          </div>
-          <div className="min-w-[14rem]">
-            {renderCalendar(rightYear, rightMonth, false)}
-          </div>
+          <div className="min-w-[14rem]">{renderCalendar(leftYear, leftMonth, true)}</div>
+          <div className="min-w-[14rem]">{renderCalendar(rightYear, rightMonth, false)}</div>
         </div>
         <p className="mt-4 text-sm text-(--txt-secondary)">
           After: {formatDisplay(startDate)} Before: {formatDisplay(endDate)}

@@ -1,9 +1,9 @@
-import { useEffect, useState, useMemo } from "react";
-import { createPortal } from "react-dom";
-import { Button } from "./ui";
-import { issueService } from "../services/issueService";
-import { moduleService } from "../services/moduleService";
-import type { IssueApiResponse } from "../api/types";
+import { useEffect, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import { Button } from './ui';
+import { issueService } from '../services/issueService';
+import { moduleService } from '../services/moduleService';
+import type { IssueApiResponse } from '../api/types';
 
 const IconSearch = () => (
   <svg
@@ -43,7 +43,7 @@ export function AddExistingWorkItemModal({
   projectIdentifier,
   onAdded,
 }: AddExistingWorkItemModalProps) {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [projectIssues, setProjectIssues] = useState<IssueApiResponse[]>([]);
   const [moduleIssueIds, setModuleIssueIds] = useState<Set<string>>(new Set());
@@ -67,7 +67,7 @@ export function AddExistingWorkItemModal({
         setSelectedIds(new Set());
       })
       .catch(() => {
-        if (!cancelled) setError("Failed to load work items");
+        if (!cancelled) setError('Failed to load work items');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -79,7 +79,7 @@ export function AddExistingWorkItemModal({
 
   useEffect(() => {
     if (!open) {
-      setSearchQuery("");
+      setSearchQuery('');
       setSelectedIds(new Set());
     }
   }, [open]);
@@ -93,7 +93,7 @@ export function AddExistingWorkItemModal({
     const q = searchQuery.trim().toLowerCase();
     return availableIssues.filter((issue) => {
       const id = displayId(issue, projectIdentifier);
-      const name = (issue.name ?? "").toLowerCase();
+      const name = (issue.name ?? '').toLowerCase();
       return id.toLowerCase().includes(q) || name.includes(q);
     });
   }, [availableIssues, searchQuery, projectIdentifier]);
@@ -127,20 +127,13 @@ export function AddExistingWorkItemModal({
         await Promise.all(
           ids
             .slice(i, i + BATCH)
-            .map((issueId) =>
-              moduleService.addIssue(
-                workspaceSlug,
-                projectId,
-                moduleId,
-                issueId,
-              ),
-            ),
+            .map((issueId) => moduleService.addIssue(workspaceSlug, projectId, moduleId, issueId)),
         );
       }
       onAdded?.();
       onClose();
     } catch {
-      setError("Failed to add work items");
+      setError('Failed to add work items');
     } finally {
       setSubmitting(false);
     }
@@ -149,8 +142,8 @@ export function AddExistingWorkItemModal({
   const selectedCount = selectedIds.size;
   const selectionLabel =
     selectedCount === 0
-      ? "No work items selected"
-      : `${selectedCount} work item${selectedCount === 1 ? "" : "s"} selected`;
+      ? 'No work items selected'
+      : `${selectedCount} work item${selectedCount === 1 ? '' : 's'} selected`;
 
   const footer = (
     <div className="flex w-full items-center justify-between">
@@ -185,11 +178,7 @@ export function AddExistingWorkItemModal({
       aria-modal="true"
       aria-labelledby="add-existing-work-item-title"
     >
-      <div
-        className="absolute inset-0 bg-(--bg-backdrop)"
-        onClick={onClose}
-        aria-hidden
-      />
+      <div className="absolute inset-0 bg-(--bg-backdrop)" onClick={onClose} aria-hidden />
       <div
         className="relative z-10 flex w-full max-w-md flex-col rounded-lg border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-overlay)"
         onClick={(e) => e.stopPropagation()}
@@ -217,18 +206,14 @@ export function AddExistingWorkItemModal({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4">
-          {error && (
-            <p className="mb-2 text-sm text-(--txt-danger-primary)">{error}</p>
-          )}
+          {error && <p className="mb-2 text-sm text-(--txt-danger-primary)">{error}</p>}
           {loading ? (
-            <p className="py-8 text-center text-sm text-(--txt-tertiary)">
-              Loading work items…
-            </p>
+            <p className="py-8 text-center text-sm text-(--txt-tertiary)">Loading work items…</p>
           ) : filteredIssues.length === 0 ? (
             <p className="py-8 text-center text-sm text-(--txt-tertiary)">
               {availableIssues.length === 0
-                ? "No other work items in this project."
-                : "No matching work items."}
+                ? 'No other work items in this project.'
+                : 'No matching work items.'}
             </p>
           ) : (
             <ul className="max-h-64 overflow-y-auto divide-y divide-(--border-subtle)">
@@ -249,12 +234,8 @@ export function AddExistingWorkItemModal({
                         aria-hidden
                       />
                       <span className="min-w-0 flex-1 truncate text-sm">
-                        <span className="font-medium text-(--txt-primary)">
-                          {id}
-                        </span>
-                        <span className="ml-2 text-(--txt-secondary)">
-                          {issue.name || "—"}
-                        </span>
+                        <span className="font-medium text-(--txt-primary)">{id}</span>
+                        <span className="ml-2 text-(--txt-secondary)">{issue.name || '—'}</span>
                       </span>
                     </label>
                   </li>
@@ -264,9 +245,7 @@ export function AddExistingWorkItemModal({
           )}
         </div>
 
-        <div className="flex w-full border-t border-(--border-subtle) px-5 py-4">
-          {footer}
-        </div>
+        <div className="flex w-full border-t border-(--border-subtle) px-5 py-4">{footer}</div>
       </div>
     </div>,
     document.body,

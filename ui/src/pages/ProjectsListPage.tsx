@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Avatar } from "../components/ui";
-import { CreateProjectModal } from "../components/CreateProjectModal";
-import { ProjectIconDisplay } from "../components/ProjectIconModal";
-import { getImageUrl } from "../lib/utils";
-import { workspaceService } from "../services/workspaceService";
-import { projectService } from "../services/projectService";
-import { favoriteService } from "../services/favoriteService";
-import { useFavorites } from "../contexts/FavoritesContext";
-import type { WorkspaceApiResponse, ProjectApiResponse } from "../api/types";
+import { useEffect, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Avatar } from '../components/ui';
+import { CreateProjectModal } from '../components/CreateProjectModal';
+import { ProjectIconDisplay } from '../components/ProjectIconModal';
+import { getImageUrl } from '../lib/utils';
+import { workspaceService } from '../services/workspaceService';
+import { projectService } from '../services/projectService';
+import { favoriteService } from '../services/favoriteService';
+import { useFavorites } from '../contexts/FavoritesContext';
+import type { WorkspaceApiResponse, ProjectApiResponse } from '../api/types';
 
 const MAX_AVATARS = 3;
 
@@ -34,21 +34,21 @@ const IconStar = ({ filled }: { filled: boolean }) => (
     width="16"
     height="16"
     viewBox="0 0 24 24"
-    fill={filled ? "currentColor" : "none"}
+    fill={filled ? 'currentColor' : 'none'}
     stroke="currentColor"
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
     aria-hidden
-    className={filled ? "text-amber-400" : ""}
+    className={filled ? 'text-amber-400' : ''}
   >
     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
   </svg>
 );
 
 function getCoverGradient(projectId: string): string {
-  const n = projectId.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  const hues = ["220", "260", "160", "30", "340"];
+  const n = projectId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const hues = ['220', '260', '160', '30', '340'];
   const hue = hues[n % hues.length];
   return `linear-gradient(135deg, hsl(${hue}, 45%, 35%) 0%, hsl(${hue}, 55%, 25%) 100%)`;
 }
@@ -56,24 +56,22 @@ function getCoverGradient(projectId: string): string {
 export function ProjectsListPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const searchQuery = (searchParams.get("q") ?? "").toLowerCase().trim();
+  const searchQuery = (searchParams.get('q') ?? '').toLowerCase().trim();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [allProjects, setAllProjects] = useState<ProjectApiResponse[]>([]);
-  const [membersByProject, setMembersByProject] = useState<
-    Record<string, string[]>
-  >({});
+  const [membersByProject, setMembersByProject] = useState<Record<string, string[]>>({});
   const { favoriteProjectIds, setFavoriteProjectIds } = useFavorites();
-  const [favoriteRequestInFlight, setFavoriteRequestInFlight] = useState<
-    Record<string, boolean>
-  >({});
+  const [favoriteRequestInFlight, setFavoriteRequestInFlight] = useState<Record<string, boolean>>(
+    {},
+  );
   const [loading, setLoading] = useState(true);
-  const createProjectOpen = searchParams.get("createProject") === "1";
+  const createProjectOpen = searchParams.get('createProject') === '1';
 
   const closeCreateModal = () => {
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
-        next.delete("createProject");
+        next.delete('createProject');
         return next;
       },
       { replace: true },
@@ -165,9 +163,7 @@ export function ProjectsListPage() {
           .listMembers(workspaceSlug, p.id)
           .then((members) => ({
             projectId: p.id,
-            memberIds: (members ?? [])
-              .map((m) => m.member_id)
-              .filter(Boolean) as string[],
+            memberIds: (members ?? []).map((m) => m.member_id).filter(Boolean) as string[],
           }))
           .catch(() => ({ projectId: p.id, memberIds: [] as string[] })),
       ),
@@ -227,10 +223,7 @@ export function ProjectsListPage() {
           }> = memberIds
             .slice(0, MAX_AVATARS)
             .map((id) => ({ id, name: id.slice(0, 8), avatarUrl: null }));
-          const extraCount = Math.max(
-            0,
-            memberIds.length - visibleMembers.length,
-          );
+          const extraCount = Math.max(0, memberIds.length - visibleMembers.length);
 
           const coverUrl = getImageUrl(project.cover_image);
           return (
@@ -238,10 +231,7 @@ export function ProjectsListPage() {
               key={project.id}
               className="overflow-hidden rounded-xl bg-(--bg-surface-1) shadow-sm"
             >
-              <Link
-                to={`${baseUrl}/projects/${project.id}/issues`}
-                className="block no-underline"
-              >
+              <Link to={`${baseUrl}/projects/${project.id}/issues`} className="block no-underline">
                 {/* Cover image */}
                 <div
                   className="relative h-32 w-full shrink-0 rounded-t-xl overflow-hidden"
@@ -249,8 +239,8 @@ export function ProjectsListPage() {
                     coverUrl
                       ? {
                           backgroundImage: `url(${coverUrl})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
                         }
                       : { background: getCoverGradient(project.id) }
                   }
@@ -263,13 +253,11 @@ export function ProjectsListPage() {
                     className="absolute right-3 top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/30 backdrop-blur-sm text-white shadow-sm hover:bg-white/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 disabled:opacity-60 disabled:pointer-events-none"
                     aria-label={
                       favoriteProjectIds.includes(project.id)
-                        ? "Remove from favorites"
-                        : "Add to favorites"
+                        ? 'Remove from favorites'
+                        : 'Add to favorites'
                     }
                   >
-                    <IconStar
-                      filled={favoriteProjectIds.includes(project.id)}
-                    />
+                    <IconStar filled={favoriteProjectIds.includes(project.id)} />
                   </button>
                   {/* Overlay: icon + name + identifier, inside cover, no border */}
                   <div className="absolute bottom-4 left-4 z-10 flex items-center gap-3 px-1 py-1">
@@ -293,7 +281,7 @@ export function ProjectsListPage() {
                 {/* Description */}
                 <div className="px-4 py-3">
                   <p className="line-clamp-2 text-sm text-(--txt-secondary)">
-                    {project.description || "No description"}
+                    {project.description || 'No description'}
                   </p>
                 </div>
               </Link>
@@ -304,9 +292,7 @@ export function ProjectsListPage() {
                   className="flex min-w-0 flex-1 -space-x-2 no-underline"
                 >
                   {visibleMembers.length === 0 ? (
-                    <span className="text-xs text-(--txt-tertiary)">
-                      No members
-                    </span>
+                    <span className="text-xs text-(--txt-tertiary)">No members</span>
                   ) : (
                     <>
                       {visibleMembers.map((user) => (
@@ -341,9 +327,7 @@ export function ProjectsListPage() {
           );
         })}
       </div>
-      {projects.length === 0 && (
-        <p className="text-sm text-(--txt-tertiary)">No projects yet.</p>
-      )}
+      {projects.length === 0 && <p className="text-sm text-(--txt-tertiary)">No projects yet.</p>}
     </div>
   );
 }

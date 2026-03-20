@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   type SavedViewDisplayPropertyId,
   type SavedViewGroupBy,
   type SavedViewOrderBy,
   ALL_SAVED_VIEW_DISPLAY_PROPERTIES,
   SAVED_VIEW_DISPLAY_PROPERTY_LABELS,
-} from "../../lib/projectSavedViewDisplay";
-import { useProjectSavedViewDisplay } from "../../contexts/ProjectSavedViewDisplayContext";
-import { Button } from "../ui";
+} from '../../lib/projectSavedViewDisplay';
+import { useProjectSavedViewDisplay } from '../../contexts/ProjectSavedViewDisplayContext';
+import { Button } from '../ui';
 
 const IconChevronDown = () => (
   <svg
@@ -37,26 +37,26 @@ const IconCheck = () => (
   </svg>
 );
 
-type SectionId = "properties" | "group" | "order";
+type SectionId = 'properties' | 'group' | 'order';
 
 const GROUP_OPTIONS: { value: SavedViewGroupBy; label: string }[] = [
-  { value: "states", label: "States" },
-  { value: "priority", label: "Priority" },
-  { value: "cycle", label: "Cycle" },
-  { value: "module", label: "Module" },
-  { value: "labels", label: "Labels" },
-  { value: "assignees", label: "Assignees" },
-  { value: "created_by", label: "Created by" },
-  { value: "none", label: "None" },
+  { value: 'states', label: 'States' },
+  { value: 'priority', label: 'Priority' },
+  { value: 'cycle', label: 'Cycle' },
+  { value: 'module', label: 'Module' },
+  { value: 'labels', label: 'Labels' },
+  { value: 'assignees', label: 'Assignees' },
+  { value: 'created_by', label: 'Created by' },
+  { value: 'none', label: 'None' },
 ];
 
 const ORDER_OPTIONS: { value: SavedViewOrderBy; label: string }[] = [
-  { value: "manual", label: "Manual" },
-  { value: "last_created", label: "Last created" },
-  { value: "last_updated", label: "Last updated" },
-  { value: "start_date", label: "Start date" },
-  { value: "due_date", label: "Due date" },
-  { value: "priority", label: "Priority" },
+  { value: 'manual', label: 'Manual' },
+  { value: 'last_created', label: 'Last created' },
+  { value: 'last_updated', label: 'Last updated' },
+  { value: 'start_date', label: 'Start date' },
+  { value: 'due_date', label: 'Due date' },
+  { value: 'priority', label: 'Priority' },
 ];
 
 function CollapsibleSection(props: {
@@ -76,7 +76,7 @@ function CollapsibleSection(props: {
       >
         <span>{title}</span>
         <span
-          className={`text-(--txt-icon-tertiary) transition-transform ${expanded ? "rotate-180" : ""}`}
+          className={`text-(--txt-icon-tertiary) transition-transform ${expanded ? 'rotate-180' : ''}`}
         >
           <IconChevronDown />
         </span>
@@ -97,13 +97,13 @@ function RadioRow<T extends string>(props: {
     <button
       type="button"
       onClick={() => onSelect(value)}
-      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-1-hover) ${selected ? "bg-(--bg-layer-1-hover)" : ""}`}
+      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-1-hover) ${selected ? 'bg-(--bg-layer-1-hover)' : ''}`}
     >
       <span
         className={`flex size-4 shrink-0 items-center justify-center rounded-full border-2 ${
           selected
-            ? "border-(--brand-default) bg-(--brand-default) text-white"
-            : "border-(--border-strong)"
+            ? 'border-(--brand-default) bg-(--brand-default) text-white'
+            : 'border-(--border-strong)'
         }`}
       >
         {selected ? <IconCheck /> : null}
@@ -129,8 +129,8 @@ export function ProjectSavedViewDisplayDropdown() {
         setOpen(false);
       }
     };
-    if (open) document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    if (open) document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
   }, [open]);
 
   const toggleProperty = (id: SavedViewDisplayPropertyId) => {
@@ -181,8 +181,8 @@ export function ProjectSavedViewDisplayDropdown() {
                       onClick={() => toggleProperty(prop)}
                       className={`rounded-md border px-2 py-1 text-[12px] font-medium transition-colors ${
                         on
-                          ? "border-(--brand-default) bg-(--brand-default) text-white"
-                          : "border-(--border-subtle) bg-(--bg-layer-1) text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)"
+                          ? 'border-(--brand-default) bg-(--brand-default) text-white'
+                          : 'border-(--border-subtle) bg-(--bg-layer-1) text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)'
                       }`}
                     >
                       {SAVED_VIEW_DISPLAY_PROPERTY_LABELS[prop]}

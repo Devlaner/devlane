@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { FILTER_ICONS } from "./WorkspaceViewsFiltersData";
+import type { ReactNode } from 'react';
+import { FILTER_ICONS } from './WorkspaceViewsFiltersData';
 
 export interface CollapsibleSectionProps {
   title: string;
@@ -23,11 +23,7 @@ export function CollapsibleSection({
       >
         {title}
         <span className="text-(--txt-icon-tertiary)">
-          {controlledOpen ? (
-            <FILTER_ICONS.chevronUp />
-          ) : (
-            <FILTER_ICONS.chevronDown />
-          )}
+          {controlledOpen ? <FILTER_ICONS.chevronUp /> : <FILTER_ICONS.chevronDown />}
         </span>
       </button>
       {controlledOpen && <div className="pb-1">{children}</div>}

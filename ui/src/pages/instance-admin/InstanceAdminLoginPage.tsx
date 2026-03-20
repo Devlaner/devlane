@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button, IconEye, IconEyeOff, Input } from "../../components/ui";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button, IconEye, IconEyeOff, Input } from '../../components/ui';
 
-const INSTANCE_ADMIN_KEY = "devlane_instance_admin";
+const INSTANCE_ADMIN_KEY = 'devlane_instance_admin';
 
 const IconGlobe = () => (
   <svg
@@ -23,20 +23,20 @@ const IconGlobe = () => (
 );
 export function InstanceAdminLoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
+    setError('');
     // Mock: accept any non-empty email + password for instance admin
     if (email.trim() && password) {
-      sessionStorage.setItem(INSTANCE_ADMIN_KEY, "1");
-      navigate("/instance-admin/general", { replace: true });
+      sessionStorage.setItem(INSTANCE_ADMIN_KEY, '1');
+      navigate('/instance-admin/general', { replace: true });
     } else {
-      setError("Please enter your email and password.");
+      setError('Please enter your email and password.');
     }
   }
 
@@ -82,7 +82,7 @@ export function InstanceAdminLoginPage() {
               <div className="relative">
                 <input
                   id="instance-admin-password"
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
@@ -94,16 +94,12 @@ export function InstanceAdminLoginPage() {
                   type="button"
                   onClick={() => setShowPassword((p) => !p)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <IconEyeOff /> : <IconEye />}
                 </button>
               </div>
-              {error && (
-                <span className="text-xs text-(--txt-danger-primary)">
-                  {error}
-                </span>
-              )}
+              {error && <span className="text-xs text-(--txt-danger-primary)">{error}</span>}
             </div>
             <Button type="submit" className="w-full">
               Sign in

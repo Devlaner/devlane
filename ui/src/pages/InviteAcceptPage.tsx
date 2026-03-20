@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { Card, CardContent, Button } from "../components/ui";
-import { useAuth } from "../contexts/AuthContext";
-import { invitationService } from "../services/invitationService";
-import { workspaceService } from "../services/workspaceService";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Card, CardContent, Button } from '../components/ui';
+import { useAuth } from '../contexts/AuthContext';
+import { invitationService } from '../services/invitationService';
+import { workspaceService } from '../services/workspaceService';
 
 const IconCheck = () => (
   <svg
@@ -94,7 +94,7 @@ export function InviteAcceptPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
-  const token = searchParams.get("token") ?? "";
+  const token = searchParams.get('token') ?? '';
 
   const [invite, setInvite] = useState<{
     workspace_name: string;
@@ -106,13 +106,13 @@ export function InviteAcceptPage() {
   const [error, setError] = useState<string | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [ignoring, setIgnoring] = useState(false);
-  const [step, setStep] = useState<"invite" | "join">("invite");
-  const [joinEmail, setJoinEmail] = useState("");
+  const [step, setStep] = useState<'invite' | 'join'>('invite');
+  const [joinEmail, setJoinEmail] = useState('');
   const autoAcceptDone = useRef(false);
 
   useEffect(() => {
     if (!token.trim()) {
-      navigate("/", { replace: true });
+      navigate('/', { replace: true });
       return;
     }
     let cancelled = false;
@@ -122,7 +122,7 @@ export function InviteAcceptPage() {
         if (!cancelled) setInvite(data);
       })
       .catch(() => {
-        if (!cancelled) setError("Invite not found or expired.");
+        if (!cancelled) setError('Invite not found or expired.');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -139,7 +139,7 @@ export function InviteAcceptPage() {
       await workspaceService.joinByToken(token);
       navigate(`/${invite.workspace_slug}`, { replace: true });
     } catch {
-      setError("Failed to join workspace. Please try again.");
+      setError('Failed to join workspace. Please try again.');
     } finally {
       setAccepting(false);
     }
@@ -147,14 +147,7 @@ export function InviteAcceptPage() {
 
   // When user returns from login (already authenticated), auto-accept and go to workspace
   useEffect(() => {
-    if (
-      !user ||
-      !invite ||
-      !token ||
-      step !== "invite" ||
-      autoAcceptDone.current
-    )
-      return;
+    if (!user || !invite || !token || step !== 'invite' || autoAcceptDone.current) return;
     autoAcceptDone.current = true;
     doJoinWorkspace();
   }, [user, invite, token, step, doJoinWorkspace]);
@@ -163,7 +156,7 @@ export function InviteAcceptPage() {
     if (!token || !invite) return;
     if (!user) {
       setJoinEmail(invite.email);
-      setStep("join");
+      setStep('join');
       return;
     }
     doJoinWorkspace();
@@ -174,9 +167,9 @@ export function InviteAcceptPage() {
     setIgnoring(true);
     try {
       await invitationService.declineByToken(token);
-      navigate("/", { replace: true });
+      navigate('/', { replace: true });
     } catch {
-      setError("Failed to decline. Please try again.");
+      setError('Failed to decline. Please try again.');
     } finally {
       setIgnoring(false);
     }
@@ -199,7 +192,7 @@ export function InviteAcceptPage() {
             <Button
               variant="secondary"
               className="mt-4"
-              onClick={() => navigate("/", { replace: true })}
+              onClick={() => navigate('/', { replace: true })}
             >
               Go home
             </Button>
@@ -212,7 +205,7 @@ export function InviteAcceptPage() {
   if (!invite) return null;
 
   // Step 2: Join [workspace] — email + Continue → login
-  if (step === "join") {
+  if (step === 'join') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
         <Card className="w-full max-w-md">
@@ -227,9 +220,7 @@ export function InviteAcceptPage() {
             </p>
 
             <div className="mt-6">
-              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                Email
-              </label>
+              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">Email</label>
               <div className="relative">
                 <input
                   type="email"
@@ -242,7 +233,7 @@ export function InviteAcceptPage() {
                 {joinEmail && (
                   <button
                     type="button"
-                    onClick={() => setJoinEmail("")}
+                    onClick={() => setJoinEmail('')}
                     className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-full text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
                     aria-label="Clear email"
                   >
@@ -256,7 +247,7 @@ export function InviteAcceptPage() {
               type="button"
               className="mt-6 w-full"
               onClick={() =>
-                navigate("/invite/sign-up", {
+                navigate('/invite/sign-up', {
                   replace: true,
                   state: {
                     email: joinEmail,
@@ -271,14 +262,14 @@ export function InviteAcceptPage() {
             </Button>
 
             <p className="mt-4 text-center text-sm text-(--txt-secondary)">
-              Already have an account?{" "}
+              Already have an account?{' '}
               <button
                 type="button"
                 onClick={() =>
-                  navigate("/login", {
+                  navigate('/login', {
                     replace: true,
                     state: {
-                      from: { pathname: "/invite", search: `?token=${token}` },
+                      from: { pathname: '/invite', search: `?token=${token}` },
                       email: joinEmail,
                     },
                   })
@@ -290,18 +281,12 @@ export function InviteAcceptPage() {
             </p>
 
             <p className="mt-6 text-center text-xs text-(--txt-tertiary)">
-              By signing in, you understand and agree to our{" "}
-              <a
-                href="/terms"
-                className="underline hover:text-(--txt-secondary)"
-              >
+              By signing in, you understand and agree to our{' '}
+              <a href="/terms" className="underline hover:text-(--txt-secondary)">
                 Terms of Service
-              </a>{" "}
-              and{" "}
-              <a
-                href="/privacy"
-                className="underline hover:text-(--txt-secondary)"
-              >
+              </a>{' '}
+              and{' '}
+              <a href="/privacy" className="underline hover:text-(--txt-secondary)">
                 Privacy Policy
               </a>
               .
@@ -320,14 +305,11 @@ export function InviteAcceptPage() {
             You have been invited to {invite.workspace_name}
           </h1>
           <p className="mt-3 text-sm text-(--txt-secondary)">
-            Your workspace is where you'll create projects, collaborate on work
-            items, and organize different streams of work in your Devlane
-            account.
+            Your workspace is where you'll create projects, collaborate on work items, and organize
+            different streams of work in your Devlane account.
           </p>
 
-          {error && (
-            <p className="mt-3 text-sm text-(--txt-destructive)">{error}</p>
-          )}
+          {error && <p className="mt-3 text-sm text-(--txt-destructive)">{error}</p>}
 
           <div className="mt-8 flex flex-col gap-3">
             <button

@@ -1,19 +1,19 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Card, CardContent, Button, Modal, Input } from "../components/ui";
-import { useAuth } from "../contexts/AuthContext";
-import { workspaceService } from "../services/workspaceService";
-import { projectService } from "../services/projectService";
-import { quickLinksService } from "../services/quickLinksService";
-import { stickiesService } from "../services/stickiesService";
-import { recentsService } from "../services/recentsService";
+import { useEffect, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Card, CardContent, Button, Modal, Input } from '../components/ui';
+import { useAuth } from '../contexts/AuthContext';
+import { workspaceService } from '../services/workspaceService';
+import { projectService } from '../services/projectService';
+import { quickLinksService } from '../services/quickLinksService';
+import { stickiesService } from '../services/stickiesService';
+import { recentsService } from '../services/recentsService';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
   QuickLinkApiResponse,
   StickyApiResponse,
   RecentVisitApiResponse,
-} from "../api/types";
+} from '../api/types';
 
 // ---------------------------------------------------------------------------
 // Icons (Devlane-style)
@@ -251,39 +251,31 @@ const IconTrash = () => (
 
 function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
 function formatDateTime(date: Date): string {
-  const days = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ];
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   const d = date.getDate();
   const h = date.getHours();
   const m = date.getMinutes();
-  return `${days[date.getDay()]}, ${months[date.getMonth()]} ${d} ${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+  return `${days[date.getDay()]}, ${months[date.getMonth()]} ${d} ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 }
 
 function formatRelativeTime(iso: string): string {
@@ -293,12 +285,10 @@ function formatRelativeTime(iso: string): string {
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60)
-    return `${diffMins} minute${diffMins === 1 ? "" : "s"} ago`;
-  if (diffHours < 24)
-    return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
-  if (diffDays === 1) return "1 day ago";
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  if (diffDays === 1) return '1 day ago';
   return `${diffDays} days ago`;
 }
 
@@ -319,17 +309,17 @@ export function WorkspaceHomePage() {
   const [loading, setLoading] = useState(true);
   const [addQuicklinkOpen, setAddQuicklinkOpen] = useState(false);
   const [addStickyOpen, setAddStickyOpen] = useState(false);
-  const [quicklinkUrl, setQuicklinkUrl] = useState("");
-  const [quicklinkTitle, setQuicklinkTitle] = useState("");
-  const [stickyContent, setStickyContent] = useState("");
+  const [quicklinkUrl, setQuicklinkUrl] = useState('');
+  const [quicklinkTitle, setQuicklinkTitle] = useState('');
+  const [stickyContent, setStickyContent] = useState('');
   const [quicklinkSubmitting, setQuicklinkSubmitting] = useState(false);
   const [stickySubmitting, setStickySubmitting] = useState(false);
   const [recentsFilterOpen, setRecentsFilterOpen] = useState(false);
   const [recentsFilterValue, setRecentsFilterValue] = useState<
-    "All" | "Work Items" | "Pages" | "Projects"
-  >("All");
+    'All' | 'Work Items' | 'Pages' | 'Projects'
+  >('All');
   const [stickySearchOpen, setStickySearchOpen] = useState(false);
-  const [stickySearchQuery, setStickySearchQuery] = useState("");
+  const [stickySearchQuery, setStickySearchQuery] = useState('');
   const recentsFilterTriggerRef = useRef<HTMLButtonElement>(null);
   const recentsFilterDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -393,8 +383,8 @@ export function WorkspaceHomePage() {
 
   const handleCloseQuicklink = () => {
     setAddQuicklinkOpen(false);
-    setQuicklinkUrl("");
-    setQuicklinkTitle("");
+    setQuicklinkUrl('');
+    setQuicklinkTitle('');
   };
   const handleAddQuicklink = async () => {
     if (!workspaceSlug || !quicklinkUrl.trim()) return;
@@ -414,15 +404,15 @@ export function WorkspaceHomePage() {
   // const handleDeleteQuicklink = async (id: string) => { if (!workspaceSlug) return; try { await quickLinksService.delete(workspaceSlug, id); refetchQuicklinks(); } catch {} };
   const handleCloseSticky = () => {
     setAddStickyOpen(false);
-    setStickyContent("");
+    setStickyContent('');
   };
   const handleAddSticky = async () => {
     if (!workspaceSlug) return;
     setStickySubmitting(true);
     try {
       await stickiesService.create(workspaceSlug, {
-        name: stickyContent.trim().slice(0, 255) || "Untitled",
-        description: stickyContent.trim() || "",
+        name: stickyContent.trim().slice(0, 255) || 'Untitled',
+        description: stickyContent.trim() || '',
       });
       refetchStickies();
       handleCloseSticky();
@@ -451,8 +441,8 @@ export function WorkspaceHomePage() {
         return;
       setRecentsFilterOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [recentsFilterOpen]);
 
   if (loading) {
@@ -467,27 +457,22 @@ export function WorkspaceHomePage() {
   }
 
   const baseUrl = `/${workspace.slug}`;
-  const recentsFilterOptions = [
-    "All",
-    "Work Items",
-    "Pages",
-    "Projects",
-  ] as const;
+  const recentsFilterOptions = ['All', 'Work Items', 'Pages', 'Projects'] as const;
   const filteredRecents =
-    recentsFilterValue === "All"
+    recentsFilterValue === 'All'
       ? recents
-      : recentsFilterValue === "Work Items"
-        ? recents.filter((r) => r.entity_name === "issue")
-        : recentsFilterValue === "Pages"
-          ? recents.filter((r) => r.entity_name === "page")
-          : recents.filter((r) => r.entity_name === "project");
+      : recentsFilterValue === 'Work Items'
+        ? recents.filter((r) => r.entity_name === 'issue')
+        : recentsFilterValue === 'Pages'
+          ? recents.filter((r) => r.entity_name === 'page')
+          : recents.filter((r) => r.entity_name === 'project');
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 pb-8">
       {/* Welcome */}
       <section className="text-center">
         <h1 className="text-2xl font-bold tracking-tight text-(--txt-primary)">
-          {getGreeting()}, {user?.name ?? "User"}
+          {getGreeting()}, {user?.name ?? 'User'}
         </h1>
         <p className="mt-1 flex items-center justify-center gap-2 text-sm text-(--txt-tertiary)">
           <span className="text-(--txt-icon-tertiary)">
@@ -500,9 +485,7 @@ export function WorkspaceHomePage() {
       {/* Quicklinks */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-(--txt-primary)">
-            Quicklinks
-          </h2>
+          <h2 className="text-base font-semibold text-(--txt-primary)">Quicklinks</h2>
           <Button
             variant="ghost"
             size="sm"
@@ -526,7 +509,7 @@ export function WorkspaceHomePage() {
                 onClick={handleAddQuicklink}
                 disabled={!quicklinkUrl.trim() || quicklinkSubmitting}
               >
-                {quicklinkSubmitting ? "Adding…" : "Add Quicklink"}
+                {quicklinkSubmitting ? 'Adding…' : 'Add Quicklink'}
               </Button>
             </>
           }
@@ -545,8 +528,7 @@ export function WorkspaceHomePage() {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                Display title{" "}
-                <span className="text-(--txt-tertiary)">Optional</span>
+                Display title <span className="text-(--txt-tertiary)">Optional</span>
               </label>
               <Input
                 value={quicklinkTitle}
@@ -561,9 +543,7 @@ export function WorkspaceHomePage() {
           {quicklinks.map((ql) => {
             const label = ql.title?.trim() || ql.url;
             const isInternal = !!ql.project_id;
-            const href = ql.project_id
-              ? `${baseUrl}/projects/${ql.project_id}`
-              : ql.url;
+            const href = ql.project_id ? `${baseUrl}/projects/${ql.project_id}` : ql.url;
             const content = (
               <Card
                 variant="outlined"
@@ -574,9 +554,7 @@ export function WorkspaceHomePage() {
                     <IconTarget />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-(--txt-primary)">
-                      {label}
-                    </p>
+                    <p className="truncate font-medium text-(--txt-primary)">{label}</p>
                     <p className="text-xs text-(--txt-tertiary)">
                       {formatRelativeTime(ql.updated_at)}
                     </p>
@@ -618,9 +596,7 @@ export function WorkspaceHomePage() {
       {/* Recents */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-(--txt-primary)">
-            Recents
-          </h2>
+          <h2 className="text-base font-semibold text-(--txt-primary)">Recents</h2>
           <div className="relative">
             <button
               ref={recentsFilterTriggerRef}
@@ -663,15 +639,14 @@ export function WorkspaceHomePage() {
           <CardContent className="divide-y divide-(--border-subtle) p-0">
             {filteredRecents.map((r) => {
               const recentsLink =
-                r.entity_name === "issue" && r.project_id && r.entity_identifier
+                r.entity_name === 'issue' && r.project_id && r.entity_identifier
                   ? `${baseUrl}/projects/${r.project_id}/issues/${r.entity_identifier}`
-                  : r.entity_name === "project" && r.entity_identifier
+                  : r.entity_name === 'project' && r.entity_identifier
                     ? `${baseUrl}/projects/${r.entity_identifier}`
-                    : r.entity_name === "page" && r.entity_identifier
+                    : r.entity_name === 'page' && r.entity_identifier
                       ? `${baseUrl}/pages/${r.entity_identifier}`
                       : null;
-              const idLabel =
-                r.display_identifier || r.entity_identifier || r.id;
+              const idLabel = r.display_identifier || r.entity_identifier || r.id;
               const titleLabel = r.display_title || r.entity_name;
               const inner = (
                 <>
@@ -680,12 +655,8 @@ export function WorkspaceHomePage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="flex items-baseline gap-2 text-[13px]">
-                      <span className="font-medium text-(--txt-primary)">
-                        {idLabel}
-                      </span>
-                      <span className="truncate text-(--txt-secondary)">
-                        {titleLabel}
-                      </span>
+                      <span className="font-medium text-(--txt-primary)">{idLabel}</span>
+                      <span className="truncate text-(--txt-secondary)">{titleLabel}</span>
                     </p>
                     <p className="mt-0.5 text-xs text-(--txt-tertiary)">
                       {formatRelativeTime(r.last_visited_at)}
@@ -722,12 +693,10 @@ export function WorkspaceHomePage() {
       {/* Your stickies */}
       <section>
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-base font-semibold text-(--txt-primary)">
-            Your stickies
-          </h2>
+          <h2 className="text-base font-semibold text-(--txt-primary)">Your stickies</h2>
           <div className="flex flex-1 items-center justify-end gap-1 min-w-0">
             <div
-              className={`overflow-hidden transition-[width] duration-200 ease-out ${stickySearchOpen ? "w-56" : "w-0"}`}
+              className={`overflow-hidden transition-[width] duration-200 ease-out ${stickySearchOpen ? 'w-56' : 'w-0'}`}
             >
               <div className="flex items-center gap-2 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1.5">
                 <span className="shrink-0 text-(--txt-icon-tertiary)">
@@ -744,7 +713,7 @@ export function WorkspaceHomePage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setStickySearchQuery("");
+                    setStickySearchQuery('');
                     setStickySearchOpen(false);
                   }}
                   className="shrink-0 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-secondary)"
@@ -785,7 +754,7 @@ export function WorkspaceHomePage() {
                 Cancel
               </Button>
               <Button onClick={handleAddSticky} disabled={stickySubmitting}>
-                {stickySubmitting ? "Adding…" : "Add sticky"}
+                {stickySubmitting ? 'Adding…' : 'Add sticky'}
               </Button>
             </>
           }
@@ -807,9 +776,7 @@ export function WorkspaceHomePage() {
         </Modal>
         {(() => {
           const filteredStickies = stickies.filter((s) =>
-            s.name
-              .toLowerCase()
-              .includes(stickySearchQuery.toLowerCase().trim()),
+            s.name.toLowerCase().includes(stickySearchQuery.toLowerCase().trim()),
           );
           if (filteredStickies.length === 0) {
             return (
@@ -820,8 +787,8 @@ export function WorkspaceHomePage() {
                   </span>
                   <p className="max-w-sm text-center text-sm italic text-(--txt-placeholder)">
                     {stickySearchQuery.trim()
-                      ? "No stickies match your search."
-                      : "Jot down an idea, capture an aha, or record a brainwave. Add a sticky to get started."}
+                      ? 'No stickies match your search.'
+                      : 'Jot down an idea, capture an aha, or record a brainwave. Add a sticky to get started.'}
                   </p>
                 </CardContent>
               </Card>
@@ -832,22 +799,16 @@ export function WorkspaceHomePage() {
               {filteredStickies.map((sticky) => {
                 const isDefaultDark =
                   !sticky.color ||
-                  sticky.color === "#0d0d0d" ||
-                  sticky.color.toLowerCase() === "#0d0d0d";
+                  sticky.color === '#0d0d0d' ||
+                  sticky.color.toLowerCase() === '#0d0d0d';
                 return (
                   <div
                     key={sticky.id}
-                    className={`flex min-h-[120px] flex-col rounded-(--radius-md) border border-(--border-subtle) p-3 shadow-sm ${isDefaultDark ? "bg-(--bg-layer-2)" : ""}`}
-                    style={
-                      isDefaultDark
-                        ? undefined
-                        : { backgroundColor: sticky.color }
-                    }
+                    className={`flex min-h-[120px] flex-col rounded-(--radius-md) border border-(--border-subtle) p-3 shadow-sm ${isDefaultDark ? 'bg-(--bg-layer-2)' : ''}`}
+                    style={isDefaultDark ? undefined : { backgroundColor: sticky.color }}
                   >
                     <div className="min-h-0 flex-1 text-sm text-(--txt-primary)">
-                      <p className="whitespace-pre-wrap break-words">
-                        {sticky.name}
-                      </p>
+                      <p className="whitespace-pre-wrap break-words">{sticky.name}</p>
                       {sticky.description && (
                         <p className="mt-1 whitespace-pre-wrap break-words text-(--txt-secondary)">
                           {sticky.description}

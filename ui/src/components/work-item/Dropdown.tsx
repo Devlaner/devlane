@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 const DROPDOWN_Z_INDEX = 9999;
 
@@ -14,7 +14,7 @@ export interface DropdownProps {
   compact?: boolean;
   panelClassName?: string;
   /** When 'right', panel's right edge aligns with trigger's right edge (opens toward left). Default 'left'. */
-  align?: "left" | "right";
+  align?: 'left' | 'right';
   /** Optional class for the trigger button (e.g. table cell style: full width, hover only). */
   triggerClassName?: string;
   /** Optional custom trigger content (when set, icon and displayValue are ignored and this is rendered inside the trigger). */
@@ -31,7 +31,7 @@ export function Dropdown({
   children,
   compact = false,
   panelClassName,
-  align = "left",
+  align = 'left',
   triggerClassName,
   triggerContent,
 }: DropdownProps) {
@@ -45,8 +45,8 @@ export function Dropdown({
   const open = openId === id;
 
   const defaultTriggerClass = compact
-    ? "inline-flex min-w-0 items-center gap-1 rounded border border-(--border-subtle) bg-(--bg-layer-2) px-1.5 py-1 text-xs text-(--txt-secondary) hover:bg-(--bg-layer-2-hover) [&_svg]:size-3"
-    : "inline-flex min-w-0 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-sm text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)";
+    ? 'inline-flex min-w-0 items-center gap-1 rounded border border-(--border-subtle) bg-(--bg-layer-2) px-1.5 py-1 text-xs text-(--txt-secondary) hover:bg-(--bg-layer-2-hover) [&_svg]:size-3'
+    : 'inline-flex min-w-0 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-sm text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)';
 
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) {
@@ -56,7 +56,7 @@ export function Dropdown({
       return;
     }
     const rect = triggerRef.current.getBoundingClientRect();
-    if (align === "right") {
+    if (align === 'right') {
       setPosition({
         top: rect.bottom + 4,
         right: window.innerWidth - rect.right,
@@ -74,15 +74,12 @@ export function Dropdown({
       // If a modal is open (e.g. date-range picker), don't close the dropdown
       // when the user clicks inside the modal (modal is portaled to `body`).
       if (targetEl?.closest?.('[role="dialog"]')) return;
-      if (
-        !triggerRef.current?.contains(target) &&
-        !panelRef.current?.contains(target)
-      ) {
+      if (!triggerRef.current?.contains(target) && !panelRef.current?.contains(target)) {
         onOpen(null);
       }
     };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
   }, [open, onOpen]);
 
   return (
@@ -107,10 +104,10 @@ export function Dropdown({
             ref={panelRef}
             className={
               panelClassName ??
-              "max-h-60 min-w-[140px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
+              'max-h-60 min-w-[140px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)'
             }
             style={{
-              position: "fixed",
+              position: 'fixed',
               top: position.top,
               ...(position.left !== undefined && { left: position.left }),
               ...(position.right !== undefined && { right: position.right }),

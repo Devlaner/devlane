@@ -1,15 +1,8 @@
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 const IconSearch = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="11" cy="11" r="8" />
     <path d="m21 21-4.35-4.35" />
   </svg>
@@ -31,13 +24,13 @@ export function SelectParentModal({
   onChange,
 }: SelectParentModalProps) {
   void value; // reserved for future use (e.g. pre-select current parent)
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (!open) {
       // Intentional: clear search when modal closes (kept for future use)
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSearch("");
+      setSearch('');
     }
   }, [open]);
 
@@ -53,20 +46,13 @@ export function SelectParentModal({
       aria-modal="true"
       aria-labelledby="select-parent-title"
     >
-      <div
-        className="absolute inset-0 bg-(--bg-backdrop)"
-        onClick={onClose}
-        aria-hidden
-      />
+      <div className="absolute inset-0 bg-(--bg-backdrop)" onClick={onClose} aria-hidden />
       <div
         className="relative z-10 w-full max-w-md rounded-(--radius-lg) border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-overlay)"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-(--border-subtle) px-4 py-3">
-          <h2
-            id="select-parent-title"
-            className="text-sm font-semibold text-(--txt-primary)"
-          >
+          <h2 id="select-parent-title" className="text-sm font-semibold text-(--txt-primary)">
             Select parent
           </h2>
         </div>

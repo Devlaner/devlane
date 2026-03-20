@@ -7,19 +7,19 @@ import {
   useMemo,
   useState,
   type ReactNode,
-} from "react";
-import type { User } from "../types";
-import type { UserApiResponse } from "../api/types";
-import { authService } from "../services/authService";
+} from 'react';
+import type { User } from '../types';
+import type { UserApiResponse } from '../api/types';
+import { authService } from '../services/authService';
 
 function mapApiUserToUser(api: UserApiResponse): User {
   const name =
     api.display_name?.trim() ||
-    [api.first_name, api.last_name].filter(Boolean).join(" ").trim() ||
+    [api.first_name, api.last_name].filter(Boolean).join(' ').trim() ||
     api.username;
   return {
     id: api.id,
-    email: api.email ?? "",
+    email: api.email ?? '',
     name,
     avatarUrl: api.avatar ?? null,
     coverImageUrl: api.cover_image ?? null,
@@ -56,18 +56,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(mapApiUserToUser(api));
   }, []);
 
-  const login = useCallback(
-    async (email: string, password: string): Promise<boolean> => {
-      try {
-        const api = await authService.signIn({ email, password });
-        setUser(mapApiUserToUser(api));
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    [],
-  );
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+    try {
+      const api = await authService.signIn({ email, password });
+      setUser(mapApiUserToUser(api));
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
 
   const logout = useCallback(async () => {
     try {
@@ -95,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) {
-    throw new Error("useAuth must be used within AuthProvider");
+    throw new Error('useAuth must be used within AuthProvider');
   }
   return ctx;
 }

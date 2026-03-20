@@ -1,6 +1,6 @@
-import { Dropdown } from "../work-item";
-import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
-import { WorkspaceViewsDisplayPanel } from "./WorkspaceViewsDisplayPanel";
+import { Dropdown } from '../work-item';
+import { useWorkspaceViewsState } from '../../contexts/WorkspaceViewsStateContext';
+import { WorkspaceViewsDisplayPanel } from './WorkspaceViewsDisplayPanel';
 
 const IconLayoutGrid = () => (
   <svg
@@ -41,10 +41,7 @@ export function WorkspaceViewsDisplayDropdown({
       panelClassName="flex min-w-[280px] max-w-[320px] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
       align="right"
     >
-      <WorkspaceViewsDisplayPanel
-        display={display}
-        onDisplayChange={setDisplay}
-      />
+      <WorkspaceViewsDisplayPanel display={display} onDisplayChange={setDisplay} />
     </Dropdown>
   );
 }

@@ -1,24 +1,25 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { Link, NavLink, useLocation, useParams } from "react-router-dom";
-import { workspaceService } from "../../services/workspaceService";
-import { projectService } from "../../services/projectService";
-import { favoriteService } from "../../services/favoriteService";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Link, NavLink, useLocation, useParams } from 'react-router-dom';
+import { workspaceService } from '../../services/workspaceService';
+import { projectService } from '../../services/projectService';
+import { favoriteService } from '../../services/favoriteService';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
   ModuleApiResponse,
   IssueViewApiResponse,
-} from "../../api/types";
-import { CreateWorkItemModal } from "../CreateWorkItemModal";
-import { Avatar, Button } from "../ui";
-import { useAuth } from "../../contexts/AuthContext";
-import { useFavorites } from "../../contexts/FavoritesContext";
-import { cn, getImageUrl } from "../../lib/utils";
-import { moduleService } from "../../services/moduleService";
-import { viewService } from "../../services/viewService";
-import { slugify } from "../../lib/slug";
-import { ISSUE_VIEW_FAVORITES_CHANGED_EVENT } from "../../lib/issueViewFavoritesEvents";
+} from '../../api/types';
+import { CreateWorkItemModal } from '../CreateWorkItemModal';
+import { Avatar, Button } from '../ui';
+import { ProjectIconDisplay } from '../ProjectIconModal';
+import { useAuth } from '../../contexts/AuthContext';
+import { useFavorites } from '../../contexts/FavoritesContext';
+import { cn, getImageUrl } from '../../lib/utils';
+import { moduleService } from '../../services/moduleService';
+import { viewService } from '../../services/viewService';
+import { slugify } from '../../lib/slug';
+import { ISSUE_VIEW_FAVORITES_CHANGED_EVENT } from '../../lib/issueViewFavoritesEvents';
 
 const SIDEBAR_WIDTH = 256;
 const SIDEBAR_WIDTH_COLLAPSED = 0;
@@ -221,10 +222,7 @@ const IconViewLayers = () => (
   </svg>
 );
 
-function favoritedIssueViewHref(
-  baseUrl: string,
-  view: IssueViewApiResponse,
-): string {
+function favoritedIssueViewHref(baseUrl: string, view: IssueViewApiResponse): string {
   if (view.project_id) {
     return `${baseUrl}/projects/${view.project_id}/views/${view.id}`;
   }
@@ -275,7 +273,7 @@ const IconModuleGrid = ({ className }: { className?: string }) => (
     strokeLinecap="round"
     strokeLinejoin="round"
     aria-hidden
-    className={cn("shrink-0", className ?? "size-4")}
+    className={cn('shrink-0', className ?? 'size-4')}
   >
     <rect x="3" y="3" width="7" height="7" rx="1" />
     <rect x="14" y="3" width="7" height="7" rx="1" />
@@ -450,11 +448,11 @@ const IconLogOut = () => (
 );
 
 const projectNavItems = [
-  { key: "issues", to: "issues", label: "Work items", Icon: IconFileStack },
-  { key: "cycles", to: "cycles", label: "Cycles", Icon: IconIterationCw },
-  { key: "modules", to: "modules", label: "Modules", Icon: IconModuleGrid },
-  { key: "views", to: "views", label: "Views", Icon: IconLayers },
-  { key: "pages", to: "pages", label: "Pages", Icon: IconFileText },
+  { key: 'issues', to: 'issues', label: 'Work items', Icon: IconFileStack },
+  { key: 'cycles', to: 'cycles', label: 'Cycles', Icon: IconIterationCw },
+  { key: 'modules', to: 'modules', label: 'Modules', Icon: IconModuleGrid },
+  { key: 'views', to: 'views', label: 'Views', Icon: IconLayers },
+  { key: 'pages', to: 'pages', label: 'Pages', Icon: IconFileText },
 ];
 
 /** Pill + grid icon — matches the “Modules” category badge (not list progress rings). */
@@ -478,13 +476,9 @@ export function Sidebar() {
     left: number;
     minWidth: number;
   } | null>(null);
-  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [workspaceSectionExpanded, setWorkspaceSectionExpanded] =
-    useState(true);
-  const [favoritesSectionExpanded, setFavoritesSectionExpanded] =
-    useState(true);
+  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(new Set());
+  const [workspaceSectionExpanded, setWorkspaceSectionExpanded] = useState(true);
+  const [favoritesSectionExpanded, setFavoritesSectionExpanded] = useState(true);
   const [projectsSectionExpanded, setProjectsSectionExpanded] = useState(true);
   const [createWorkItemOpen, setCreateWorkItemOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState<WorkspaceApiResponse[]>([]);
@@ -494,9 +488,7 @@ export function Sidebar() {
     Array<{ projectId: string; module: ModuleApiResponse }>
   >([]);
   const [moduleFavoritesNonce, setModuleFavoritesNonce] = useState(0);
-  const [favoriteIssueViews, setFavoriteIssueViews] = useState<
-    IssueViewApiResponse[]
-  >([]);
+  const [favoriteIssueViews, setFavoriteIssueViews] = useState<IssueViewApiResponse[]>([]);
   const [issueViewFavoritesNonce, setIssueViewFavoritesNonce] = useState(0);
   const workspaceTriggerRef = useRef<HTMLButtonElement>(null);
   const workspaceDropdownRef = useRef<HTMLDivElement>(null);
@@ -509,41 +501,28 @@ export function Sidebar() {
   // Derive workspace slug from URL when useParams doesn't provide it (e.g. parent route context)
   const pathSegment = location.pathname.match(/^\/([^/]+)/)?.[1];
   const slugFromPath =
-    pathSegment &&
-    !["login", "setup", "instance-admin", "auth"].includes(pathSegment)
+    pathSegment && !['login', 'setup', 'instance-admin', 'auth'].includes(pathSegment)
       ? pathSegment
       : undefined;
   const workspaceSlug = paramsSlug ?? slugFromPath;
-  const workspace =
-    workspaces.find((w) => w.slug === workspaceSlug) ?? workspaces[0] ?? null;
-  const baseUrl = workspaceSlug
-    ? `/${workspaceSlug}`
-    : workspace
-      ? `/${workspace.slug}`
-      : "";
-  const favoriteProjects = projects.filter((p) =>
-    favoriteProjectIds.includes(p.id),
-  );
+  const workspace = workspaces.find((w) => w.slug === workspaceSlug) ?? workspaces[0] ?? null;
+  const baseUrl = workspaceSlug ? `/${workspaceSlug}` : workspace ? `/${workspace.slug}` : '';
+  const favoriteProjects = projects.filter((p) => favoriteProjectIds.includes(p.id));
 
-  const STORAGE_KEY_PREFIX = "module_favorites";
+  const STORAGE_KEY_PREFIX = 'module_favorites';
   const storageKey = (workspaceId: string, projId: string) =>
     `${STORAGE_KEY_PREFIX}_${workspaceId}_${projId}`;
 
-  const loadModuleFavoriteIds = useCallback(
-    (workspaceId: string, projId: string) => {
-      try {
-        const raw = localStorage.getItem(storageKey(workspaceId, projId));
-        if (!raw) return [];
-        const parsed = JSON.parse(raw) as unknown;
-        return Array.isArray(parsed)
-          ? parsed.filter((x) => typeof x === "string")
-          : [];
-      } catch {
-        return [];
-      }
-    },
-    [],
-  );
+  const loadModuleFavoriteIds = useCallback((workspaceId: string, projId: string) => {
+    try {
+      const raw = localStorage.getItem(storageKey(workspaceId, projId));
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as unknown;
+      return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : [];
+    } catch {
+      return [];
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -586,8 +565,7 @@ export function Sidebar() {
     // Load starred modules from localStorage, then resolve names via module list.
     let cancelled = false;
     const run = async () => {
-      const entries: Array<{ projectId: string; module: ModuleApiResponse }> =
-        [];
+      const entries: Array<{ projectId: string; module: ModuleApiResponse }> = [];
       for (const proj of projects) {
         const favIds = loadModuleFavoriteIds(workspaceSlug, proj.id);
         if (!favIds.length) continue;
@@ -633,15 +611,9 @@ export function Sidebar() {
       if (ce.detail?.workspaceSlug !== workspaceSlug) return;
       setIssueViewFavoritesNonce((n) => n + 1);
     };
-    window.addEventListener(
-      ISSUE_VIEW_FAVORITES_CHANGED_EVENT,
-      handler as EventListener,
-    );
+    window.addEventListener(ISSUE_VIEW_FAVORITES_CHANGED_EVENT, handler as EventListener);
     return () => {
-      window.removeEventListener(
-        ISSUE_VIEW_FAVORITES_CHANGED_EVENT,
-        handler as EventListener,
-      );
+      window.removeEventListener(ISSUE_VIEW_FAVORITES_CHANGED_EVENT, handler as EventListener);
     };
   }, [workspaceSlug]);
 
@@ -660,23 +632,15 @@ export function Sidebar() {
 
       // Optimistically remove immediately on un-favorite.
       if (moduleId && isFavorite === false) {
-        setFavoriteModules((prev) =>
-          prev.filter(({ module }) => module.id !== moduleId),
-        );
+        setFavoriteModules((prev) => prev.filter(({ module }) => module.id !== moduleId));
       }
 
       // Always reload after a change to ensure names and newly-added items are correct.
       setModuleFavoritesNonce((n) => n + 1);
     };
-    window.addEventListener(
-      "module-favorites-changed",
-      handler as EventListener,
-    );
+    window.addEventListener('module-favorites-changed', handler as EventListener);
     return () => {
-      window.removeEventListener(
-        "module-favorites-changed",
-        handler as EventListener,
-      );
+      window.removeEventListener('module-favorites-changed', handler as EventListener);
     };
   }, [workspaceSlug]);
 
@@ -733,8 +697,8 @@ export function Sidebar() {
       });
     };
     updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
       if (
@@ -744,11 +708,11 @@ export function Sidebar() {
         return;
       setWorkspaceDropdownOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [workspaceDropdownOpen]);
 
@@ -795,26 +759,20 @@ export function Sidebar() {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  (workspace?.name ?? "—").slice(0, 2).toUpperCase()
+                  (workspace?.name ?? '—').slice(0, 2).toUpperCase()
                 )}
               </div>
               <span className="min-w-0 flex-1 truncate text-sm font-semibold text-(--txt-primary)">
-                {workspace?.name ?? "Loading…"}
+                {workspace?.name ?? 'Loading…'}
               </span>
               <span
                 className={cn(
-                  "shrink-0 text-(--txt-icon-tertiary) transition-opacity",
-                  workspaceDropdownOpen
-                    ? "opacity-100"
-                    : "opacity-0 group-hover:opacity-100",
+                  'shrink-0 text-(--txt-icon-tertiary) transition-opacity',
+                  workspaceDropdownOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
                 )}
                 aria-hidden
               >
-                {workspaceDropdownOpen ? (
-                  <IconChevronUp />
-                ) : (
-                  <IconChevronDown />
-                )}
+                {workspaceDropdownOpen ? <IconChevronUp /> : <IconChevronDown />}
               </span>
             </button>
             <div className="flex shrink-0 items-center gap-1">
@@ -826,11 +784,7 @@ export function Sidebar() {
               >
                 <IconPanelLeft />
               </button>
-              <Avatar
-                name={user?.name ?? "User"}
-                src={getImageUrl(user?.avatarUrl)}
-                size="sm"
-              />
+              <Avatar name={user?.name ?? 'User'} src={getImageUrl(user?.avatarUrl)} size="sm" />
             </div>
           </div>
 
@@ -842,7 +796,7 @@ export function Sidebar() {
                 ref={workspaceDropdownRef}
                 className="z-50 min-w-[280px] rounded-(--radius-lg) border border-(--border-subtle) bg-(--bg-surface-1) p-4 shadow-(--shadow-lg)"
                 style={{
-                  position: "fixed",
+                  position: 'fixed',
                   top: dropdownPosition.top,
                   left: dropdownPosition.left,
                   minWidth: Math.max(dropdownPosition.minWidth, 280),
@@ -851,9 +805,7 @@ export function Sidebar() {
                 role="menu"
                 aria-label="Workspace menu"
               >
-                <p className="mb-3 truncate text-sm text-(--txt-primary)">
-                  {user?.email}
-                </p>
+                <p className="mb-3 truncate text-sm text-(--txt-primary)">{user?.email}</p>
                 <div className="mb-4 flex items-start gap-3">
                   <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-(--border-subtle) bg-(--bg-layer-2) text-xs font-semibold uppercase tracking-wide text-(--txt-secondary)">
                     {workspace?.logo && getImageUrl(workspace.logo) ? (
@@ -863,12 +815,12 @@ export function Sidebar() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      (workspace?.name ?? "—").slice(0, 2)
+                      (workspace?.name ?? '—').slice(0, 2)
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-(--txt-primary)">
-                      {workspace?.name ?? "—"}
+                      {workspace?.name ?? '—'}
                     </p>
                     <p className="text-xs text-(--txt-tertiary)">Members</p>
                   </div>
@@ -878,7 +830,7 @@ export function Sidebar() {
                 </div>
                 <div className="mb-3 flex gap-1.5">
                   <Link
-                    to={baseUrl ? `${baseUrl}/settings` : "/settings"}
+                    to={baseUrl ? `${baseUrl}/settings` : '/settings'}
                     onClick={() => setWorkspaceDropdownOpen(false)}
                     className="flex flex-1 items-center justify-center gap-1 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-1.5 py-1.5 text-[12px] font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover) whitespace-nowrap"
                   >
@@ -886,11 +838,7 @@ export function Sidebar() {
                     Settings
                   </Link>
                   <Link
-                    to={
-                      baseUrl
-                        ? `${baseUrl}/settings?section=members`
-                        : "/settings"
-                    }
+                    to={baseUrl ? `${baseUrl}/settings?section=members` : '/settings'}
                     onClick={() => setWorkspaceDropdownOpen(false)}
                     className="flex flex-1 items-center justify-center gap-1 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-1.5 py-1.5 text-[12px] font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover) whitespace-nowrap no-underline"
                   >
@@ -900,11 +848,7 @@ export function Sidebar() {
                 </div>
                 <div className="flex flex-col gap-0.5 border-t border-(--border-subtle) pt-3">
                   <Link
-                    to={
-                      baseUrl
-                        ? `${baseUrl}/settings?section=members`
-                        : "/settings"
-                    }
+                    to={baseUrl ? `${baseUrl}/settings?section=members` : '/settings'}
                     onClick={() => setWorkspaceDropdownOpen(false)}
                     className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-2 text-left text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary) no-underline"
                   >
@@ -951,21 +895,21 @@ export function Sidebar() {
             {/* 3. Primary nav: Home, Inbox, Your work */}
             <div className="flex flex-col gap-0.5 px-2 py-2">
               <NavLink
-                to={baseUrl || (workspace ? `/${workspace.slug}` : "/")}
+                to={baseUrl || (workspace ? `/${workspace.slug}` : '/')}
                 end
                 className={({ isActive }) =>
                   cn(
-                    "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                    'flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors',
                     isActive
-                      ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
-                      : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
+                      ? 'bg-(--bg-accent-subtle) text-(--txt-accent-primary)'
+                      : 'text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)',
                   )
                 }
               >
                 <span
                   className={cn(
-                    "flex size-4 shrink-0 items-center justify-center",
-                    "text-(--txt-icon-tertiary)",
+                    'flex size-4 shrink-0 items-center justify-center',
+                    'text-(--txt-icon-tertiary)',
                   )}
                 >
                   <IconHome />
@@ -973,14 +917,14 @@ export function Sidebar() {
                 Home
               </NavLink>
               <NavLink
-                to={baseUrl ? `${baseUrl}/notifications` : "/"}
+                to={baseUrl ? `${baseUrl}/notifications` : '/'}
                 end
                 className={({ isActive }) =>
                   cn(
-                    "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                    'flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors',
                     isActive
-                      ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
-                      : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
+                      ? 'bg-(--bg-accent-subtle) text-(--txt-accent-primary)'
+                      : 'text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)',
                   )
                 }
               >
@@ -990,18 +934,14 @@ export function Sidebar() {
                 Inbox
               </NavLink>
               <NavLink
-                to={
-                  baseUrl && user
-                    ? `${baseUrl}/profile/${user.id}`
-                    : baseUrl || "/"
-                }
+                to={baseUrl && user ? `${baseUrl}/profile/${user.id}` : baseUrl || '/'}
                 end
                 className={({ isActive }) =>
                   cn(
-                    "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                    'flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors',
                     isActive
-                      ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
-                      : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
+                      ? 'bg-(--bg-accent-subtle) text-(--txt-accent-primary)'
+                      : 'text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)',
                   )
                 }
               >
@@ -1024,8 +964,8 @@ export function Sidebar() {
                 <span className="flex size-4 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
                   <IconChevronRight
                     className={cn(
-                      "text-(--txt-icon-tertiary)",
-                      workspaceSectionExpanded && "rotate-90",
+                      'text-(--txt-icon-tertiary)',
+                      workspaceSectionExpanded && 'rotate-90',
                     )}
                   />
                 </span>
@@ -1033,14 +973,14 @@ export function Sidebar() {
               {workspaceSectionExpanded && (
                 <div className="flex flex-col gap-0.5 pl-1">
                   <NavLink
-                    to={baseUrl ? `${baseUrl}/projects` : "/"}
+                    to={baseUrl ? `${baseUrl}/projects` : '/'}
                     end
                     className={({ isActive }) =>
                       cn(
-                        "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                        'flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors',
                         isActive
-                          ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
-                          : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
+                          ? 'bg-(--bg-accent-subtle) text-(--txt-accent-primary)'
+                          : 'text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)',
                       )
                     }
                   >
@@ -1050,14 +990,13 @@ export function Sidebar() {
                     Projects
                   </NavLink>
                   <NavLink
-                    to={baseUrl ? `${baseUrl}/views/all-issues` : "/"}
+                    to={baseUrl ? `${baseUrl}/views/all-issues` : '/'}
                     className={({ isActive }) =>
                       cn(
-                        "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
-                        isActive ||
-                          location.pathname.startsWith(`${baseUrl}/views`)
-                          ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
-                          : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
+                        'flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors',
+                        isActive || location.pathname.startsWith(`${baseUrl}/views`)
+                          ? 'bg-(--bg-accent-subtle) text-(--txt-accent-primary)'
+                          : 'text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)',
                       )
                     }
                   >
@@ -1067,14 +1006,14 @@ export function Sidebar() {
                     Views
                   </NavLink>
                   <NavLink
-                    to={baseUrl ? `${baseUrl}/analytics` : "/"}
+                    to={baseUrl ? `${baseUrl}/analytics` : '/'}
                     end={false}
                     className={({ isActive }) =>
                       cn(
-                        "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                        'flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors',
                         isActive
-                          ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
-                          : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
+                          ? 'bg-(--bg-accent-subtle) text-(--txt-accent-primary)'
+                          : 'text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)',
                       )
                     }
                   >
@@ -1084,14 +1023,14 @@ export function Sidebar() {
                     Analytics
                   </NavLink>
                   <NavLink
-                    to={baseUrl ? `${baseUrl}/drafts` : "/"}
+                    to={baseUrl ? `${baseUrl}/drafts` : '/'}
                     end
                     className={({ isActive }) =>
                       cn(
-                        "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                        'flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors',
                         isActive
-                          ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
-                          : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
+                          ? 'bg-(--bg-accent-subtle) text-(--txt-accent-primary)'
+                          : 'text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)',
                       )
                     }
                   >
@@ -1101,14 +1040,14 @@ export function Sidebar() {
                     Drafts
                   </NavLink>
                   <NavLink
-                    to={baseUrl ? `${baseUrl}/archives` : "/"}
+                    to={baseUrl ? `${baseUrl}/archives` : '/'}
                     end
                     className={({ isActive }) =>
                       cn(
-                        "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors",
+                        'flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium outline-none transition-colors',
                         isActive
-                          ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
-                          : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
+                          ? 'bg-(--bg-accent-subtle) text-(--txt-accent-primary)'
+                          : 'text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)',
                       )
                     }
                   >
@@ -1133,8 +1072,8 @@ export function Sidebar() {
                 <span className="flex size-4 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
                   <IconChevronRight
                     className={cn(
-                      "text-(--txt-icon-tertiary)",
-                      favoritesSectionExpanded && "rotate-90",
+                      'text-(--txt-icon-tertiary)',
+                      favoritesSectionExpanded && 'rotate-90',
                     )}
                   />
                 </span>
@@ -1147,11 +1086,13 @@ export function Sidebar() {
                       to={`${baseUrl}/projects/${project.id}`}
                       className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                     >
-                      <div className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-(--bg-layer-1) text-[10px] font-medium text-(--txt-tertiary)">
-                        {(project.identifier ?? project.id.slice(0, 2)).slice(
-                          0,
-                          2,
-                        )}
+                      <div className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-(--bg-layer-1) text-(--txt-tertiary)">
+                        <ProjectIconDisplay
+                          emoji={project.emoji}
+                          icon_prop={project.icon_prop}
+                          size={14}
+                          className="leading-none"
+                        />
                       </div>
                       <span className="truncate">{project.name}</span>
                     </Link>
@@ -1201,8 +1142,8 @@ export function Sidebar() {
                   <span className="flex size-4 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
                     <IconChevronRight
                       className={cn(
-                        "text-(--txt-icon-tertiary)",
-                        projectsSectionExpanded && "rotate-90",
+                        'text-(--txt-icon-tertiary)',
+                        projectsSectionExpanded && 'rotate-90',
                       )}
                     />
                   </span>
@@ -1212,8 +1153,7 @@ export function Sidebar() {
                 <div className="flex flex-col gap-0.5 px-2 py-1 pb-2">
                   {projects.map((project) => {
                     const isExpanded =
-                      expandedProjectIds.has(project.id) ||
-                      projectId === project.id;
+                      expandedProjectIds.has(project.id) || projectId === project.id;
                     const projectUrl = `${baseUrl}/projects/${project.id}`;
                     return (
                       <div key={project.id} className="flex flex-col gap-0.5">
@@ -1224,18 +1164,21 @@ export function Sidebar() {
                           aria-expanded={isExpanded}
                         >
                           <span className="flex min-w-0 flex-1 items-center gap-2">
-                            <div className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-(--bg-layer-1) text-[10px] font-medium text-(--txt-tertiary)">
-                              {(
-                                project.identifier ?? project.id.slice(0, 2)
-                              ).slice(0, 2)}
+                            <div className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-(--bg-layer-1) text-(--txt-tertiary)">
+                              <ProjectIconDisplay
+                                emoji={project.emoji}
+                                icon_prop={project.icon_prop}
+                                size={14}
+                                className="leading-none"
+                              />
                             </div>
                             <span className="truncate">{project.name}</span>
                           </span>
                           <span className="flex size-5 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
                             <IconChevronRight
                               className={cn(
-                                "text-(--txt-icon-tertiary)",
-                                isExpanded && "rotate-90",
+                                'text-(--txt-icon-tertiary)',
+                                isExpanded && 'rotate-90',
                               )}
                             />
                           </span>
@@ -1248,10 +1191,10 @@ export function Sidebar() {
                                 to={`${projectUrl}/${to}`}
                                 className={({ isActive }) =>
                                   cn(
-                                    "flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1 text-[13px] font-medium outline-none",
+                                    'flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1 text-[13px] font-medium outline-none',
                                     isActive
-                                      ? "bg-(--bg-layer-transparent-active) text-(--txt-primary)"
-                                      : "text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)",
+                                      ? 'bg-(--bg-layer-transparent-active) text-(--txt-primary)'
+                                      : 'text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)',
                                   )
                                 }
                               >
@@ -1289,7 +1232,7 @@ export function Sidebar() {
                 <IconHelp />
               </button>
               <Link
-                to={baseUrl ? `${baseUrl}/settings` : "/settings"}
+                to={baseUrl ? `${baseUrl}/settings` : '/settings'}
                 className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
                 aria-label="Settings"
               >
@@ -1303,7 +1246,7 @@ export function Sidebar() {
       {collapsed && (
         <div
           className="flex shrink-0 flex-col items-center border-r border-(--border-subtle) bg-(--bg-surface-1) py-3"
-          style={{ width: "48px", minWidth: "48px" }}
+          style={{ width: '48px', minWidth: '48px' }}
         >
           <button
             type="button"
@@ -1320,7 +1263,7 @@ export function Sidebar() {
       <CreateWorkItemModal
         open={createWorkItemOpen}
         onClose={() => setCreateWorkItemOpen(false)}
-        workspaceSlug={workspace?.slug ?? ""}
+        workspaceSlug={workspace?.slug ?? ''}
         projects={projects}
       />
     </>

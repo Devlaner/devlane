@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Avatar, Badge, Button } from "../components/ui";
-import { CreateWorkItemModal } from "../components/CreateWorkItemModal";
-import { AddExistingWorkItemModal } from "../components/AddExistingWorkItemModal";
-import { workspaceService } from "../services/workspaceService";
-import { projectService } from "../services/projectService";
-import { moduleService } from "../services/moduleService";
-import { issueService } from "../services/issueService";
-import { stateService } from "../services/stateService";
-import { labelService } from "../services/labelService";
+import { useEffect, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Avatar, Badge, Button } from '../components/ui';
+import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
+import { AddExistingWorkItemModal } from '../components/AddExistingWorkItemModal';
+import { workspaceService } from '../services/workspaceService';
+import { projectService } from '../services/projectService';
+import { moduleService } from '../services/moduleService';
+import { issueService } from '../services/issueService';
+import { stateService } from '../services/stateService';
+import { labelService } from '../services/labelService';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
@@ -17,20 +17,17 @@ import type {
   StateApiResponse,
   LabelApiResponse,
   WorkspaceMemberApiResponse,
-} from "../api/types";
-import type { Priority } from "../types";
-import { getImageUrl } from "../lib/utils";
-import { slugify } from "../lib/slug";
+} from '../api/types';
+import type { Priority } from '../types';
+import { getImageUrl } from '../lib/utils';
+import { slugify } from '../lib/slug';
 
-const priorityVariant: Record<
-  Priority,
-  "danger" | "warning" | "default" | "neutral"
-> = {
-  urgent: "danger",
-  high: "danger",
-  medium: "warning",
-  low: "default",
-  none: "neutral",
+const priorityVariant: Record<Priority, 'danger' | 'warning' | 'default' | 'neutral'> = {
+  urgent: 'danger',
+  high: 'danger',
+  medium: 'warning',
+  low: 'default',
+  none: 'neutral',
 };
 
 const IconCalendar = () => (
@@ -77,13 +74,7 @@ const IconTag = () => (
   </svg>
 );
 const IconMoreVertical = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    aria-hidden
-  >
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
     <circle cx="12" cy="5" r="1.5" />
     <circle cx="12" cy="12" r="1.5" />
     <circle cx="12" cy="19" r="1.5" />
@@ -122,10 +113,10 @@ const IconModule = () => (
 );
 
 function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return '—';
   const d = new Date(iso);
   const day = d.getDate();
-  const month = d.toLocaleString("en-US", { month: "short" });
+  const month = d.toLocaleString('en-US', { month: 'short' });
   return `${day} ${month}`;
 }
 
@@ -150,7 +141,7 @@ export function ModuleDetailPage() {
   const [addExistingOpen, setAddExistingOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
-  const createParam = searchParams.get("create") === "1";
+  const createParam = searchParams.get('create') === '1';
 
   useEffect(() => {
     if (createParam && projectId) {
@@ -161,7 +152,7 @@ export function ModuleDetailPage() {
   const handleCloseCreate = () => {
     setCreateOpen(false);
     setCreateError(null);
-    searchParams.delete("create");
+    searchParams.delete('create');
     setSearchParams(searchParams, { replace: true });
   };
 
@@ -170,9 +161,7 @@ export function ModuleDetailPage() {
     issueService
       .list(workspaceSlug, projectId, { limit: 1000 })
       .then((list) => {
-        setIssues(
-          (list ?? []).filter((i) => i.module_ids?.includes(resolvedModuleId)),
-        );
+        setIssues((list ?? []).filter((i) => i.module_ids?.includes(resolvedModuleId)));
       })
       .catch(() => {});
   };
@@ -205,9 +194,7 @@ export function ModuleDetailPage() {
           null;
         setModule(found);
         setResolvedModuleId(found?.id ?? null);
-        setIssues(
-          (iss ?? []).filter((i) => i.module_ids?.includes(found?.id ?? "")),
-        );
+        setIssues((iss ?? []).filter((i) => i.module_ids?.includes(found?.id ?? '')));
         setStates(st ?? []);
         setLabels(lab ?? []);
         setMembers(mem ?? []);
@@ -263,24 +250,17 @@ export function ModuleDetailPage() {
         parent_id: data.parentId || undefined,
       });
       if (created?.id) {
-        await moduleService.addIssue(
-          workspaceSlug,
-          data.projectId,
-          resolvedModuleId,
-          created.id,
-        );
+        await moduleService.addIssue(workspaceSlug, data.projectId, resolvedModuleId, created.id);
       }
       refetchIssues();
       handleCloseCreate();
     } catch (err) {
-      setCreateError(
-        err instanceof Error ? err.message : "Failed to create work item",
-      );
+      setCreateError(err instanceof Error ? err.message : 'Failed to create work item');
     }
   };
 
   const getStateName = (stateId: string | null | undefined) =>
-    stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : "—";
+    stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : '—';
   const getLabelNames = (labelIds: string[] = []) =>
     labelIds
       .map((id) => labels.find((l) => l.id === id)?.name)
@@ -289,8 +269,8 @@ export function ModuleDetailPage() {
     if (!userId) return null;
     const m = members.find((x) => x.member_id === userId);
     const display = m?.member_display_name?.trim();
-    const emailUser = m?.member_email?.split("@")[0]?.trim();
-    const name = display || emailUser || "Member";
+    const emailUser = m?.member_email?.split('@')[0]?.trim();
+    const name = display || emailUser || 'Member';
     const avatarUrl = m?.member_avatar ?? null;
     return { id: userId, name, avatarUrl };
   };
@@ -322,18 +302,13 @@ export function ModuleDetailPage() {
   const displayId = (issue: IssueApiResponse) =>
     `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`;
 
-  const issuesByState = states.reduce<Record<string, IssueApiResponse[]>>(
-    (acc, s) => {
-      acc[s.id] = issues.filter((i) => (i.state_id ?? "") === s.id);
-      return acc;
-    },
-    {},
-  );
-  const ungrouped = issues.filter(
-    (i) => !i.state_id || !states.some((s) => s.id === i.state_id),
-  );
+  const issuesByState = states.reduce<Record<string, IssueApiResponse[]>>((acc, s) => {
+    acc[s.id] = issues.filter((i) => (i.state_id ?? '') === s.id);
+    return acc;
+  }, {});
+  const ungrouped = issues.filter((i) => !i.state_id || !states.some((s) => s.id === i.state_id));
   if (ungrouped.length > 0) {
-    issuesByState[""] = ungrouped;
+    issuesByState[''] = ungrouped;
   }
 
   return (
@@ -347,16 +322,11 @@ export function ModuleDetailPage() {
               No work items in the module
             </h2>
             <p className="mt-1 text-sm text-(--txt-secondary)">
-              Create or add work items which you want to accomplish as part of
-              this module.
+              Create or add work items which you want to accomplish as part of this module.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Button
-              size="sm"
-              className="gap-1.5"
-              onClick={() => setSearchParams({ create: "1" })}
-            >
+            <Button size="sm" className="gap-1.5" onClick={() => setSearchParams({ create: '1' })}>
               <IconPlus />
               Create new work items
             </Button>
@@ -409,26 +379,17 @@ export function ModuleDetailPage() {
                             <span className="font-medium text-(--txt-accent-primary)">
                               {displayId(issue)}
                             </span>
-                            <span className="ml-2 text-(--txt-primary)">
-                              {issue.name}
-                            </span>
+                            <span className="ml-2 text-(--txt-primary)">{issue.name}</span>
                           </span>
                           <div className="flex shrink-0 items-center gap-2 text-(--txt-icon-tertiary)">
-                            <Badge
-                              variant="neutral"
-                              className="text-xs font-medium"
-                            >
+                            <Badge variant="neutral" className="text-xs font-medium">
                               {getStateName(issue.state_id ?? undefined)}
                             </Badge>
                             <Badge
-                              variant={
-                                priorityVariant[
-                                  (issue.priority as Priority) ?? "none"
-                                ]
-                              }
+                              variant={priorityVariant[(issue.priority as Priority) ?? 'none']}
                               className="px-1.5! py-0! text-[10px]"
                             >
-                              {issue.priority ?? "—"}
+                              {issue.priority ?? '—'}
                             </Badge>
                             <span
                               title={formatDate(issue.target_date ?? undefined)}
@@ -437,15 +398,13 @@ export function ModuleDetailPage() {
                               <IconCalendar />
                             </span>
                             <span
-                              title={assignee?.name ?? "Unassigned"}
+                              title={assignee?.name ?? 'Unassigned'}
                               className="flex size-6 items-center justify-center"
                             >
                               {assignee ? (
                                 <Avatar
                                   name={assignee.name}
-                                  src={
-                                    getImageUrl(assignee.avatarUrl) ?? undefined
-                                  }
+                                  src={getImageUrl(assignee.avatarUrl) ?? undefined}
                                   size="sm"
                                   className="h-6 w-6 text-[10px]"
                                 />
@@ -454,11 +413,7 @@ export function ModuleDetailPage() {
                               )}
                             </span>
                             <span
-                              title={
-                                labelNames.length
-                                  ? labelNames.join(", ")
-                                  : "Labels"
-                              }
+                              title={labelNames.length ? labelNames.join(', ') : 'Labels'}
                               className="flex size-6 items-center justify-center"
                             >
                               <IconTag />
@@ -483,15 +438,15 @@ export function ModuleDetailPage() {
               </section>
             );
           })}
-          {(issuesByState[""]?.length ?? 0) > 0 && (
+          {(issuesByState['']?.length ?? 0) > 0 && (
             <section className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) overflow-hidden">
               <div className="flex items-center gap-2 border-b border-(--border-subtle) bg-(--bg-layer-2) px-4 py-2">
                 <span className="text-sm font-medium text-(--txt-primary)">
-                  No state {issuesByState[""].length}
+                  No state {issuesByState[''].length}
                 </span>
               </div>
               <ul className="divide-y divide-(--border-subtle)">
-                {issuesByState[""].map((issue) => {
+                {issuesByState[''].map((issue) => {
                   const primaryAssigneeId = issue.assignee_ids?.[0] ?? null;
                   const assignee = getUser(primaryAssigneeId);
                   return (
@@ -504,9 +459,7 @@ export function ModuleDetailPage() {
                           <span className="font-medium text-(--txt-accent-primary)">
                             {displayId(issue)}
                           </span>
-                          <span className="ml-2 text-(--txt-primary)">
-                            {issue.name}
-                          </span>
+                          <span className="ml-2 text-(--txt-primary)">{issue.name}</span>
                         </span>
                         <div className="flex shrink-0 items-center gap-2">
                           {assignee ? (
@@ -543,11 +496,7 @@ export function ModuleDetailPage() {
 
       {issues.length > 0 && (
         <div className="flex flex-wrap items-center justify-center gap-3 border-t border-(--border-subtle) pt-6">
-          <Button
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setSearchParams({ create: "1" })}
-          >
+          <Button size="sm" className="gap-1.5" onClick={() => setSearchParams({ create: '1' })}>
             <IconPlus />
             Create new work items
           </Button>
@@ -567,7 +516,7 @@ export function ModuleDetailPage() {
         onClose={() => setAddExistingOpen(false)}
         workspaceSlug={workspace.slug}
         projectId={project.id}
-        moduleId={resolvedModuleId ?? ""}
+        moduleId={resolvedModuleId ?? ''}
         projectIdentifier={project.identifier ?? project.id.slice(0, 8)}
         onAdded={refetchIssues}
       />

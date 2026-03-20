@@ -1,5 +1,5 @@
-import { apiClient } from "../api/client";
-import type { IssueCommentApiResponse } from "../api/types";
+import { apiClient } from '../api/client';
+import type { IssueCommentApiResponse } from '../api/types';
 
 export const commentService = {
   async list(

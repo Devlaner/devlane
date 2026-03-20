@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import {
   Radar,
   RadarChart as RechartsRadarChart,
@@ -7,16 +7,16 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   ResponsiveContainer,
-} from "recharts";
-import { workspaceService } from "../services/workspaceService";
-import { projectService } from "../services/projectService";
-import { issueService } from "../services/issueService";
+} from 'recharts';
+import { workspaceService } from '../services/workspaceService';
+import { projectService } from '../services/projectService';
+import { issueService } from '../services/issueService';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
   IssueApiResponse,
   WorkspaceMemberApiResponse,
-} from "../api/types";
+} from '../api/types';
 
 export function AnalyticsOverviewPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
@@ -52,9 +52,7 @@ export function AnalyticsOverviewPage() {
         }
         if (!cancelled && projs?.length) {
           return Promise.all(
-            projs.map((p) =>
-              issueService.list(workspaceSlug!, p.id, { limit: 200 }),
-            ),
+            projs.map((p) => issueService.list(workspaceSlug!, p.id, { limit: 200 })),
           );
         }
         return [];
@@ -101,24 +99,24 @@ export function AnalyticsOverviewPage() {
   const baseUrl = `/${workspace.slug}/analytics`;
 
   const summaryCards = [
-    { label: "Total Users", value: totalUsers },
-    { label: "Total Admins", value: totalAdmins },
-    { label: "Total Members", value: totalMembers },
-    { label: "Total Guests", value: totalGuests },
-    { label: "Total Projects", value: projects.length },
-    { label: "Total Work items", value: totalWorkItems },
-    { label: "Total Cycles", value: cycles.length },
-    { label: "Total Intake", value: 0 },
+    { label: 'Total Users', value: totalUsers },
+    { label: 'Total Admins', value: totalAdmins },
+    { label: 'Total Members', value: totalMembers },
+    { label: 'Total Guests', value: totalGuests },
+    { label: 'Total Projects', value: projects.length },
+    { label: 'Total Work items', value: totalWorkItems },
+    { label: 'Total Cycles', value: cycles.length },
+    { label: 'Total Intake', value: 0 },
   ];
 
   const radarDimensions = [
-    { name: "Work Items", value: totalWorkItems },
-    { name: "Cycles", value: cycles.length },
-    { name: "Modules", value: modules.length },
-    { name: "Intake", value: 0 },
-    { name: "Members", value: totalUsers },
-    { name: "Pages", value: pages.length },
-    { name: "Views", value: 1 },
+    { name: 'Work Items', value: totalWorkItems },
+    { name: 'Cycles', value: cycles.length },
+    { name: 'Modules', value: modules.length },
+    { name: 'Intake', value: 0 },
+    { name: 'Members', value: totalUsers },
+    { name: 'Pages', value: pages.length },
+    { name: 'Views', value: 1 },
   ];
 
   const radarMax = Math.max(...radarDimensions.map((d) => d.value), 1);
@@ -156,9 +154,7 @@ export function AnalyticsOverviewPage() {
             className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3"
           >
             <p className="text-xs font-medium text-(--txt-tertiary)">{label}</p>
-            <p className="mt-1 text-2xl font-semibold text-(--txt-primary)">
-              {value}
-            </p>
+            <p className="mt-1 text-2xl font-semibold text-(--txt-primary)">{value}</p>
           </div>
         ))}
       </div>
@@ -167,15 +163,11 @@ export function AnalyticsOverviewPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
         {/* Project Insights: contains Work Items and Summary of Projects (same row) */}
         <section className="min-w-0 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-6">
-          <h3 className="mb-4 text-base font-semibold text-(--txt-primary)">
-            Project Insights
-          </h3>
+          <h3 className="mb-4 text-base font-semibold text-(--txt-primary)">Project Insights</h3>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-[3fr_2fr]">
             {/* Work Items - radar chart */}
             <div className="min-w-0">
-              <h4 className="mb-3 text-sm font-semibold text-(--txt-primary)">
-                Work Items
-              </h4>
+              <h4 className="mb-3 text-sm font-semibold text-(--txt-primary)">Work Items</h4>
               <div className="rounded-md bg-(--bg-surface-1) p-4">
                 <div className="h-[400px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -186,14 +178,14 @@ export function AnalyticsOverviewPage() {
                       <PolarGrid stroke="var(--border-subtle)" />
                       <PolarAngleAxis
                         dataKey="subject"
-                        tick={{ fill: "var(--txt-secondary)", fontSize: 11 }}
-                        tickLine={{ stroke: "var(--border-subtle)" }}
+                        tick={{ fill: 'var(--txt-secondary)', fontSize: 11 }}
+                        tickLine={{ stroke: 'var(--border-subtle)' }}
                       />
                       <PolarRadiusAxis
                         angle={90}
                         domain={[0, radarMax]}
-                        tick={{ fill: "var(--txt-tertiary)", fontSize: 10 }}
-                        tickLine={{ stroke: "var(--border-subtle)" }}
+                        tick={{ fill: 'var(--txt-tertiary)', fontSize: 10 }}
+                        tickLine={{ stroke: 'var(--border-subtle)' }}
                       />
                       <Radar
                         name="Metrics"
@@ -214,12 +206,8 @@ export function AnalyticsOverviewPage() {
               <h4 className="mb-2 text-sm font-semibold text-(--txt-primary)">
                 Summary of Projects
               </h4>
-              <p className="mb-1 text-sm font-semibold text-(--txt-primary)">
-                All Projects
-              </p>
-              <p className="mb-3 text-sm text-(--txt-tertiary)">
-                Trend on charts
-              </p>
+              <p className="mb-1 text-sm font-semibold text-(--txt-primary)">All Projects</p>
+              <p className="mb-3 text-sm text-(--txt-tertiary)">Trend on charts</p>
               <ul className="space-y-3 text-sm">
                 {radarDimensions.map((d) => (
                   <li
@@ -239,9 +227,7 @@ export function AnalyticsOverviewPage() {
 
         {/* Active Projects */}
         <section className="min-w-0">
-          <h3 className="mb-4 text-base font-semibold text-(--txt-primary)">
-            Active Projects
-          </h3>
+          <h3 className="mb-4 text-base font-semibold text-(--txt-primary)">Active Projects</h3>
           <ul className="space-y-2">
             {projects.map((p) => (
               <li

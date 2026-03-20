@@ -1,5 +1,5 @@
-import { apiClient } from "../api/client";
-import type { InviteByTokenResponse } from "../api/types";
+import { apiClient } from '../api/client';
+import type { InviteByTokenResponse } from '../api/types';
 
 /**
  * Public invitation APIs (no auth required).
@@ -10,10 +10,9 @@ export const invitationService = {
    * GET /api/invitations/by-token/?token=...
    */
   async getByToken(token: string): Promise<InviteByTokenResponse> {
-    const { data } = await apiClient.get<InviteByTokenResponse>(
-      "/api/invitations/by-token/",
-      { params: { token } },
-    );
+    const { data } = await apiClient.get<InviteByTokenResponse>('/api/invitations/by-token/', {
+      params: { token },
+    });
     return data;
   },
 
@@ -22,6 +21,6 @@ export const invitationService = {
    * POST /api/invitations/decline/
    */
   async declineByToken(token: string): Promise<void> {
-    await apiClient.post("/api/invitations/decline/", { token });
+    await apiClient.post('/api/invitations/decline/', { token });
   },
 };

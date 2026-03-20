@@ -19,9 +19,9 @@ export function toISODateLocal(date: Date): string {
 
 export function formatISODateDisplay(iso: string): string {
   const d = parseISODateLocal(iso);
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   });
 }

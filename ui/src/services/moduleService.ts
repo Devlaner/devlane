@@ -1,5 +1,5 @@
-import { apiClient } from "../api/client";
-import type { ModuleApiResponse } from "../api/types";
+import { apiClient } from '../api/client';
+import type { ModuleApiResponse } from '../api/types';
 
 export interface CreateModulePayload {
   name: string;
@@ -11,10 +11,7 @@ export interface CreateModulePayload {
 }
 
 export const moduleService = {
-  async list(
-    workspaceSlug: string,
-    projectId: string,
-  ): Promise<ModuleApiResponse[]> {
+  async list(workspaceSlug: string, projectId: string): Promise<ModuleApiResponse[]> {
     const { data } = await apiClient.get<ModuleApiResponse[]>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/modules/`,
     );

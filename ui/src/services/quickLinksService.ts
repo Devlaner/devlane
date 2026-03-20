@@ -1,8 +1,5 @@
-import { apiClient } from "../api/client";
-import type {
-  QuickLinkApiResponse,
-  CreateQuickLinkRequest,
-} from "../api/types";
+import { apiClient } from '../api/client';
+import type { QuickLinkApiResponse, CreateQuickLinkRequest } from '../api/types';
 
 /**
  * Quick links API (workspace-scoped).

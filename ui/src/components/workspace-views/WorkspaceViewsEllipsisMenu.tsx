@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { useLocation } from "react-router-dom";
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useLocation } from 'react-router-dom';
 
 const IconExternal = () => (
   <svg
@@ -60,9 +60,7 @@ export function WorkspaceViewsEllipsisMenu() {
   } | null>(null);
 
   const fullUrl =
-    typeof window !== "undefined"
-      ? window.location.href
-      : `${location.pathname}${location.search}`;
+    typeof window !== 'undefined' ? window.location.href : `${location.pathname}${location.search}`;
 
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) {
@@ -82,19 +80,16 @@ export function WorkspaceViewsEllipsisMenu() {
     if (!open) return;
     const handleClick = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (
-        !triggerRef.current?.contains(target) &&
-        !panelRef.current?.contains(target)
-      ) {
+      if (!triggerRef.current?.contains(target) && !panelRef.current?.contains(target)) {
         setOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
 
   const handleOpenInNewTab = () => {
-    window.open(fullUrl, "_blank", "noopener,noreferrer");
+    window.open(fullUrl, '_blank', 'noopener,noreferrer');
     setOpen(false);
   };
 
@@ -125,7 +120,7 @@ export function WorkspaceViewsEllipsisMenu() {
             ref={panelRef}
             className="min-w-[180px] rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
             style={{
-              position: "fixed",
+              position: 'fixed',
               top: position.top,
               right: position.right,
               zIndex: DROPDOWN_Z_INDEX,

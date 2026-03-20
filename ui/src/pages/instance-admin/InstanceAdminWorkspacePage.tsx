@@ -1,21 +1,21 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Button, Skeleton } from "../../components/ui";
-import { workspaceService } from "../../services/workspaceService";
-import { instanceSettingsService } from "../../services/instanceService";
-import { getApiErrorMessage } from "../../api/client";
-import type { InstanceGeneralSection } from "../../api/types";
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Button, Skeleton } from '../../components/ui';
+import { workspaceService } from '../../services/workspaceService';
+import { instanceSettingsService } from '../../services/instanceService';
+import { getApiErrorMessage } from '../../api/client';
+import type { InstanceGeneralSection } from '../../api/types';
 
 export function InstanceAdminWorkspacePage() {
   const navigate = useNavigate();
-  const [workspaces, setWorkspaces] = useState<
-    Array<{ id: string; name: string; slug: string }>
-  >([]);
+  const [workspaces, setWorkspaces] = useState<Array<{ id: string; name: string; slug: string }>>(
+    [],
+  );
   const [onlyAdminCanCreate, setOnlyAdminCanCreate] = useState(false);
   const [loading, setLoading] = useState(true);
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -65,10 +65,10 @@ export function InstanceAdminWorkspacePage() {
 
   const handleToggle = () => {
     const next = !onlyAdminCanCreate;
-    setError("");
+    setError('');
     setSaving(true);
     instanceSettingsService
-      .updateSection("general", { only_admin_can_create_workspace: next })
+      .updateSection('general', { only_admin_can_create_workspace: next })
       .then(() => setOnlyAdminCanCreate(next))
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setSaving(false));
@@ -133,8 +133,8 @@ export function InstanceAdminWorkspacePage() {
             Prevent anyone else from creating a workspace.
           </p>
           <p className="mt-0.5 text-xs text-(--txt-secondary)">
-            Toggling this on will let only you (the instance admin) create
-            workspaces. You will have to invite users to new workspaces.
+            Toggling this on will let only you (the instance admin) create workspaces. You will have
+            to invite users to new workspaces.
           </p>
         </div>
         <label className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full bg-(--neutral-400) has-[:checked]:bg-(--brand-default)">
@@ -156,22 +156,20 @@ export function InstanceAdminWorkspacePage() {
               All workspaces on this instance • {workspaces.length}
             </h2>
             <p className="mt-0.5 text-xs text-(--txt-secondary)">
-              You can&apos;t yet delete workspaces and you can only go to the
-              workspace if you are an Admin or a Member.
+              You can&apos;t yet delete workspaces and you can only go to the workspace if you are
+              an Admin or a Member.
             </p>
           </div>
           <Button
             size="sm"
             type="button"
             className="text-xs"
-            onClick={() => navigate("/instance-admin/workspace/create")}
+            onClick={() => navigate('/instance-admin/workspace/create')}
           >
             Create workspace
           </Button>
         </div>
-        {error && (
-          <p className="mb-3 text-sm text-(--txt-danger-primary)">{error}</p>
-        )}
+        {error && <p className="mb-3 text-sm text-(--txt-danger-primary)">{error}</p>}
         <ul className="space-y-2">
           {workspaces.map((w) => (
             <li
@@ -183,9 +181,7 @@ export function InstanceAdminWorkspacePage() {
                   {w.name.charAt(0)}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-(--txt-primary)">
-                    {w.name}
-                  </p>
+                  <p className="text-sm font-medium text-(--txt-primary)">{w.name}</p>
                   <p className="text-xs text-(--txt-tertiary)">[{w.slug}]</p>
                 </div>
               </div>

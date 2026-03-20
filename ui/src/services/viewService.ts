@@ -1,5 +1,5 @@
-import { apiClient } from "../api/client";
-import type { IssueViewApiResponse } from "../api/types";
+import { apiClient } from '../api/client';
+import type { IssueViewApiResponse } from '../api/types';
 
 export interface CreateViewRequest {
   name: string;
@@ -12,10 +12,7 @@ export interface CreateViewRequest {
 }
 
 export const viewService = {
-  async list(
-    workspaceSlug: string,
-    projectId?: string | null,
-  ): Promise<IssueViewApiResponse[]> {
+  async list(workspaceSlug: string, projectId?: string | null): Promise<IssueViewApiResponse[]> {
     const url = projectId
       ? `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/?project_id=${encodeURIComponent(projectId)}`
       : `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/`;
@@ -31,20 +28,14 @@ export const viewService = {
     return data ?? [];
   },
 
-  async get(
-    workspaceSlug: string,
-    viewId: string,
-  ): Promise<IssueViewApiResponse> {
+  async get(workspaceSlug: string, viewId: string): Promise<IssueViewApiResponse> {
     const { data } = await apiClient.get<IssueViewApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/`,
     );
     return data;
   },
 
-  async create(
-    workspaceSlug: string,
-    payload: CreateViewRequest,
-  ): Promise<IssueViewApiResponse> {
+  async create(workspaceSlug: string, payload: CreateViewRequest): Promise<IssueViewApiResponse> {
     const { data } = await apiClient.post<IssueViewApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/`,
       payload,
@@ -82,10 +73,7 @@ export const viewService = {
     );
   },
 
-  async publish(
-    workspaceSlug: string,
-    viewId: string,
-  ): Promise<IssueViewApiResponse> {
+  async publish(workspaceSlug: string, viewId: string): Promise<IssueViewApiResponse> {
     try {
       const { data } = await apiClient.post<IssueViewApiResponse>(
         `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/publish/`,
@@ -99,10 +87,7 @@ export const viewService = {
     }
   },
 
-  async unpublish(
-    workspaceSlug: string,
-    viewId: string,
-  ): Promise<IssueViewApiResponse> {
+  async unpublish(workspaceSlug: string, viewId: string): Promise<IssueViewApiResponse> {
     try {
       const { data } = await apiClient.post<IssueViewApiResponse>(
         `/api/workspaces/${encodeURIComponent(workspaceSlug)}/views/${encodeURIComponent(viewId)}/unpublish/`,

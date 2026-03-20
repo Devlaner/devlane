@@ -1,26 +1,22 @@
-import { useState, useEffect, useRef } from "react";
-import { Modal, Button, Input, Avatar } from "./ui";
-import { DateRangeModal } from "./workspace-views/DateRangeModal";
-import { getImageUrl } from "../lib/utils";
-import { moduleService } from "../services/moduleService";
-import { workspaceService } from "../services/workspaceService";
-import type { ModuleApiResponse } from "../api/types";
-import type { WorkspaceMemberApiResponse } from "../api/types";
-import { formatISODateDisplay } from "../lib/dateOnly";
-import { MODULE_STATUSES } from "../lib/moduleStatuses";
+import { useState, useEffect, useRef } from 'react';
+import { Modal, Button, Input, Avatar } from './ui';
+import { DateRangeModal } from './workspace-views/DateRangeModal';
+import { getImageUrl } from '../lib/utils';
+import { moduleService } from '../services/moduleService';
+import { workspaceService } from '../services/workspaceService';
+import type { ModuleApiResponse } from '../api/types';
+import type { WorkspaceMemberApiResponse } from '../api/types';
+import { formatISODateDisplay } from '../lib/dateOnly';
+import { MODULE_STATUSES } from '../lib/moduleStatuses';
 
-function formatDateRangeDisplay(
-  start: string | null,
-  end: string | null,
-): string {
-  if (!start && !end) return "Start date → End date";
-  if (start && end)
-    return `${formatISODateDisplay(start)} → ${formatISODateDisplay(end)}`;
+function formatDateRangeDisplay(start: string | null, end: string | null): string {
+  if (!start && !end) return 'Start date → End date';
+  if (start && end) return `${formatISODateDisplay(start)} → ${formatISODateDisplay(end)}`;
   return start
     ? formatISODateDisplay(start)
     : end
       ? formatISODateDisplay(end)
-      : "Start date → End date";
+      : 'Start date → End date';
 }
 
 export interface CreateModuleModalProps {
@@ -40,19 +36,19 @@ export function CreateModuleModal({
   projectName,
   onCreated,
 }: CreateModuleModalProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
-  const [status, setStatus] = useState<string>("backlog");
+  const [status, setStatus] = useState<string>('backlog');
   const [leadId, setLeadId] = useState<string | null>(null);
   const [memberIds, setMemberIds] = useState<string[]>([]);
   const [dateModalOpen, setDateModalOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [leadDropdownOpen, setLeadDropdownOpen] = useState(false);
   const [membersDropdownOpen, setMembersDropdownOpen] = useState(false);
-  const [leadSearch, setLeadSearch] = useState("");
-  const [membersSearch, setMembersSearch] = useState("");
+  const [leadSearch, setLeadSearch] = useState('');
+  const [membersSearch, setMembersSearch] = useState('');
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,16 +66,16 @@ export function CreateModuleModal({
 
   useEffect(() => {
     if (!open) {
-      setTitle("");
-      setDescription("");
+      setTitle('');
+      setDescription('');
       setStartDate(null);
       setEndDate(null);
-      setStatus("backlog");
+      setStatus('backlog');
       setLeadId(null);
       setMemberIds([]);
       setError(null);
-      setLeadSearch("");
-      setMembersSearch("");
+      setLeadSearch('');
+      setMembersSearch('');
       setStatusDropdownOpen(false);
       setLeadDropdownOpen(false);
       setMembersDropdownOpen(false);
@@ -96,26 +92,22 @@ export function CreateModuleModal({
       setLeadDropdownOpen(false);
       setMembersDropdownOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   const q = (s: string) => s.trim().toLowerCase();
   const filteredLead = members.filter((m) =>
-    q(m.member_display_name ?? m.member_email ?? m.member_id).includes(
-      q(leadSearch),
-    ),
+    q(m.member_display_name ?? m.member_email ?? m.member_id).includes(q(leadSearch)),
   );
   const filteredMembers = members.filter((m) =>
-    q(m.member_display_name ?? m.member_email ?? m.member_id).includes(
-      q(membersSearch),
-    ),
+    q(m.member_display_name ?? m.member_email ?? m.member_id).includes(q(membersSearch)),
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      setError("Title is required.");
+      setError('Title is required.');
       return;
     }
     setError(null);
@@ -124,24 +116,21 @@ export function CreateModuleModal({
       const created = await moduleService.create(workspaceSlug, projectId, {
         name: title.trim(),
         description: description.trim() || undefined,
-        status: status || "backlog",
+        status: status || 'backlog',
         start_date: startDate || undefined,
         target_date: endDate || undefined,
       });
       onClose();
       onCreated?.(created);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create module.");
+      setError(err instanceof Error ? err.message : 'Failed to create module.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const statusLabel =
-    MODULE_STATUSES.find((s) => s.id === status)?.label ?? status;
-  const leadMember = leadId
-    ? members.find((m) => m.member_id === leadId)
-    : null;
+  const statusLabel = MODULE_STATUSES.find((s) => s.id === status)?.label ?? status;
+  const leadMember = leadId ? members.find((m) => m.member_id === leadId) : null;
   const selectedMembers = memberIds
     .map((id) => members.find((m) => m.member_id === id))
     .filter(Boolean) as WorkspaceMemberApiResponse[];
@@ -158,22 +147,14 @@ export function CreateModuleModal({
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              form="create-module-form"
-              disabled={submitting || !title.trim()}
-            >
+            <Button type="submit" form="create-module-form" disabled={submitting || !title.trim()}>
               Create Module
             </Button>
           </>
         }
       >
         <div className="mb-3 text-sm text-(--txt-secondary)">{projectName}</div>
-        <form
-          id="create-module-form"
-          onSubmit={handleSubmit}
-          className="space-y-4"
-        >
+        <form id="create-module-form" onSubmit={handleSubmit} className="space-y-4">
           <Input
             label="Title"
             value={title}
@@ -283,20 +264,14 @@ export function CreateModuleModal({
                         key={m.member_id}
                         type="button"
                         onClick={() => {
-                          setLeadId(
-                            leadId === m.member_id ? null : m.member_id,
-                          );
+                          setLeadId(leadId === m.member_id ? null : m.member_id);
                           setLeadDropdownOpen(false);
                         }}
                         className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                       >
                         <span className="flex items-center gap-2 truncate">
                           <Avatar
-                            name={
-                              m.member_display_name ??
-                              m.member_email ??
-                              m.member_id
-                            }
+                            name={m.member_display_name ?? m.member_email ?? m.member_id}
                             src={getImageUrl(m.member_avatar) ?? undefined}
                             size="sm"
                             className="h-6 w-6 text-xs"
@@ -326,9 +301,7 @@ export function CreateModuleModal({
                     {selectedMembers.map((m) => (
                       <Avatar
                         key={m.member_id}
-                        name={
-                          m.member_display_name ?? m.member_email ?? m.member_id
-                        }
+                        name={m.member_display_name ?? m.member_email ?? m.member_id}
                         src={getImageUrl(m.member_avatar) ?? undefined}
                         size="sm"
                         className="h-6 w-6 border-2 border-(--bg-layer-2) text-xs"
@@ -368,11 +341,7 @@ export function CreateModuleModal({
                         >
                           <span className="flex items-center gap-2 truncate">
                             <Avatar
-                              name={
-                                m.member_display_name ??
-                                m.member_email ??
-                                m.member_id
-                              }
+                              name={m.member_display_name ?? m.member_email ?? m.member_id}
                               src={getImageUrl(m.member_avatar) ?? undefined}
                               size="sm"
                               className="h-6 w-6 text-xs"
@@ -391,9 +360,7 @@ export function CreateModuleModal({
             </div>
           </div>
 
-          {error && (
-            <p className="text-sm text-(--txt-danger-primary)">{error}</p>
-          )}
+          {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
         </form>
       </Modal>
 

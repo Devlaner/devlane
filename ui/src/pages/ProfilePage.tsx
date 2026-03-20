@@ -1,22 +1,22 @@
-import { useParams, Link } from "react-router-dom";
-import { useState, useMemo, useEffect } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { Avatar, Card, CardContent } from "../components/ui";
-import { getImageUrl } from "../lib/utils";
-import { workspaceService } from "../services/workspaceService";
-import { projectService } from "../services/projectService";
-import { issueService } from "../services/issueService";
-import { stateService } from "../services/stateService";
+import { useParams, Link } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { Avatar, Card, CardContent } from '../components/ui';
+import { getImageUrl } from '../lib/utils';
+import { workspaceService } from '../services/workspaceService';
+import { projectService } from '../services/projectService';
+import { issueService } from '../services/issueService';
+import { stateService } from '../services/stateService';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
   IssueApiResponse,
   StateApiResponse,
   WorkspaceMemberApiResponse,
-} from "../api/types";
+} from '../api/types';
 // import type { Issue } from "../types"; // reserved for future use
 
-type TabId = "summary" | "assigned" | "created" | "subscribed" | "activity";
+type TabId = 'summary' | 'assigned' | 'created' | 'subscribed' | 'activity';
 
 function formatTimeAgo(iso: string): string {
   const d = new Date(iso);
@@ -25,17 +25,17 @@ function formatTimeAgo(iso: string): string {
   const min = Math.floor(diffMs / 60000);
   const hr = Math.floor(min / 60);
   const day = Math.floor(hr / 24);
-  if (day > 0) return `${day} day${day === 1 ? "" : "s"} ago`;
-  if (hr > 0) return `about ${hr} hour${hr === 1 ? "" : "s"} ago`;
-  if (min > 0) return `about ${min} minute${min === 1 ? "" : "s"} ago`;
-  return "just now";
+  if (day > 0) return `${day} day${day === 1 ? '' : 's'} ago`;
+  if (hr > 0) return `about ${hr} hour${hr === 1 ? '' : 's'} ago`;
+  if (min > 0) return `about ${min} minute${min === 1 ? '' : 's'} ago`;
+  return 'just now';
 }
 
 function formatJoinedDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   });
 }
 
@@ -45,7 +45,7 @@ export function ProfilePage() {
     userId: string;
   }>();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabId>("summary");
+  const [activeTab, setActiveTab] = useState<TabId>('summary');
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
@@ -75,9 +75,7 @@ export function ProfilePage() {
         if (!cancelled) setMembers(mem ?? []);
         if (!cancelled && list?.length)
           return Promise.all([
-            ...list.map((p) =>
-              issueService.list(workspaceSlug!, p.id, { limit: 100 }),
-            ),
+            ...list.map((p) => issueService.list(workspaceSlug!, p.id, { limit: 100 })),
             ...list.map((p) => stateService.list(workspaceSlug!, p.id)),
           ]);
         return [];
@@ -108,23 +106,16 @@ export function ProfilePage() {
     return user ?? null; // Only current user supported until user-by-id API exists
   }, [userId, user]);
 
-  const member = profileUser
-    ? (members.find((m) => m.member_id === profileUser.id) ?? null)
-    : null;
+  const member = profileUser ? (members.find((m) => m.member_id === profileUser.id) ?? null) : null;
   const joinedAt = member?.created_at ?? new Date().toISOString();
 
   const issuesCreated = useMemo(
-    () =>
-      profileUser
-        ? issues.filter((i) => i.created_by_id === profileUser.id)
-        : [],
+    () => (profileUser ? issues.filter((i) => i.created_by_id === profileUser.id) : []),
     [profileUser, issues],
   );
   const issuesAssigned = useMemo((): IssueApiResponse[] => {
     if (!profileUser?.id) return [];
-    return issues.filter((i) =>
-      (i.assignee_ids ?? []).includes(profileUser.id),
-    );
+    return issues.filter((i) => (i.assignee_ids ?? []).includes(profileUser.id));
   }, [profileUser, issues]);
   const issuesSubscribed = issuesAssigned.length;
   const issuesSubscribedList = issuesAssigned;
@@ -139,37 +130,35 @@ export function ProfilePage() {
   }, [issuesAssigned]);
 
   const workloadCategories = useMemo(() => {
-    const backlog = states.filter((s) => s.name === "Backlog").map((s) => s.id);
-    const notStarted = states.filter((s) => s.name === "Todo").map((s) => s.id);
-    const workingOn = states
-      .filter((s) => s.name === "In Progress")
-      .map((s) => s.id);
-    const completed = states.filter((s) => s.name === "Done").map((s) => s.id);
+    const backlog = states.filter((s) => s.name === 'Backlog').map((s) => s.id);
+    const notStarted = states.filter((s) => s.name === 'Todo').map((s) => s.id);
+    const workingOn = states.filter((s) => s.name === 'In Progress').map((s) => s.id);
+    const completed = states.filter((s) => s.name === 'Done').map((s) => s.id);
     const canceled: string[] = [];
     return [
-      { id: "backlog", label: "Backlog", color: "#94a3b8", stateIds: backlog },
+      { id: 'backlog', label: 'Backlog', color: '#94a3b8', stateIds: backlog },
       {
-        id: "not-started",
-        label: "Not started",
-        color: "#3b82f6",
+        id: 'not-started',
+        label: 'Not started',
+        color: '#3b82f6',
         stateIds: notStarted,
       },
       {
-        id: "working-on",
-        label: "Working on",
-        color: "#f59e0b",
+        id: 'working-on',
+        label: 'Working on',
+        color: '#f59e0b',
         stateIds: workingOn,
       },
       {
-        id: "completed",
-        label: "Completed",
-        color: "#22c55e",
+        id: 'completed',
+        label: 'Completed',
+        color: '#22c55e',
         stateIds: completed,
       },
       {
-        id: "canceled",
-        label: "Canceled",
-        color: "#ef4444",
+        id: 'canceled',
+        label: 'Canceled',
+        color: '#ef4444',
         stateIds: canceled,
       },
     ];
@@ -184,7 +173,7 @@ export function ProfilePage() {
       none: 0,
     };
     issuesAssigned.forEach((i) => {
-      const p = i.priority ?? "none";
+      const p = i.priority ?? 'none';
       counts[p] = (counts[p] ?? 0) + 1;
     });
     return counts;
@@ -194,10 +183,7 @@ export function ProfilePage() {
     return workloadCategories.map((cat) => ({
       label: cat.label,
       color: cat.color,
-      count: cat.stateIds.reduce(
-        (sum, id) => sum + (workloadByState[id] ?? 0),
-        0,
-      ),
+      count: cat.stateIds.reduce((sum, id) => sum + (workloadByState[id] ?? 0), 0),
     }));
   }, [workloadCategories, workloadByState]);
 
@@ -217,13 +203,10 @@ export function ProfilePage() {
         id: `created-${i.id}`,
         projectId: i.project_id,
         issueId: i.id,
-        type: "created" as const,
+        type: 'created' as const,
         createdAt: i.created_at ?? i.updated_at ?? new Date().toISOString(),
       }))
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      )
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 20);
     return created;
   }, [profileUser, issuesCreated]);
@@ -242,17 +225,13 @@ export function ProfilePage() {
       const statesForProject = states.filter((s) => s.project_id === p.id);
       const stateCounts = statesForProject.map((s) => ({
         ...s,
-        count: issues.filter(
-          (i) => i.project_id === p.id && i.state_id === s.id,
-        ).length,
+        count: issues.filter((i) => i.project_id === p.id && i.state_id === s.id).length,
       }));
       return { project: p, states: stateCounts };
     });
   }, [projectsWithProgress, states, issues]);
 
-  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(
-    new Set(),
-  );
+  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(new Set());
 
   const toggleProjectExpanded = (projectId: string) => {
     setExpandedProjectIds((prev) => {
@@ -271,18 +250,16 @@ export function ProfilePage() {
     );
   }
   if (!workspace) {
-    return (
-      <div className="p-4 text-(--txt-secondary)">Workspace not found.</div>
-    );
+    return <div className="p-4 text-(--txt-secondary)">Workspace not found.</div>;
   }
 
   const baseUrl = `/${workspace.slug}`;
   const tabs: { id: TabId; label: string }[] = [
-    { id: "summary", label: "Summary" },
-    { id: "assigned", label: "Assigned" },
-    { id: "created", label: "Created" },
-    { id: "subscribed", label: "Subscribed" },
-    { id: "activity", label: "Activity" },
+    { id: 'summary', label: 'Summary' },
+    { id: 'assigned', label: 'Assigned' },
+    { id: 'created', label: 'Created' },
+    { id: 'subscribed', label: 'Subscribed' },
+    { id: 'activity', label: 'Activity' },
   ];
 
   return (
@@ -299,8 +276,8 @@ export function ProfilePage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                   activeTab === tab.id
-                    ? "border-(--brand-default) text-(--txt-primary)"
-                    : "border-transparent text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
+                    ? 'border-(--brand-default) text-(--txt-primary)'
+                    : 'border-transparent text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)'
                 }`}
               >
                 {tab.label}
@@ -309,23 +286,18 @@ export function ProfilePage() {
           </div>
         </div>
 
-        {activeTab === "summary" && (
+        {activeTab === 'summary' && (
           <>
             {/* Overview */}
             <section>
-              <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">
-                Overview
-              </h2>
+              <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">Overview</h2>
               <div className="grid gap-4 sm:grid-cols-3">
                 <button
                   type="button"
-                  onClick={() => setActiveTab("created")}
+                  onClick={() => setActiveTab('created')}
                   className="w-full cursor-pointer rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) text-left transition-colors hover:bg-(--bg-layer-1-hover) focus:outline-none"
                 >
-                  <Card
-                    variant="outlined"
-                    className="border-0 bg-transparent shadow-none"
-                  >
+                  <Card variant="outlined" className="border-0 bg-transparent shadow-none">
                     <CardContent className="flex items-center gap-3 p-4">
                       <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-(--bg-layer-1) text-(--txt-icon-secondary)">
                         <svg
@@ -346,22 +318,17 @@ export function ProfilePage() {
                         <p className="text-2xl font-semibold text-(--txt-primary)">
                           {issuesCreated.length}
                         </p>
-                        <p className="text-sm text-(--txt-secondary)">
-                          Work items created
-                        </p>
+                        <p className="text-sm text-(--txt-secondary)">Work items created</p>
                       </div>
                     </CardContent>
                   </Card>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab("assigned")}
+                  onClick={() => setActiveTab('assigned')}
                   className="w-full cursor-pointer rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) text-left transition-colors hover:bg-(--bg-layer-1-hover) focus:outline-none"
                 >
-                  <Card
-                    variant="outlined"
-                    className="border-0 bg-transparent shadow-none"
-                  >
+                  <Card variant="outlined" className="border-0 bg-transparent shadow-none">
                     <CardContent className="flex items-center gap-3 p-4">
                       <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-(--bg-layer-1) text-(--txt-icon-secondary)">
                         <svg
@@ -382,22 +349,17 @@ export function ProfilePage() {
                         <p className="text-2xl font-semibold text-(--txt-primary)">
                           {issuesAssigned.length}
                         </p>
-                        <p className="text-sm text-(--txt-secondary)">
-                          Work items assigned
-                        </p>
+                        <p className="text-sm text-(--txt-secondary)">Work items assigned</p>
                       </div>
                     </CardContent>
                   </Card>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab("subscribed")}
+                  onClick={() => setActiveTab('subscribed')}
                   className="w-full cursor-pointer rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) text-left transition-colors hover:bg-(--bg-layer-1-hover) focus:outline-none"
                 >
-                  <Card
-                    variant="outlined"
-                    className="border-0 bg-transparent shadow-none"
-                  >
+                  <Card variant="outlined" className="border-0 bg-transparent shadow-none">
                     <CardContent className="flex items-center gap-3 p-4">
                       <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-(--bg-layer-1) text-(--txt-icon-secondary)">
                         <svg
@@ -416,9 +378,7 @@ export function ProfilePage() {
                         <p className="text-2xl font-semibold text-(--txt-primary)">
                           {issuesSubscribed}
                         </p>
-                        <p className="text-sm text-(--txt-secondary)">
-                          Work items subscribed
-                        </p>
+                        <p className="text-sm text-(--txt-secondary)">Work items subscribed</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -428,9 +388,7 @@ export function ProfilePage() {
 
             {/* Workload */}
             <section>
-              <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">
-                Workload
-              </h2>
+              <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">Workload</h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 {workloadCategories.map((cat) => {
                   const count = cat.stateIds.reduce(
@@ -450,12 +408,8 @@ export function ProfilePage() {
                           aria-hidden
                         />
                         <div>
-                          <p className="text-2xl font-semibold text-(--txt-primary)">
-                            {count}
-                          </p>
-                          <p className="text-sm text-(--txt-secondary)">
-                            {cat.label}
-                          </p>
+                          <p className="text-2xl font-semibold text-(--txt-primary)">{count}</p>
+                          <p className="text-sm text-(--txt-secondary)">{cat.label}</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -476,25 +430,20 @@ export function ProfilePage() {
                 >
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-2">
-                      {(
-                        ["urgent", "high", "medium", "low", "none"] as const
-                      ).map((p) => {
+                      {(['urgent', 'high', 'medium', 'low', 'none'] as const).map((p) => {
                         const count = priorityCounts[p] ?? 0;
-                        const max = Math.max(
-                          1,
-                          ...Object.values(priorityCounts),
-                        );
+                        const max = Math.max(1, ...Object.values(priorityCounts));
                         const width = max ? (count / max) * 100 : 0;
                         const barColor =
-                          p === "urgent"
-                            ? "#ef4444"
-                            : p === "high"
-                              ? "#f87171"
-                              : p === "medium"
-                                ? "#f59e0b"
-                                : p === "low"
-                                  ? "#60a5fa"
-                                  : "#94a3b8";
+                          p === 'urgent'
+                            ? '#ef4444'
+                            : p === 'high'
+                              ? '#f87171'
+                              : p === 'medium'
+                                ? '#f59e0b'
+                                : p === 'low'
+                                  ? '#60a5fa'
+                                  : '#94a3b8';
                         return (
                           <div key={p} className="flex items-center gap-3">
                             <span className="w-16 shrink-0 capitalize text-sm text-(--txt-secondary)">
@@ -507,7 +456,7 @@ export function ProfilePage() {
                                   style={{
                                     width: `${width}%`,
                                     minWidth: count ? 8 : 0,
-                                    maxWidth: "100%",
+                                    maxWidth: '100%',
                                     backgroundColor: barColor,
                                   }}
                                 />
@@ -537,20 +486,13 @@ export function ProfilePage() {
                     </div>
                     <div className="flex flex-col gap-1.5">
                       {stateCountsForDonut.map((item) => (
-                        <div
-                          key={item.label}
-                          className="flex items-center gap-2 text-sm"
-                        >
+                        <div key={item.label} className="flex items-center gap-2 text-sm">
                           <span
                             className="h-3 w-3 shrink-0 rounded-sm"
                             style={{ backgroundColor: item.color }}
                           />
-                          <span className="text-(--txt-secondary)">
-                            {item.label}
-                          </span>
-                          <span className="text-(--txt-primary)">
-                            ({item.count})
-                          </span>
+                          <span className="text-(--txt-secondary)">{item.label}</span>
+                          <span className="text-(--txt-primary)">({item.count})</span>
                         </div>
                       ))}
                     </div>
@@ -561,9 +503,7 @@ export function ProfilePage() {
 
             {/* Recent activity */}
             <section>
-              <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">
-                Recent activity
-              </h2>
+              <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">Recent activity</h2>
               <Card
                 variant="outlined"
                 className="border border-(--border-subtle) bg-(--bg-surface-1)"
@@ -576,53 +516,44 @@ export function ProfilePage() {
                       </li>
                     ) : (
                       recentActivity.map((act) => {
-                        const project = projects.find(
-                          (p) => p.id === act.projectId,
-                        );
+                        const project = projects.find((p) => p.id === act.projectId);
                         const issue = issues.find(
-                          (i) =>
-                            i.id === act.issueId &&
-                            i.project_id === act.projectId,
+                          (i) => i.id === act.issueId && i.project_id === act.projectId,
                         );
                         const issueRef =
                           project && issue
-                            ? `${project.identifier ?? ""}-${issue.sequence_id ?? issue.id.slice(-4)}`
-                            : "";
-                        const issueTitle = issue?.name ?? "";
-                        let text: React.ReactNode = "";
-                        if (act.type === "label" && act.labelName) {
+                            ? `${project.identifier ?? ''}-${issue.sequence_id ?? issue.id.slice(-4)}`
+                            : '';
+                        const issueTitle = issue?.name ?? '';
+                        let text: React.ReactNode = '';
+                        if (act.type === 'label' && act.labelName) {
                           text = (
                             <>
-                              You added a new label{" "}
+                              You added a new label{' '}
                               <span className="rounded bg-(--bg-warning-subtle) px-1.5 py-0.5 text-(--txt-warning-primary)">
                                 {act.labelName}
-                              </span>{" "}
-                              to {issueRef} {issueTitle}{" "}
+                              </span>{' '}
+                              to {issueRef} {issueTitle} {formatTimeAgo(act.createdAt)}
+                            </>
+                          );
+                        } else if (act.type === 'cycle' && act.cycleName) {
+                          text = (
+                            <>
+                              You added {issueRef} {issueTitle} to the cycle {act.cycleName}{' '}
                               {formatTimeAgo(act.createdAt)}
                             </>
                           );
-                        } else if (act.type === "cycle" && act.cycleName) {
+                        } else if (act.type === 'assignee' && act.assigneeName) {
                           text = (
                             <>
-                              You added {issueRef} {issueTitle} to the cycle{" "}
-                              {act.cycleName} {formatTimeAgo(act.createdAt)}
-                            </>
-                          );
-                        } else if (
-                          act.type === "assignee" &&
-                          act.assigneeName
-                        ) {
-                          text = (
-                            <>
-                              You added a new assignee {act.assigneeName} to{" "}
-                              {issueRef} {formatTimeAgo(act.createdAt)}
-                            </>
-                          );
-                        } else if (act.type === "created") {
-                          text = (
-                            <>
-                              You created {issueRef} {issueTitle}{" "}
+                              You added a new assignee {act.assigneeName} to {issueRef}{' '}
                               {formatTimeAgo(act.createdAt)}
+                            </>
+                          );
+                        } else if (act.type === 'created') {
+                          text = (
+                            <>
+                              You created {issueRef} {issueTitle} {formatTimeAgo(act.createdAt)}
                             </>
                           );
                         } else {
@@ -631,16 +562,12 @@ export function ProfilePage() {
                         return (
                           <li key={act.id} className="flex gap-3 px-4 py-3">
                             <Avatar
-                              name={profileUser?.name ?? "?"}
-                              src={
-                                getImageUrl(profileUser?.avatarUrl) ?? undefined
-                              }
+                              name={profileUser?.name ?? '?'}
+                              src={getImageUrl(profileUser?.avatarUrl) ?? undefined}
                               size="sm"
                               className="shrink-0"
                             />
-                            <p className="min-w-0 text-sm text-(--txt-secondary)">
-                              {text}
-                            </p>
+                            <p className="min-w-0 text-sm text-(--txt-secondary)">{text}</p>
                           </li>
                         );
                       })
@@ -652,7 +579,7 @@ export function ProfilePage() {
           </>
         )}
 
-        {activeTab === "assigned" && (
+        {activeTab === 'assigned' && (
           <WorkItemsList
             issues={issuesAssigned}
             states={states}
@@ -662,7 +589,7 @@ export function ProfilePage() {
             workspaceSlug={workspace.slug}
           />
         )}
-        {activeTab === "created" && (
+        {activeTab === 'created' && (
           <WorkItemsList
             issues={issuesCreated}
             states={states}
@@ -672,7 +599,7 @@ export function ProfilePage() {
             workspaceSlug={workspace.slug}
           />
         )}
-        {activeTab === "subscribed" && (
+        {activeTab === 'subscribed' && (
           <WorkItemsList
             issues={issuesSubscribedList}
             states={states}
@@ -682,7 +609,7 @@ export function ProfilePage() {
             workspaceSlug={workspace.slug}
           />
         )}
-        {activeTab === "activity" && (
+        {activeTab === 'activity' && (
           <ActivityTab
             activities={recentActivity}
             projects={projects}
@@ -705,8 +632,8 @@ export function ProfilePage() {
               getImageUrl(profileUser?.coverImageUrl)
                 ? {
                     backgroundImage: `url(${getImageUrl(profileUser?.coverImageUrl)})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
                   }
                 : undefined
             }
@@ -731,21 +658,21 @@ export function ProfilePage() {
           </div>
           <div
             className="relative flex min-h-0 flex-1 flex-col px-4 pb-4"
-            style={{ marginTop: "-28px" }}
+            style={{ marginTop: '-28px' }}
           >
             <div className="mb-3 flex justify-center shrink-0">
               <Avatar
-                name={profileUser?.name ?? "?"}
+                name={profileUser?.name ?? '?'}
                 src={getImageUrl(profileUser?.avatarUrl) ?? undefined}
                 size="lg"
                 className="h-14 w-14"
               />
             </div>
             <h3 className="text-center text-base font-semibold text-(--txt-primary) shrink-0">
-              {profileUser?.name ?? "—"}
+              {profileUser?.name ?? '—'}
             </h3>
             <p className="text-center text-sm text-(--txt-tertiary) shrink-0">
-              ({profileUser?.email?.split("@")[0] ?? "user"})
+              ({profileUser?.email?.split('@')[0] ?? 'user'})
             </p>
             <p className="mt-2 text-center text-xs text-(--txt-secondary) shrink-0">
               Joined on {formatJoinedDate(joinedAt)}
@@ -761,9 +688,7 @@ export function ProfilePage() {
                 {projectStateBreakdown.map(({ project: p, states }, index) => {
                   const expanded = expandedProjectIds.has(p.id);
                   const total = states.reduce((sum, s) => sum + s.count, 0);
-                  const projectIcon = p.name
-                    .toLowerCase()
-                    .includes("logistics") ? (
+                  const projectIcon = p.name.toLowerCase().includes('logistics') ? (
                     <svg
                       width="16"
                       height="16"
@@ -803,11 +728,7 @@ export function ProfilePage() {
                   return (
                     <li
                       key={p.id}
-                      className={
-                        index > 0
-                          ? "border-t border-(--border-subtle)"
-                          : undefined
-                      }
+                      className={index > 0 ? 'border-t border-(--border-subtle)' : undefined}
                     >
                       <div className="py-1">
                         <button
@@ -841,7 +762,7 @@ export function ProfilePage() {
                             fill="none"
                             stroke="currentColor"
                             strokeWidth="2"
-                            className={`shrink-0 text-(--txt-icon-tertiary) transition-transform ${expanded ? "rotate-0" : "-rotate-90"}`}
+                            className={`shrink-0 text-(--txt-icon-tertiary) transition-transform ${expanded ? 'rotate-0' : '-rotate-90'}`}
                           >
                             <path d="m6 9 6 6 6-6" />
                           </svg>
@@ -868,10 +789,7 @@ export function ProfilePage() {
                             </div>
                             <ul className="space-y-1">
                               {states.map((s) => (
-                                <li
-                                  key={s.id}
-                                  className="flex items-center gap-2 text-xs"
-                                >
+                                <li key={s.id} className="flex items-center gap-2 text-xs">
                                   <span
                                     className="h-3 w-3 shrink-0 rounded-sm"
                                     style={{
@@ -879,12 +797,10 @@ export function ProfilePage() {
                                     }}
                                     aria-hidden
                                   />
-                                  <span className="text-(--txt-secondary)">
-                                    {s.name}
-                                  </span>
+                                  <span className="text-(--txt-secondary)">{s.name}</span>
                                   <span className="text-(--txt-primary)">
                                     — {s.count} Work item
-                                    {s.count === 1 ? "" : "s"}
+                                    {s.count === 1 ? '' : 's'}
                                   </span>
                                 </li>
                               ))}
@@ -933,14 +849,12 @@ function WorkItemsList({
   void workspaceSlug; // reserved for future use (e.g. links)
   const getStateName = (stateId: string) =>
     statesList.find((s) => s.id === stateId)?.name ?? stateId;
-  const getUser = (
-    userId: string | null,
-  ): { name: string; avatarUrl?: string | null } | null => {
+  const getUser = (userId: string | null): { name: string; avatarUrl?: string | null } | null => {
     if (!userId) return null;
     const m = membersList.find((x) => x.member_id === userId);
     const display = m?.member_display_name?.trim();
-    const emailUser = m?.member_email?.split("@")[0]?.trim();
-    const name = display || emailUser || "Member";
+    const emailUser = m?.member_email?.split('@')[0]?.trim();
+    const name = display || emailUser || 'Member';
     const avatarUrl = m?.member_avatar ?? null;
     return { name, avatarUrl };
   };
@@ -1060,9 +974,7 @@ function WorkItemsList({
       >
         <CardContent className="p-0">
           {issues.length === 0 ? (
-            <div className="py-12 text-center text-sm text-(--txt-tertiary)">
-              No work items
-            </div>
+            <div className="py-12 text-center text-sm text-(--txt-tertiary)">No work items</div>
           ) : (
             <ul className="divide-y divide-(--border-subtle)">
               {issues.map((issue) => {
@@ -1078,10 +990,10 @@ function WorkItemsList({
                   ? projectsList.find((p) => p.id === apiIssue.project_id)
                   : null;
                 const issueRef = project
-                  ? `${project.identifier ?? ""}-${apiIssue.sequence_id ?? issue.id.slice(-4)}`
+                  ? `${project.identifier ?? ''}-${apiIssue.sequence_id ?? issue.id.slice(-4)}`
                   : issue.id;
                 const issueUrl = `${baseUrl}/projects/${apiIssue.project_id}/issues/${issue.id}`;
-                const stateName = getStateName(apiIssue.state_id ?? "");
+                const stateName = getStateName(apiIssue.state_id ?? '');
                 const primaryAssigneeId = apiIssue.assignee_ids?.[0] ?? null;
                 const assignee = getUser(primaryAssigneeId);
                 const cycle = getCycle(null);
@@ -1135,14 +1047,7 @@ function WorkItemsList({
                           stroke="currentColor"
                           strokeWidth="2"
                         >
-                          <rect
-                            width="18"
-                            height="18"
-                            x="3"
-                            y="4"
-                            rx="2"
-                            ry="2"
-                          />
+                          <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
                           <line x1="16" y1="2" x2="16" y2="6" />
                           <line x1="8" y1="2" x2="8" y2="6" />
                           <line x1="3" y1="10" x2="21" y2="10" />
@@ -1180,12 +1085,7 @@ function WorkItemsList({
                         className="shrink-0 rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover)"
                         aria-label="More options"
                       >
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                        >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                           <circle cx="12" cy="5" r="1.5" />
                           <circle cx="12" cy="12" r="1.5" />
                           <circle cx="12" cy="19" r="1.5" />
@@ -1233,9 +1133,7 @@ function ActivityTab({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-(--txt-primary)">
-          Recent activity
-        </h2>
+        <h2 className="text-sm font-semibold text-(--txt-primary)">Recent activity</h2>
         <button
           type="button"
           className="rounded-md bg-(--brand-default) px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
@@ -1243,10 +1141,7 @@ function ActivityTab({
           Download today&apos;s activity
         </button>
       </div>
-      <Card
-        variant="outlined"
-        className="border border-(--border-subtle) bg-(--bg-surface-1)"
-      >
+      <Card variant="outlined" className="border border-(--border-subtle) bg-(--bg-surface-1)">
         <CardContent className="p-0">
           <ul className="divide-y divide-(--border-subtle)">
             {activities.length === 0 ? (
@@ -1255,17 +1150,15 @@ function ActivityTab({
               </li>
             ) : (
               activities.map((act) => {
-                const project = projectsList.find(
-                  (p) => p.id === act.projectId,
-                );
+                const project = projectsList.find((p) => p.id === act.projectId);
                 const issue = issuesList.find(
                   (i) => i.id === act.issueId && i.project_id === act.projectId,
                 );
                 const issueRef =
                   project && issue
-                    ? `${project.identifier ?? ""}-${issue.sequence_id ?? issue.id.slice(-4)}`
-                    : "";
-                const issueTitle = issue?.name ?? "";
+                    ? `${project.identifier ?? ''}-${issue.sequence_id ?? issue.id.slice(-4)}`
+                    : '';
+                const issueTitle = issue?.name ?? '';
                 let icon = (
                   <svg
                     width="16"
@@ -1279,8 +1172,8 @@ function ActivityTab({
                     <polyline points="14 2 14 8 20 8" />
                   </svg>
                 );
-                let text: React.ReactNode = "";
-                if (act.type === "label" && act.labelName) {
+                let text: React.ReactNode = '';
+                if (act.type === 'label' && act.labelName) {
                   icon = (
                     <svg
                       width="16"
@@ -1295,18 +1188,18 @@ function ActivityTab({
                   );
                   text = (
                     <>
-                      You added a new label{" "}
+                      You added a new label{' '}
                       <span className="inline-flex rounded bg-(--bg-warning-subtle) px-1.5 py-0.5 text-(--txt-warning-primary)">
                         {act.labelName}
-                      </span>{" "}
-                      to{" "}
+                      </span>{' '}
+                      to{' '}
                       <strong>
                         {issueRef} {issueTitle}
-                      </strong>{" "}
+                      </strong>{' '}
                       {formatTimeAgo(act.createdAt)}.
                     </>
                   );
-                } else if (act.type === "cycle" && act.cycleName) {
+                } else if (act.type === 'cycle' && act.cycleName) {
                   icon = (
                     <svg
                       width="16"
@@ -1322,15 +1215,14 @@ function ActivityTab({
                   );
                   text = (
                     <>
-                      You added{" "}
+                      You added{' '}
                       <strong>
                         {issueRef} {issueTitle}
-                      </strong>{" "}
-                      to the cycle <strong>{act.cycleName}</strong>{" "}
-                      {formatTimeAgo(act.createdAt)}.
+                      </strong>{' '}
+                      to the cycle <strong>{act.cycleName}</strong> {formatTimeAgo(act.createdAt)}.
                     </>
                   );
-                } else if (act.type === "assignee" && act.assigneeName) {
+                } else if (act.type === 'assignee' && act.assigneeName) {
                   icon = (
                     <svg
                       width="16"
@@ -1348,19 +1240,17 @@ function ActivityTab({
                   );
                   text = (
                     <>
-                      You added a new assignee{" "}
-                      <strong>{act.assigneeName}</strong> to{" "}
-                      <strong>{issueRef}</strong> {formatTimeAgo(act.createdAt)}
-                      .
+                      You added a new assignee <strong>{act.assigneeName}</strong> to{' '}
+                      <strong>{issueRef}</strong> {formatTimeAgo(act.createdAt)}.
                     </>
                   );
-                } else if (act.type === "created") {
+                } else if (act.type === 'created') {
                   text = (
                     <>
-                      You created{" "}
+                      You created{' '}
                       <strong>
                         {issueRef} {issueTitle}
-                      </strong>{" "}
+                      </strong>{' '}
                       {formatTimeAgo(act.createdAt)}.
                     </>
                   );
@@ -1372,9 +1262,7 @@ function ActivityTab({
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-(--bg-layer-1) text-(--txt-icon-tertiary)">
                       {icon}
                     </span>
-                    <p className="min-w-0 text-sm text-(--txt-secondary)">
-                      {text}
-                    </p>
+                    <p className="min-w-0 text-sm text-(--txt-secondary)">{text}</p>
                   </li>
                 );
               })
@@ -1386,22 +1274,14 @@ function ActivityTab({
   );
 }
 
-function DonutChart({
-  data,
-}: {
-  data: { label: string; color: string; count: number }[];
-}) {
+function DonutChart({ data }: { data: { label: string; color: string; count: number }[] }) {
   const total = data.reduce((s, d) => s + d.count, 0) || 1;
   const parts = data.map((d, i) => {
-    const start = data
-      .slice(0, i)
-      .reduce((s, x) => s + (x.count / total) * 100, 0);
+    const start = data.slice(0, i).reduce((s, x) => s + (x.count / total) * 100, 0);
     const end = start + (d.count / total) * 100;
     return `${d.color} ${start}% ${end}%`;
   });
-  const conic = parts.length
-    ? `conic-gradient(${parts.join(", ")})`
-    : "var(--bg-layer-1)";
+  const conic = parts.length ? `conic-gradient(${parts.join(', ')})` : 'var(--bg-layer-1)';
   return (
     <div
       className="absolute inset-0 rounded-full border-[8px] border-white"

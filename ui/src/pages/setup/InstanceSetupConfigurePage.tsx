@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button, Input } from "../../components/ui";
-import { useAuth } from "../../contexts/AuthContext";
-import { instanceService } from "../../services/instanceService";
-import { getApiErrorMessage } from "../../api/client";
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button, Input } from '../../components/ui';
+import { useAuth } from '../../contexts/AuthContext';
+import { instanceService } from '../../services/instanceService';
+import { getApiErrorMessage } from '../../api/client';
 
 const LogoMark = () => (
   <span
@@ -95,8 +95,8 @@ function PasswordRequirement({ met, label }: { met: boolean; label: string }) {
       <span
         className={`flex size-5 shrink-0 items-center justify-center rounded-full ${
           met
-            ? "bg-(--bg-success-primary) text-(--txt-on-color)"
-            : "bg-(--bg-layer-1) text-(--txt-placeholder)"
+            ? 'bg-(--bg-success-primary) text-(--txt-on-color)'
+            : 'bg-(--bg-layer-1) text-(--txt-placeholder)'
         }`}
         aria-hidden
       >
@@ -110,45 +110,43 @@ function PasswordRequirement({ met, label }: { met: boolean; label: string }) {
 export function InstanceSetupConfigurePage() {
   const navigate = useNavigate();
   const { setUserFromApi } = useAuth();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [allowUsageData, setAllowUsageData] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const req = usePasswordRequirements(password);
-  const allMet =
-    req.minLength && req.upper && req.lower && req.number && req.special;
-  const passwordsMatch =
-    password === confirmPassword && confirmPassword.length > 0;
+  const allMet = req.minLength && req.upper && req.lower && req.number && req.special;
+  const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
+    setError('');
     if (!firstName.trim() || !lastName.trim()) {
-      setError("Please enter your first and last name.");
+      setError('Please enter your first and last name.');
       return;
     }
     if (!email.trim()) {
-      setError("Please enter your email.");
+      setError('Please enter your email.');
       return;
     }
     if (!companyName.trim()) {
-      setError("Please enter your company name.");
+      setError('Please enter your company name.');
       return;
     }
     if (!allMet) {
-      setError("Please meet all password requirements.");
+      setError('Please meet all password requirements.');
       return;
     }
     if (!passwordsMatch) {
-      setError("Passwords do not match.");
+      setError('Passwords do not match.');
       return;
     }
     setIsSubmitting(true);
@@ -161,7 +159,7 @@ export function InstanceSetupConfigurePage() {
         company_name: companyName.trim() || undefined,
       });
       setUserFromApi(user);
-      navigate("/setup/complete", { replace: true });
+      navigate('/setup/complete', { replace: true });
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
@@ -234,7 +232,7 @@ export function InstanceSetupConfigurePage() {
               <div className="relative">
                 <input
                   id="setup-password"
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="New password..."
@@ -246,29 +244,17 @@ export function InstanceSetupConfigurePage() {
                   type="button"
                   onClick={() => setShowPassword((p) => !p)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <IconEyeOff /> : <IconEye />}
                 </button>
               </div>
               <div className="mt-2 flex flex-col gap-1.5">
-                <PasswordRequirement
-                  met={req.minLength}
-                  label="Min 8 characters"
-                />
-                <PasswordRequirement
-                  met={req.upper}
-                  label="Min 1 upper-case letter"
-                />
-                <PasswordRequirement
-                  met={req.lower}
-                  label="Min 1 lower-case letter"
-                />
+                <PasswordRequirement met={req.minLength} label="Min 8 characters" />
+                <PasswordRequirement met={req.upper} label="Min 1 upper-case letter" />
+                <PasswordRequirement met={req.lower} label="Min 1 lower-case letter" />
                 <PasswordRequirement met={req.number} label="Min 1 number" />
-                <PasswordRequirement
-                  met={req.special}
-                  label="Min 1 special character"
-                />
+                <PasswordRequirement met={req.special} label="Min 1 special character" />
               </div>
             </div>
 
@@ -282,7 +268,7 @@ export function InstanceSetupConfigurePage() {
               <div className="relative">
                 <input
                   id="setup-confirm-password"
-                  type={showConfirmPassword ? "text" : "password"}
+                  type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm password"
@@ -294,9 +280,7 @@ export function InstanceSetupConfigurePage() {
                   type="button"
                   onClick={() => setShowConfirmPassword((p) => !p)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-                  aria-label={
-                    showConfirmPassword ? "Hide password" : "Show password"
-                  }
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                 >
                   {showConfirmPassword ? <IconEyeOff /> : <IconEye />}
                 </button>
@@ -311,22 +295,17 @@ export function InstanceSetupConfigurePage() {
                 className="mt-0.5 size-4 rounded border-(--border-subtle) bg-(--bg-surface-1) text-(--bg-accent-primary) focus:ring-(--border-accent-strong)"
               />
               <span className="text-(--txt-secondary)">
-                Allow Devlane to anonymously collect usage events.{" "}
-                <a
-                  href="#"
-                  className="text-(--txt-accent-primary) underline hover:no-underline"
-                >
+                Allow Devlane to anonymously collect usage events.{' '}
+                <a href="#" className="text-(--txt-accent-primary) underline hover:no-underline">
                   See more
                 </a>
               </span>
             </label>
 
-            {error && (
-              <p className="text-sm text-(--txt-danger-primary)">{error}</p>
-            )}
+            {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Setting up…" : "Continue"}
+              {isSubmitting ? 'Setting up…' : 'Continue'}
             </Button>
           </form>
         </div>

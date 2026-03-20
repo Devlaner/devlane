@@ -1,10 +1,10 @@
-import { apiClient } from "../api/client";
+import { apiClient } from '../api/client';
 import type {
   CreateWorkspaceRequest,
   WorkspaceApiResponse,
   WorkspaceInviteApiResponse,
   WorkspaceMemberApiResponse,
-} from "../api/types";
+} from '../api/types';
 
 /**
  * Workspace API service.
@@ -15,9 +15,7 @@ export const workspaceService = {
    * List workspaces for the current user.
    */
   async list(): Promise<WorkspaceApiResponse[]> {
-    const { data } = await apiClient.get<WorkspaceApiResponse[]>(
-      "/api/users/me/workspaces/",
-    );
+    const { data } = await apiClient.get<WorkspaceApiResponse[]>('/api/users/me/workspaces/');
     return data;
   },
 
@@ -36,25 +34,18 @@ export const workspaceService = {
    * @throws Error with user-facing message on failure
    */
   async create(payload: CreateWorkspaceRequest): Promise<WorkspaceApiResponse> {
-    const { data } = await apiClient.post<WorkspaceApiResponse>(
-      "/api/workspaces/",
-      payload,
-    );
+    const { data } = await apiClient.post<WorkspaceApiResponse>('/api/workspaces/', payload);
     return data;
   },
 
-  async listMembers(
-    workspaceSlug: string,
-  ): Promise<WorkspaceMemberApiResponse[]> {
+  async listMembers(workspaceSlug: string): Promise<WorkspaceMemberApiResponse[]> {
     const { data } = await apiClient.get<WorkspaceMemberApiResponse[]>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/members/`,
     );
     return data;
   },
 
-  async listInvites(
-    workspaceSlug: string,
-  ): Promise<WorkspaceInviteApiResponse[]> {
+  async listInvites(workspaceSlug: string): Promise<WorkspaceInviteApiResponse[]> {
     const { data } = await apiClient.get<WorkspaceInviteApiResponse[]>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/invitations/`,
     );
@@ -128,10 +119,7 @@ export const workspaceService = {
    * POST /api/workspaces/join/
    */
   async joinByToken(token: string): Promise<WorkspaceApiResponse> {
-    const { data } = await apiClient.post<WorkspaceApiResponse>(
-      "/api/workspaces/join/",
-      { token },
-    );
+    const { data } = await apiClient.post<WorkspaceApiResponse>('/api/workspaces/join/', { token });
     return data;
   },
 };

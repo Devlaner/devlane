@@ -1,46 +1,35 @@
-import { useState, useRef, useEffect } from "react";
-import {
-  Link,
-  useLocation,
-  useNavigate,
-  useParams,
-  useSearchParams,
-} from "react-router-dom";
-import { Button } from "../ui";
-import { Dropdown } from "../work-item";
-import { useModulesFilter } from "../../contexts/ModulesFilterContext";
-import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
+import { useState, useRef, useEffect } from 'react';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Button } from '../ui';
+import { Dropdown } from '../work-item';
+import { useModulesFilter } from '../../contexts/ModulesFilterContext';
+import { useWorkspaceViewsState } from '../../contexts/WorkspaceViewsStateContext';
 import {
   WorkspaceViewsFiltersDropdown,
   WorkspaceViewsDisplayDropdown,
   WorkspaceViewsEllipsisMenu,
   CreateViewModal,
   ModuleFiltersPanel,
-} from "../workspace-views";
-import { ProjectSavedViewDisplayDropdown } from "../project-saved-view/ProjectSavedViewDisplayDropdown";
-import { ProjectSavedViewMoreMenu } from "../project-saved-view/ProjectSavedViewMoreMenu";
-import { DateRangeModal } from "../workspace-views/DateRangeModal";
-import { CreateModuleModal } from "../CreateModuleModal";
-import { workspaceService } from "../../services/workspaceService";
-import { projectService } from "../../services/projectService";
-import { issueService } from "../../services/issueService";
-import { viewService } from "../../services/viewService";
-import { moduleService } from "../../services/moduleService";
+} from '../workspace-views';
+import { ProjectSavedViewDisplayDropdown } from '../project-saved-view/ProjectSavedViewDisplayDropdown';
+import { ProjectSavedViewMoreMenu } from '../project-saved-view/ProjectSavedViewMoreMenu';
+import { DateRangeModal } from '../workspace-views/DateRangeModal';
+import { CreateModuleModal } from '../CreateModuleModal';
+import { workspaceService } from '../../services/workspaceService';
+import { projectService } from '../../services/projectService';
+import { issueService } from '../../services/issueService';
+import { viewService } from '../../services/viewService';
+import { moduleService } from '../../services/moduleService';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
   IssueViewApiResponse,
   ModuleApiResponse,
   WorkspaceMemberApiResponse,
-} from "../../api/types";
-import { PROJECT_VIEWS_FILTER_EVENT } from "../../lib/projectViewsEvents";
+} from '../../api/types';
+import { PROJECT_VIEWS_FILTER_EVENT } from '../../lib/projectViewsEvents';
 
-export type ProjectSection =
-  | "issues"
-  | "cycles"
-  | "modules"
-  | "views"
-  | "pages";
+export type ProjectSection = 'issues' | 'cycles' | 'modules' | 'views' | 'pages';
 
 const IconHome = () => (
   <svg
@@ -77,14 +66,7 @@ const IconGrid = () => (
   </svg>
 );
 const IconGitHub = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    stroke="none"
-    aria-hidden
-  >
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden>
     <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
   </svg>
 );
@@ -283,13 +265,7 @@ const IconArchive = () => (
   </svg>
 );
 const IconMoreVertical = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    aria-hidden
-  >
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
     <circle cx="12" cy="5" r="1.5" />
     <circle cx="12" cy="12" r="1.5" />
     <circle cx="12" cy="19" r="1.5" />
@@ -349,13 +325,7 @@ const IconLayers = () => (
   </svg>
 );
 const IconViewsPlane = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 16 16"
-    fill="currentColor"
-    aria-hidden
-  >
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
     <path d="M14.3926 10.7735C14.7013 10.6192 15.0771 10.7451 15.2314 11.0538C15.3854 11.3623 15.2604 11.7373 14.9521 11.8917L8.52344 15.1056C8.46846 15.1331 8.33457 15.2069 8.18262 15.2355H8.18164C8.06516 15.2572 7.94558 15.2573 7.8291 15.2355C7.67698 15.2069 7.54234 15.1331 7.4873 15.1056L1.05957 11.8917C0.750903 11.7374 0.626065 11.3625 0.780273 11.0538C0.934594 10.7452 1.30948 10.6194 1.61816 10.7735L8.00488 13.9669L14.3926 10.7735ZM14.3926 7.44054C14.7013 7.28618 15.0771 7.41114 15.2314 7.71983C15.3858 8.02847 15.2607 8.40424 14.9521 8.5587L8.52344 11.7726C8.46839 11.8001 8.33451 11.8739 8.18262 11.9025H8.18164C8.06519 11.9242 7.94554 11.9242 7.8291 11.9025C7.67698 11.8739 7.54234 11.8001 7.4873 11.7726L1.05957 8.5587C0.750834 8.40433 0.625905 8.02857 0.780273 7.71983C0.934713 7.41138 1.30956 7.28634 1.61816 7.44054L8.00488 10.6339L14.3926 7.44054ZM7.91699 0.751084C8.00545 0.742877 8.09504 0.747328 8.18262 0.763779C8.33432 0.79232 8.46833 0.865118 8.52344 0.892686L14.9521 4.10753C15.1636 4.21348 15.2969 4.42959 15.2969 4.66612C15.2969 4.90266 15.1636 5.11875 14.9521 5.22472L8.52344 8.43956C8.46831 8.46714 8.33434 8.53992 8.18262 8.56847H8.18164C8.06513 8.59024 7.94561 8.59028 7.8291 8.56847C7.67698 8.53994 7.54235 8.46708 7.4873 8.43956L1.05957 5.22472C0.84784 5.11884 0.713867 4.90285 0.713867 4.66612C0.713883 4.42941 0.847843 4.21339 1.05957 4.10753L7.4873 0.892686C7.54232 0.865181 7.67699 0.7923 7.8291 0.763779L7.91699 0.751084ZM2.73535 4.66612L8.00488 7.30089L13.2754 4.66612L8.00488 2.03038L2.73535 4.66612Z" />
   </svg>
 );
@@ -484,11 +454,11 @@ const IconFileText = () => (
 );
 
 const SECTION_LABELS: Record<ProjectSection, string> = {
-  issues: "Work items",
-  cycles: "Cycles",
-  modules: "Modules",
-  views: "Views",
-  pages: "Pages",
+  issues: 'Work items',
+  cycles: 'Cycles',
+  modules: 'Modules',
+  views: 'Views',
+  pages: 'Pages',
 };
 
 const SECTION_ICONS: Record<ProjectSection, React.ReactNode> = {
@@ -513,20 +483,13 @@ function ProjectSectionDropdown({
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const sections: ProjectSection[] = [
-    "issues",
-    "cycles",
-    "modules",
-    "views",
-    "pages",
-  ];
+  const sections: ProjectSection[] = ['issues', 'cycles', 'modules', 'views', 'pages'];
   const currentLabel = SECTION_LABELS[currentSection];
   const currentIcon = SECTION_ICONS[currentSection];
 
@@ -541,7 +504,7 @@ function ProjectSectionDropdown({
           {currentIcon}
         </span>
         {currentLabel}
-        {currentSection === "issues" && (
+        {currentSection === 'issues' && (
           <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-(--brand-200) px-1.5 text-xs font-medium text-(--brand-default)">
             {issueCount}
           </span>
@@ -553,10 +516,7 @@ function ProjectSectionDropdown({
       {open && (
         <div className="absolute left-0 top-full z-50 mt-1 min-w-45 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)">
           {sections.map((section) => {
-            const href =
-              section === "issues"
-                ? `${baseUrl}/issues`
-                : `${baseUrl}/${section}`;
+            const href = section === 'issues' ? `${baseUrl}/issues` : `${baseUrl}/${section}`;
             const isActive = section === currentSection;
             return (
               <Link
@@ -565,8 +525,8 @@ function ProjectSectionDropdown({
                 onClick={() => setOpen(false)}
                 className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm no-underline ${
                   isActive
-                    ? "bg-(--brand-200) text-(--txt-primary)"
-                    : "text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
+                    ? 'bg-(--brand-200) text-(--txt-primary)'
+                    : 'text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)'
                 }`}
               >
                 <span className="flex size-5 items-center justify-center text-(--txt-icon-secondary)">
@@ -688,7 +648,7 @@ function HomeHeader() {
 
 function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const searchQuery = searchParams.get("q") ?? "";
+  const searchQuery = searchParams.get('q') ?? '';
   const [searchOpen, setSearchOpen] = useState(!!searchQuery);
 
   const baseUrl = `/${workspaceSlug}`;
@@ -703,7 +663,7 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
       </div>
       <div className="flex flex-1 items-center justify-end gap-2 min-w-0">
         <div
-          className={`overflow-hidden transition-[width] duration-200 ease-out ${searchOpen ? "w-56" : "w-0"}`}
+          className={`overflow-hidden transition-[width] duration-200 ease-out ${searchOpen ? 'w-56' : 'w-0'}`}
         >
           <div className="flex items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2 py-1.5">
             <span className="shrink-0 text-(--txt-icon-tertiary)">
@@ -712,9 +672,7 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) =>
-                setSearchParams({ q: e.target.value }, { replace: true })
-              }
+              onChange={(e) => setSearchParams({ q: e.target.value }, { replace: true })}
               placeholder="Search projects"
               className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
               aria-label="Search projects"
@@ -876,17 +834,16 @@ function ModuleDetailHeader({
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
   const [moduleDropdownOpen, setModuleDropdownOpen] = useState(false);
   const [viewLayout, setViewLayout] = useState<
-    "list" | "board" | "calendar" | "gallery" | "timeline"
-  >("list");
+    'list' | 'board' | 'calendar' | 'gallery' | 'timeline'
+  >('list');
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setModuleDropdownOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) setModuleDropdownOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const viewButtons: {
@@ -894,11 +851,11 @@ function ModuleDetailHeader({
     icon: React.ReactNode;
     label: string;
   }[] = [
-    { id: "list", icon: <IconListAlt />, label: "List" },
-    { id: "board", icon: <IconBarChartModule />, label: "Board" },
-    { id: "calendar", icon: <IconCalendar />, label: "Calendar" },
-    { id: "gallery", icon: <IconLayoutGridModule />, label: "Gallery" },
-    { id: "timeline", icon: <IconListAlt />, label: "Timeline" },
+    { id: 'list', icon: <IconListAlt />, label: 'List' },
+    { id: 'board', icon: <IconBarChartModule />, label: 'Board' },
+    { id: 'calendar', icon: <IconCalendar />, label: 'Calendar' },
+    { id: 'gallery', icon: <IconLayoutGridModule />, label: 'Gallery' },
+    { id: 'timeline', icon: <IconListAlt />, label: 'Timeline' },
   ];
 
   return (
@@ -951,9 +908,9 @@ function ModuleDetailHeader({
               onClick={() => setViewLayout(b.id)}
               className={`flex size-7 items-center justify-center rounded-md text-(--txt-icon-secondary) transition-colors ${
                 viewLayout === b.id
-                  ? "bg-white shadow-sm text-(--txt-primary)"
-                  : "bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
-              } ${i === 0 ? "rounded-l-md" : ""} ${i === viewButtons.length - 1 ? "rounded-r-md" : ""}`}
+                  ? 'bg-white shadow-sm text-(--txt-primary)'
+                  : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
+              } ${i === 0 ? 'rounded-l-md' : ''} ${i === viewButtons.length - 1 ? 'rounded-r-md' : ''}`}
               title={b.label}
               aria-pressed={viewLayout === b.id}
             >
@@ -1018,35 +975,25 @@ function ProjectSectionHeader({
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
   const issuesUrl = `${baseUrl}/issues`;
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
-  const [projectSearch, setProjectSearch] = useState("");
+  const [projectSearch, setProjectSearch] = useState('');
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [createModuleOpen, setCreateModuleOpen] = useState(false);
   const [modulesSearchExpanded, setModulesSearchExpanded] = useState(false);
-  const [modulesFiltersOpen, setModulesFiltersOpen] = useState<string | null>(
-    null,
-  );
+  const [modulesFiltersOpen, setModulesFiltersOpen] = useState<string | null>(null);
   const [modulesSortOpen, setModulesSortOpen] = useState<string | null>(null);
   const [viewsSortOpen, setViewsSortOpen] = useState<string | null>(null);
   const [viewsFiltersOpen, setViewsFiltersOpen] = useState<string | null>(null);
   const [viewsSearchOpen, setViewsSearchOpen] = useState(false);
-  const [viewsSearchQuery, setViewsSearchQuery] = useState("");
+  const [viewsSearchQuery, setViewsSearchQuery] = useState('');
   const [viewsFavOnly, setViewsFavOnly] = useState(false);
   const [viewsCreatedDate, setViewsCreatedDate] = useState<
-    "1_week" | "2_weeks" | "1_month" | "custom" | null
+    '1_week' | '2_weeks' | '1_month' | 'custom' | null
   >(null);
-  const [viewsCreatedAfter, setViewsCreatedAfter] = useState<string | null>(
-    null,
-  );
-  const [viewsCreatedBefore, setViewsCreatedBefore] = useState<string | null>(
-    null,
-  );
+  const [viewsCreatedAfter, setViewsCreatedAfter] = useState<string | null>(null);
+  const [viewsCreatedBefore, setViewsCreatedBefore] = useState<string | null>(null);
   const [viewsCreatedBy, setViewsCreatedBy] = useState<string[]>([]);
-  const [viewsMembers, setViewsMembers] = useState<
-    WorkspaceMemberApiResponse[]
-  >([]);
-  const [modulesDateRangeModal, setModulesDateRangeModal] = useState<
-    "start" | "due" | null
-  >(null);
+  const [viewsMembers, setViewsMembers] = useState<WorkspaceMemberApiResponse[]>([]);
+  const [modulesDateRangeModal, setModulesDateRangeModal] = useState<'start' | 'due' | null>(null);
   const projectDropdownRef = useRef<HTMLDivElement | null>(null);
   const modulesSearchInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -1067,18 +1014,15 @@ function ProjectSectionHeader({
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (
-        projectDropdownRef.current &&
-        !projectDropdownRef.current.contains(e.target as Node)
-      ) {
+      if (projectDropdownRef.current && !projectDropdownRef.current.contains(e.target as Node)) {
         setProjectDropdownOpen(false);
       }
     };
     if (projectDropdownOpen) {
-      document.addEventListener("mousedown", handler);
+      document.addEventListener('mousedown', handler);
     }
     return () => {
-      document.removeEventListener("mousedown", handler);
+      document.removeEventListener('mousedown', handler);
     };
   }, [projectDropdownOpen]);
 
@@ -1089,7 +1033,7 @@ function ProjectSectionHeader({
   }, [modulesSearchExpanded]);
 
   useEffect(() => {
-    if (section !== "views") return;
+    if (section !== 'views') return;
     let cancelled = false;
     workspaceService
       .listMembers(workspaceSlug)
@@ -1108,7 +1052,7 @@ function ProjectSectionHeader({
     next: Partial<{
       query: string;
       favoritesOnly: boolean;
-      createdDatePreset: "1_week" | "2_weeks" | "1_month" | "custom" | null;
+      createdDatePreset: '1_week' | '2_weeks' | '1_month' | 'custom' | null;
       createdAfter: string | null;
       createdBefore: string | null;
       createdByIds: string[];
@@ -1130,20 +1074,18 @@ function ProjectSectionHeader({
   };
 
   const q = (s: string) => s.trim().toLowerCase();
-  const filteredProjects = projects.filter((p) =>
-    q(p.name).includes(q(projectSearch)),
-  );
+  const filteredProjects = projects.filter((p) => q(p.name).includes(q(projectSearch)));
 
   const handleSelectProject = (targetProjectId: string) => {
     const targetBase = `/${workspaceSlug}/projects/${targetProjectId}`;
     const targetPath =
-      section === "issues"
+      section === 'issues'
         ? `${targetBase}/issues`
-        : section === "cycles"
+        : section === 'cycles'
           ? `${targetBase}/cycles`
-          : section === "modules"
+          : section === 'modules'
             ? `${targetBase}/modules`
-            : section === "views"
+            : section === 'views'
               ? `${targetBase}/views`
               : `${targetBase}/pages`;
     setProjectDropdownOpen(false);
@@ -1153,7 +1095,7 @@ function ProjectSectionHeader({
   const currentLayout = modulesFilter.layout;
 
   const rightActions = () => {
-    if (section === "issues") {
+    if (section === 'issues') {
       return (
         <>
           <button
@@ -1223,7 +1165,7 @@ function ProjectSectionHeader({
         </>
       );
     }
-    if (section === "cycles") {
+    if (section === 'cycles') {
       return (
         <>
           <button
@@ -1245,11 +1187,11 @@ function ProjectSectionHeader({
         </>
       );
     }
-    if (section === "modules") {
-      const listActive = currentLayout === "list";
-      const galleryActive = currentLayout === "gallery";
-      const timelineActive = currentLayout === "timeline";
-      const modulesSearch = modulesFilter.search ?? "";
+    if (section === 'modules') {
+      const listActive = currentLayout === 'list';
+      const galleryActive = currentLayout === 'gallery';
+      const timelineActive = currentLayout === 'timeline';
+      const modulesSearch = modulesFilter.search ?? '';
       const showSearchInput = modulesSearchExpanded || modulesSearch.length > 0;
       return (
         <>
@@ -1267,8 +1209,7 @@ function ProjectSectionHeader({
                   modulesFilter.setSearch(v);
                 }}
                 onBlur={() => {
-                  if (modulesSearch.length === 0)
-                    setModulesSearchExpanded(false);
+                  if (modulesSearch.length === 0) setModulesSearchExpanded(false);
                 }}
                 placeholder="Search"
                 className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -1278,7 +1219,7 @@ function ProjectSectionHeader({
                 <button
                   type="button"
                   onClick={() => {
-                    modulesFilter.setSearch("");
+                    modulesFilter.setSearch('');
                   }}
                   className="shrink-0 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
                   aria-label="Clear search"
@@ -1304,16 +1245,16 @@ function ProjectSectionHeader({
             label="Sort by"
             icon={<IconArrowUpDown />}
             displayValue={(() => {
-              const sort = modulesFilter.sort || "progress";
+              const sort = modulesFilter.sort || 'progress';
               const labels: Record<string, string> = {
-                name: "Name",
-                progress: "Progress",
-                work_items: "Number of work items",
-                due_date: "Due date",
-                created_date: "Created date",
-                manual: "Manual",
+                name: 'Name',
+                progress: 'Progress',
+                work_items: 'Number of work items',
+                due_date: 'Due date',
+                created_date: 'Created date',
+                manual: 'Manual',
               };
-              return labels[sort] ?? "Progress";
+              return labels[sort] ?? 'Progress';
             })()}
             panelClassName="min-w-[200px] rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
             align="left"
@@ -1324,16 +1265,16 @@ function ProjectSectionHeader({
                 </span>
                 <span className="truncate">
                   {(() => {
-                    const sort = modulesFilter.sort || "progress";
+                    const sort = modulesFilter.sort || 'progress';
                     const labels: Record<string, string> = {
-                      name: "Name",
-                      progress: "Progress",
-                      work_items: "Number of work items",
-                      due_date: "Due date",
-                      created_date: "Created date",
-                      manual: "Manual",
+                      name: 'Name',
+                      progress: 'Progress',
+                      work_items: 'Number of work items',
+                      due_date: 'Due date',
+                      created_date: 'Created date',
+                      manual: 'Manual',
                     };
-                    return labels[sort] ?? "Progress";
+                    return labels[sort] ?? 'Progress';
                   })()}
                 </span>
                 <span className="shrink-0 text-(--txt-icon-tertiary)">
@@ -1344,21 +1285,21 @@ function ProjectSectionHeader({
             triggerClassName="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             {[
-              { value: "name", label: "Name" },
-              { value: "progress", label: "Progress" },
-              { value: "work_items", label: "Number of work items" },
-              { value: "due_date", label: "Due date" },
-              { value: "created_date", label: "Created date" },
-              { value: "manual", label: "Manual" },
+              { value: 'name', label: 'Name' },
+              { value: 'progress', label: 'Progress' },
+              { value: 'work_items', label: 'Number of work items' },
+              { value: 'due_date', label: 'Due date' },
+              { value: 'created_date', label: 'Created date' },
+              { value: 'manual', label: 'Manual' },
             ].map((opt) => {
-              const current = modulesFilter.sort || "progress";
+              const current = modulesFilter.sort || 'progress';
               return (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => {
                     modulesFilter.setSort(opt.value);
-                    if (!modulesFilter.order) modulesFilter.setOrder("asc");
+                    if (!modulesFilter.order) modulesFilter.setOrder('asc');
                     setModulesSortOpen(null);
                   }}
                   className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
@@ -1373,15 +1314,15 @@ function ProjectSectionHeader({
               );
             })}
             <div className="my-1 border-t border-(--border-subtle)" />
-            {["asc", "desc"].map((orderValue) => {
-              const currentOrder = modulesFilter.order || "asc";
-              const label = orderValue === "asc" ? "Ascending" : "Descending";
+            {['asc', 'desc'].map((orderValue) => {
+              const currentOrder = modulesFilter.order || 'asc';
+              const label = orderValue === 'asc' ? 'Ascending' : 'Descending';
               return (
                 <button
                   key={orderValue}
                   type="button"
                   onClick={() => {
-                    modulesFilter.setOrder(orderValue as "asc" | "desc");
+                    modulesFilter.setOrder(orderValue as 'asc' | 'desc');
                     setModulesSortOpen(null);
                   }}
                   className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
@@ -1429,12 +1370,12 @@ function ProjectSectionHeader({
             </Dropdown>
             {[
               modulesFilter.search.trim(),
-              modulesFilter.favorites ? "1" : "",
-              modulesFilter.status.join(","),
-              modulesFilter.lead.join(","),
-              modulesFilter.members.join(","),
-              modulesFilter.startDateList.join(","),
-              modulesFilter.dueDateList.join(","),
+              modulesFilter.favorites ? '1' : '',
+              modulesFilter.status.join(','),
+              modulesFilter.lead.join(','),
+              modulesFilter.members.join(','),
+              modulesFilter.startDateList.join(','),
+              modulesFilter.dueDateList.join(','),
             ].some(Boolean) && (
               <span
                 className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-(--brand-default)"
@@ -1445,11 +1386,11 @@ function ProjectSectionHeader({
           <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
             <button
               type="button"
-              onClick={() => modulesFilter.setLayout("list")}
+              onClick={() => modulesFilter.setLayout('list')}
               className={`flex size-7 items-center justify-center rounded-l-md text-(--txt-icon-secondary) transition-colors ${
                 listActive
-                  ? "bg-white shadow-sm text-(--txt-primary)"
-                  : "bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
+                  ? 'bg-white shadow-sm text-(--txt-primary)'
+                  : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
               }`}
               aria-pressed={listActive}
               title="List layout"
@@ -1458,11 +1399,11 @@ function ProjectSectionHeader({
             </button>
             <button
               type="button"
-              onClick={() => modulesFilter.setLayout("gallery")}
+              onClick={() => modulesFilter.setLayout('gallery')}
               className={`flex size-7 items-center justify-center text-(--txt-icon-secondary) transition-colors ${
                 galleryActive
-                  ? "bg-white shadow-sm text-(--txt-primary)"
-                  : "bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
+                  ? 'bg-white shadow-sm text-(--txt-primary)'
+                  : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
               }`}
               aria-pressed={galleryActive}
               title="Gallery layout"
@@ -1471,11 +1412,11 @@ function ProjectSectionHeader({
             </button>
             <button
               type="button"
-              onClick={() => modulesFilter.setLayout("timeline")}
+              onClick={() => modulesFilter.setLayout('timeline')}
               className={`flex size-7 items-center justify-center rounded-r-md text-(--txt-icon-secondary) transition-colors ${
                 timelineActive
-                  ? "bg-white shadow-sm text-(--txt-primary)"
-                  : "bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
+                  ? 'bg-white shadow-sm text-(--txt-primary)'
+                  : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
               }`}
               aria-pressed={timelineActive}
               title="Timeline layout"
@@ -1494,7 +1435,7 @@ function ProjectSectionHeader({
         </>
       );
     }
-    if (section === "pages") {
+    if (section === 'pages') {
       return (
         <Link to={`${baseUrl}/pages/new`}>
           <Button size="sm" className="gap-1.5 text-[13px] font-medium">
@@ -1503,7 +1444,7 @@ function ProjectSectionHeader({
         </Link>
       );
     }
-    if (section === "views") {
+    if (section === 'views') {
       const activeFilters =
         viewsFavOnly ||
         !!viewsCreatedDate ||
@@ -1511,11 +1452,11 @@ function ProjectSectionHeader({
         !!viewsCreatedBefore ||
         viewsCreatedBy.length > 0;
       const sortLabel =
-        viewsDisplay.sortBy === "name"
-          ? "Name"
-          : viewsDisplay.sortBy === "created_at"
-            ? "Created at"
-            : "Updated at";
+        viewsDisplay.sortBy === 'name'
+          ? 'Name'
+          : viewsDisplay.sortBy === 'created_at'
+            ? 'Created at'
+            : 'Updated at';
       return (
         <>
           <div className="flex items-center">
@@ -1531,7 +1472,7 @@ function ProjectSectionHeader({
             )}
             <div
               className={`ml-2 overflow-hidden transition-[width] duration-200 ease-out ${
-                viewsSearchOpen ? "w-64" : "w-0"
+                viewsSearchOpen ? 'w-64' : 'w-0'
               }`}
             >
               <div className="flex items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2 py-1.5">
@@ -1547,10 +1488,10 @@ function ProjectSectionHeader({
                     dispatchViewsFilters({ query: v });
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === "Escape") {
+                    if (e.key === 'Escape') {
                       if (viewsSearchQuery.trim()) {
-                        setViewsSearchQuery("");
-                        dispatchViewsFilters({ query: "" });
+                        setViewsSearchQuery('');
+                        dispatchViewsFilters({ query: '' });
                       } else {
                         setViewsSearchOpen(false);
                       }
@@ -1564,8 +1505,8 @@ function ProjectSectionHeader({
                   <button
                     type="button"
                     onClick={() => {
-                      setViewsSearchQuery("");
-                      dispatchViewsFilters({ query: "" });
+                      setViewsSearchQuery('');
+                      dispatchViewsFilters({ query: '' });
                       setViewsSearchOpen(false);
                     }}
                     className="shrink-0 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
@@ -1600,9 +1541,9 @@ function ProjectSectionHeader({
             triggerClassName="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             {[
-              { value: "updated_at", label: "Updated at" },
-              { value: "created_at", label: "Created at" },
-              { value: "name", label: "Name" },
+              { value: 'updated_at', label: 'Updated at' },
+              { value: 'created_at', label: 'Created at' },
+              { value: 'name', label: 'Name' },
             ].map((opt) => (
               <button
                 key={opt.value}
@@ -1625,7 +1566,7 @@ function ProjectSectionHeader({
               </button>
             ))}
             <div className="my-1 border-t border-(--border-subtle)" />
-            {(["desc", "asc"] as const).map((orderValue) => (
+            {(['desc', 'asc'] as const).map((orderValue) => (
               <button
                 key={orderValue}
                 type="button"
@@ -1635,7 +1576,7 @@ function ProjectSectionHeader({
                 }}
                 className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
               >
-                {orderValue === "desc" ? "Descending" : "Ascending"}
+                {orderValue === 'desc' ? 'Descending' : 'Ascending'}
                 {viewsDisplay.sortOrder === orderValue && (
                   <span className="shrink-0 text-(--txt-primary)">
                     <IconCheck />
@@ -1707,10 +1648,10 @@ function ProjectSectionHeader({
                     <span>Created date</span>
                   </div>
                   {[
-                    { id: "1_week", label: "1 week ago" },
-                    { id: "2_weeks", label: "2 weeks ago" },
-                    { id: "1_month", label: "1 month ago" },
-                    { id: "custom", label: "Custom range" },
+                    { id: '1_week', label: '1 week ago' },
+                    { id: '2_weeks', label: '2 weeks ago' },
+                    { id: '1_month', label: '1 month ago' },
+                    { id: 'custom', label: 'Custom range' },
                   ].map((opt) => (
                     <label
                       key={opt.id}
@@ -1721,26 +1662,16 @@ function ProjectSectionHeader({
                         name="views-created-date"
                         checked={viewsCreatedDate === opt.id}
                         onChange={() => {
-                          const nextPreset = opt.id as
-                            | "1_week"
-                            | "2_weeks"
-                            | "1_month"
-                            | "custom";
+                          const nextPreset = opt.id as '1_week' | '2_weeks' | '1_month' | 'custom';
                           setViewsCreatedDate(nextPreset);
-                          if (nextPreset !== "custom") {
+                          if (nextPreset !== 'custom') {
                             setViewsCreatedAfter(null);
                             setViewsCreatedBefore(null);
                           }
                           dispatchViewsFilters({
                             createdDatePreset: nextPreset,
-                            createdAfter:
-                              nextPreset === "custom"
-                                ? viewsCreatedAfter
-                                : null,
-                            createdBefore:
-                              nextPreset === "custom"
-                                ? viewsCreatedBefore
-                                : null,
+                            createdAfter: nextPreset === 'custom' ? viewsCreatedAfter : null,
+                            createdBefore: nextPreset === 'custom' ? viewsCreatedBefore : null,
                           });
                         }}
                         className="border-(--border-subtle)"
@@ -1764,21 +1695,19 @@ function ProjectSectionHeader({
                   >
                     Clear created date
                   </button>
-                  {viewsCreatedDate === "custom" && (
+                  {viewsCreatedDate === 'custom' && (
                     <div className="px-3 pb-2 pt-1">
                       <div className="grid grid-cols-2 gap-2">
                         <div className="min-w-0">
-                          <label className="mb-1 block text-xs text-(--txt-tertiary)">
-                            After
-                          </label>
+                          <label className="mb-1 block text-xs text-(--txt-tertiary)">After</label>
                           <input
                             type="date"
-                            value={viewsCreatedAfter ?? ""}
+                            value={viewsCreatedAfter ?? ''}
                             onChange={(e) => {
                               const nextValue = e.target.value || null;
                               setViewsCreatedAfter(nextValue);
                               dispatchViewsFilters({
-                                createdDatePreset: "custom",
+                                createdDatePreset: 'custom',
                                 createdAfter: nextValue,
                                 createdBefore: viewsCreatedBefore,
                               });
@@ -1787,17 +1716,15 @@ function ProjectSectionHeader({
                           />
                         </div>
                         <div className="min-w-0">
-                          <label className="mb-1 block text-xs text-(--txt-tertiary)">
-                            Before
-                          </label>
+                          <label className="mb-1 block text-xs text-(--txt-tertiary)">Before</label>
                           <input
                             type="date"
-                            value={viewsCreatedBefore ?? ""}
+                            value={viewsCreatedBefore ?? ''}
                             onChange={(e) => {
                               const nextValue = e.target.value || null;
                               setViewsCreatedBefore(nextValue);
                               dispatchViewsFilters({
-                                createdDatePreset: "custom",
+                                createdDatePreset: 'custom',
                                 createdAfter: viewsCreatedAfter,
                                 createdBefore: nextValue,
                               });
@@ -1816,8 +1743,7 @@ function ProjectSectionHeader({
                   </div>
                   {viewsMembers.map((m) => {
                     const checked = viewsCreatedBy.includes(m.member_id);
-                    const label =
-                      m.member_display_name ?? m.member_email ?? m.member_id;
+                    const label = m.member_display_name ?? m.member_email ?? m.member_id;
                     return (
                       <label
                         key={m.id}
@@ -1867,9 +1793,7 @@ function ProjectSectionHeader({
             className="gap-1.5 text-[13px] font-medium"
             type="button"
             onClick={() => {
-              window.dispatchEvent(
-                new CustomEvent("project-views-create-open"),
-              );
+              window.dispatchEvent(new CustomEvent('project-views-create-open'));
             }}
           >
             <IconPlus /> Add view
@@ -1882,10 +1806,7 @@ function ProjectSectionHeader({
 
   return (
     <>
-      <div
-        className="relative flex items-center gap-2 text-sm"
-        ref={projectDropdownRef}
-      >
+      <div className="relative flex items-center gap-2 text-sm" ref={projectDropdownRef}>
         <Link
           to={issuesUrl}
           className="flex items-center gap-1.5 rounded-l-md border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
@@ -1940,7 +1861,7 @@ function ProjectSectionHeader({
         />
       </div>
       <div className="flex items-center gap-1">{rightActions()}</div>
-      {section === "modules" && (
+      {section === 'modules' && (
         <>
           <CreateModuleModal
             open={createModuleOpen}
@@ -1950,34 +1871,30 @@ function ProjectSectionHeader({
             projectName={projectName}
             onCreated={() => {
               setCreateModuleOpen(false);
-              window.dispatchEvent(new CustomEvent("modules-refresh"));
+              window.dispatchEvent(new CustomEvent('modules-refresh'));
             }}
           />
           <DateRangeModal
             open={modulesDateRangeModal !== null}
             onClose={() => setModulesDateRangeModal(null)}
-            title={
-              modulesDateRangeModal === "start"
-                ? "Start date range"
-                : "Due date range"
-            }
+            title={modulesDateRangeModal === 'start' ? 'Start date range' : 'Due date range'}
             after={
-              modulesDateRangeModal === "start"
+              modulesDateRangeModal === 'start'
                 ? (modulesFilter.startAfter ?? null)
                 : (modulesFilter.dueAfter ?? null)
             }
             before={
-              modulesDateRangeModal === "start"
+              modulesDateRangeModal === 'start'
                 ? (modulesFilter.startBefore ?? null)
                 : (modulesFilter.dueBefore ?? null)
             }
             onApply={(after, before) => {
-              if (modulesDateRangeModal === "start") {
-                modulesFilter.setStartDateList(["custom"]);
+              if (modulesDateRangeModal === 'start') {
+                modulesFilter.setStartDateList(['custom']);
                 modulesFilter.setStartAfter(after);
                 modulesFilter.setStartBefore(before);
               } else {
-                modulesFilter.setDueDateList(["custom"]);
+                modulesFilter.setDueDateList(['custom']);
                 modulesFilter.setDueAfter(after);
                 modulesFilter.setDueBefore(before);
               }
@@ -1992,13 +1909,13 @@ function ProjectSectionHeader({
 
 /** Default workspace view options (Plane-style: all-issues, assigned, created, subscribed). */
 const DEFAULT_WORKSPACE_VIEWS = [
-  { id: "all-issues", name: "All work items" },
-  { id: "assigned", name: "Assigned" },
-  { id: "created", name: "Created" },
-  { id: "subscribed", name: "Subscribed" },
+  { id: 'all-issues', name: 'All work items' },
+  { id: 'assigned', name: 'Assigned' },
+  { id: 'created', name: 'Created' },
+  { id: 'subscribed', name: 'Subscribed' },
 ] as const;
 
-const LONG_LIST_PANEL_STYLE = { maxHeight: "min(70vh, 28rem)" };
+const LONG_LIST_PANEL_STYLE = { maxHeight: 'min(70vh, 28rem)' };
 
 function WorkspaceViewsHeader() {
   const { workspaceSlug, viewId: urlViewId } = useParams<{
@@ -2007,14 +1924,10 @@ function WorkspaceViewsHeader() {
   }>();
   const navigate = useNavigate();
   const [viewDropdownOpen, setViewDropdownOpen] = useState<string | null>(null);
-  const [filtersDropdownOpen, setFiltersDropdownOpen] = useState<string | null>(
-    null,
-  );
-  const [displayDropdownOpen, setDisplayDropdownOpen] = useState<string | null>(
-    null,
-  );
+  const [filtersDropdownOpen, setFiltersDropdownOpen] = useState<string | null>(null);
+  const [displayDropdownOpen, setDisplayDropdownOpen] = useState<string | null>(null);
   const [createViewModalOpen, setCreateViewModalOpen] = useState(false);
-  const [viewSearch, setViewSearch] = useState("");
+  const [viewSearch, setViewSearch] = useState('');
   const [customViews, setCustomViews] = useState<IssueViewApiResponse[]>([]);
 
   useEffect(() => {
@@ -2030,11 +1943,11 @@ function WorkspaceViewsHeader() {
 
   useEffect(() => {
     if (!viewDropdownOpen) {
-      queueMicrotask(() => setViewSearch(""));
+      queueMicrotask(() => setViewSearch(''));
     }
   }, [viewDropdownOpen]);
 
-  const selectedViewId = urlViewId ?? "all-issues";
+  const selectedViewId = urlViewId ?? 'all-issues';
   const allOptions = [
     ...DEFAULT_WORKSPACE_VIEWS,
     ...customViews.map((v) => ({ id: v.id, name: v.name })),
@@ -2043,11 +1956,9 @@ function WorkspaceViewsHeader() {
     DEFAULT_WORKSPACE_VIEWS.find((v) => v.id === selectedViewId) ??
     customViews.find((v) => v.id === selectedViewId) ??
     DEFAULT_WORKSPACE_VIEWS[0];
-  const displayName = selectedView?.name ?? "All work items";
+  const displayName = selectedView?.name ?? 'All work items';
   const q = (s: string) => s.trim().toLowerCase();
-  const filteredViews = allOptions.filter((v) =>
-    q(v.name).includes(q(viewSearch)),
-  );
+  const filteredViews = allOptions.filter((v) => q(v.name).includes(q(viewSearch)));
 
   const handleSelectView = (id: string) => {
     setViewDropdownOpen(null);
@@ -2059,7 +1970,7 @@ function WorkspaceViewsHeader() {
     <>
       <div className="flex items-center gap-2 text-sm font-medium text-(--txt-secondary)">
         <Link
-          to={workspaceSlug ? `/${workspaceSlug}/views/all-issues` : "/"}
+          to={workspaceSlug ? `/${workspaceSlug}/views/all-issues` : '/'}
           className="flex items-center gap-1.5 text-(--txt-secondary) hover:text-(--txt-primary)"
         >
           <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
@@ -2094,10 +2005,7 @@ function WorkspaceViewsHeader() {
               />
             </div>
           </div>
-          <div
-            className="min-h-0 flex-1 overflow-y-auto py-1"
-            style={LONG_LIST_PANEL_STYLE}
-          >
+          <div className="min-h-0 flex-1 overflow-y-auto py-1" style={LONG_LIST_PANEL_STYLE}>
             {filteredViews.map((view) => (
               <button
                 key={view.id}
@@ -2156,10 +2064,8 @@ function WorkspaceViewsHeader() {
 
 function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [projectSearch, setProjectSearch] = useState("");
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-    null,
-  );
+  const [projectSearch, setProjectSearch] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
 
   useEffect(() => {
@@ -2182,15 +2088,13 @@ function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
     : null;
 
   const q = (s: string) => s.trim().toLowerCase();
-  const filteredProjects = projects.filter((p) =>
-    q(p.name).includes(q(projectSearch)),
-  );
+  const filteredProjects = projects.filter((p) => q(p.name).includes(q(projectSearch)));
 
   useEffect(() => {
     if (!openDropdown) {
       // Intentional: clear search when dropdown closes (kept for future use)
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setProjectSearch("");
+      setProjectSearch('');
     }
   }, [openDropdown]);
 
@@ -2209,7 +2113,7 @@ function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
           onOpen={setOpenDropdown}
           label="All projects"
           icon={<IconBriefcase />}
-          displayValue={selectedProject?.name ?? "All projects"}
+          displayValue={selectedProject?.name ?? 'All projects'}
           panelClassName="flex min-w-[200px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
           align="right"
         >
@@ -2275,13 +2179,11 @@ function ProjectSavedViewDetailHeader({
   const { filters: workspaceViewFilters } = useWorkspaceViewsState();
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
   const issuesUrl = `${baseUrl}/issues`;
-  const [viewTitle, setViewTitle] = useState<string>("…");
+  const [viewTitle, setViewTitle] = useState<string>('…');
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
-  const [projectSearch, setProjectSearch] = useState("");
+  const [projectSearch, setProjectSearch] = useState('');
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
-  const [filtersDropdownOpen, setFiltersDropdownOpen] = useState<string | null>(
-    null,
-  );
+  const [filtersDropdownOpen, setFiltersDropdownOpen] = useState<string | null>(null);
   const projectDropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -2289,9 +2191,9 @@ function ProjectSavedViewDetailHeader({
     void (async () => {
       try {
         const v = await viewService.get(workspaceSlug, viewId);
-        if (!cancelled) setViewTitle(v?.name?.trim() ? v.name : "View");
+        if (!cancelled) setViewTitle(v?.name?.trim() ? v.name : 'View');
       } catch {
-        if (!cancelled) setViewTitle("View");
+        if (!cancelled) setViewTitle('View');
       }
     })();
     return () => {
@@ -2316,15 +2218,12 @@ function ProjectSavedViewDetailHeader({
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (
-        projectDropdownRef.current &&
-        !projectDropdownRef.current.contains(e.target as Node)
-      ) {
+      if (projectDropdownRef.current && !projectDropdownRef.current.contains(e.target as Node)) {
         setProjectDropdownOpen(false);
       }
     };
-    if (projectDropdownOpen) document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    if (projectDropdownOpen) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, [projectDropdownOpen]);
 
   const handleSelectProject = (targetProjectId: string) => {
@@ -2335,20 +2234,18 @@ function ProjectSavedViewDetailHeader({
   };
 
   const q = (s: string) => s.trim().toLowerCase();
-  const filteredProjects = projects.filter((p) =>
-    q(p.name).includes(q(projectSearch)),
-  );
+  const filteredProjects = projects.filter((p) => q(p.name).includes(q(projectSearch)));
 
   const startDateEffective =
     workspaceViewFilters.startDate.length &&
     !(
-      workspaceViewFilters.startDate.includes("custom") &&
+      workspaceViewFilters.startDate.includes('custom') &&
       (!workspaceViewFilters.startAfter || !workspaceViewFilters.startBefore)
     );
   const dueDateEffective =
     workspaceViewFilters.dueDate.length &&
     !(
-      workspaceViewFilters.dueDate.includes("custom") &&
+      workspaceViewFilters.dueDate.includes('custom') &&
       (!workspaceViewFilters.dueAfter || !workspaceViewFilters.dueBefore)
     );
   const activeFilters =
@@ -2358,7 +2255,7 @@ function ProjectSavedViewDetailHeader({
     workspaceViewFilters.createdByIds.length > 0 ||
     workspaceViewFilters.labelIds.length > 0 ||
     workspaceViewFilters.projectIds.length > 0 ||
-    workspaceViewFilters.grouping !== "all" ||
+    workspaceViewFilters.grouping !== 'all' ||
     Boolean(startDateEffective) ||
     Boolean(dueDateEffective);
 
@@ -2569,13 +2466,10 @@ export function PageHeader() {
       .get(workspaceSlug, projectId)
       .then((p) => {
         if (!cancelled) setProject(p ?? null);
-        return p
-          ? issueService.list(workspaceSlug, projectId, { limit: 1000 })
-          : [];
+        return p ? issueService.list(workspaceSlug, projectId, { limit: 1000 }) : [];
       })
       .then((issues) => {
-        if (!cancelled && Array.isArray(issues))
-          setProjectIssueCount(issues.length);
+        if (!cancelled && Array.isArray(issues)) setProjectIssueCount(issues.length);
       })
       .catch(() => {
         if (!cancelled) setProject(null);
@@ -2613,58 +2507,42 @@ export function PageHeader() {
     workspaceSlug &&
     (pathname === `/${workspaceSlug}/settings` ||
       pathname.startsWith(`/${workspaceSlug}/settings/`));
-  const isProjectsList =
-    workspaceSlug && pathname === `/${workspaceSlug}/projects`;
-  const projectBase =
-    workspaceSlug && projectId ? `/${workspaceSlug}/projects/${projectId}` : "";
+  const isProjectsList = workspaceSlug && pathname === `/${workspaceSlug}/projects`;
+  const projectBase = workspaceSlug && projectId ? `/${workspaceSlug}/projects/${projectId}` : '';
   const isIssuesPage = projectBase && pathname === `${projectBase}/issues`;
   const isCyclesPage = projectBase && pathname === `${projectBase}/cycles`;
   const isModulesPage = projectBase && pathname === `${projectBase}/modules`;
   const isModuleDetailPage =
-    projectBase &&
-    moduleId &&
-    pathname === `${projectBase}/modules/${moduleId}`;
-  const pathNoTrailingSlash = pathname.replace(/\/+$/, "") || pathname;
-  const isViewsListPage =
-    projectBase && pathNoTrailingSlash === `${projectBase}/views`;
+    projectBase && moduleId && pathname === `${projectBase}/modules/${moduleId}`;
+  const pathNoTrailingSlash = pathname.replace(/\/+$/, '') || pathname;
+  const isViewsListPage = projectBase && pathNoTrailingSlash === `${projectBase}/views`;
   const isProjectSavedViewDetailPage =
-    projectBase &&
-    !!viewId &&
-    pathNoTrailingSlash === `${projectBase}/views/${viewId}`;
+    projectBase && !!viewId && pathNoTrailingSlash === `${projectBase}/views/${viewId}`;
   const isPagesPage = projectBase && pathname === `${projectBase}/pages`;
   const isProjectSection =
-    isIssuesPage ||
-    isCyclesPage ||
-    isModulesPage ||
-    isViewsListPage ||
-    isPagesPage;
+    isIssuesPage || isCyclesPage || isModulesPage || isViewsListPage || isPagesPage;
   const isProjectDetail =
-    workspaceSlug &&
-    projectId &&
-    pathname.startsWith(`/${workspaceSlug}/projects/${projectId}`);
-  const isInbox =
-    workspaceSlug && pathname === `/${workspaceSlug}/notifications`;
-  const isProfilePage =
-    workspaceSlug && /^\/[^/]+\/profile\/[^/]+$/.test(pathname);
+    workspaceSlug && projectId && pathname.startsWith(`/${workspaceSlug}/projects/${projectId}`);
+  const isInbox = workspaceSlug && pathname === `/${workspaceSlug}/notifications`;
+  const isProfilePage = workspaceSlug && /^\/[^/]+\/profile\/[^/]+$/.test(pathname);
   const isAnalyticsPage =
     workspaceSlug &&
     (pathname === `/${workspaceSlug}/analytics` ||
       pathname.startsWith(`/${workspaceSlug}/analytics/`));
   const isWorkspaceViewsPage =
     workspaceSlug &&
-    (pathname === `/${workspaceSlug}/views` ||
-      pathname.startsWith(`/${workspaceSlug}/views/`));
+    (pathname === `/${workspaceSlug}/views` || pathname.startsWith(`/${workspaceSlug}/views/`));
 
   const projectSection: ProjectSection | null = isIssuesPage
-    ? "issues"
+    ? 'issues'
     : isCyclesPage
-      ? "cycles"
+      ? 'cycles'
       : isModulesPage
-        ? "modules"
+        ? 'modules'
         : isViewsListPage
-          ? "views"
+          ? 'views'
           : isPagesPage
-            ? "pages"
+            ? 'pages'
             : null;
 
   let content: React.ReactNode = null;
@@ -2682,13 +2560,7 @@ export function PageHeader() {
     content = <AnalyticsHeader workspaceSlug={workspaceSlug} />;
   } else if (isWorkspaceViewsPage && workspaceSlug) {
     content = <WorkspaceViewsHeader />;
-  } else if (
-    isModuleDetailPage &&
-    workspaceSlug &&
-    projectId &&
-    project &&
-    module
-  ) {
+  } else if (isModuleDetailPage && workspaceSlug && projectId && project && module) {
     content = (
       <ModuleDetailHeader
         workspaceSlug={workspaceSlug}
@@ -2698,13 +2570,7 @@ export function PageHeader() {
         moduleName={module.name}
       />
     );
-  } else if (
-    isProjectSavedViewDetailPage &&
-    workspaceSlug &&
-    projectId &&
-    viewId &&
-    project
-  ) {
+  } else if (isProjectSavedViewDetailPage && workspaceSlug && projectId && viewId && project) {
     content = (
       <ProjectSavedViewDetailHeader
         workspaceSlug={workspaceSlug}
@@ -2714,13 +2580,7 @@ export function PageHeader() {
         issueCount={projectIssueCount}
       />
     );
-  } else if (
-    isProjectSection &&
-    workspaceSlug &&
-    projectId &&
-    project &&
-    projectSection
-  ) {
+  } else if (isProjectSection && workspaceSlug && projectId && project && projectSection) {
     content = (
       <ProjectSectionHeader
         workspaceSlug={workspaceSlug}

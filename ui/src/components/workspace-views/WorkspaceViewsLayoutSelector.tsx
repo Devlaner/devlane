@@ -1,9 +1,9 @@
-import { useWorkspaceViewsState } from "../../contexts/WorkspaceViewsStateContext";
+import { useWorkspaceViewsState } from '../../contexts/WorkspaceViewsStateContext';
 import {
   VIEW_LAYOUTS,
   VIEW_LAYOUT_LABELS,
   type ViewLayout,
-} from "../../types/workspaceViewDisplay";
+} from '../../types/workspaceViewDisplay';
 
 const IconList = (props: React.SVGAttributes<SVGSVGElement>) => (
   <svg
@@ -96,10 +96,7 @@ const IconGantt = (props: React.SVGAttributes<SVGSVGElement>) => (
   </svg>
 );
 
-const LAYOUT_ICONS: Record<
-  ViewLayout,
-  React.ComponentType<React.SVGAttributes<SVGSVGElement>>
-> = {
+const LAYOUT_ICONS: Record<ViewLayout, React.ComponentType<React.SVGAttributes<SVGSVGElement>>> = {
   list: IconList,
   kanban: IconColumns,
   calendar: IconCalendar,
@@ -128,8 +125,8 @@ export function WorkspaceViewsLayoutSelector() {
             title={VIEW_LAYOUT_LABELS[l]}
             className={`flex size-8 items-center justify-center rounded transition-colors ${
               isActive
-                ? "bg-(--bg-layer-2) text-(--txt-primary)"
-                : "text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-secondary)"
+                ? 'bg-(--bg-layer-2) text-(--txt-primary)'
+                : 'text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-secondary)'
             }`}
             aria-pressed={isActive}
             aria-label={VIEW_LAYOUT_LABELS[l]}

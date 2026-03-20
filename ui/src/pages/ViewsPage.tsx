@@ -1,40 +1,34 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type SVGProps,
-} from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Button, Input, Modal } from "../components/ui";
-import { Dropdown } from "../components/work-item";
-import { useWorkspaceViewsState } from "../contexts/WorkspaceViewsStateContext";
-import { useAuth } from "../contexts/AuthContext";
-import { workspaceService } from "../services/workspaceService";
-import { projectService } from "../services/projectService";
-import { viewService } from "../services/viewService";
-import { getViewAccessMeta } from "../lib/viewAccess";
-import { ISSUE_VIEW_FAVORITES_CHANGED_EVENT } from "../lib/issueViewFavoritesEvents";
-import { countSavedViewFilters } from "../lib/viewFilterCount";
+import { useCallback, useEffect, useMemo, useState, type SVGProps } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Button, Input, Modal } from '../components/ui';
+import { Dropdown } from '../components/work-item';
+import { useWorkspaceViewsState } from '../contexts/WorkspaceViewsStateContext';
+import { useAuth } from '../contexts/AuthContext';
+import { workspaceService } from '../services/workspaceService';
+import { projectService } from '../services/projectService';
+import { viewService } from '../services/viewService';
+import { getViewAccessMeta } from '../lib/viewAccess';
+import { ISSUE_VIEW_FAVORITES_CHANGED_EVENT } from '../lib/issueViewFavoritesEvents';
+import { countSavedViewFilters } from '../lib/viewFilterCount';
 import {
   PROJECT_VIEWS_CREATE_EVENT,
   PROJECT_VIEWS_EDIT_EVENT,
   PROJECT_VIEWS_FILTER_EVENT,
   PROJECT_VIEWS_REFRESH_EVENT,
-} from "../lib/projectViewsEvents";
+} from '../lib/projectViewsEvents';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
   IssueViewApiResponse,
   WorkspaceMemberApiResponse,
-} from "../api/types";
+} from '../api/types';
 
-type CreatedDatePreset = "1_week" | "2_weeks" | "1_month";
+type CreatedDatePreset = '1_week' | '2_weeks' | '1_month';
 
 type ProjectViewsFilters = {
   query: string;
   favoritesOnly: boolean;
-  createdDatePreset: CreatedDatePreset | "custom" | null;
+  createdDatePreset: CreatedDatePreset | 'custom' | null;
   createdAfter: string | null;
   createdBefore: string | null;
   createdByIds: string[];
@@ -104,14 +98,7 @@ function IconLock(props: SVGProps<SVGSVGElement>) {
 
 function IconMoreVertical(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden
-      {...props}
-    >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden {...props}>
       <circle cx="12" cy="5" r="1.5" />
       <circle cx="12" cy="12" r="1.5" />
       <circle cx="12" cy="19" r="1.5" />
@@ -208,7 +195,7 @@ function IconStar(props: SVGProps<SVGSVGElement> & { filled?: boolean }) {
       width="16"
       height="16"
       viewBox="0 0 24 24"
-      fill={filled ? "currentColor" : "none"}
+      fill={filled ? 'currentColor' : 'none'}
       stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
@@ -227,7 +214,7 @@ function getProjectViewsFavoritesKey(workspaceId: string, projectId: string) {
 
 function userInitial(name: string): string {
   const trimmed = name.trim();
-  return trimmed ? trimmed.charAt(0).toUpperCase() : "?";
+  return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
 }
 
 export function ViewsPage() {
@@ -247,10 +234,10 @@ export function ViewsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpenId, setEditOpenId] = useState<string | null>(null);
   const [deleteOpenId, setDeleteOpenId] = useState<string | null>(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [editTitle, setEditTitle] = useState("");
-  const [editDescription, setEditDescription] = useState("");
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -258,11 +245,9 @@ export function ViewsPage() {
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [viewMenuOpenId, setViewMenuOpenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [favoriteActionError, setFavoriteActionError] = useState<string | null>(
-    null,
-  );
+  const [favoriteActionError, setFavoriteActionError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ProjectViewsFilters>({
-    query: "",
+    query: '',
     favoritesOnly: false,
     createdDatePreset: null,
     createdAfter: null,
@@ -314,9 +299,7 @@ export function ViewsPage() {
         setProject(null);
         setViews([]);
         setMembers([]);
-        setLoadError(
-          "Unable to load project views right now. Please refresh and try again.",
-        );
+        setLoadError('Unable to load project views right now. Please refresh and try again.');
       })
       .finally(() => {
         setLoading(false);
@@ -325,17 +308,17 @@ export function ViewsPage() {
 
   const openEdit = useCallback((view: IssueViewApiResponse) => {
     setEditOpenId(view.id);
-    setEditTitle(view.name ?? "");
-    setEditDescription(view.description ?? "");
+    setEditTitle(view.name ?? '');
+    setEditDescription(view.description ?? '');
     setError(null);
   }, []);
 
-  const editFromUrl = searchParams.get("edit");
+  const editFromUrl = searchParams.get('edit');
   useEffect(() => {
     if (!editFromUrl || views.length === 0) return;
     const target = views.find((v) => v.id === editFromUrl);
     const next = new URLSearchParams(searchParams);
-    next.delete("edit");
+    next.delete('edit');
     if (!target) {
       setSearchParams(next, { replace: true });
       return;
@@ -361,17 +344,11 @@ export function ViewsPage() {
       void loadPageData();
     };
     window.addEventListener(PROJECT_VIEWS_CREATE_EVENT, handleOpenCreate);
-    window.addEventListener(
-      PROJECT_VIEWS_EDIT_EVENT,
-      handleOpenEdit as EventListener,
-    );
+    window.addEventListener(PROJECT_VIEWS_EDIT_EVENT, handleOpenEdit as EventListener);
     window.addEventListener(PROJECT_VIEWS_REFRESH_EVENT, handleRefresh);
     return () => {
       window.removeEventListener(PROJECT_VIEWS_CREATE_EVENT, handleOpenCreate);
-      window.removeEventListener(
-        PROJECT_VIEWS_EDIT_EVENT,
-        handleOpenEdit as EventListener,
-      );
+      window.removeEventListener(PROJECT_VIEWS_EDIT_EVENT, handleOpenEdit as EventListener);
       window.removeEventListener(PROJECT_VIEWS_REFRESH_EVENT, handleRefresh);
     };
   }, [views, loadPageData, openEdit]);
@@ -382,15 +359,9 @@ export function ViewsPage() {
       if (!ce.detail) return;
       setFilters((prev) => ({ ...prev, ...ce.detail }));
     };
-    window.addEventListener(
-      PROJECT_VIEWS_FILTER_EVENT,
-      handler as EventListener,
-    );
+    window.addEventListener(PROJECT_VIEWS_FILTER_EVENT, handler as EventListener);
     return () => {
-      window.removeEventListener(
-        PROJECT_VIEWS_FILTER_EVENT,
-        handler as EventListener,
-      );
+      window.removeEventListener(PROJECT_VIEWS_FILTER_EVENT, handler as EventListener);
     };
   }, []);
 
@@ -409,9 +380,7 @@ export function ViewsPage() {
     // Optimistic UI update so the star responds immediately.
     setFavoriteIds(nextFavoriteIds);
     setViews((prev) =>
-      prev.map((v) =>
-        v.id === viewId ? { ...v, is_favorite: nextIsFavorite } : v,
-      ),
+      prev.map((v) => (v.id === viewId ? { ...v, is_favorite: nextIsFavorite } : v)),
     );
     try {
       localStorage.setItem(key, JSON.stringify(nextFavoriteIds));
@@ -432,12 +401,10 @@ export function ViewsPage() {
       );
     } catch {
       // Roll back optimistic UI if the server update fails.
-      setFavoriteActionError("Unable to update favorite. Please try again.");
+      setFavoriteActionError('Unable to update favorite. Please try again.');
       setFavoriteIds(prevFavoriteIds);
       setViews((prev) =>
-        prev.map((v) =>
-          v.id === viewId ? { ...v, is_favorite: wasFavorited } : v,
-        ),
+        prev.map((v) => (v.id === viewId ? { ...v, is_favorite: wasFavorited } : v)),
       );
       try {
         localStorage.setItem(key, JSON.stringify(prevFavoriteIds));
@@ -451,41 +418,33 @@ export function ViewsPage() {
     const q = filters.query.trim().toLowerCase();
     const now = Date.now();
     const days =
-      filters.createdDatePreset === "1_week"
+      filters.createdDatePreset === '1_week'
         ? 7
-        : filters.createdDatePreset === "2_weeks"
+        : filters.createdDatePreset === '2_weeks'
           ? 14
-          : filters.createdDatePreset === "1_month"
+          : filters.createdDatePreset === '1_month'
             ? 30
             : null;
     const createdAfter = days ? now - days * 24 * 60 * 60 * 1000 : null;
-    const customAfter = filters.createdAfter
-      ? new Date(filters.createdAfter).getTime()
-      : null;
-    const customBefore = filters.createdBefore
-      ? new Date(filters.createdBefore).getTime()
-      : null;
+    const customAfter = filters.createdAfter ? new Date(filters.createdAfter).getTime() : null;
+    const customBefore = filters.createdBefore ? new Date(filters.createdBefore).getTime() : null;
     return views.filter((v) => {
       if (q) {
-        const hay = `${v.name ?? ""} ${v.description ?? ""}`.toLowerCase();
+        const hay = `${v.name ?? ''} ${v.description ?? ''}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       if (filters.favoritesOnly && !favoriteIds.includes(v.id)) return false;
-      if (
-        filters.createdByIds.length &&
-        !filters.createdByIds.includes(v.owned_by_id)
-      )
+      if (filters.createdByIds.length && !filters.createdByIds.includes(v.owned_by_id))
         return false;
       if (createdAfter) {
         const ts = v.created_at ? new Date(v.created_at).getTime() : 0;
         if (!ts || ts < createdAfter) return false;
       }
-      if (filters.createdDatePreset === "custom") {
+      if (filters.createdDatePreset === 'custom') {
         const ts = v.created_at ? new Date(v.created_at).getTime() : 0;
         if (!ts) return false;
         if (customAfter && ts < customAfter) return false;
-        if (customBefore && ts > customBefore + 24 * 60 * 60 * 1000 - 1)
-          return false;
+        if (customBefore && ts > customBefore + 24 * 60 * 60 * 1000 - 1) return false;
       }
       return true;
     });
@@ -496,12 +455,12 @@ export function ViewsPage() {
     const sortBy = display.sortBy;
     const sortOrder = display.sortOrder;
     list.sort((a, b) => {
-      let va: string | number = "";
-      let vb: string | number = "";
-      if (sortBy === "name") {
-        va = a.name ?? "";
-        vb = b.name ?? "";
-      } else if (sortBy === "created_at") {
+      let va: string | number = '';
+      let vb: string | number = '';
+      if (sortBy === 'name') {
+        va = a.name ?? '';
+        vb = b.name ?? '';
+      } else if (sortBy === 'created_at') {
         va = a.created_at ? new Date(a.created_at).getTime() : 0;
         vb = b.created_at ? new Date(b.created_at).getTime() : 0;
       } else {
@@ -509,18 +468,17 @@ export function ViewsPage() {
         vb = b.updated_at ? new Date(b.updated_at).getTime() : 0;
       }
       const cmp =
-        typeof va === "string" && typeof vb === "string"
-          ? va.localeCompare(vb, undefined, { sensitivity: "base" })
+        typeof va === 'string' && typeof vb === 'string'
+          ? va.localeCompare(vb, undefined, { sensitivity: 'base' })
           : Number(va) - Number(vb);
-      return sortOrder === "asc" ? cmp : -cmp;
+      return sortOrder === 'asc' ? cmp : -cmp;
     });
     return list;
   }, [filteredViews, display.sortBy, display.sortOrder]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!workspaceSlug || !projectId || !title.trim() || !canCreateViews)
-      return;
+    if (!workspaceSlug || !projectId || !title.trim() || !canCreateViews) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -530,12 +488,12 @@ export function ViewsPage() {
         project_id: projectId,
       });
       setCreateOpen(false);
-      setTitle("");
-      setDescription("");
+      setTitle('');
+      setDescription('');
       await loadPageData();
       window.dispatchEvent(new CustomEvent(PROJECT_VIEWS_REFRESH_EVENT));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create view.");
+      setError(err instanceof Error ? err.message : 'Failed to create view.');
     } finally {
       setSubmitting(false);
     }
@@ -564,7 +522,7 @@ export function ViewsPage() {
       await loadPageData();
       window.dispatchEvent(new CustomEvent(PROJECT_VIEWS_REFRESH_EVENT));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update view.");
+      setError(err instanceof Error ? err.message : 'Failed to update view.');
     } finally {
       setEditing(false);
     }
@@ -580,7 +538,7 @@ export function ViewsPage() {
       await loadPageData();
       window.dispatchEvent(new CustomEvent(PROJECT_VIEWS_REFRESH_EVENT));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete view.");
+      setError(err instanceof Error ? err.message : 'Failed to delete view.');
     } finally {
       setDeleting(false);
     }
@@ -593,10 +551,7 @@ export function ViewsPage() {
       const href = `${window.location.origin}/${workspaceSlug}/projects/${projectId}/views/${viewId}`;
       await navigator.clipboard.writeText(href);
     } finally {
-      setTimeout(
-        () => setCopyingId((prev) => (prev === viewId ? null : prev)),
-        800,
-      );
+      setTimeout(() => setCopyingId((prev) => (prev === viewId ? null : prev)), 800);
     }
   };
 
@@ -612,7 +567,7 @@ export function ViewsPage() {
       }
       await loadPageData();
     } catch {
-      setError("Unable to update publish status for this view.");
+      setError('Unable to update publish status for this view.');
     } finally {
       setPublishingId(null);
     }
@@ -623,8 +578,8 @@ export function ViewsPage() {
     for (const member of members) {
       const label =
         member.member_display_name?.trim() ||
-        member.member_email?.split("@")[0]?.trim() ||
-        "Member";
+        member.member_email?.split('@')[0]?.trim() ||
+        'Member';
       map.set(member.member_id, label);
     }
     return map;
@@ -648,21 +603,19 @@ export function ViewsPage() {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       const isTyping =
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
-        target?.isContentEditable;
+        target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
       if (isTyping) return;
-      if (e.key.toLowerCase() === "c" && canCreateViews) {
+      if (e.key.toLowerCase() === 'c' && canCreateViews) {
         e.preventDefault();
         setCreateOpen(true);
       }
-      if (e.key.toLowerCase() === "r" && !e.ctrlKey && !e.metaKey) {
+      if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         window.dispatchEvent(new CustomEvent(PROJECT_VIEWS_REFRESH_EVENT));
       }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [canCreateViews]);
 
   if (loading) {
@@ -675,7 +628,7 @@ export function ViewsPage() {
   if (!workspace || !project) {
     return (
       <div className="px-6 py-8 text-sm text-(--txt-secondary)">
-        {loadError ?? "Project not found."}
+        {loadError ?? 'Project not found.'}
       </div>
     );
   }
@@ -687,8 +640,7 @@ export function ViewsPage() {
             Views are disabled for this project
           </h2>
           <p className="mt-2 text-sm text-(--txt-secondary)">
-            Enable the Views feature in project settings to create and manage
-            project views.
+            Enable the Views feature in project settings to create and manage project views.
           </p>
         </div>
       </div>
@@ -710,27 +662,20 @@ export function ViewsPage() {
                 Save filtered views for your project. Create as many as you need
               </h2>
               <p className="mt-2 max-w-4xl text-sm text-(--txt-secondary)">
-                Views are a set of saved filters that you use frequently or want
-                easy access to. All your colleagues in a project can see
-                everyone&apos;s views and choose whichever suits their needs
-                best.
+                Views are a set of saved filters that you use frequently or want easy access to. All
+                your colleagues in a project can see everyone&apos;s views and choose whichever
+                suits their needs best.
               </p>
               <div className="mt-6 rounded-lg border border-(--border-subtle) bg-(--bg-layer-1) p-6">
                 <div className="mx-auto flex h-80 w-full max-w-4xl items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
                   <div className="space-y-3 text-center">
                     <div className="mx-auto h-12 w-12 rounded-md border border-(--border-subtle) bg-(--bg-layer-1)" />
-                    <p className="text-sm text-(--txt-tertiary)">
-                      No project views yet
-                    </p>
+                    <p className="text-sm text-(--txt-tertiary)">No project views yet</p>
                   </div>
                 </div>
               </div>
               <div className="mt-7 flex justify-center">
-                <Button
-                  size="sm"
-                  onClick={() => setCreateOpen(true)}
-                  disabled={!canCreateViews}
-                >
+                <Button size="sm" onClick={() => setCreateOpen(true)} disabled={!canCreateViews}>
                   Create your first view
                 </Button>
               </div>
@@ -743,8 +688,8 @@ export function ViewsPage() {
                 No views match your filters
               </h3>
               <p className="mt-2 text-sm text-(--txt-secondary)">
-                Try clearing or relaxing your search, created date, favorites,
-                or created-by filters.
+                Try clearing or relaxing your search, created date, favorites, or created-by
+                filters.
               </p>
             </div>
           </div>
@@ -754,18 +699,13 @@ export function ViewsPage() {
               {sortedViews.map((v) => {
                 const accessMeta = getViewAccessMeta(v);
                 const filterCount = countSavedViewFilters(v);
-                const filterLabel =
-                  filterCount === 1 ? "1 filter" : `${filterCount} filters`;
+                const filterLabel = filterCount === 1 ? '1 filter' : `${filterCount} filters`;
                 const creatorLabel =
-                  memberNameById.get(v.owned_by_id) ??
-                  v.owned_by?.trim() ??
-                  "Member";
+                  memberNameById.get(v.owned_by_id) ?? v.owned_by?.trim() ?? 'Member';
                 const creatorAvatar = memberAvatarById.get(v.owned_by_id);
                 const isFav =
-                  typeof v.is_favorite === "boolean"
-                    ? v.is_favorite
-                    : favoriteIds.includes(v.id);
-                const isPublic = accessMeta?.tone === "public";
+                  typeof v.is_favorite === 'boolean' ? v.is_favorite : favoriteIds.includes(v.id);
+                const isPublic = accessMeta?.tone === 'public';
 
                 return (
                   <div
@@ -773,18 +713,13 @@ export function ViewsPage() {
                     className="group flex items-center justify-between gap-4 px-6 py-3.5 transition-colors duration-150 hover:bg-(--bg-layer-1-hover)"
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                      <span
-                        className="shrink-0 text-(--txt-icon-tertiary)"
-                        aria-hidden
-                      >
+                      <span className="shrink-0 text-(--txt-icon-tertiary)" aria-hidden>
                         <IconLayers className="size-4" />
                       </span>
                       <button
                         type="button"
                         onClick={() =>
-                          navigate(
-                            `/${workspaceSlug}/projects/${projectId}/views/${v.id}`,
-                          )
+                          navigate(`/${workspaceSlug}/projects/${projectId}/views/${v.id}`)
                         }
                         className="min-w-0 truncate text-left text-sm font-medium text-(--txt-primary) hover:underline"
                       >
@@ -802,12 +737,12 @@ export function ViewsPage() {
                         className="shrink-0 text-(--txt-icon-tertiary)"
                         title={
                           isPublic
-                            ? "Public"
+                            ? 'Public'
                             : accessMeta
-                              ? accessMeta.tone === "restricted"
-                                ? "Restricted"
-                                : "Private"
-                              : "Access"
+                              ? accessMeta.tone === 'restricted'
+                                ? 'Restricted'
+                                : 'Private'
+                              : 'Access'
                         }
                       >
                         {isPublic ? (
@@ -816,10 +751,7 @@ export function ViewsPage() {
                           <IconLock className="size-4" strokeWidth={1.75} />
                         )}
                       </span>
-                      <span
-                        className="shrink-0"
-                        title={`Created by ${creatorLabel}`}
-                      >
+                      <span className="shrink-0" title={`Created by ${creatorLabel}`}>
                         {creatorAvatar ? (
                           <img
                             src={creatorAvatar}
@@ -835,7 +767,7 @@ export function ViewsPage() {
                       <button
                         type="button"
                         className="inline-flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
-                        aria-label={isFav ? "Unfavorite view" : "Favorite view"}
+                        aria-label={isFav ? 'Unfavorite view' : 'Favorite view'}
                         onClick={(e) => {
                           e.stopPropagation();
                           void toggleFavorite(v.id);
@@ -878,7 +810,7 @@ export function ViewsPage() {
                             setViewMenuOpenId(null);
                             window.open(
                               `/${workspaceSlug}/projects/${projectId}/views/${v.id}`,
-                              "_blank",
+                              '_blank',
                             );
                           }}
                         >
@@ -894,7 +826,7 @@ export function ViewsPage() {
                           }}
                         >
                           <IconLinkChain className="shrink-0 text-(--txt-icon-tertiary)" />
-                          {copyingId === v.id ? "Copied!" : "Copy link"}
+                          {copyingId === v.id ? 'Copied!' : 'Copy link'}
                         </button>
                         <button
                           type="button"
@@ -908,16 +840,9 @@ export function ViewsPage() {
                           <span className="inline-flex w-3.5 shrink-0 justify-center text-xs text-(--txt-icon-tertiary)">
                             ●
                           </span>
-                          {publishingId === v.id
-                            ? "Updating…"
-                            : v.anchor
-                              ? "Unpublish"
-                              : "Publish"}
+                          {publishingId === v.id ? 'Updating…' : v.anchor ? 'Unpublish' : 'Publish'}
                         </button>
-                        <div
-                          className="my-0.5 h-px bg-(--border-subtle)"
-                          role="separator"
-                        />
+                        <div className="my-0.5 h-px bg-(--border-subtle)" role="separator" />
                         <button
                           type="button"
                           disabled={!canCreateViews}
@@ -962,16 +887,12 @@ export function ViewsPage() {
               form="project-create-view-form"
               disabled={submitting || !title.trim() || !canCreateViews}
             >
-              {submitting ? "Creating..." : "Add view"}
+              {submitting ? 'Creating...' : 'Add view'}
             </Button>
           </>
         }
       >
-        <form
-          id="project-create-view-form"
-          onSubmit={handleCreate}
-          className="space-y-4"
-        >
+        <form id="project-create-view-form" onSubmit={handleCreate} className="space-y-4">
           <Input
             label="Name"
             value={title}
@@ -991,9 +912,7 @@ export function ViewsPage() {
               className="w-full rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
             />
           </div>
-          {error && (
-            <p className="text-sm text-(--txt-danger-primary)">{error}</p>
-          )}
+          {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
         </form>
       </Modal>
       <Modal
@@ -1019,16 +938,12 @@ export function ViewsPage() {
               form="project-edit-view-form"
               disabled={editing || !editTitle.trim()}
             >
-              {editing ? "Saving..." : "Save changes"}
+              {editing ? 'Saving...' : 'Save changes'}
             </Button>
           </>
         }
       >
-        <form
-          id="project-edit-view-form"
-          onSubmit={handleEdit}
-          className="space-y-4"
-        >
+        <form id="project-edit-view-form" onSubmit={handleEdit} className="space-y-4">
           <Input
             label="Name"
             value={editTitle}
@@ -1048,9 +963,7 @@ export function ViewsPage() {
               className="w-full rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
             />
           </div>
-          {error && (
-            <p className="text-sm text-(--txt-danger-primary)">{error}</p>
-          )}
+          {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
         </form>
       </Modal>
       <Modal
@@ -1071,26 +984,20 @@ export function ViewsPage() {
             >
               Cancel
             </Button>
-            <Button
-              type="button"
-              onClick={() => void handleDelete()}
-              disabled={deleting}
-            >
-              {deleting ? "Deleting..." : "Delete"}
+            <Button type="button" onClick={() => void handleDelete()} disabled={deleting}>
+              {deleting ? 'Deleting...' : 'Delete'}
             </Button>
           </>
         }
       >
         <p className="text-sm text-(--txt-secondary)">
-          Delete view{" "}
+          Delete view{' '}
           <span className="font-medium text-(--txt-primary)">
-            {deleteView?.name ?? "this view"}
+            {deleteView?.name ?? 'this view'}
           </span>
           ? This action cannot be undone.
         </p>
-        {error && (
-          <p className="mt-3 text-sm text-(--txt-danger-primary)">{error}</p>
-        )}
+        {error && <p className="mt-3 text-sm text-(--txt-danger-primary)">{error}</p>}
       </Modal>
     </>
   );

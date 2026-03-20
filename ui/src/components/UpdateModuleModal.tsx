@@ -1,28 +1,21 @@
-import { useEffect, useRef, useState } from "react";
-import { Modal, Button, Input, Avatar } from "./ui";
-import { DateRangeModal } from "./workspace-views/DateRangeModal";
-import { getImageUrl } from "../lib/utils";
-import { workspaceService } from "../services/workspaceService";
-import { moduleService } from "../services/moduleService";
-import type {
-  ModuleApiResponse,
-  WorkspaceMemberApiResponse,
-} from "../api/types";
-import { formatISODateDisplay } from "../lib/dateOnly";
-import { MODULE_STATUSES } from "../lib/moduleStatuses";
+import { useEffect, useRef, useState } from 'react';
+import { Modal, Button, Input, Avatar } from './ui';
+import { DateRangeModal } from './workspace-views/DateRangeModal';
+import { getImageUrl } from '../lib/utils';
+import { workspaceService } from '../services/workspaceService';
+import { moduleService } from '../services/moduleService';
+import type { ModuleApiResponse, WorkspaceMemberApiResponse } from '../api/types';
+import { formatISODateDisplay } from '../lib/dateOnly';
+import { MODULE_STATUSES } from '../lib/moduleStatuses';
 
-function formatDateRangeDisplay(
-  start: string | null,
-  end: string | null,
-): string {
-  if (!start && !end) return "Start date → End date";
-  if (start && end)
-    return `${formatISODateDisplay(start)} → ${formatISODateDisplay(end)}`;
+function formatDateRangeDisplay(start: string | null, end: string | null): string {
+  if (!start && !end) return 'Start date → End date';
+  if (start && end) return `${formatISODateDisplay(start)} → ${formatISODateDisplay(end)}`;
   return start
     ? formatISODateDisplay(start)
     : end
       ? formatISODateDisplay(end)
-      : "Start date → End date";
+      : 'Start date → End date';
 }
 
 export interface UpdateModuleModalProps {
@@ -44,16 +37,16 @@ export function UpdateModuleModal({
   onUpdated,
   openDatePickerOnOpen,
 }: UpdateModuleModalProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
-  const [status, setStatus] = useState<string>("backlog");
+  const [status, setStatus] = useState<string>('backlog');
   const [leadId, setLeadId] = useState<string | null>(null);
   const [dateModalOpen, setDateModalOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [leadDropdownOpen, setLeadDropdownOpen] = useState(false);
-  const [leadSearch, setLeadSearch] = useState("");
+  const [leadSearch, setLeadSearch] = useState('');
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,13 +63,13 @@ export function UpdateModuleModal({
 
   useEffect(() => {
     if (!open || !module) return;
-    setTitle(module.name ?? "");
-    setDescription(module.description ?? "");
+    setTitle(module.name ?? '');
+    setDescription(module.description ?? '');
     setStartDate(module.start_date ?? null);
     setEndDate(module.target_date ?? null);
-    setStatus(module.status ?? "backlog");
+    setStatus(module.status ?? 'backlog');
     setLeadId(module.lead_id ?? null);
-    setLeadSearch("");
+    setLeadSearch('');
     setError(null);
     setDateModalOpen(Boolean(openDatePickerOnOpen));
     setStatusDropdownOpen(false);
@@ -91,45 +84,35 @@ export function UpdateModuleModal({
       setStatusDropdownOpen(false);
       setLeadDropdownOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   const q = (s: string) => s.trim().toLowerCase();
   const filteredLead = members.filter((m) =>
-    q(m.member_display_name ?? m.member_email ?? m.member_id).includes(
-      q(leadSearch),
-    ),
+    q(m.member_display_name ?? m.member_email ?? m.member_id).includes(q(leadSearch)),
   );
-  const leadMember = leadId
-    ? (members.find((m) => m.member_id === leadId) ?? null)
-    : null;
+  const leadMember = leadId ? (members.find((m) => m.member_id === leadId) ?? null) : null;
 
-  const statusLabel =
-    MODULE_STATUSES.find((s) => s.id === status)?.label ?? status;
+  const statusLabel = MODULE_STATUSES.find((s) => s.id === status)?.label ?? status;
 
   const handleSubmit = async () => {
     if (!module || !workspaceSlug || !projectId || !title.trim()) return;
     setSubmitting(true);
     setError(null);
     try {
-      const updated = await moduleService.update(
-        workspaceSlug,
-        projectId,
-        module.id,
-        {
-          name: title.trim(),
-          description: description.trim() || undefined,
-          status,
-          start_date: startDate ?? "",
-          target_date: endDate ?? "",
-          lead_id: leadId ?? "",
-        },
-      );
+      const updated = await moduleService.update(workspaceSlug, projectId, module.id, {
+        name: title.trim(),
+        description: description.trim() || undefined,
+        status,
+        start_date: startDate ?? '',
+        target_date: endDate ?? '',
+        lead_id: leadId ?? '',
+      });
       onUpdated?.(updated);
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update module");
+      setError(e instanceof Error ? e.message : 'Failed to update module');
     } finally {
       setSubmitting(false);
     }
@@ -147,18 +130,13 @@ export function UpdateModuleModal({
             <Button variant="secondary" onClick={onClose} disabled={submitting}>
               Cancel
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={submitting || !module || !title.trim()}
-            >
+            <Button onClick={handleSubmit} disabled={submitting || !module || !title.trim()}>
               Update Module
             </Button>
           </>
         }
       >
-        {error && (
-          <p className="mb-3 text-sm text-(--txt-danger-primary)">{error}</p>
-        )}
+        {error && <p className="mb-3 text-sm text-(--txt-danger-primary)">{error}</p>}
         <div className="space-y-3">
           <Input
             value={title}
@@ -211,9 +189,7 @@ export function UpdateModuleModal({
                       }}
                     >
                       {s.label}
-                      {s.id === status && (
-                        <span className="text-(--txt-icon-tertiary)">✓</span>
-                      )}
+                      {s.id === status && <span className="text-(--txt-icon-tertiary)">✓</span>}
                     </button>
                   ))}
                 </div>
@@ -271,29 +247,21 @@ export function UpdateModuleModal({
                       className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                     >
                       <span className="truncate">No lead</span>
-                      {leadId === null && (
-                        <span className="text-(--txt-icon-tertiary)">✓</span>
-                      )}
+                      {leadId === null && <span className="text-(--txt-icon-tertiary)">✓</span>}
                     </button>
                     {filteredLead.map((m) => (
                       <button
                         key={m.member_id}
                         type="button"
                         onClick={() => {
-                          setLeadId(
-                            leadId === m.member_id ? null : m.member_id,
-                          );
+                          setLeadId(leadId === m.member_id ? null : m.member_id);
                           setLeadDropdownOpen(false);
                         }}
                         className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                       >
                         <span className="flex items-center gap-2 truncate">
                           <Avatar
-                            name={
-                              m.member_display_name ??
-                              m.member_email ??
-                              m.member_id
-                            }
+                            name={m.member_display_name ?? m.member_email ?? m.member_id}
                             src={getImageUrl(m.member_avatar) ?? undefined}
                             size="sm"
                             className="h-6 w-6 text-xs"

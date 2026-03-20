@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Button } from "../ui";
-import { useAuth } from "../../contexts/AuthContext";
-import { workspaceService } from "../../services/workspaceService";
-import { projectService } from "../../services/projectService";
-import type { WorkspaceApiResponse, ProjectApiResponse } from "../../api/types";
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Button } from '../ui';
+import { useAuth } from '../../contexts/AuthContext';
+import { workspaceService } from '../../services/workspaceService';
+import { projectService } from '../../services/projectService';
+import type { WorkspaceApiResponse, ProjectApiResponse } from '../../api/types';
 
 export function Header() {
   const { user, logout } = useAuth();
@@ -67,15 +67,12 @@ export function Header() {
     >
       <div className="flex items-center gap-4">
         <Link
-          to={workspace ? `/${workspace.slug}` : "/"}
+          to={workspace ? `/${workspace.slug}` : '/'}
           className="text-lg font-semibold text-(--txt-primary) no-underline hover:text-(--txt-accent-primary)"
         >
           Devlane
         </Link>
-        <nav
-          aria-label="Breadcrumb"
-          className="flex items-center gap-2 text-sm"
-        >
+        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm">
           {breadcrumbs.map((b, i) => (
             <span key={i} className="flex items-center gap-2">
               {i > 0 && <span className="text-(--txt-tertiary)">/</span>}

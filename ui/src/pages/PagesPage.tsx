@@ -1,14 +1,10 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Avatar } from "../components/ui";
-import { workspaceService } from "../services/workspaceService";
-import { projectService } from "../services/projectService";
-import { pageService } from "../services/pageService";
-import type {
-  WorkspaceApiResponse,
-  ProjectApiResponse,
-  PageApiResponse,
-} from "../api/types";
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Avatar } from '../components/ui';
+import { workspaceService } from '../services/workspaceService';
+import { projectService } from '../services/projectService';
+import { pageService } from '../services/pageService';
+import type { WorkspaceApiResponse, ProjectApiResponse, PageApiResponse } from '../api/types';
 
 const IconSearch = () => (
   <svg
@@ -97,13 +93,7 @@ const IconStar = () => (
   </svg>
 );
 const IconMoreVertical = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    aria-hidden
-  >
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
     <circle cx="12" cy="5" r="1.5" />
     <circle cx="12" cy="12" r="1.5" />
     <circle cx="12" cy="19" r="1.5" />
@@ -139,14 +129,14 @@ const IconChevronDown = () => (
   </svg>
 );
 
-type PageTab = "public" | "private" | "archived";
+type PageTab = 'public' | 'private' | 'archived';
 
 export function PagesPage() {
   const { workspaceSlug, projectId } = useParams<{
     workspaceSlug: string;
     projectId: string;
   }>();
-  const [tab, setTab] = useState<PageTab>("public");
+  const [tab, setTab] = useState<PageTab>('public');
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [pages, setPages] = useState<PageApiResponse[]>([]);
@@ -188,15 +178,13 @@ export function PagesPage() {
   }, [workspaceSlug, projectId]);
 
   const filteredPages =
-    tab === "public"
+    tab === 'public'
       ? pages.filter((p) => p.access === 0)
-      : tab === "private"
+      : tab === 'private'
         ? pages.filter((p) => p.access === 1)
         : pages.filter((p) => p.archived_at);
 
-  const getUser = (
-    userId: string | null,
-  ): { name: string; avatarUrl?: string | null } | null => {
+  const getUser = (userId: string | null): { name: string; avatarUrl?: string | null } | null => {
     void userId; // reserved for future assignee display
     return null;
   };
@@ -218,22 +206,18 @@ export function PagesPage() {
     <div className="space-y-4">
       {/* Tabs: Public | Private | Archived */}
       <div className="flex gap-1 border-b border-(--border-subtle)">
-        {(["public", "private", "archived"] as const).map((t) => (
+        {(['public', 'private', 'archived'] as const).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
             className={`border-b-2 px-4 py-2.5 text-sm font-medium capitalize ${
               tab === t
-                ? "border-(--brand-default) text-(--txt-primary)"
-                : "border-transparent text-(--txt-secondary) hover:text-(--txt-primary)"
+                ? 'border-(--brand-default) text-(--txt-primary)'
+                : 'border-transparent text-(--txt-secondary) hover:text-(--txt-primary)'
             }`}
           >
-            {t === "public"
-              ? "Public"
-              : t === "private"
-                ? "Private"
-                : "Archived"}
+            {t === 'public' ? 'Public' : t === 'private' ? 'Private' : 'Archived'}
           </button>
         ))}
       </div>
@@ -266,15 +250,11 @@ export function PagesPage() {
       {/* Page list */}
       <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
         {filteredPages.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-(--txt-tertiary)">
-            No {tab} pages yet.
-          </p>
+          <p className="px-4 py-8 text-center text-sm text-(--txt-tertiary)">No {tab} pages yet.</p>
         ) : (
           <ul className="divide-y divide-(--border-subtle)">
             {filteredPages.map((page) => {
-              const updatedBy = getUser(
-                page.updated_by_id ?? page.owned_by_id ?? null,
-              );
+              const updatedBy = getUser(page.updated_by_id ?? page.owned_by_id ?? null);
               return (
                 <li key={page.id}>
                   <Link

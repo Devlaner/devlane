@@ -1,8 +1,8 @@
-import { useEffect } from "react";
-import { EditorContent, useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Placeholder from "@tiptap/extension-placeholder";
-import Underline from "@tiptap/extension-underline";
+import { useEffect } from 'react';
+import { EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Placeholder from '@tiptap/extension-placeholder';
+import Underline from '@tiptap/extension-underline';
 
 export interface CommentEditorProps {
   onSubmit: (contentHtml: string) => void | Promise<void>;
@@ -32,17 +32,17 @@ export function CommentEditor({
       }),
       Underline,
       Placeholder.configure({
-        placeholder: placeholder ?? "Add comment",
+        placeholder: placeholder ?? 'Add comment',
       }),
     ],
-    content: initialHtml || "",
-    autofocus: autoFocus ? "end" : false,
+    content: initialHtml || '',
+    autofocus: autoFocus ? 'end' : false,
   });
 
   useEffect(() => {
     if (!editor) return;
     if (initialHtml !== undefined) {
-      editor.commands.setContent(initialHtml || "");
+      editor.commands.setContent(initialHtml || '');
     }
     return () => {
       editor.destroy();
@@ -54,14 +54,14 @@ export function CommentEditor({
   const handleSubmit = () => {
     if (isSubmitting) return;
     const html = editor.getHTML().trim();
-    const isEmpty = html === "<p></p>" || html === "";
+    const isEmpty = html === '<p></p>' || html === '';
     if (isEmpty) return;
     void onSubmit(html);
     editor.commands.clearContent();
   };
 
   const buttonBase =
-    "inline-flex h-8 w-8 items-center justify-center rounded border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary) disabled:opacity-40";
+    'inline-flex h-8 w-8 items-center justify-center rounded border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary) disabled:opacity-40';
 
   return (
     <div className="rounded-md bg-(--bg-surface-1)">
@@ -112,13 +112,11 @@ export function CommentEditor({
           onClick={() => editor.chain().focus().toggleCodeBlock().run()}
           aria-label="Code block"
         >
-          {"</>"}
+          {'</>'}
         </button>
         <div className="ml-auto flex items-center gap-2 text-[11px] text-(--txt-tertiary)">
           {showShortcutHint && (
-            <span className="hidden sm:inline">
-              Ctrl / Cmd + Enter to comment
-            </span>
+            <span className="hidden sm:inline">Ctrl / Cmd + Enter to comment</span>
           )}
           {onCancel && (
             <button
@@ -144,7 +142,7 @@ export function CommentEditor({
         <EditorContent
           editor={editor}
           onKeyDown={(event) => {
-            if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+            if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
               event.preventDefault();
               handleSubmit();
             }

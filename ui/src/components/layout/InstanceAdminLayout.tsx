@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 
 const IconGlobe = () => (
   <svg
@@ -175,64 +175,60 @@ const IconArrowLeft = () => (
 
 const SECTIONS = [
   {
-    path: "general",
-    label: "General",
-    desc: "Identify your instances and get key details.",
+    path: 'general',
+    label: 'General',
+    desc: 'Identify your instances and get key details.',
     Icon: IconSettings,
   },
   {
-    path: "workspace",
-    label: "Workspaces",
-    desc: "Manage all workspaces on this instance.",
+    path: 'workspace',
+    label: 'Workspaces',
+    desc: 'Manage all workspaces on this instance.',
     Icon: IconBriefcase,
   },
   {
-    path: "email",
-    label: "Email",
-    desc: "Configure your SMTP controls.",
+    path: 'email',
+    label: 'Email',
+    desc: 'Configure your SMTP controls.',
     Icon: IconEnvelope,
   },
   {
-    path: "authentication",
-    label: "Authentication",
-    desc: "Configure authentication modes.",
+    path: 'authentication',
+    label: 'Authentication',
+    desc: 'Configure authentication modes.',
     Icon: IconLock,
   },
   {
-    path: "ai",
-    label: "Artificial intelligence",
-    desc: "Configure your OpenAI creds.",
+    path: 'ai',
+    label: 'Artificial intelligence',
+    desc: 'Configure your OpenAI creds.',
     Icon: IconCpu,
   },
   {
-    path: "image",
-    label: "Images in Devlane",
-    desc: "Allow third-party image libraries.",
+    path: 'image',
+    label: 'Images in Devlane',
+    desc: 'Allow third-party image libraries.',
     Icon: IconImage,
   },
 ] as const;
 
 const BREADCRUMB_LABEL: Record<string, string> = {
-  general: "General",
-  workspace: "Workspace",
-  email: "Email",
-  authentication: "Authentication",
-  ai: "Artificial Intelligence",
-  image: "Image",
+  general: 'General',
+  workspace: 'Workspace',
+  email: 'Email',
+  authentication: 'Authentication',
+  ai: 'Artificial Intelligence',
+  image: 'Image',
 };
 
 export function InstanceAdminLayout() {
   const location = useLocation();
   const pathname = location.pathname;
-  const basePath = "/instance-admin";
-  const segments = pathname
-    .replace(basePath, "")
-    .replace(/^\//, "")
-    .split("/")
-    .filter(Boolean);
-  const segment = segments[0] || "general";
-  const breadcrumbLabel = BREADCRUMB_LABEL[segment] ?? "General";
-  const breadcrumbTail = segments[1] === "create" ? "Create" : null;
+  const basePath = '/instance-admin';
+  const segments = pathname.replace(basePath, '').replace(/^\//, '').split('/').filter(Boolean);
+  const segment = segments[0] || 'general';
+  const breadcrumbLabel = BREADCRUMB_LABEL[segment] ?? 'General';
+  const breadcrumbTail = segments[1] === 'create' ? 'Create' : null;
 
   return (
     <div className="flex h-screen flex-col bg-(--bg-canvas)">
@@ -257,8 +253,8 @@ export function InstanceAdminLayout() {
                   className={({ isActive }) =>
                     `mb-0.5 flex gap-2 rounded-md px-2.5 py-2 text-left no-underline transition-colors ${
                       isActive
-                        ? "bg-(--bg-accent-subtle) text-(--txt-accent-primary)"
-                        : "text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
+                        ? 'bg-(--bg-accent-subtle) text-(--txt-accent-primary)'
+                        : 'text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)'
                     }`
                   }
                 >

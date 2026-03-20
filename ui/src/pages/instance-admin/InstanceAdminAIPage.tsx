@@ -1,22 +1,21 @@
-import { useEffect, useState } from "react";
-import { Button, IconEye, IconEyeOff, Skeleton } from "../../components/ui";
-import { instanceSettingsService } from "../../services/instanceService";
-import { getApiErrorMessage } from "../../api/client";
-import type { InstanceAISection } from "../../api/types";
+import { useEffect, useState } from 'react';
+import { Button, IconEye, IconEyeOff, Skeleton } from '../../components/ui';
+import { instanceSettingsService } from '../../services/instanceService';
+import { getApiErrorMessage } from '../../api/client';
+import type { InstanceAISection } from '../../api/types';
 
 export function InstanceAdminAIPage() {
   const [ai, setAi] = useState<InstanceAISection>({
-    model: "gpt-4o-mini",
+    model: 'gpt-4o-mini',
     api_key_set: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKeyLocal, setApiKeyLocal] = useState<string | undefined>(undefined);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
-  const apiKeyDisplay =
-    apiKeyLocal !== undefined ? apiKeyLocal : (ai.api_key ?? "");
+  const apiKeyDisplay = apiKeyLocal !== undefined ? apiKeyLocal : (ai.api_key ?? '');
 
   useEffect(() => {
     let cancelled = false;
@@ -26,9 +25,9 @@ export function InstanceAdminAIPage() {
         if (cancelled) return;
         const a = (settings.ai || {}) as InstanceAISection;
         setAi({
-          model: a.model ?? "gpt-4o-mini",
+          model: a.model ?? 'gpt-4o-mini',
           api_key_set: a.api_key_set ?? false,
-          api_key: a.api_key ?? "",
+          api_key: a.api_key ?? '',
         });
       })
       .catch((err) => {
@@ -43,19 +42,15 @@ export function InstanceAdminAIPage() {
   }, []);
 
   const handleSave = () => {
-    setError("");
+    setError('');
     setSaving(true);
     const apiKeyToSend = apiKeyLocal !== undefined ? apiKeyLocal : ai.api_key;
-    const payload: InstanceAISection = { ...ai, api_key: apiKeyToSend ?? "" };
+    const payload: InstanceAISection = { ...ai, api_key: apiKeyToSend ?? '' };
     instanceSettingsService
-      .updateSection(
-        "ai",
-        payload as import("../../api/types").InstanceSettingSectionValue,
-      )
+      .updateSection('ai', payload as import('../../api/types').InstanceSettingSectionValue)
       .then((res) => {
         setApiKeyLocal(undefined);
-        if (res.value)
-          setAi((p) => ({ ...p, ...res.value }) as InstanceAISection);
+        if (res.value) setAi((p) => ({ ...p, ...res.value }) as InstanceAISection);
       })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setSaving(false));
@@ -94,8 +89,8 @@ export function InstanceAdminAIPage() {
           AI features for all your workspaces
         </h1>
         <p className="mt-0.5 text-xs text-(--txt-secondary)">
-          Configure your AI API credentials so Devlane AI features are turned on
-          for all your workspaces.
+          Configure your AI API credentials so Devlane AI features are turned on for all your
+          workspaces.
         </p>
       </div>
 
@@ -105,23 +100,18 @@ export function InstanceAdminAIPage() {
         <h2 className="text-xs font-semibold uppercase tracking-wide text-(--txt-secondary)">
           OpenAI
         </h2>
-        <p className="text-xs text-(--txt-secondary)">
-          If you use ChatGPT, this is for you.
-        </p>
+        <p className="text-xs text-(--txt-secondary)">If you use ChatGPT, this is for you.</p>
         <label className="block text-xs font-medium text-(--txt-secondary)">
           LLM Model
           <input
             type="text"
-            value={ai.model ?? ""}
+            value={ai.model ?? ''}
             onChange={(e) => setAi((p) => ({ ...p, model: e.target.value }))}
             className="mt-0.5 block w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 text-xs text-(--txt-primary) focus:outline-none"
           />
           <p className="mt-0.5 text-[11px] text-(--txt-tertiary)">
-            Choose an OpenAI engine.{" "}
-            <a
-              href="#"
-              className="text-(--txt-accent-primary) underline hover:no-underline"
-            >
+            Choose an OpenAI engine.{' '}
+            <a href="#" className="text-(--txt-accent-primary) underline hover:no-underline">
               Learn more
             </a>
           </p>
@@ -130,30 +120,27 @@ export function InstanceAdminAIPage() {
           API key
           <div className="relative mt-0.5">
             <input
-              type={showApiKey ? "text" : "password"}
+              type={showApiKey ? 'text' : 'password'}
               value={apiKeyDisplay}
               onChange={(e) => setApiKeyLocal(e.target.value)}
               onFocus={() => {
                 if (apiKeyLocal === undefined) setApiKeyLocal(apiKeyDisplay);
               }}
-              placeholder={!apiKeyDisplay ? "Enter API key" : ""}
+              placeholder={!apiKeyDisplay ? 'Enter API key' : ''}
               className="block w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 pr-9 text-xs text-(--txt-primary) focus:outline-none"
             />
             <button
               type="button"
               onClick={() => setShowApiKey((v) => !v)}
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-              aria-label={showApiKey ? "Hide API key" : "Show API key"}
+              aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
             >
               {showApiKey ? <IconEyeOff /> : <IconEye />}
             </button>
           </div>
           <p className="mt-0.5 text-[11px] text-(--txt-tertiary)">
-            You will find your API key{" "}
-            <a
-              href="#"
-              className="text-(--txt-accent-primary) underline hover:no-underline"
-            >
+            You will find your API key{' '}
+            <a href="#" className="text-(--txt-accent-primary) underline hover:no-underline">
               here
             </a>
             . Leave blank to keep existing key.
@@ -161,13 +148,8 @@ export function InstanceAdminAIPage() {
         </label>
       </section>
 
-      <Button
-        size="sm"
-        className="text-xs"
-        onClick={handleSave}
-        disabled={saving}
-      >
-        {saving ? "Saving…" : "Save changes"}
+      <Button size="sm" className="text-xs" onClick={handleSave} disabled={saving}>
+        {saving ? 'Saving…' : 'Save changes'}
       </Button>
     </div>
   );

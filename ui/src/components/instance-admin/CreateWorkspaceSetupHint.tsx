@@ -1,4 +1,4 @@
-import { Button } from "../ui";
+import { Button } from '../ui';
 
 const IconWorkspace = () => (
   <svg
@@ -22,9 +22,7 @@ interface CreateWorkspaceSetupHintProps {
   onDismiss: () => void;
 }
 
-export function CreateWorkspaceSetupHint({
-  onDismiss,
-}: CreateWorkspaceSetupHintProps) {
+export function CreateWorkspaceSetupHint({ onDismiss }: CreateWorkspaceSetupHintProps) {
   return (
     <div
       className="fixed bottom-6 right-6 z-50 w-full max-w-sm rounded-(--radius-lg) border border-(--border-subtle) bg-(--bg-surface-1) p-4 shadow-(--shadow-overlay)"
@@ -33,23 +31,16 @@ export function CreateWorkspaceSetupHint({
     >
       <div className="flex gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-(--txt-primary)">
-            Create workspace
-          </h3>
+          <h3 className="text-sm font-semibold text-(--txt-primary)">Create workspace</h3>
           <p className="mt-1 text-xs text-(--txt-secondary)">
-            Instance setup is complete. Welcome to your Devlane instance. Start
-            your journey by creating your first workspace.
+            Instance setup is complete. Welcome to your Devlane instance. Start your journey by
+            creating your first workspace.
           </p>
           <div className="mt-3 flex gap-2">
             <Button size="sm" type="button" onClick={onDismiss}>
               Create workspace
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              type="button"
-              onClick={onDismiss}
-            >
+            <Button size="sm" variant="secondary" type="button" onClick={onDismiss}>
               Close
             </Button>
           </div>
