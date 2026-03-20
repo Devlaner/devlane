@@ -1268,7 +1268,7 @@ export function Sidebar() {
                           </span>
                         </button>
                         {isExpanded && (
-                          <div className="ml-5 flex flex-col gap-0.5 border-l border-(--border-subtle) pl-2">
+                          <div className="ml-5 flex flex-col gap-0.5">
                             {projectNavItems.map(({ key, to, label, Icon }) => (
                               <NavLink
                                 key={key}
