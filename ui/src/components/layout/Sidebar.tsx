@@ -789,6 +789,13 @@ export function Sidebar() {
     });
   };
 
+  // Auto-expand current project when navigating to its page (Plane-style: expand on nav, but allow manual collapse)
+  useEffect(() => {
+    if (projectId) {
+      setExpandedProjectIds((prev) => new Set(prev).add(projectId));
+    }
+  }, [projectId]);
+
   const width = collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH;
 
   return (
@@ -1236,8 +1243,7 @@ export function Sidebar() {
               {projectsSectionExpanded && (
                 <div className="flex flex-col gap-0.5 px-2 py-1 pb-2">
                   {projects.map((project) => {
-                    const isExpanded =
-                      expandedProjectIds.has(project.id) || projectId === project.id;
+                    const isExpanded = expandedProjectIds.has(project.id);
                     const projectUrl = `${baseUrl}/projects/${project.id}`;
                     return (
                       <div key={project.id} className="flex flex-col gap-0.5">
