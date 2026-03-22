@@ -244,6 +244,62 @@ const IconTrash = () => (
     <line x1="14" y1="11" x2="14" y2="17" />
   </svg>
 );
+const IconMoreVertical = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <circle cx="12" cy="5" r="1.5" />
+    <circle cx="12" cy="12" r="1.5" />
+    <circle cx="12" cy="19" r="1.5" />
+  </svg>
+);
+const IconPencil = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+    <path d="m15 5 4 4" />
+  </svg>
+);
+const IconOpenNewTab = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    <polyline points="15 3 21 3 21 9" />
+    <line x1="10" x2="21" y1="14" y2="3" />
+  </svg>
+);
+const IconChain = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -292,6 +348,211 @@ function formatRelativeTime(iso: string): string {
   return `${diffDays} days ago`;
 }
 
+function quicklinkAbsoluteUrl(ql: QuickLinkApiResponse, baseUrl: string): string {
+  if (ql.project_id) {
+    return `${window.location.origin}${baseUrl}/projects/${ql.project_id}`;
+  }
+  const u = ql.url.trim();
+  if (/^https?:\/\//i.test(u)) return u;
+  return `https://${u}`;
+}
+
+/** Resolve hostname from the link target, then load favicon via a public icon service (same pattern as common PM apps). */
+function quicklinkFaviconServiceUrl(ql: QuickLinkApiResponse, baseUrl: string): string | null {
+  try {
+    const hostname = new URL(quicklinkAbsoluteUrl(ql, baseUrl)).hostname;
+    if (!hostname) return null;
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=128`;
+  } catch {
+    return null;
+  }
+}
+
+function QuicklinkFaviconImg({ src }: { src: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <IconTarget />;
+  return (
+    <img
+      src={src}
+      alt=""
+      className="size-6 shrink-0 object-contain grayscale"
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
+function QuicklinkFavicon({ ql, baseUrl }: { ql: QuickLinkApiResponse; baseUrl: string }) {
+  const src = quicklinkFaviconServiceUrl(ql, baseUrl);
+  if (!src) return <IconTarget />;
+  return <QuicklinkFaviconImg key={src} src={src} />;
+}
+
+function QuicklinkCardRow({
+  ql,
+  baseUrl,
+  workspaceSlug,
+  onEdit,
+  onAfterChange,
+}: {
+  ql: QuickLinkApiResponse;
+  baseUrl: string;
+  workspaceSlug: string;
+  onEdit: (ql: QuickLinkApiResponse) => void;
+  onAfterChange: () => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRootRef = useRef<HTMLDivElement>(null);
+  const label = ql.title?.trim() || ql.url;
+  const isInternal = !!ql.project_id;
+  const href = isInternal ? `${baseUrl}/projects/${ql.project_id}` : ql.url;
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (menuRootRef.current && !menuRootRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [menuOpen]);
+
+  const closeMenu = () => setMenuOpen(false);
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(quicklinkAbsoluteUrl(ql, baseUrl));
+    } catch {
+      /* ignore */
+    }
+    closeMenu();
+  };
+
+  const handleOpenNewTab = () => {
+    window.open(quicklinkAbsoluteUrl(ql, baseUrl), '_blank', 'noopener,noreferrer');
+    closeMenu();
+  };
+
+  const handleDelete = async () => {
+    if (!workspaceSlug) return;
+    if (!window.confirm('Delete this quicklink?')) return;
+    try {
+      await quickLinksService.delete(workspaceSlug, ql.id);
+      onAfterChange();
+    } catch {
+      /* ignore */
+    }
+    closeMenu();
+  };
+
+  const linkClass = 'flex min-w-0 flex-1 items-center gap-3 p-3 no-underline';
+
+  const main = (
+    <>
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-(--radius-md) bg-(--bg-layer-1) text-(--txt-icon-tertiary)">
+        <QuicklinkFavicon ql={ql} baseUrl={baseUrl} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-medium text-(--txt-primary)">{label}</p>
+        <p className="text-xs text-(--txt-tertiary)">{formatRelativeTime(ql.updated_at)}</p>
+      </div>
+    </>
+  );
+
+  return (
+    <div
+      className={`group relative flex items-stretch rounded-(--radius-lg) border border-(--border-subtle) bg-(--bg-surface-1) transition-colors hover:bg-(--bg-layer-transparent-hover) ${menuOpen ? 'z-20' : 'z-0'}`}
+    >
+      {isInternal ? (
+        <Link to={href} className={linkClass}>
+          {main}
+        </Link>
+      ) : (
+        <a href={href} target="_blank" rel="noopener noreferrer" className={linkClass}>
+          {main}
+        </a>
+      )}
+      <div
+        ref={menuRootRef}
+        className="relative flex w-10 shrink-0 items-center justify-center pr-1"
+      >
+        <button
+          type="button"
+          className={`rounded-(--radius-md) p-1.5 text-(--txt-icon-tertiary) transition-opacity hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary) focus-visible:opacity-100 focus-visible:outline-none ${
+            menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          }`}
+          aria-expanded={menuOpen}
+          aria-haspopup="true"
+          aria-label="Quicklink options"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setMenuOpen((o) => !o);
+          }}
+        >
+          <IconMoreVertical />
+        </button>
+        {menuOpen ? (
+          <div
+            className="absolute right-0 top-full z-50 mt-1 w-52 overflow-hidden rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-overlay)"
+            role="menu"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover)"
+              onClick={() => {
+                onEdit(ql);
+                closeMenu();
+              }}
+            >
+              <span className="text-(--txt-icon-tertiary)" aria-hidden>
+                <IconPencil />
+              </span>
+              Edit
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover)"
+              onClick={handleOpenNewTab}
+            >
+              <span className="text-(--txt-icon-tertiary)" aria-hidden>
+                <IconOpenNewTab />
+              </span>
+              Open in new tab
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover)"
+              onClick={() => void handleCopyLink()}
+            >
+              <span className="text-(--txt-icon-tertiary)" aria-hidden>
+                <IconChain />
+              </span>
+              Copy link
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-(--txt-danger-primary) hover:bg-(--bg-layer-transparent-hover)"
+              onClick={() => void handleDelete()}
+            >
+              <span className="text-(--txt-danger-primary)" aria-hidden>
+                <IconTrash />
+              </span>
+              Delete
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -313,6 +574,10 @@ export function WorkspaceHomePage() {
   const [quicklinkTitle, setQuicklinkTitle] = useState('');
   const [stickyContent, setStickyContent] = useState('');
   const [quicklinkSubmitting, setQuicklinkSubmitting] = useState(false);
+  const [editQuicklink, setEditQuicklink] = useState<QuickLinkApiResponse | null>(null);
+  const [editQuicklinkUrl, setEditQuicklinkUrl] = useState('');
+  const [editQuicklinkTitle, setEditQuicklinkTitle] = useState('');
+  const [editQuicklinkSubmitting, setEditQuicklinkSubmitting] = useState(false);
   const [stickySubmitting, setStickySubmitting] = useState(false);
   const [recentsFilterOpen, setRecentsFilterOpen] = useState(false);
   const [recentsFilterValue, setRecentsFilterValue] = useState<
@@ -400,8 +665,27 @@ export function WorkspaceHomePage() {
       setQuicklinkSubmitting(false);
     }
   };
-  // Reserved for future use (delete quicklink from UI):
-  // const handleDeleteQuicklink = async (id: string) => { if (!workspaceSlug) return; try { await quickLinksService.delete(workspaceSlug, id); refetchQuicklinks(); } catch {} };
+
+  const handleCloseEditQuicklink = () => {
+    setEditQuicklink(null);
+    setEditQuicklinkUrl('');
+    setEditQuicklinkTitle('');
+  };
+
+  const handleSaveEditQuicklink = async () => {
+    if (!workspaceSlug || !editQuicklink || !editQuicklinkUrl.trim()) return;
+    setEditQuicklinkSubmitting(true);
+    try {
+      await quickLinksService.update(workspaceSlug, editQuicklink.id, {
+        url: editQuicklinkUrl.trim(),
+        title: editQuicklinkTitle.trim() || undefined,
+      });
+      refetchQuicklinks();
+      handleCloseEditQuicklink();
+    } finally {
+      setEditQuicklinkSubmitting(false);
+    }
+  };
   const handleCloseSticky = () => {
     setAddStickyOpen(false);
     setStickyContent('');
@@ -539,45 +823,64 @@ export function WorkspaceHomePage() {
             </div>
           </div>
         </Modal>
+        <Modal
+          open={editQuicklink !== null}
+          onClose={handleCloseEditQuicklink}
+          title="Edit Quicklink"
+          footer={
+            <>
+              <Button variant="secondary" onClick={handleCloseEditQuicklink}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => void handleSaveEditQuicklink()}
+                disabled={!editQuicklinkUrl.trim() || editQuicklinkSubmitting}
+              >
+                {editQuicklinkSubmitting ? 'Saving…' : 'Save'}
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
+                URL <span className="text-(--txt-tertiary)">Required</span>
+              </label>
+              <Input
+                value={editQuicklinkUrl}
+                onChange={(e) => setEditQuicklinkUrl(e.target.value)}
+                placeholder="Type or paste a URL"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
+                Display title <span className="text-(--txt-tertiary)">Optional</span>
+              </label>
+              <Input
+                value={editQuicklinkTitle}
+                onChange={(e) => setEditQuicklinkTitle(e.target.value)}
+                placeholder="What you'd like to see this link as"
+                className="mt-1"
+              />
+            </div>
+          </div>
+        </Modal>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {quicklinks.map((ql) => {
-            const label = ql.title?.trim() || ql.url;
-            const isInternal = !!ql.project_id;
-            const href = ql.project_id ? `${baseUrl}/projects/${ql.project_id}` : ql.url;
-            const content = (
-              <Card
-                variant="outlined"
-                className="transition-colors hover:bg-(--bg-layer-transparent-hover)"
-              >
-                <CardContent className="flex items-center gap-3 p-3">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-(--radius-md) bg-(--bg-layer-1) text-(--txt-icon-tertiary)">
-                    <IconTarget />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-(--txt-primary)">{label}</p>
-                    <p className="text-xs text-(--txt-tertiary)">
-                      {formatRelativeTime(ql.updated_at)}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-            return isInternal ? (
-              <Link key={ql.id} to={href} className="block no-underline">
-                {content}
-              </Link>
-            ) : (
-              <a
-                key={ql.id}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block no-underline"
-              >
-                {content}
-              </a>
-            );
-          })}
+          {quicklinks.map((ql) => (
+            <QuicklinkCardRow
+              key={ql.id}
+              ql={ql}
+              baseUrl={baseUrl}
+              workspaceSlug={workspaceSlug ?? ''}
+              onEdit={(row) => {
+                setEditQuicklink(row);
+                setEditQuicklinkUrl(row.url);
+                setEditQuicklinkTitle(row.title?.trim() ?? '');
+              }}
+              onAfterChange={refetchQuicklinks}
+            />
+          ))}
         </div>
         {quicklinks.length === 0 && (
           <Card variant="outlined">
