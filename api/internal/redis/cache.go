@@ -8,7 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Cache key prefixes (Plane-style).
+// Cache key prefixes.
 const (
 	PrefixMagicLink = "magic_"
 	PrefixLock      = "lock_"
@@ -68,7 +68,7 @@ func (c *Client) CacheSet(ctx context.Context, key string, v interface{}, ttl ti
 	return c.Client.Set(ctx, PrefixCache+key, data, ttl).Err()
 }
 
-// --- Lock (distributed lock, Plane-style for batch tasks) ---
+// --- Lock (distributed lock for batch tasks) ---
 
 // AcquireLock acquires a lock. Returns true if acquired, false if already held.
 func (c *Client) AcquireLock(ctx context.Context, lockID string, expire time.Duration) (bool, error) {
@@ -85,7 +85,7 @@ func (c *Client) ReleaseLock(ctx context.Context, lockID string) error {
 	return c.Client.Del(ctx, PrefixLock+lockID).Err()
 }
 
-// --- Magic-link token (Plane-style: key = magic_<email>, value = JSON) ---
+// --- Magic-link token (key = magic_<email>, value = JSON) ---
 
 // MagicLinkData is stored in Redis for magic-link auth.
 type MagicLinkData struct {
@@ -128,7 +128,7 @@ func (c *Client) DeleteMagicLink(ctx context.Context, email string) error {
 	return c.Client.Del(ctx, PrefixMagicLink+email).Err()
 }
 
-// --- Short-lived metadata (e.g. request origin per issue, Plane-style) ---
+// --- Short-lived metadata (e.g. request origin per issue) ---
 
 // SetRequestOrigin sets a short-lived value for an entity (e.g. issue_id -> origin).
 func (c *Client) SetRequestOrigin(ctx context.Context, entityID, origin string, ttl time.Duration) error {

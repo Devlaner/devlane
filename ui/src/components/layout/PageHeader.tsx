@@ -16,6 +16,9 @@ import { ProjectSavedViewMoreMenu } from '../project-saved-view/ProjectSavedView
 import { DateRangeModal } from '../workspace-views/DateRangeModal';
 import { CreateModuleModal } from '../CreateModuleModal';
 import { CreateCycleModal } from '../CreateCycleModal';
+import { ProjectIssuesFiltersPanel } from '../project-issues/ProjectIssuesFiltersPanel';
+import { ProjectIssuesDisplayPanel } from '../project-issues/ProjectIssuesDisplayPanel';
+import { useAuth } from '../../contexts/AuthContext';
 import { workspaceService } from '../../services/workspaceService';
 import { projectService } from '../../services/projectService';
 import { issueService } from '../../services/issueService';
@@ -33,6 +36,20 @@ import {
   PROJECT_CYCLES_FILTER_EVENT,
   PROJECT_CYCLES_REFRESH_EVENT,
 } from '../../lib/projectCyclesEvents';
+import {
+  DEFAULT_PROJECT_ISSUES_FILTERS,
+  PROJECT_ISSUES_DISPLAY_EVENT,
+  PROJECT_ISSUES_FILTER_EVENT,
+  type ProjectIssuesFiltersState,
+} from '../../lib/projectIssuesEvents';
+import {
+  cloneDefaultProjectIssuesDisplay,
+  parseProjectIssuesDisplay,
+  projectIssuesDisplayStorageKey,
+  serializeProjectIssuesDisplay,
+  toDisplayPayload,
+  type ProjectIssuesDisplayState,
+} from '../../lib/projectIssuesDisplay';
 import { PROJECT_VIEWS_FILTER_EVENT } from '../../lib/projectViewsEvents';
 
 export type ProjectSection = 'issues' | 'cycles' | 'modules' | 'views' | 'pages';
@@ -346,7 +363,7 @@ const IconLayers = () => (
     <path d="M5 14l7 4 7-4" />
   </svg>
 );
-const IconViewsPlane = () => (
+const IconProjectViews = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
     <path d="M14.3926 10.7735C14.7013 10.6192 15.0771 10.7451 15.2314 11.0538C15.3854 11.3623 15.2604 11.7373 14.9521 11.8917L8.52344 15.1056C8.46846 15.1331 8.33457 15.2069 8.18262 15.2355H8.18164C8.06516 15.2572 7.94558 15.2573 7.8291 15.2355C7.67698 15.2069 7.54234 15.1331 7.4873 15.1056L1.05957 11.8917C0.750903 11.7374 0.626065 11.3625 0.780273 11.0538C0.934594 10.7452 1.30948 10.6194 1.61816 10.7735L8.00488 13.9669L14.3926 10.7735ZM14.3926 7.44054C14.7013 7.28618 15.0771 7.41114 15.2314 7.71983C15.3858 8.02847 15.2607 8.40424 14.9521 8.5587L8.52344 11.7726C8.46839 11.8001 8.33451 11.8739 8.18262 11.9025H8.18164C8.06519 11.9242 7.94554 11.9242 7.8291 11.9025C7.67698 11.8739 7.54234 11.8001 7.4873 11.7726L1.05957 8.5587C0.750834 8.40433 0.625905 8.02857 0.780273 7.71983C0.934713 7.41138 1.30956 7.28634 1.61816 7.44054L8.00488 10.6339L14.3926 7.44054ZM7.91699 0.751084C8.00545 0.742877 8.09504 0.747328 8.18262 0.763779C8.33432 0.79232 8.46833 0.865118 8.52344 0.892686L14.9521 4.10753C15.1636 4.21348 15.2969 4.42959 15.2969 4.66612C15.2969 4.90266 15.1636 5.11875 14.9521 5.22472L8.52344 8.43956C8.46831 8.46714 8.33434 8.53992 8.18262 8.56847H8.18164C8.06513 8.59024 7.94561 8.59028 7.8291 8.56847C7.67698 8.53994 7.54235 8.46708 7.4873 8.43956L1.05957 5.22472C0.84784 5.11884 0.713867 4.90285 0.713867 4.66612C0.713883 4.42941 0.847843 4.21339 1.05957 4.10753L7.4873 0.892686C7.54232 0.865181 7.67699 0.7923 7.8291 0.763779L7.91699 0.751084ZM2.73535 4.66612L8.00488 7.30089L13.2754 4.66612L8.00488 2.03038L2.73535 4.66612Z" />
   </svg>
@@ -487,7 +504,7 @@ const SECTION_ICONS: Record<ProjectSection, React.ReactNode> = {
   issues: <IconClipboard />,
   cycles: <IconCycle />,
   modules: <IconGrid />,
-  views: <IconViewsPlane />,
+  views: <IconProjectViews />,
   pages: <IconFileText />,
 };
 
@@ -1011,6 +1028,7 @@ function ProjectSectionHeader({
   issueCount: number;
 }) {
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   const modulesFilter = useModulesFilter();
   const { display: viewsDisplay, setDisplay } = useWorkspaceViewsState();
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
@@ -1053,6 +1071,17 @@ function ProjectSectionHeader({
   const [cyclesStartBefore, setCyclesStartBefore] = useState<string | null>(null);
   const [cyclesDueAfter, setCyclesDueAfter] = useState<string | null>(null);
   const [cyclesDueBefore, setCyclesDueBefore] = useState<string | null>(null);
+  const [issuesFiltersOpen, setIssuesFiltersOpen] = useState<string | null>(null);
+  const [issuesFiltersSearch, setIssuesFiltersSearch] = useState('');
+  const [issuesMembers, setIssuesMembers] = useState<WorkspaceMemberApiResponse[]>([]);
+  const [issuesFilters, setIssuesFilters] = useState<ProjectIssuesFiltersState>(() => ({
+    ...DEFAULT_PROJECT_ISSUES_FILTERS,
+  }));
+  const [issuesDateRangeModal, setIssuesDateRangeModal] = useState<'start' | 'due' | null>(null);
+  const [issuesDisplayOpen, setIssuesDisplayOpen] = useState<string | null>(null);
+  const [issuesDisplay, setIssuesDisplay] = useState<ProjectIssuesDisplayState>(() =>
+    cloneDefaultProjectIssuesDisplay(),
+  );
   const projectDropdownRef = useRef<HTMLDivElement | null>(null);
   const modulesSearchInputRef = useRef<HTMLInputElement | null>(null);
   const cyclesSearchInputRef = useRef<HTMLInputElement | null>(null);
@@ -1113,6 +1142,69 @@ function ProjectSectionHeader({
       cancelled = true;
     };
   }, [section, workspaceSlug]);
+
+  useEffect(() => {
+    if (section !== 'issues') return;
+    let cancelled = false;
+    workspaceService
+      .listMembers(workspaceSlug)
+      .then((mem) => {
+        if (!cancelled) setIssuesMembers(mem ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setIssuesMembers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [section, workspaceSlug]);
+
+  useEffect(() => {
+    if (section !== 'issues' || !workspaceSlug || !projectId) return;
+    window.dispatchEvent(
+      new CustomEvent(PROJECT_ISSUES_FILTER_EVENT, {
+        detail: { workspaceSlug, projectId, filters: issuesFilters },
+      }),
+    );
+  }, [section, workspaceSlug, projectId, issuesFilters]);
+
+  useEffect(() => {
+    if (section !== 'issues') return;
+    if (!workspaceSlug || !projectId) return;
+    const key = projectIssuesDisplayStorageKey(workspaceSlug, projectId);
+    try {
+      const raw = localStorage.getItem(key);
+      const parsed = parseProjectIssuesDisplay(raw);
+      queueMicrotask(() => setIssuesDisplay(parsed ?? cloneDefaultProjectIssuesDisplay()));
+    } catch {
+      queueMicrotask(() => setIssuesDisplay(cloneDefaultProjectIssuesDisplay()));
+    }
+  }, [section, workspaceSlug, projectId]);
+
+  useEffect(() => {
+    if (section !== 'issues' || !workspaceSlug || !projectId) return;
+    try {
+      localStorage.setItem(
+        projectIssuesDisplayStorageKey(workspaceSlug, projectId),
+        serializeProjectIssuesDisplay(issuesDisplay),
+      );
+    } catch {
+      // ignore quota / private mode
+    }
+  }, [section, workspaceSlug, projectId, issuesDisplay]);
+
+  useEffect(() => {
+    if (section !== 'issues' || !workspaceSlug || !projectId) return;
+    window.dispatchEvent(
+      new CustomEvent(PROJECT_ISSUES_DISPLAY_EVENT, {
+        detail: {
+          workspaceSlug,
+          projectId,
+          display: toDisplayPayload(issuesDisplay),
+        },
+      }),
+    );
+  }, [section, workspaceSlug, projectId, issuesDisplay]);
 
   const dispatchViewsFilters = (
     next: Partial<{
@@ -1241,18 +1333,82 @@ function ProjectSectionHeader({
             <IconGrid />
           </button>
           <div className="mx-1 w-px self-stretch bg-(--border-subtle)" />
-          <button
-            type="button"
-            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+          <div className="relative shrink-0">
+            <Dropdown
+              id="project-issues-filters"
+              openId={issuesFiltersOpen}
+              onOpen={setIssuesFiltersOpen}
+              label="Filters"
+              icon={<IconFilter />}
+              displayValue="Filters"
+              panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
+              align="right"
+              triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+              triggerContent={
+                <>
+                  <span className="shrink-0 text-(--txt-icon-tertiary)">
+                    <IconFilter />
+                  </span>
+                  <span className="truncate">Filters</span>
+                  <span className="shrink-0 text-(--txt-icon-tertiary)">
+                    <IconChevronDown />
+                  </span>
+                </>
+              }
+            >
+              <ProjectIssuesFiltersPanel
+                search={issuesFiltersSearch}
+                onSearchChange={setIssuesFiltersSearch}
+                filters={issuesFilters}
+                setFilters={setIssuesFilters}
+                members={issuesMembers}
+                currentUserId={authUser?.id}
+                currentUserName={authUser?.name ?? 'You'}
+                currentUserAvatarUrl={authUser?.avatarUrl}
+                onOpenCustomStart={() => {
+                  setIssuesFiltersOpen(null);
+                  setIssuesDateRangeModal('start');
+                }}
+                onOpenCustomDue={() => {
+                  setIssuesFiltersOpen(null);
+                  setIssuesDateRangeModal('due');
+                }}
+              />
+            </Dropdown>
+            {[
+              issuesFilters.priorities.length,
+              issuesFilters.stateGroups.length,
+              issuesFilters.assigneeIds.length,
+              issuesFilters.startDate.length,
+              issuesFilters.dueDate.length,
+            ].some((n) => n > 0) && (
+              <span
+                className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-(--brand-default)"
+                aria-hidden
+              />
+            )}
+          </div>
+          <Dropdown
+            id="project-issues-display"
+            openId={issuesDisplayOpen}
+            onOpen={setIssuesDisplayOpen}
+            label="Display"
+            icon={<IconLayoutGrid />}
+            displayValue="Display"
+            panelClassName="flex w-[min(340px,calc(100vw-24px))] max-h-[min(70vh,560px)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
+            align="right"
+            triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+            triggerContent={
+              <>
+                <span className="truncate">Display</span>
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
+                  <IconChevronDown />
+                </span>
+              </>
+            }
           >
-            <IconFilter /> Filters <IconChevronDown />
-          </button>
-          <button
-            type="button"
-            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
-          >
-            Display <IconChevronDown />
-          </button>
+            <ProjectIssuesDisplayPanel display={issuesDisplay} setDisplay={setIssuesDisplay} />
+          </Dropdown>
           <Link
             to={`/${workspaceSlug}/analytics/work-items`}
             className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
@@ -2246,6 +2402,41 @@ function ProjectSectionHeader({
           />
         </>
       )}
+      {section === 'issues' && (
+        <DateRangeModal
+          open={issuesDateRangeModal !== null}
+          onClose={() => setIssuesDateRangeModal(null)}
+          title={issuesDateRangeModal === 'start' ? 'Start date range' : 'Due date range'}
+          after={
+            issuesDateRangeModal === 'start' ? issuesFilters.startAfter : issuesFilters.dueAfter
+          }
+          before={
+            issuesDateRangeModal === 'start' ? issuesFilters.startBefore : issuesFilters.dueBefore
+          }
+          onApply={(after, before) => {
+            if (issuesDateRangeModal === 'start') {
+              setIssuesFilters((prev) => ({
+                ...prev,
+                startDate: prev.startDate.includes('custom')
+                  ? prev.startDate
+                  : [...prev.startDate, 'custom'],
+                startAfter: after,
+                startBefore: before,
+              }));
+            } else {
+              setIssuesFilters((prev) => ({
+                ...prev,
+                dueDate: prev.dueDate.includes('custom')
+                  ? prev.dueDate
+                  : [...prev.dueDate, 'custom'],
+                dueAfter: after,
+                dueBefore: before,
+              }));
+            }
+            setIssuesDateRangeModal(null);
+          }}
+        />
+      )}
       {section === 'cycles' && (
         <>
           <DateRangeModal
@@ -2288,7 +2479,7 @@ function ProjectSectionHeader({
   );
 }
 
-/** Default workspace view options (Plane-style: all-issues, assigned, created, subscribed). */
+/** Default workspace view options: all-issues, assigned, created, subscribed. */
 const DEFAULT_WORKSPACE_VIEWS = [
   { id: 'all-issues', name: 'All work items' },
   { id: 'assigned', name: 'Assigned' },
@@ -2355,7 +2546,7 @@ function WorkspaceViewsHeader() {
           className="flex items-center gap-1.5 text-(--txt-secondary) hover:text-(--txt-primary)"
         >
           <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
-            <IconViewsPlane />
+            <IconProjectViews />
           </span>
           <span>Views</span>
         </Link>
@@ -2367,7 +2558,7 @@ function WorkspaceViewsHeader() {
           openId={viewDropdownOpen}
           onOpen={setViewDropdownOpen}
           label="All work items"
-          icon={<IconViewsPlane />}
+          icon={<IconProjectViews />}
           displayValue={displayName}
           panelClassName="flex min-w-[220px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
           align="left"
@@ -2539,7 +2730,7 @@ function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Project saved view detail (Plane-style: work items + issues toolbar + breadcrumb)
+// Project saved view detail: work items + issues toolbar + breadcrumb
 // ---------------------------------------------------------------------------
 
 function ProjectSavedViewDetailHeader({
@@ -2711,7 +2902,7 @@ function ProjectSavedViewDetailHeader({
           className="flex max-w-[28vw] shrink-0 items-center gap-1.5 truncate rounded-md px-2.5 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
         >
           <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
-            <IconViewsPlane />
+            <IconProjectViews />
           </span>
           Views
         </Link>
@@ -2720,7 +2911,7 @@ function ProjectSavedViewDetailHeader({
         </span>
         <div className="flex min-w-0 max-w-[36vw] items-center gap-1.5 truncate rounded-md px-2.5 py-1.5 font-medium text-(--txt-primary)">
           <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
-            <IconViewsPlane />
+            <IconProjectViews />
           </span>
           <span className="truncate">{viewTitle}</span>
         </div>

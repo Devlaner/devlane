@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Badge, Avatar, Button } from '../components/ui';
 import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
@@ -16,9 +16,26 @@ import type {
   StateApiResponse,
   LabelApiResponse,
   WorkspaceMemberApiResponse,
+  CycleApiResponse,
+  ModuleApiResponse,
 } from '../api/types';
 import type { Priority } from '../types';
-import { getImageUrl } from '../lib/utils';
+import type { StateGroup } from '../types/workspaceViewFilters';
+import type { SavedViewDisplayPropertyId } from '../lib/projectSavedViewDisplay';
+import { buildGroupedIssues } from '../lib/issueListGroupAndSort';
+import {
+  cloneDefaultProjectIssuesDisplay,
+  fromDisplayPayload,
+  type ProjectIssuesDisplayState,
+} from '../lib/projectIssuesDisplay';
+import {
+  DEFAULT_PROJECT_ISSUES_FILTERS,
+  PROJECT_ISSUES_DISPLAY_EVENT,
+  PROJECT_ISSUES_FILTER_EVENT,
+  type ProjectIssuesDisplayPayload,
+  type ProjectIssuesFiltersState,
+} from '../lib/projectIssuesEvents';
+import { findWorkspaceMemberByUserId, getImageUrl, normalizeUuidKey } from '../lib/utils';
 
 const priorityVariant: Record<Priority, 'danger' | 'warning' | 'default' | 'neutral'> = {
   urgent: 'danger',
@@ -107,6 +124,29 @@ const IconPlus = () => (
   </svg>
 );
 
+const IconLinkOut = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    <polyline points="15 3 21 3 21 9" />
+    <line x1="10" x2="21" y1="14" y2="3" />
+  </svg>
+);
+
+function formatShortDate(iso: string | null | undefined): string | null {
+  if (!iso?.trim()) return null;
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return null;
+  return new Date(t).toLocaleDateString();
+}
+
 export function IssueListPage() {
   const { workspaceSlug, projectId } = useParams<{
     workspaceSlug: string;
@@ -120,9 +160,17 @@ export function IssueListPage() {
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
   const [states, setStates] = useState<StateApiResponse[]>([]);
   const [labels, setLabels] = useState<LabelApiResponse[]>([]);
+  const [cycles, setCycles] = useState<CycleApiResponse[]>([]);
+  const [modules, setModules] = useState<ModuleApiResponse[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [listFilters, setListFilters] = useState<ProjectIssuesFiltersState>(() => ({
+    ...DEFAULT_PROJECT_ISSUES_FILTERS,
+  }));
+  const [listDisplay, setListDisplay] = useState<ProjectIssuesDisplayState>(() =>
+    cloneDefaultProjectIssuesDisplay(),
+  );
 
   const refetchIssues = () => {
     if (!workspaceSlug || !projectId) return;
@@ -147,9 +195,11 @@ export function IssueListPage() {
       issueService.list(workspaceSlug, projectId, { limit: 100 }),
       stateService.list(workspaceSlug, projectId),
       labelService.list(workspaceSlug, projectId),
+      cycleService.list(workspaceSlug, projectId),
+      moduleService.list(workspaceSlug, projectId),
       workspaceService.listMembers(workspaceSlug),
     ])
-      .then(([w, p, list, iss, st, lab, mem]) => {
+      .then(([w, p, list, iss, st, lab, cyc, mod, mem]) => {
         if (cancelled) return;
         setWorkspace(w);
         setProject(p);
@@ -157,6 +207,8 @@ export function IssueListPage() {
         setIssues(iss ?? []);
         setStates(st ?? []);
         setLabels(lab ?? []);
+        setCycles(cyc ?? []);
+        setModules(mod ?? []);
         setMembers(mem ?? []);
       })
       .catch(() => {
@@ -166,6 +218,8 @@ export function IssueListPage() {
         setIssues([]);
         setStates([]);
         setLabels([]);
+        setCycles([]);
+        setModules([]);
         setMembers([]);
       })
       .finally(() => {
@@ -176,6 +230,183 @@ export function IssueListPage() {
     };
   }, [workspaceSlug, projectId]);
 
+  useLayoutEffect(() => {
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<{
+        workspaceSlug: string;
+        projectId: string;
+        filters: ProjectIssuesFiltersState;
+      }>;
+      const d = ce.detail;
+      if (!d || d.workspaceSlug !== workspaceSlug || d.projectId !== projectId) return;
+      setListFilters(d.filters);
+    };
+    window.addEventListener(PROJECT_ISSUES_FILTER_EVENT, handler);
+    return () => window.removeEventListener(PROJECT_ISSUES_FILTER_EVENT, handler);
+  }, [workspaceSlug, projectId]);
+
+  useLayoutEffect(() => {
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<{
+        workspaceSlug: string;
+        projectId: string;
+        display: ProjectIssuesDisplayPayload;
+      }>;
+      const d = ce.detail;
+      if (!d || d.workspaceSlug !== workspaceSlug || d.projectId !== projectId) return;
+      setListDisplay(fromDisplayPayload(d.display));
+    };
+    window.addEventListener(PROJECT_ISSUES_DISPLAY_EVENT, handler);
+    return () => window.removeEventListener(PROJECT_ISSUES_DISPLAY_EVENT, handler);
+  }, [workspaceSlug, projectId]);
+
+  const filteredIssues = useMemo(() => {
+    const stateGroupMap: Record<string, StateGroup> = {
+      backlog: 'backlog',
+      unstarted: 'unstarted',
+      started: 'started',
+      completed: 'completed',
+      canceled: 'canceled',
+      cancelled: 'canceled',
+    };
+    const getStateGroup = (stateId: string | null | undefined): StateGroup | undefined => {
+      if (!stateId) return undefined;
+      const s = states.find((x) => x.id === stateId);
+      const g = s?.group?.toLowerCase();
+      return g ? stateGroupMap[g] : undefined;
+    };
+
+    let list = issues;
+    if (listFilters.priorities.length) {
+      list = list.filter((i) => {
+        const p = (i.priority as Priority) ?? 'none';
+        return listFilters.priorities.includes(p);
+      });
+    }
+    if (listFilters.stateGroups.length) {
+      list = list.filter((i) => {
+        const g = getStateGroup(i.state_id ?? undefined);
+        return g && listFilters.stateGroups.includes(g);
+      });
+    }
+    if (listFilters.assigneeIds.length) {
+      list = list.filter((i) =>
+        i.assignee_ids?.some((aid) =>
+          listFilters.assigneeIds.some((fid) => normalizeUuidKey(fid) === normalizeUuidKey(aid)),
+        ),
+      );
+    }
+    const now = new Date();
+    const addDays = (d: number) => new Date(now.getTime() + d * 24 * 60 * 60 * 1000);
+    const startDateEffective =
+      listFilters.startDate.length &&
+      !(
+        listFilters.startDate.includes('custom') &&
+        (!listFilters.startAfter || !listFilters.startBefore)
+      );
+    if (startDateEffective) {
+      list = list.filter((i) => {
+        const sd = i.start_date ? new Date(i.start_date) : null;
+        if (!sd) return false;
+        return listFilters.startDate.some((preset) => {
+          if (preset === 'custom' && listFilters.startAfter && listFilters.startBefore) {
+            const after = new Date(listFilters.startAfter);
+            const before = new Date(listFilters.startBefore);
+            return sd >= after && sd <= before;
+          }
+          if (preset === 'custom') return false;
+          const end =
+            preset === '1_week'
+              ? addDays(7)
+              : preset === '2_weeks'
+                ? addDays(14)
+                : preset === '1_month'
+                  ? addDays(30)
+                  : preset === '2_months'
+                    ? addDays(60)
+                    : null;
+          return Boolean(end && sd >= now && sd <= end);
+        });
+      });
+    }
+    const dueDateEffective =
+      listFilters.dueDate.length &&
+      !(
+        listFilters.dueDate.includes('custom') &&
+        (!listFilters.dueAfter || !listFilters.dueBefore)
+      );
+    if (dueDateEffective) {
+      list = list.filter((i) => {
+        const td = i.target_date ? new Date(i.target_date) : null;
+        if (!td) return false;
+        return listFilters.dueDate.some((preset) => {
+          if (preset === 'custom' && listFilters.dueAfter && listFilters.dueBefore) {
+            const after = new Date(listFilters.dueAfter);
+            const before = new Date(listFilters.dueBefore);
+            return td >= after && td <= before;
+          }
+          if (preset === 'custom') return false;
+          const end =
+            preset === '1_week'
+              ? addDays(7)
+              : preset === '2_weeks'
+                ? addDays(14)
+                : preset === '1_month'
+                  ? addDays(30)
+                  : preset === '2_months'
+                    ? addDays(60)
+                    : null;
+          return Boolean(end && td >= now && td <= end);
+        });
+      });
+    }
+    return list;
+  }, [issues, states, listFilters]);
+
+  const subWorkCountByParentId = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const i of issues) {
+      const pid = i.parent_id?.trim();
+      if (!pid) continue;
+      m.set(pid, (m.get(pid) ?? 0) + 1);
+    }
+    return m;
+  }, [issues]);
+
+  const baseForGrouping = useMemo(() => {
+    let list = filteredIssues;
+    if (!listDisplay.showSubWorkItems) {
+      list = list.filter((i) => !i.parent_id?.trim());
+    }
+    return list;
+  }, [filteredIssues, listDisplay.showSubWorkItems]);
+
+  const groupedIssues = useMemo(
+    () =>
+      buildGroupedIssues({
+        baseForGrouping,
+        groupBy: listDisplay.groupBy,
+        orderBy: listDisplay.orderBy,
+        showEmptyGroups: listDisplay.showEmptyGroups,
+        states,
+        cycles,
+        modules,
+        labels,
+        members,
+      }),
+    [
+      baseForGrouping,
+      listDisplay.groupBy,
+      listDisplay.orderBy,
+      listDisplay.showEmptyGroups,
+      states,
+      cycles,
+      modules,
+      labels,
+      members,
+    ],
+  );
+
   const getStateName = (stateId: string | null | undefined) =>
     stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : '—';
   const getLabelNames = (labelIds: string[] = []) =>
@@ -184,11 +415,12 @@ export function IssueListPage() {
       .filter((name): name is string => Boolean(name));
   const getUser = (userId: string | null) => {
     if (!userId) return null;
-    const m = members.find((x) => x.member_id === userId);
-    const display = m?.member_display_name?.trim();
-    const emailUser = m?.member_email?.split('@')[0]?.trim();
-    const name = display || emailUser || 'Member';
-    const avatarUrl = m?.member_avatar ?? null;
+    const m = findWorkspaceMemberByUserId(members, userId);
+    const display = m?.member_display_name?.trim() ?? '';
+    const emailUser = m?.member_email?.trim().split('@')[0]?.trim() ?? '';
+    const name = display !== '' ? display : emailUser !== '' ? emailUser : userId.slice(0, 8);
+    const raw = m?.member_avatar?.trim();
+    const avatarUrl = raw ? raw : null;
     return { id: userId, name, avatarUrl };
   };
 
@@ -263,13 +495,186 @@ export function IssueListPage() {
   }
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
+  const dp = listDisplay.displayProperties;
+  const hasCol = (id: SavedViewDisplayPropertyId) => dp.has(id);
+
+  const cycleName = (issue: IssueApiResponse) => {
+    const id = issue.cycle_ids?.[0];
+    return id ? (cycles.find((c) => c.id === id)?.name ?? '—') : '—';
+  };
+
+  const moduleName = (issue: IssueApiResponse) => {
+    const id = issue.module_ids?.[0];
+    return id ? (modules.find((m) => m.id === id)?.name ?? '—') : '—';
+  };
+
+  const renderIssueRow = (issue: IssueApiResponse) => {
+    const primaryAssigneeId =
+      issue.assignee_ids && issue.assignee_ids.length > 0 ? issue.assignee_ids[0] : null;
+    const assignee = getUser(primaryAssigneeId);
+    const labelNames = getLabelNames(issue.label_ids ?? []);
+    const displayId = `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`;
+    const startStr = formatShortDate(issue.start_date);
+    const dueStr = formatShortDate(issue.target_date);
+    const subN = subWorkCountByParentId.get(issue.id) ?? 0;
+    const issueUrl = `${baseUrl}/issues/${issue.id}`;
+
+    return (
+      <li key={issue.id}>
+        <Link
+          to={issueUrl}
+          className="flex min-h-12 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
+        >
+          <span className="min-w-0 flex-1 truncate text-sm">
+            {hasCol('id') ? (
+              <>
+                <span className="font-medium text-(--txt-accent-primary)">{displayId}</span>
+                <span className="ml-2 text-(--txt-primary)">{issue.name}</span>
+              </>
+            ) : (
+              <span className="text-(--txt-primary)">{issue.name}</span>
+            )}
+          </span>
+          <div className="flex shrink-0 flex-wrap items-center gap-2 text-(--txt-icon-tertiary)">
+            {hasCol('state') ? (
+              <span title={getStateName(issue.state_id ?? undefined)}>
+                <Badge variant="neutral" className="text-xs font-medium">
+                  {getStateName(issue.state_id ?? undefined)}
+                </Badge>
+              </span>
+            ) : null}
+            {hasCol('priority') ? (
+              <span
+                title={issue.priority ?? ''}
+                className="flex size-6 items-center justify-center"
+              >
+                <Badge
+                  variant={priorityVariant[(issue.priority as Priority) ?? 'none']}
+                  className="!px-1.5 !py-0 text-[10px]"
+                >
+                  {issue.priority ?? '—'}
+                </Badge>
+              </span>
+            ) : null}
+            {hasCol('start_date') ? (
+              <span
+                className="max-w-[4.5rem] truncate text-[11px] text-(--txt-secondary)"
+                title={issue.start_date ?? ''}
+              >
+                {startStr ?? '—'}
+              </span>
+            ) : null}
+            {hasCol('due_date') ? (
+              <span
+                className="flex size-6 items-center justify-center"
+                title={dueStr ?? 'Due date'}
+              >
+                <IconCalendar />
+              </span>
+            ) : null}
+            {hasCol('assignee') ? (
+              <span
+                className="flex size-6 items-center justify-center"
+                title={assignee?.name ?? 'Unassigned'}
+              >
+                {assignee ? (
+                  <Avatar
+                    name={assignee.name}
+                    src={getImageUrl(assignee.avatarUrl) ?? undefined}
+                    size="sm"
+                    className="h-6 w-6 text-[10px]"
+                  />
+                ) : (
+                  <IconUser />
+                )}
+              </span>
+            ) : null}
+            {hasCol('labels') ? (
+              <span
+                className="flex size-6 items-center justify-center"
+                title={labelNames.length ? labelNames.join(', ') : 'Labels'}
+              >
+                {labelNames.length > 0 ? (
+                  <IconTag />
+                ) : (
+                  <span className="opacity-40">
+                    <IconTag />
+                  </span>
+                )}
+              </span>
+            ) : null}
+            {hasCol('sub_work_count') ? (
+              <span
+                className="min-w-6 text-center text-[11px] text-(--txt-secondary)"
+                title="Sub-work items"
+              >
+                {subN}
+              </span>
+            ) : null}
+            {hasCol('attachment_count') ? (
+              <span
+                className="min-w-6 text-center text-[11px] text-(--txt-secondary)"
+                title="Attachments"
+              >
+                —
+              </span>
+            ) : null}
+            {hasCol('estimate') ? (
+              <span className="text-[11px] text-(--txt-secondary)">—</span>
+            ) : null}
+            {hasCol('module') ? (
+              <span
+                className="max-w-[5rem] truncate text-[11px] text-(--txt-secondary)"
+                title="Module"
+              >
+                {moduleName(issue)}
+              </span>
+            ) : null}
+            {hasCol('cycle') ? (
+              <span
+                className="max-w-[5rem] truncate text-[11px] text-(--txt-secondary)"
+                title="Cycle"
+              >
+                {cycleName(issue)}
+              </span>
+            ) : null}
+            {hasCol('link') ? (
+              <a
+                href={issueUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex size-6 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
+                title="Open in new tab"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <IconLinkOut />
+              </a>
+            ) : null}
+            <span className="flex size-6 items-center justify-center" title="Visibility">
+              <IconEye />
+            </span>
+            <button
+              type="button"
+              className="flex size-6 items-center justify-center rounded hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
+              aria-label="More options"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              <IconMoreVertical />
+            </button>
+          </div>
+        </Link>
+      </li>
+    );
+  };
 
   return (
-    <div className="space-y-4">
-      {/* All work items N + plus */}
-      <div className="flex items-center justify-between">
+    <div className="w-full">
+      <div className="flex items-center justify-between gap-4 border-b border-(--border-subtle) px-4 py-3">
         <h2 className="flex items-center gap-2 text-base font-semibold text-(--txt-primary)">
-          All work items {issues.length}
+          All work items {filteredIssues.length}
           <button
             type="button"
             className="flex size-7 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
@@ -281,104 +686,48 @@ export function IssueListPage() {
         </h2>
       </div>
 
-      {/* List of work item rows */}
-      <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
-        {issues.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-4 px-4 py-12">
-            <p className="text-sm text-(--txt-tertiary)">No work items yet.</p>
-            <Button size="sm" className="gap-1.5" onClick={() => setSearchParams({ create: '1' })}>
-              <IconPlus />
-              New work item
-            </Button>
-          </div>
-        ) : (
-          <ul className="divide-y divide-(--border-subtle)">
-            {issues.map((issue) => {
-              const primaryAssigneeId =
-                issue.assignee_ids && issue.assignee_ids.length > 0 ? issue.assignee_ids[0] : null;
-              const assignee = getUser(primaryAssigneeId);
-              const labelNames = getLabelNames(issue.label_ids ?? []);
-              const displayId = `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`;
-              return (
-                <li key={issue.id}>
-                  <Link
-                    to={`${baseUrl}/issues/${issue.id}`}
-                    className="flex min-h-12 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
-                  >
-                    <span className="min-w-0 flex-1 truncate text-sm">
-                      <span className="font-medium text-(--txt-accent-primary)">{displayId}</span>
-                      <span className="ml-2 text-(--txt-primary)">{issue.name}</span>
-                    </span>
-                    <div className="flex shrink-0 items-center gap-2 text-(--txt-icon-tertiary)">
-                      <span title={getStateName(issue.state_id ?? undefined)}>
-                        <Badge variant="neutral" className="text-xs font-medium">
-                          {getStateName(issue.state_id ?? undefined)}
-                        </Badge>
+      {issues.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-4 px-4 py-12">
+          <p className="text-sm text-(--txt-tertiary)">No work items yet.</p>
+          <Button size="sm" className="gap-1.5" onClick={() => setSearchParams({ create: '1' })}>
+            <IconPlus />
+            New work item
+          </Button>
+        </div>
+      ) : filteredIssues.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-4 px-4 py-12">
+          <p className="text-sm text-(--txt-tertiary)">No work items match your filters.</p>
+        </div>
+      ) : (
+        <>
+          {groupedIssues.isFlat ? (
+            <ul className="w-full divide-y divide-(--border-subtle)">
+              {(groupedIssues.groups.get(groupedIssues.order[0]) ?? []).map((issue) =>
+                renderIssueRow(issue),
+              )}
+            </ul>
+          ) : (
+            <div className="space-y-6 px-4 py-4">
+              {groupedIssues.order.map((sectionKey) => {
+                const sectionIssues = groupedIssues.groups.get(sectionKey) ?? [];
+                if (sectionIssues.length === 0 && !listDisplay.showEmptyGroups) return null;
+                const title = groupedIssues.title(sectionKey);
+                return (
+                  <section key={sectionKey} className="space-y-2">
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-(--txt-primary)">
+                      {title}
+                      <span className="font-normal text-(--txt-tertiary)">
+                        {sectionIssues.length}
                       </span>
-                      <span
-                        title={issue.priority ?? ''}
-                        className="flex size-6 items-center justify-center"
-                      >
-                        <Badge
-                          variant={priorityVariant[(issue.priority as Priority) ?? 'none']}
-                          className="!px-1.5 !py-0 text-[10px]"
-                        >
-                          {issue.priority ?? '—'}
-                        </Badge>
-                      </span>
-                      <span className="flex size-6 items-center justify-center" title="Due date">
-                        <IconCalendar />
-                      </span>
-                      <span
-                        className="flex size-6 items-center justify-center"
-                        title={assignee?.name ?? 'Unassigned'}
-                      >
-                        {assignee ? (
-                          <Avatar
-                            name={assignee.name}
-                            src={getImageUrl(assignee.avatarUrl) ?? undefined}
-                            size="sm"
-                            className="h-6 w-6 text-[10px]"
-                          />
-                        ) : (
-                          <IconUser />
-                        )}
-                      </span>
-                      <span
-                        className="flex size-6 items-center justify-center"
-                        title={labelNames.length ? labelNames.join(', ') : 'Labels'}
-                      >
-                        {labelNames.length > 0 ? (
-                          <IconTag />
-                        ) : (
-                          <span className="opacity-40">
-                            <IconTag />
-                          </span>
-                        )}
-                      </span>
-                      <span className="flex size-6 items-center justify-center" title="Visibility">
-                        <IconEye />
-                      </span>
-                      <button
-                        type="button"
-                        className="flex size-6 items-center justify-center rounded hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-                        aria-label="More options"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                      >
-                        <IconMoreVertical />
-                      </button>
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        {issues.length > 0 && (
+                    </h3>
+                    <ul className="w-full divide-y divide-(--border-subtle) rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
+                      {sectionIssues.map((issue) => renderIssueRow(issue))}
+                    </ul>
+                  </section>
+                );
+              })}
+            </div>
+          )}
           <div className="border-t border-(--border-subtle) px-4 py-2.5">
             <button
               type="button"
@@ -389,8 +738,8 @@ export function IssueListPage() {
               New work item
             </button>
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       <CreateWorkItemModal
         open={createOpen}
