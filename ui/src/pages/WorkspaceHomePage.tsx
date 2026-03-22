@@ -462,7 +462,9 @@ function QuicklinkCardRow({
   );
 
   return (
-    <div className="group flex items-stretch overflow-hidden rounded-(--radius-lg) border border-(--border-subtle) bg-(--bg-surface-1) transition-colors hover:bg-(--bg-layer-transparent-hover)">
+    <div
+      className={`group relative flex items-stretch rounded-(--radius-lg) border border-(--border-subtle) bg-(--bg-surface-1) transition-colors hover:bg-(--bg-layer-transparent-hover) ${menuOpen ? 'z-20' : 'z-0'}`}
+    >
       {isInternal ? (
         <Link to={href} className={linkClass}>
           {main}
@@ -494,7 +496,7 @@ function QuicklinkCardRow({
         </button>
         {menuOpen ? (
           <div
-            className="absolute right-2 top-full z-20 mt-1 w-52 overflow-hidden rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-overlay)"
+            className="absolute right-0 top-full z-50 mt-1 w-52 overflow-hidden rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-overlay)"
             role="menu"
           >
             <button
