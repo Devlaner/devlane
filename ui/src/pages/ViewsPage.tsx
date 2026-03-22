@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type SVGProps } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Button, Input, Modal } from '../components/ui';
+import { Avatar, Button, Input, Modal } from '../components/ui';
 import { Dropdown } from '../components/work-item';
 import { useWorkspaceViewsState } from '../contexts/WorkspaceViewsStateContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,6 +16,7 @@ import {
   PROJECT_VIEWS_FILTER_EVENT,
   PROJECT_VIEWS_REFRESH_EVENT,
 } from '../lib/projectViewsEvents';
+import { findWorkspaceMemberByUserId, getImageUrl } from '../lib/utils';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
@@ -212,9 +213,25 @@ function getProjectViewsFavoritesKey(workspaceId: string, projectId: string) {
   return `project-view-favorites:${workspaceId}:${projectId}`;
 }
 
-function userInitial(name: string): string {
-  const trimmed = name.trim();
-  return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
+function resolveViewCreator(
+  members: WorkspaceMemberApiResponse[],
+  v: IssueViewApiResponse,
+): { label: string; avatarSrc: string | undefined } {
+  const m = findWorkspaceMemberByUserId(members, v.owned_by_id);
+  const fromDisplay = m?.member_display_name?.trim() ?? '';
+  const fromEmail = m?.member_email?.trim().split('@')[0]?.trim() ?? '';
+  const ownedByStr = v.owned_by?.trim() ?? '';
+  const label =
+    fromDisplay !== ''
+      ? fromDisplay
+      : fromEmail !== ''
+        ? fromEmail
+        : ownedByStr !== ''
+          ? ownedByStr
+          : v.owned_by_id.slice(0, 8);
+  const raw = m?.member_avatar?.trim();
+  const resolved = raw ? getImageUrl(raw) : null;
+  return { label, avatarSrc: resolved ?? undefined };
 }
 
 export function ViewsPage() {
@@ -573,26 +590,6 @@ export function ViewsPage() {
     }
   };
 
-  const memberNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const member of members) {
-      const label =
-        member.member_display_name?.trim() ||
-        member.member_email?.split('@')[0]?.trim() ||
-        'Member';
-      map.set(member.member_id, label);
-    }
-    return map;
-  }, [members]);
-
-  const memberAvatarById = useMemo(() => {
-    const map = new Map<string, string | undefined>();
-    for (const member of members) {
-      map.set(member.member_id, member.member_avatar);
-    }
-    return map;
-  }, [members]);
-
   const viewsFeatureEnabled = project?.issue_views_view !== false;
   const canCreateViews = !!user && viewsFeatureEnabled;
 
@@ -700,9 +697,10 @@ export function ViewsPage() {
                 const accessMeta = getViewAccessMeta(v);
                 const filterCount = countSavedViewFilters(v);
                 const filterLabel = filterCount === 1 ? '1 filter' : `${filterCount} filters`;
-                const creatorLabel =
-                  memberNameById.get(v.owned_by_id) ?? v.owned_by?.trim() ?? 'Member';
-                const creatorAvatar = memberAvatarById.get(v.owned_by_id);
+                const { label: creatorLabel, avatarSrc: creatorAvatarSrc } = resolveViewCreator(
+                  members,
+                  v,
+                );
                 const isFav =
                   typeof v.is_favorite === 'boolean' ? v.is_favorite : favoriteIds.includes(v.id);
                 const isPublic = accessMeta?.tone === 'public';
@@ -751,18 +749,13 @@ export function ViewsPage() {
                           <IconLock className="size-4" strokeWidth={1.75} />
                         )}
                       </span>
-                      <span className="shrink-0" title={`Created by ${creatorLabel}`}>
-                        {creatorAvatar ? (
-                          <img
-                            src={creatorAvatar}
-                            alt=""
-                            className="size-6 rounded-full object-cover ring-1 ring-(--border-subtle)"
-                          />
-                        ) : (
-                          <span className="inline-flex size-6 items-center justify-center rounded-full bg-teal-600/90 text-[11px] font-semibold text-white ring-1 ring-teal-700/30 dark:bg-teal-500/85">
-                            {userInitial(creatorLabel)}
-                          </span>
-                        )}
+                      <span className="shrink-0" title={creatorLabel}>
+                        <Avatar
+                          name={creatorLabel}
+                          src={creatorAvatarSrc}
+                          size="sm"
+                          className="size-6 ring-1 ring-(--border-subtle)"
+                        />
                       </span>
                       <button
                         type="button"
