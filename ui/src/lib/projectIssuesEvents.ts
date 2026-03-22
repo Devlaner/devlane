@@ -1,7 +1,22 @@
 import type { DatePreset, Priority, StateGroup } from '../types/workspaceViewFilters';
+import type {
+  SavedViewDisplayPropertyId,
+  SavedViewGroupBy,
+  SavedViewOrderBy,
+} from './projectSavedViewDisplay';
 
 /** Dispatched from PageHeader when project work-items filters change; IssueListPage listens. */
 export const PROJECT_ISSUES_FILTER_EVENT = 'project-issues-filter-change';
+
+export const PROJECT_ISSUES_DISPLAY_EVENT = 'project-issues-display-change';
+
+export interface ProjectIssuesDisplayPayload {
+  displayProperties: SavedViewDisplayPropertyId[];
+  groupBy: SavedViewGroupBy;
+  orderBy: SavedViewOrderBy;
+  showSubWorkItems: boolean;
+  showEmptyGroups: boolean;
+}
 
 export interface ProjectIssuesFiltersState {
   priorities: Priority[];
