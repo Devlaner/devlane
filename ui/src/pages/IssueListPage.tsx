@@ -18,7 +18,7 @@ import type {
   WorkspaceMemberApiResponse,
 } from '../api/types';
 import type { Priority } from '../types';
-import { getImageUrl } from '../lib/utils';
+import { findWorkspaceMemberByUserId, getImageUrl } from '../lib/utils';
 
 const priorityVariant: Record<Priority, 'danger' | 'warning' | 'default' | 'neutral'> = {
   urgent: 'danger',
@@ -184,11 +184,13 @@ export function IssueListPage() {
       .filter((name): name is string => Boolean(name));
   const getUser = (userId: string | null) => {
     if (!userId) return null;
-    const m = members.find((x) => x.member_id === userId);
-    const display = m?.member_display_name?.trim();
-    const emailUser = m?.member_email?.split('@')[0]?.trim();
-    const name = display || emailUser || 'Member';
-    const avatarUrl = m?.member_avatar ?? null;
+    const m = findWorkspaceMemberByUserId(members, userId);
+    const display = m?.member_display_name?.trim() ?? '';
+    const emailUser = m?.member_email?.trim().split('@')[0]?.trim() ?? '';
+    const name =
+      display !== '' ? display : emailUser !== '' ? emailUser : userId.slice(0, 8);
+    const raw = m?.member_avatar?.trim();
+    const avatarUrl = raw ? raw : null;
     return { id: userId, name, avatarUrl };
   };
 
@@ -265,9 +267,9 @@ export function IssueListPage() {
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
 
   return (
-    <div className="space-y-4">
-      {/* All work items N + plus */}
-      <div className="flex items-center justify-between">
+    <div className="w-full">
+      {/*header + list share the canvas (no outer card). */}
+      <div className="flex items-center justify-between gap-4 border-b border-(--border-subtle) px-4 py-3">
         <h2 className="flex items-center gap-2 text-base font-semibold text-(--txt-primary)">
           All work items {issues.length}
           <button
@@ -281,18 +283,17 @@ export function IssueListPage() {
         </h2>
       </div>
 
-      {/* List of work item rows */}
-      <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
-        {issues.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-4 px-4 py-12">
-            <p className="text-sm text-(--txt-tertiary)">No work items yet.</p>
-            <Button size="sm" className="gap-1.5" onClick={() => setSearchParams({ create: '1' })}>
-              <IconPlus />
-              New work item
-            </Button>
-          </div>
-        ) : (
-          <ul className="divide-y divide-(--border-subtle)">
+      {issues.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-4 px-4 py-12">
+          <p className="text-sm text-(--txt-tertiary)">No work items yet.</p>
+          <Button size="sm" className="gap-1.5" onClick={() => setSearchParams({ create: '1' })}>
+            <IconPlus />
+            New work item
+          </Button>
+        </div>
+      ) : (
+        <>
+          <ul className="w-full divide-y divide-(--border-subtle)">
             {issues.map((issue) => {
               const primaryAssigneeId =
                 issue.assignee_ids && issue.assignee_ids.length > 0 ? issue.assignee_ids[0] : null;
@@ -376,9 +377,6 @@ export function IssueListPage() {
               );
             })}
           </ul>
-        )}
-
-        {issues.length > 0 && (
           <div className="border-t border-(--border-subtle) px-4 py-2.5">
             <button
               type="button"
@@ -389,8 +387,8 @@ export function IssueListPage() {
               New work item
             </button>
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       <CreateWorkItemModal
         open={createOpen}
