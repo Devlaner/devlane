@@ -14,7 +14,7 @@ import type {
   ModuleApiResponse,
   WorkspaceMemberApiResponse,
 } from '../api/types';
-import { getImageUrl } from '../lib/utils';
+import { findWorkspaceMemberByUserId, getImageUrl } from '../lib/utils';
 import { slugify } from '../lib/slug';
 import { parseISODateLocal } from '../lib/dateOnly';
 import { MODULE_STATUSES } from '../lib/moduleStatuses';
@@ -386,15 +386,19 @@ export function ModulesPage() {
   const layout = filter.layout;
 
   const getLeadMember = (leadId: string | null | undefined) => {
-    if (!leadId) return null;
-    const m = members.find((x) => x.member_id === leadId);
-    const name =
-      m?.member_display_name?.trim() ?? m?.member_email?.split('@')[0] ?? leadId.slice(0, 8);
-    return { name, avatarUrl: m?.member_avatar ?? null };
+    if (leadId == null) return null;
+    const id = String(leadId).trim();
+    if (id === '') return null;
+    const m = findWorkspaceMemberByUserId(members, id);
+    const fromDisplay = m?.member_display_name?.trim() ?? '';
+    const fromEmail = m?.member_email?.trim().split('@')[0]?.trim() ?? '';
+    const name = fromDisplay !== '' ? fromDisplay : fromEmail !== '' ? fromEmail : id.slice(0, 8);
+    const rawAvatar = m?.member_avatar?.trim();
+    return { name, avatarUrl: rawAvatar ? rawAvatar : null };
   };
 
   const renderListLayout = () => (
-    <div className="space-y-0 rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
+    <div className="w-full">
       {sortedModules.map((mod) => {
         const progress = getProgress(mod);
         const dateRange = formatModuleDateRange(mod);
@@ -404,7 +408,7 @@ export function ModulesPage() {
         return (
           <div
             key={mod.id}
-            className="flex items-center gap-3 border-b border-(--border-subtle) last:border-b-0 px-4 py-3 hover:bg-(--bg-layer-1-hover)"
+            className="flex items-center gap-3 border-b border-(--border-subtle) px-4 py-3 hover:bg-(--bg-layer-1-hover)"
           >
             <ModuleProgressCircle progress={progress} />
             <div className="min-w-0 flex-1">
@@ -618,6 +622,7 @@ export function ModulesPage() {
       {sortedModules.map((mod) => {
         const progress = getProgress(mod);
         const dateRange = formatModuleDateRange(mod);
+        const lead = getLeadMember(mod.lead_id ?? project.project_lead_id ?? null);
         return (
           <Link
             key={mod.id}
@@ -638,6 +643,17 @@ export function ModulesPage() {
                 {mod.status}
               </span>
             </div>
+            {lead && (
+              <div className="mt-auto flex items-center gap-2 border-t border-(--border-subtle) pt-3">
+                <Avatar
+                  name={lead.name}
+                  src={getImageUrl(lead.avatarUrl) ?? undefined}
+                  size="sm"
+                  className="h-7 w-7 shrink-0 text-[10px]"
+                />
+                <span className="min-w-0 truncate text-xs text-(--txt-secondary)">{lead.name}</span>
+              </div>
+            )}
           </Link>
         );
       })}
@@ -790,35 +806,47 @@ export function ModulesPage() {
                 </tr>
               </thead>
               <tbody>
-                {withDates.map(({ mod, durationDays }) => (
-                  <tr key={mod.id} className="border-b border-(--border-subtle) last:border-b-0">
-                    <td className="px-3 py-2">
-                      <Link
-                        to={modulePath(mod)}
-                        className="flex items-center gap-2 text-sm text-(--txt-primary) no-underline hover:text-(--brand-default)"
-                      >
-                        <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            aria-hidden
-                          >
-                            <circle cx="12" cy="12" r="9" />
-                            <path d="M12 6v6l4 2" />
-                          </svg>
-                        </span>
-                        <span className="min-w-0 truncate">{mod.name}</span>
-                      </Link>
-                    </td>
-                    <td className="px-3 py-2 text-sm text-(--txt-secondary)">
-                      {durationDays > 0 ? `${durationDays} days` : '—'}
-                    </td>
-                  </tr>
-                ))}
+                {withDates.map(({ mod, durationDays }) => {
+                  const rowLead = getLeadMember(mod.lead_id ?? project.project_lead_id ?? null);
+                  return (
+                    <tr key={mod.id} className="border-b border-(--border-subtle) last:border-b-0">
+                      <td className="px-3 py-2">
+                        <Link
+                          to={modulePath(mod)}
+                          className="flex items-center gap-2 text-sm text-(--txt-primary) no-underline hover:text-(--brand-default)"
+                        >
+                          {rowLead ? (
+                            <Avatar
+                              name={rowLead.name}
+                              src={getImageUrl(rowLead.avatarUrl) ?? undefined}
+                              size="sm"
+                              className="size-5 shrink-0 text-[9px]"
+                            />
+                          ) : (
+                            <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
+                              <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                aria-hidden
+                              >
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M12 6v6l4 2" />
+                              </svg>
+                            </span>
+                          )}
+                          <span className="min-w-0 truncate">{mod.name}</span>
+                        </Link>
+                      </td>
+                      <td className="px-3 py-2 text-sm text-(--txt-secondary)">
+                        {durationDays > 0 ? `${durationDays} days` : '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
