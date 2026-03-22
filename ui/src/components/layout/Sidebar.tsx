@@ -266,7 +266,7 @@ const IconLayers = () => (
     <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" />
   </svg>
 );
-/** 2×2 grid — same glyph as project “Modules” nav (Plane-style module badge). */
+/** 2×2 grid — same glyph as project “Modules” nav icon. */
 const IconModuleGrid = ({ className }: { className?: string }) => (
   <svg
     viewBox="0 0 24 24"
@@ -789,7 +789,7 @@ export function Sidebar() {
     });
   };
 
-  // Auto-expand current project when navigating to its page (Plane-style: expand on nav, but allow manual collapse)
+  // Auto-expand current project when navigating to its page (expand on nav, but allow manual collapse)
   useEffect(() => {
     if (projectId) {
       setExpandedProjectIds((prev) => new Set(prev).add(projectId));

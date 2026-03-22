@@ -10,7 +10,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-// Queue names (Plane-style: one queue per task type or shared).
+// Queue names (one queue per task type or shared).
 const (
 	QueueEmails   = "devlane.emails"
 	QueueWebhooks = "devlane.webhooks"

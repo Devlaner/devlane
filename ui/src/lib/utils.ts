@@ -28,7 +28,8 @@ export function getImageUrl(url: string | null | undefined): string | null {
   return base + path;
 }
 
-function normId(v: string | null | undefined): string {
+/** Normalize UUID strings for comparison (case + hyphen insensitive). */
+export function normalizeUuidKey(v: string | null | undefined): string {
   if (v == null) return '';
   return String(v).trim().toLowerCase().replace(/-/g, '');
 }
@@ -41,11 +42,11 @@ export function findWorkspaceMemberByUserId(
   if (userId == null) return undefined;
   const raw = String(userId).trim();
   if (raw === '') return undefined;
-  const key = normId(raw);
+  const key = normalizeUuidKey(raw);
   if (key === '') return undefined;
   return members.find((m) => {
-    const mid = normId(m.member_id);
-    const pk = normId(m.id);
+    const mid = normalizeUuidKey(m.member_id);
+    const pk = normalizeUuidKey(m.id);
     return (mid !== '' && mid === key) || (pk !== '' && pk === key);
   });
 }

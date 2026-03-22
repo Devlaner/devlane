@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Badge, Avatar, Button } from '../components/ui';
 import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
@@ -18,7 +18,13 @@ import type {
   WorkspaceMemberApiResponse,
 } from '../api/types';
 import type { Priority } from '../types';
-import { findWorkspaceMemberByUserId, getImageUrl } from '../lib/utils';
+import type { StateGroup } from '../types/workspaceViewFilters';
+import {
+  DEFAULT_PROJECT_ISSUES_FILTERS,
+  PROJECT_ISSUES_FILTER_EVENT,
+  type ProjectIssuesFiltersState,
+} from '../lib/projectIssuesEvents';
+import { findWorkspaceMemberByUserId, getImageUrl, normalizeUuidKey } from '../lib/utils';
 
 const priorityVariant: Record<Priority, 'danger' | 'warning' | 'default' | 'neutral'> = {
   urgent: 'danger',
@@ -123,6 +129,9 @@ export function IssueListPage() {
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [listFilters, setListFilters] = useState<ProjectIssuesFiltersState>(() => ({
+    ...DEFAULT_PROJECT_ISSUES_FILTERS,
+  }));
 
   const refetchIssues = () => {
     if (!workspaceSlug || !projectId) return;
@@ -176,6 +185,124 @@ export function IssueListPage() {
     };
   }, [workspaceSlug, projectId]);
 
+  useLayoutEffect(() => {
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<{
+        workspaceSlug: string;
+        projectId: string;
+        filters: ProjectIssuesFiltersState;
+      }>;
+      const d = ce.detail;
+      if (!d || d.workspaceSlug !== workspaceSlug || d.projectId !== projectId) return;
+      setListFilters(d.filters);
+    };
+    window.addEventListener(PROJECT_ISSUES_FILTER_EVENT, handler);
+    return () => window.removeEventListener(PROJECT_ISSUES_FILTER_EVENT, handler);
+  }, [workspaceSlug, projectId]);
+
+  const filteredIssues = useMemo(() => {
+    const stateGroupMap: Record<string, StateGroup> = {
+      backlog: 'backlog',
+      unstarted: 'unstarted',
+      started: 'started',
+      completed: 'completed',
+      canceled: 'canceled',
+      cancelled: 'canceled',
+    };
+    const getStateGroup = (stateId: string | null | undefined): StateGroup | undefined => {
+      if (!stateId) return undefined;
+      const s = states.find((x) => x.id === stateId);
+      const g = s?.group?.toLowerCase();
+      return g ? stateGroupMap[g] : undefined;
+    };
+
+    let list = issues;
+    if (listFilters.priorities.length) {
+      list = list.filter((i) => {
+        const p = (i.priority as Priority) ?? 'none';
+        return listFilters.priorities.includes(p);
+      });
+    }
+    if (listFilters.stateGroups.length) {
+      list = list.filter((i) => {
+        const g = getStateGroup(i.state_id ?? undefined);
+        return g && listFilters.stateGroups.includes(g);
+      });
+    }
+    if (listFilters.assigneeIds.length) {
+      list = list.filter((i) =>
+        i.assignee_ids?.some((aid) =>
+          listFilters.assigneeIds.some((fid) => normalizeUuidKey(fid) === normalizeUuidKey(aid)),
+        ),
+      );
+    }
+    const now = new Date();
+    const addDays = (d: number) => new Date(now.getTime() + d * 24 * 60 * 60 * 1000);
+    const startDateEffective =
+      listFilters.startDate.length &&
+      !(
+        listFilters.startDate.includes('custom') &&
+        (!listFilters.startAfter || !listFilters.startBefore)
+      );
+    if (startDateEffective) {
+      list = list.filter((i) => {
+        const sd = i.start_date ? new Date(i.start_date) : null;
+        if (!sd) return false;
+        return listFilters.startDate.some((preset) => {
+          if (preset === 'custom' && listFilters.startAfter && listFilters.startBefore) {
+            const after = new Date(listFilters.startAfter);
+            const before = new Date(listFilters.startBefore);
+            return sd >= after && sd <= before;
+          }
+          if (preset === 'custom') return false;
+          const end =
+            preset === '1_week'
+              ? addDays(7)
+              : preset === '2_weeks'
+                ? addDays(14)
+                : preset === '1_month'
+                  ? addDays(30)
+                  : preset === '2_months'
+                    ? addDays(60)
+                    : null;
+          return Boolean(end && sd >= now && sd <= end);
+        });
+      });
+    }
+    const dueDateEffective =
+      listFilters.dueDate.length &&
+      !(
+        listFilters.dueDate.includes('custom') &&
+        (!listFilters.dueAfter || !listFilters.dueBefore)
+      );
+    if (dueDateEffective) {
+      list = list.filter((i) => {
+        const td = i.target_date ? new Date(i.target_date) : null;
+        if (!td) return false;
+        return listFilters.dueDate.some((preset) => {
+          if (preset === 'custom' && listFilters.dueAfter && listFilters.dueBefore) {
+            const after = new Date(listFilters.dueAfter);
+            const before = new Date(listFilters.dueBefore);
+            return td >= after && td <= before;
+          }
+          if (preset === 'custom') return false;
+          const end =
+            preset === '1_week'
+              ? addDays(7)
+              : preset === '2_weeks'
+                ? addDays(14)
+                : preset === '1_month'
+                  ? addDays(30)
+                  : preset === '2_months'
+                    ? addDays(60)
+                    : null;
+          return Boolean(end && td >= now && td <= end);
+        });
+      });
+    }
+    return list;
+  }, [issues, states, listFilters]);
+
   const getStateName = (stateId: string | null | undefined) =>
     stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : '—';
   const getLabelNames = (labelIds: string[] = []) =>
@@ -187,8 +314,7 @@ export function IssueListPage() {
     const m = findWorkspaceMemberByUserId(members, userId);
     const display = m?.member_display_name?.trim() ?? '';
     const emailUser = m?.member_email?.trim().split('@')[0]?.trim() ?? '';
-    const name =
-      display !== '' ? display : emailUser !== '' ? emailUser : userId.slice(0, 8);
+    const name = display !== '' ? display : emailUser !== '' ? emailUser : userId.slice(0, 8);
     const raw = m?.member_avatar?.trim();
     const avatarUrl = raw ? raw : null;
     return { id: userId, name, avatarUrl };
@@ -271,7 +397,7 @@ export function IssueListPage() {
       {/*header + list share the canvas (no outer card). */}
       <div className="flex items-center justify-between gap-4 border-b border-(--border-subtle) px-4 py-3">
         <h2 className="flex items-center gap-2 text-base font-semibold text-(--txt-primary)">
-          All work items {issues.length}
+          All work items {filteredIssues.length}
           <button
             type="button"
             className="flex size-7 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
@@ -291,10 +417,14 @@ export function IssueListPage() {
             New work item
           </Button>
         </div>
+      ) : filteredIssues.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-4 px-4 py-12">
+          <p className="text-sm text-(--txt-tertiary)">No work items match your filters.</p>
+        </div>
       ) : (
         <>
           <ul className="w-full divide-y divide-(--border-subtle)">
-            {issues.map((issue) => {
+            {filteredIssues.map((issue) => {
               const primaryAssigneeId =
                 issue.assignee_ids && issue.assignee_ids.length > 0 ? issue.assignee_ids[0] : null;
               const assignee = getUser(primaryAssigneeId);

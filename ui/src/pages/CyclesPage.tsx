@@ -470,7 +470,7 @@ export function CyclesPage() {
       customAfter: string | null,
       customBefore: string | null,
     ) => {
-      // Empty selection means "no filtering" (match Plane behavior).
+      // Empty selection means "no filtering".
       if (selectedPresets.length === 0) return true;
       if (!dateIso) return false;
 

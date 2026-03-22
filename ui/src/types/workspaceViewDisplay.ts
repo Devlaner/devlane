@@ -32,7 +32,7 @@ export const DISPLAY_PROPERTY_LABELS: Record<DisplayPropertyKey, string> = {
   cycle: 'Cycle',
 };
 
-/** Plane-style column order for spreadsheet view: Work items (sticky) then these (horizontal scroll). */
+/** Column order for spreadsheet view: Work items (sticky) then these (horizontal scroll). */
 export const SPREADSHEET_COLUMN_ORDER: (DisplayPropertyKey | 'created_at' | 'updated_at')[] = [
   'priority',
   'assignee',
@@ -49,7 +49,7 @@ export const SPREADSHEET_COLUMN_ORDER: (DisplayPropertyKey | 'created_at' | 'upd
   'sub_work_item_count',
 ];
 
-/** Plane-style layout options for workspace views. */
+/** Layout options for workspace views. */
 export const VIEW_LAYOUTS = ['list', 'kanban', 'calendar', 'spreadsheet', 'gantt_chart'] as const;
 export type ViewLayout = (typeof VIEW_LAYOUTS)[number];
 
@@ -69,7 +69,7 @@ export interface WorkspaceViewDisplay {
   sortOrder: SortOrder;
 }
 
-/** Sortable columns for workspace view table (Plane-style). */
+/** Sortable columns for workspace view table. */
 export const SORTABLE_COLUMNS = [
   'name',
   'created_at',
