@@ -357,6 +357,38 @@ function quicklinkAbsoluteUrl(ql: QuickLinkApiResponse, baseUrl: string): string
   return `https://${u}`;
 }
 
+/** Resolve hostname from the link target, then load favicon via a public icon service (same pattern as common PM apps). */
+function quicklinkFaviconServiceUrl(ql: QuickLinkApiResponse, baseUrl: string): string | null {
+  try {
+    const hostname = new URL(quicklinkAbsoluteUrl(ql, baseUrl)).hostname;
+    if (!hostname) return null;
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=128`;
+  } catch {
+    return null;
+  }
+}
+
+function QuicklinkFaviconImg({ src }: { src: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <IconTarget />;
+  return (
+    <img
+      src={src}
+      alt=""
+      className="size-6 shrink-0 object-contain grayscale"
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
+function QuicklinkFavicon({ ql, baseUrl }: { ql: QuickLinkApiResponse; baseUrl: string }) {
+  const src = quicklinkFaviconServiceUrl(ql, baseUrl);
+  if (!src) return <IconTarget />;
+  return <QuicklinkFaviconImg key={src} src={src} />;
+}
+
 function QuicklinkCardRow({
   ql,
   baseUrl,
@@ -420,7 +452,7 @@ function QuicklinkCardRow({
   const main = (
     <>
       <div className="flex size-10 shrink-0 items-center justify-center rounded-(--radius-md) bg-(--bg-layer-1) text-(--txt-icon-tertiary)">
-        <IconTarget />
+        <QuicklinkFavicon ql={ql} baseUrl={baseUrl} />
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-(--txt-primary)">{label}</p>
@@ -442,7 +474,7 @@ function QuicklinkCardRow({
       )}
       <div
         ref={menuRootRef}
-        className="relative flex w-11 shrink-0 items-center justify-center border-l border-(--border-subtle)"
+        className="relative flex w-10 shrink-0 items-center justify-center pr-1"
       >
         <button
           type="button"
