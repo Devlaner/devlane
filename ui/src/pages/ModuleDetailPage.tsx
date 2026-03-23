@@ -315,31 +315,67 @@ export function ModuleDetailPage() {
     <div className="flex flex-col gap-6">
       {/* Empty state */}
       {issues.length === 0 && (
-        <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-(--border-subtle) bg-(--bg-surface-1) px-6 py-16">
-          <IconModule />
-          <div className="text-center">
-            <h2 className="text-lg font-semibold text-(--txt-primary)">
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-[30px] leading-tight font-semibold text-(--txt-primary)">
               No work items in the module
             </h2>
             <p className="mt-1 text-sm text-(--txt-secondary)">
-              Create or add work items which you want to accomplish as part of this module.
+              Create or add work items which you want to accomplish as part of this module
             </p>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Button size="sm" className="gap-1.5" onClick={() => setSearchParams({ create: '1' })}>
-              <IconPlus />
-              Create new work items
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="gap-1.5"
-              onClick={() => setAddExistingOpen(true)}
-            >
-              Add an existing work item
-            </Button>
+
+          <div className="relative overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-surface-1) px-6 py-10">
+            <div className="mx-auto max-w-190">
+              <div className="relative rounded-md border border-(--border-subtle) bg-(--bg-layer-1) p-6">
+                <div className="absolute left-6 top-6 flex size-16 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
+                  <IconModule />
+                </div>
+
+                <div className="ml-24 rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
+                  <div className="flex items-center gap-2 border-b border-(--border-subtle) px-3 py-2 text-xs text-(--txt-tertiary)">
+                    <span className="font-medium">Backlog</span>
+                    <span>7</span>
+                  </div>
+                  <div className="divide-y divide-(--border-subtle)">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <div key={n} className="h-8 bg-(--bg-surface-1)" />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pointer-events-none absolute left-10 top-34 w-70 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-3 shadow-(--shadow-raised)">
+                  <div className="h-4 w-42 rounded bg-(--bg-layer-1)" />
+                  <div className="mt-3 h-2.5 w-28 rounded bg-(--bg-layer-1)" />
+                  <div className="mt-3 h-2 w-full rounded bg-(--bg-layer-1)" />
+                  <div className="mt-3 flex items-center justify-between">
+                    <div className="h-3 w-20 rounded bg-(--bg-layer-1)" />
+                    <div className="h-3 w-12 rounded bg-(--bg-layer-1)" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setSearchParams({ create: '1' })}
+              >
+                <IconPlus />
+                Create new work items
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="gap-1.5"
+                onClick={() => setAddExistingOpen(true)}
+              >
+                Add an existing work item
+              </Button>
+            </div>
           </div>
-        </div>
+        </section>
       )}
 
       {/* Work items by state */}

@@ -34,6 +34,7 @@ import {
   PROJECT_CYCLES_REFRESH_EVENT,
 } from '../../lib/projectCyclesEvents';
 import { PROJECT_VIEWS_FILTER_EVENT } from '../../lib/projectViewsEvents';
+import { slugify } from '../../lib/slug';
 
 export type ProjectSection = 'issues' | 'cycles' | 'modules' | 'views' | 'pages';
 
@@ -2877,10 +2878,16 @@ export function PageHeader() {
       return;
     }
     let cancelled = false;
+    const key = moduleId.trim().toLowerCase();
     moduleService
-      .get(workspaceSlug, projectId, moduleId)
-      .then((m) => {
-        if (!cancelled) setModule(m ?? null);
+      .list(workspaceSlug, projectId)
+      .then((mods) => {
+        if (cancelled) return;
+        const found =
+          (mods ?? []).find((x) => x.id === moduleId) ??
+          (mods ?? []).find((x) => slugify(x.name) === key) ??
+          null;
+        setModule(found);
       })
       .catch(() => {
         if (!cancelled) setModule(null);
