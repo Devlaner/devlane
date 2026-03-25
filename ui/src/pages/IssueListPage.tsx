@@ -45,6 +45,30 @@ const priorityVariant: Record<Priority, 'danger' | 'warning' | 'default' | 'neut
   none: 'neutral',
 };
 
+function issueMentionSearchBlob(issue: IssueApiResponse): string {
+  const parts: string[] = [];
+  if (issue.name) parts.push(issue.name);
+  if (issue.description_html) parts.push(issue.description_html);
+  if (issue.description && typeof issue.description === 'object') {
+    try {
+      parts.push(JSON.stringify(issue.description));
+    } catch {
+      /* non-serializable rich text */
+    }
+  }
+  return parts.join('\n').toLowerCase();
+}
+
+/** Best-effort: match user id (or @-prefixed) in title / description HTML / JSON description. */
+function issueMentionsUserId(issue: IssueApiResponse, userId: string): boolean {
+  const blob = issueMentionSearchBlob(issue);
+  if (!blob) return false;
+  const u = userId.toLowerCase().trim();
+  if (!u) return false;
+  if (blob.includes(`@${u}`)) return true;
+  return blob.includes(u);
+}
+
 const IconCalendar = () => (
   <svg
     width="14"
@@ -239,7 +263,7 @@ export function IssueListPage() {
       }>;
       const d = ce.detail;
       if (!d || d.workspaceSlug !== workspaceSlug || d.projectId !== projectId) return;
-      setListFilters(d.filters);
+      setListFilters({ ...DEFAULT_PROJECT_ISSUES_FILTERS, ...d.filters });
     };
     window.addEventListener(PROJECT_ISSUES_FILTER_EVENT, handler);
     return () => window.removeEventListener(PROJECT_ISSUES_FILTER_EVENT, handler);
@@ -301,6 +325,25 @@ export function IssueListPage() {
         listFilters.createdByIds.some(
           (fid) => normalizeUuidKey(fid) === normalizeUuidKey(i.created_by_id),
         ),
+      );
+    }
+    if (listFilters.cycleIds.length) {
+      list = list.filter((i) =>
+        i.cycle_ids?.some((cid) =>
+          listFilters.cycleIds.some((fid) => normalizeUuidKey(fid) === normalizeUuidKey(cid)),
+        ),
+      );
+    }
+    if (listFilters.labelIds.length) {
+      list = list.filter((i) =>
+        i.label_ids?.some((lid) =>
+          listFilters.labelIds.some((fid) => normalizeUuidKey(fid) === normalizeUuidKey(lid)),
+        ),
+      );
+    }
+    if (listFilters.mentionedUserIds.length) {
+      list = list.filter((i) =>
+        listFilters.mentionedUserIds.some((uid) => issueMentionsUserId(i, uid)),
       );
     }
     if (listFilters.workItemGrouping === 'active') {

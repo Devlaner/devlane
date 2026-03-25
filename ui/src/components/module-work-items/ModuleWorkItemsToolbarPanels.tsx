@@ -1,5 +1,8 @@
 import { type Dispatch, type SetStateAction, useState } from 'react';
-import { CollapsibleSection, FiltersPanelOptionRow } from '../workspace-views/WorkspaceViewsFiltersShared';
+import {
+  CollapsibleSection,
+  FiltersPanelOptionRow,
+} from '../workspace-views/WorkspaceViewsFiltersShared';
 import { Avatar } from '../ui';
 import { getImageUrl } from '../../lib/utils';
 import type { StateApiResponse, WorkspaceMemberApiResponse } from '../../api/types';

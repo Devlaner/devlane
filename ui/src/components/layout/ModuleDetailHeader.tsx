@@ -501,8 +501,14 @@ export function ModuleDetailHeader({
               setFilters={setFilters}
               states={states}
               members={members}
-              onRequestDueCustom={() => setDateModal('due')}
-              onRequestStartCustom={() => setDateModal('start')}
+              onRequestDueCustom={() => {
+                setToolbarOpen(null);
+                setDateModal('due');
+              }}
+              onRequestStartCustom={() => {
+                setToolbarOpen(null);
+                setDateModal('start');
+              }}
             />
           </Dropdown>
         </div>
@@ -590,7 +596,9 @@ export function ModuleDetailHeader({
         onApply={(after, before) => {
           setFilters((p) => ({
             ...p,
-            duePresets: p.duePresets.includes('custom') ? p.duePresets : [...p.duePresets, 'custom'],
+            duePresets: p.duePresets.includes('custom')
+              ? p.duePresets
+              : [...p.duePresets, 'custom'],
             dueAfter: after,
             dueBefore: before,
           }));

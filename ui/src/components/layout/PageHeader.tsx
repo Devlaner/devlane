@@ -21,6 +21,8 @@ import { ProjectIssuesDisplayPanel } from '../project-issues/ProjectIssuesDispla
 import { useAuth } from '../../contexts/AuthContext';
 import { workspaceService } from '../../services/workspaceService';
 import { projectService } from '../../services/projectService';
+import { cycleService } from '../../services/cycleService';
+import { labelService } from '../../services/labelService';
 import { issueService } from '../../services/issueService';
 import { viewService } from '../../services/viewService';
 import { moduleService } from '../../services/moduleService';
@@ -31,6 +33,8 @@ import type {
   IssueViewApiResponse,
   ModuleApiResponse,
   WorkspaceMemberApiResponse,
+  CycleApiResponse,
+  LabelApiResponse,
 } from '../../api/types';
 import {
   PROJECT_CYCLES_FILTER_EVENT,
@@ -928,6 +932,8 @@ function ProjectSectionHeader({
   const [issuesFiltersOpen, setIssuesFiltersOpen] = useState<string | null>(null);
   const [issuesFiltersSearch, setIssuesFiltersSearch] = useState('');
   const [issuesMembers, setIssuesMembers] = useState<WorkspaceMemberApiResponse[]>([]);
+  const [issuesCycles, setIssuesCycles] = useState<CycleApiResponse[]>([]);
+  const [issuesLabels, setIssuesLabels] = useState<LabelApiResponse[]>([]);
   const [issuesFilters, setIssuesFilters] = useState<ProjectIssuesFiltersState>(() => ({
     ...DEFAULT_PROJECT_ISSUES_FILTERS,
   }));
@@ -1012,6 +1018,30 @@ function ProjectSectionHeader({
       cancelled = true;
     };
   }, [section, workspaceSlug]);
+
+  useEffect(() => {
+    if (section !== 'issues' || !workspaceSlug || !projectId) return;
+    let cancelled = false;
+    Promise.all([
+      cycleService.list(workspaceSlug, projectId),
+      labelService.list(workspaceSlug, projectId),
+    ])
+      .then(([cyc, lab]) => {
+        if (!cancelled) {
+          setIssuesCycles(Array.isArray(cyc) ? cyc : []);
+          setIssuesLabels(Array.isArray(lab) ? lab : []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setIssuesCycles([]);
+          setIssuesLabels([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [section, workspaceSlug, projectId]);
 
   useEffect(() => {
     if (section !== 'issues' || !workspaceSlug || !projectId) return;
@@ -1222,6 +1252,8 @@ function ProjectSectionHeader({
                 filters={issuesFilters}
                 setFilters={setIssuesFilters}
                 members={issuesMembers}
+                cycles={issuesCycles}
+                labels={issuesLabels}
                 currentUserId={authUser?.id}
                 currentUserName={authUser?.name ?? 'You'}
                 currentUserAvatarUrl={authUser?.avatarUrl}
@@ -1239,7 +1271,10 @@ function ProjectSectionHeader({
               issuesFilters.priorities.length,
               issuesFilters.stateGroups.length,
               issuesFilters.assigneeIds.length,
+              issuesFilters.cycleIds.length,
+              issuesFilters.mentionedUserIds.length,
               issuesFilters.createdByIds.length,
+              issuesFilters.labelIds.length,
               issuesFilters.workItemGrouping === 'all' ? 0 : 1,
               issuesFilters.startDate.length,
               issuesFilters.dueDate.length,

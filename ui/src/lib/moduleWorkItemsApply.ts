@@ -38,11 +38,7 @@ export function filterModuleIssues(
   const addDays = (days: number) => new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
 
   const duePresetsEff =
-    duePresets.length > 0
-      ? duePresets
-      : f.dueAfter || f.dueBefore
-        ? (['custom'] as const)
-        : [];
+    duePresets.length > 0 ? duePresets : f.dueAfter || f.dueBefore ? (['custom'] as const) : [];
   const startPresetsEff =
     startDatePresets.length > 0
       ? startDatePresets
@@ -68,11 +64,7 @@ export function filterModuleIssues(
     }
 
     const dueEffective =
-      duePresetsEff.length &&
-      !(
-        duePresetsEff.includes('custom') &&
-        (!f.dueAfter || !f.dueBefore)
-      );
+      duePresetsEff.length && !(duePresetsEff.includes('custom') && (!f.dueAfter || !f.dueBefore));
 
     if (dueEffective) {
       const td =
@@ -101,10 +93,7 @@ export function filterModuleIssues(
 
     const startEffective =
       startPresetsEff.length &&
-      !(
-        startPresetsEff.includes('custom') &&
-        (!f.startAfter || !f.startBefore)
-      );
+      !(startPresetsEff.includes('custom') && (!f.startAfter || !f.startBefore));
 
     if (startEffective) {
       const sd = issue.start_date ? new Date(issue.start_date) : null;

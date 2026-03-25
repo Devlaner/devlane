@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Avatar } from '../ui';
-import { CollapsibleSection, FiltersPanelOptionRow } from '../workspace-views/WorkspaceViewsFiltersShared';
+import {
+  CollapsibleSection,
+  FiltersPanelOptionRow,
+} from '../workspace-views/WorkspaceViewsFiltersShared';
 import {
   DATE_PRESET_LABELS,
   FILTER_ICONS,
@@ -16,8 +19,16 @@ import {
   type DatePreset,
 } from '../../types/workspaceViewFilters';
 import type { ProjectIssuesFiltersState } from '../../lib/projectIssuesEvents';
-import type { WorkspaceMemberApiResponse } from '../../api/types';
+import type {
+  CycleApiResponse,
+  LabelApiResponse,
+  WorkspaceMemberApiResponse,
+} from '../../api/types';
 import { getImageUrl, normalizeUuidKey } from '../../lib/utils';
+
+const emptyFilterHint = (
+  <div className="px-3 py-1.5 text-sm italic text-(--txt-tertiary)">No matches found</div>
+);
 
 export interface ProjectIssuesFiltersPanelProps {
   search: string;
@@ -25,6 +36,8 @@ export interface ProjectIssuesFiltersPanelProps {
   filters: ProjectIssuesFiltersState;
   setFilters: React.Dispatch<React.SetStateAction<ProjectIssuesFiltersState>>;
   members: WorkspaceMemberApiResponse[];
+  cycles: CycleApiResponse[];
+  labels: LabelApiResponse[];
   currentUserId: string | null | undefined;
   currentUserName: string;
   currentUserAvatarUrl: string | null | undefined;
@@ -38,6 +51,8 @@ export function ProjectIssuesFiltersPanel({
   filters,
   setFilters,
   members,
+  cycles,
+  labels,
   currentUserId,
   currentUserName,
   currentUserAvatarUrl,
@@ -45,11 +60,11 @@ export function ProjectIssuesFiltersPanel({
   onOpenCustomDue,
 }: ProjectIssuesFiltersPanelProps) {
   const [sectionOpen, setSectionOpen] = useState({
-    cycle: true,
-    mention: true,
     priority: true,
     state: true,
     assignee: true,
+    cycle: true,
+    mention: true,
     created_by: true,
     label: true,
     work_item_grouping: true,
@@ -73,6 +88,13 @@ export function ProjectIssuesFiltersPanel({
   const displayName = (m: WorkspaceMemberApiResponse) =>
     m.member_display_name?.trim() ?? m.member_email ?? m.member_id.slice(0, 12);
 
+  const memberPickerHasRows =
+    Boolean(currentUserId && (filterSearch('You') || filterSearch(currentUserName))) ||
+    filteredMembers.some((m) => normalizeUuidKey(m.member_id) !== normalizeUuidKey(currentUserId));
+
+  const filteredCycles = cycles.filter((c) => q(c.name).includes(q(search)));
+  const filteredLabels = labels.filter((l) => q(l.name).includes(q(search)));
+
   const hasCustomStart = filters.startDate.includes('custom');
   const hasCustomDue = filters.dueDate.includes('custom');
 
@@ -92,6 +114,18 @@ export function ProjectIssuesFiltersPanel({
       return { ...prev, dueDate: hadCustom ? [...nextRest, 'custom'] : nextRest };
     });
 
+  const youRowIcon = getImageUrl(currentUserAvatarUrl) ? (
+    <img
+      src={getImageUrl(currentUserAvatarUrl)!}
+      alt=""
+      className="size-5 shrink-0 rounded-full object-cover"
+    />
+  ) : (
+    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--brand-200) text-[10px] font-medium text-(--brand-default)">
+      {currentUserName.charAt(0).toUpperCase()}
+    </span>
+  );
+
   return (
     <>
       <div className="sticky top-0 shrink-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-2">
@@ -109,63 +143,6 @@ export function ProjectIssuesFiltersPanel({
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto py-1">
-        <CollapsibleSection
-          title="Cycle"
-          open={sectionOpen.cycle}
-          onToggle={() => toggleSection('cycle')}
-          titleClassName="text-(--txt-tertiary)"
-        >
-          <FiltersPanelOptionRow checked={false} onToggle={() => {}} label="Cycle 1" />
-          <FiltersPanelOptionRow checked={false} onToggle={() => {}} label="Cycle 2" />
-          <FiltersPanelOptionRow checked={false} onToggle={() => {}} label="test-cycle" />
-        </CollapsibleSection>
-
-        <CollapsibleSection
-          title="Mention"
-          open={sectionOpen.mention}
-          onToggle={() => toggleSection('mention')}
-          titleClassName="text-(--txt-tertiary)"
-        >
-          {currentUserId && (filterSearch('You') || filterSearch(currentUserName)) && (
-            <FiltersPanelOptionRow
-              checked={false}
-              onToggle={() => {}}
-              icon={
-                getImageUrl(currentUserAvatarUrl) ? (
-                  <img
-                    src={getImageUrl(currentUserAvatarUrl)!}
-                    alt=""
-                    className="size-5 shrink-0 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--brand-200) text-[10px] font-medium text-(--brand-default)">
-                    {currentUserName.charAt(0).toUpperCase()}
-                  </span>
-                )
-              }
-              label="You"
-            />
-          )}
-          {filteredMembers
-            .filter((m) => normalizeUuidKey(m.member_id) !== normalizeUuidKey(currentUserId))
-            .map((m) => (
-              <FiltersPanelOptionRow
-                key={`mention-${m.id}`}
-                checked={false}
-                onToggle={() => {}}
-                icon={
-                  <Avatar
-                    name={displayName(m)}
-                    src={getImageUrl(m.member_avatar) ?? undefined}
-                    size="sm"
-                    className="h-5 w-5 shrink-0 text-[10px]"
-                  />
-                }
-                label={displayName(m)}
-              />
-            ))}
-        </CollapsibleSection>
-
         <CollapsibleSection
           title="Priority"
           open={sectionOpen.priority}
@@ -220,76 +197,179 @@ export function ProjectIssuesFiltersPanel({
           onToggle={() => toggleSection('assignee')}
           titleClassName="text-(--txt-tertiary)"
         >
-          {currentUserId && (filterSearch('You') || filterSearch(currentUserName)) && (
-            <FiltersPanelOptionRow
-              checked={filters.assigneeIds.some(
-                (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
-              )}
-              onToggle={() => {
-                setFilters((prev) => {
-                  const has = prev.assigneeIds.some(
+          {!memberPickerHasRows ? (
+            emptyFilterHint
+          ) : (
+            <>
+              {currentUserId && (filterSearch('You') || filterSearch(currentUserName)) && (
+                <FiltersPanelOptionRow
+                  checked={filters.assigneeIds.some(
                     (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
-                  );
-                  return {
-                    ...prev,
-                    assigneeIds: has
-                      ? prev.assigneeIds.filter(
-                          (id) => normalizeUuidKey(id) !== normalizeUuidKey(currentUserId),
-                        )
-                      : [...prev.assigneeIds, currentUserId],
-                  };
-                });
-              }}
-              icon={
-                getImageUrl(currentUserAvatarUrl) ? (
-                  <img
-                    src={getImageUrl(currentUserAvatarUrl)!}
-                    alt=""
-                    className="size-5 shrink-0 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--brand-200) text-[10px] font-medium text-(--brand-default)">
-                    {currentUserName.charAt(0).toUpperCase()}
-                  </span>
-                )
-              }
-              label="You"
-            />
-          )}
-          {filteredMembers
-            .filter((m) => normalizeUuidKey(m.member_id) !== normalizeUuidKey(currentUserId))
-            .map((m) => (
-              <FiltersPanelOptionRow
-                key={m.id}
-                checked={filters.assigneeIds.some(
-                  (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
-                )}
-                onToggle={() => {
-                  setFilters((prev) => {
-                    const has = prev.assigneeIds.some(
+                  )}
+                  onToggle={() => {
+                    setFilters((prev) => {
+                      const has = prev.assigneeIds.some(
+                        (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
+                      );
+                      return {
+                        ...prev,
+                        assigneeIds: has
+                          ? prev.assigneeIds.filter(
+                              (id) => normalizeUuidKey(id) !== normalizeUuidKey(currentUserId),
+                            )
+                          : [...prev.assigneeIds, currentUserId],
+                      };
+                    });
+                  }}
+                  icon={youRowIcon}
+                  label="You"
+                />
+              )}
+              {filteredMembers
+                .filter((m) => normalizeUuidKey(m.member_id) !== normalizeUuidKey(currentUserId))
+                .map((m) => (
+                  <FiltersPanelOptionRow
+                    key={m.id}
+                    checked={filters.assigneeIds.some(
                       (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
-                    );
-                    return {
-                      ...prev,
-                      assigneeIds: has
-                        ? prev.assigneeIds.filter(
-                            (id) => normalizeUuidKey(id) !== normalizeUuidKey(m.member_id),
-                          )
-                        : [...prev.assigneeIds, m.member_id],
-                    };
-                  });
-                }}
-                icon={
-                  <Avatar
-                    name={displayName(m)}
-                    src={getImageUrl(m.member_avatar) ?? undefined}
-                    size="sm"
-                    className="h-5 w-5 shrink-0 text-[10px]"
+                    )}
+                    onToggle={() => {
+                      setFilters((prev) => {
+                        const has = prev.assigneeIds.some(
+                          (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
+                        );
+                        return {
+                          ...prev,
+                          assigneeIds: has
+                            ? prev.assigneeIds.filter(
+                                (id) => normalizeUuidKey(id) !== normalizeUuidKey(m.member_id),
+                              )
+                            : [...prev.assigneeIds, m.member_id],
+                        };
+                      });
+                    }}
+                    icon={
+                      <Avatar
+                        name={displayName(m)}
+                        src={getImageUrl(m.member_avatar) ?? undefined}
+                        size="sm"
+                        className="h-5 w-5 shrink-0 text-[10px]"
+                      />
+                    }
+                    label={displayName(m)}
                   />
-                }
-                label={displayName(m)}
-              />
-            ))}
+                ))}
+            </>
+          )}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Cycle"
+          open={sectionOpen.cycle}
+          onToggle={() => toggleSection('cycle')}
+          titleClassName="text-(--txt-tertiary)"
+        >
+          {filteredCycles.length === 0
+            ? emptyFilterHint
+            : filteredCycles.map((c) => (
+                <FiltersPanelOptionRow
+                  key={c.id}
+                  checked={filters.cycleIds.some(
+                    (id) => normalizeUuidKey(id) === normalizeUuidKey(c.id),
+                  )}
+                  onToggle={() => {
+                    setFilters((prev) => {
+                      const has = prev.cycleIds.some(
+                        (id) => normalizeUuidKey(id) === normalizeUuidKey(c.id),
+                      );
+                      return {
+                        ...prev,
+                        cycleIds: has
+                          ? prev.cycleIds.filter(
+                              (id) => normalizeUuidKey(id) !== normalizeUuidKey(c.id),
+                            )
+                          : [...prev.cycleIds, c.id],
+                      };
+                    });
+                  }}
+                  icon={
+                    <span className="size-3.5 shrink-0 rounded-full bg-amber-400" aria-hidden />
+                  }
+                  label={c.name}
+                />
+              ))}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Mention"
+          open={sectionOpen.mention}
+          onToggle={() => toggleSection('mention')}
+          titleClassName="text-(--txt-tertiary)"
+        >
+          {!memberPickerHasRows ? (
+            emptyFilterHint
+          ) : (
+            <>
+              {currentUserId && (filterSearch('You') || filterSearch(currentUserName)) && (
+                <FiltersPanelOptionRow
+                  checked={filters.mentionedUserIds.some(
+                    (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
+                  )}
+                  onToggle={() => {
+                    setFilters((prev) => {
+                      const has = prev.mentionedUserIds.some(
+                        (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
+                      );
+                      return {
+                        ...prev,
+                        mentionedUserIds: has
+                          ? prev.mentionedUserIds.filter(
+                              (id) => normalizeUuidKey(id) !== normalizeUuidKey(currentUserId),
+                            )
+                          : [...prev.mentionedUserIds, currentUserId],
+                      };
+                    });
+                  }}
+                  icon={youRowIcon}
+                  label="You"
+                />
+              )}
+              {filteredMembers
+                .filter((m) => normalizeUuidKey(m.member_id) !== normalizeUuidKey(currentUserId))
+                .map((m) => (
+                  <FiltersPanelOptionRow
+                    key={`mention-${m.id}`}
+                    checked={filters.mentionedUserIds.some(
+                      (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
+                    )}
+                    onToggle={() => {
+                      setFilters((prev) => {
+                        const has = prev.mentionedUserIds.some(
+                          (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
+                        );
+                        return {
+                          ...prev,
+                          mentionedUserIds: has
+                            ? prev.mentionedUserIds.filter(
+                                (id) => normalizeUuidKey(id) !== normalizeUuidKey(m.member_id),
+                              )
+                            : [...prev.mentionedUserIds, m.member_id],
+                        };
+                      });
+                    }}
+                    icon={
+                      <Avatar
+                        name={displayName(m)}
+                        src={getImageUrl(m.member_avatar) ?? undefined}
+                        size="sm"
+                        className="h-5 w-5 shrink-0 text-[10px]"
+                      />
+                    }
+                    label={displayName(m)}
+                  />
+                ))}
+            </>
+          )}
         </CollapsibleSection>
 
         <CollapsibleSection
@@ -298,42 +378,40 @@ export function ProjectIssuesFiltersPanel({
           onToggle={() => toggleSection('created_by')}
           titleClassName="text-(--txt-tertiary)"
         >
-          {creatorMembers.length === 0 ? (
-            <div className="px-3 py-1.5 text-sm text-(--txt-tertiary)">No matches found</div>
-          ) : (
-            creatorMembers.map((m) => (
-              <FiltersPanelOptionRow
-                key={`created-${m.id}`}
-                checked={filters.createdByIds.some(
-                  (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
-                )}
-                onToggle={() => {
-                  setFilters((prev) => {
-                    const has = prev.createdByIds.some(
-                      (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
-                    );
-                    return {
-                      ...prev,
-                      createdByIds: has
-                        ? prev.createdByIds.filter(
-                            (id) => normalizeUuidKey(id) !== normalizeUuidKey(m.member_id),
-                          )
-                        : [...prev.createdByIds, m.member_id],
-                    };
-                  });
-                }}
-                icon={
-                  <Avatar
-                    name={displayName(m)}
-                    src={getImageUrl(m.member_avatar) ?? undefined}
-                    size="sm"
-                    className="h-5 w-5 shrink-0 text-[10px]"
-                  />
-                }
-                label={displayName(m)}
-              />
-            ))
-          )}
+          {creatorMembers.length === 0
+            ? emptyFilterHint
+            : creatorMembers.map((m) => (
+                <FiltersPanelOptionRow
+                  key={`created-${m.id}`}
+                  checked={filters.createdByIds.some(
+                    (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
+                  )}
+                  onToggle={() => {
+                    setFilters((prev) => {
+                      const has = prev.createdByIds.some(
+                        (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
+                      );
+                      return {
+                        ...prev,
+                        createdByIds: has
+                          ? prev.createdByIds.filter(
+                              (id) => normalizeUuidKey(id) !== normalizeUuidKey(m.member_id),
+                            )
+                          : [...prev.createdByIds, m.member_id],
+                      };
+                    });
+                  }}
+                  icon={
+                    <Avatar
+                      name={displayName(m)}
+                      src={getImageUrl(m.member_avatar) ?? undefined}
+                      size="sm"
+                      className="h-5 w-5 shrink-0 text-[10px]"
+                    />
+                  }
+                  label={displayName(m)}
+                />
+              ))}
         </CollapsibleSection>
 
         <CollapsibleSection
@@ -342,7 +420,43 @@ export function ProjectIssuesFiltersPanel({
           onToggle={() => toggleSection('label')}
           titleClassName="text-(--txt-tertiary)"
         >
-          <div className="px-3 py-1.5 text-sm italic text-(--txt-tertiary)">No matches found</div>
+          {filteredLabels.length === 0
+            ? emptyFilterHint
+            : filteredLabels.map((l) => (
+                <FiltersPanelOptionRow
+                  key={l.id}
+                  checked={filters.labelIds.some(
+                    (id) => normalizeUuidKey(id) === normalizeUuidKey(l.id),
+                  )}
+                  onToggle={() => {
+                    setFilters((prev) => {
+                      const has = prev.labelIds.some(
+                        (id) => normalizeUuidKey(id) === normalizeUuidKey(l.id),
+                      );
+                      return {
+                        ...prev,
+                        labelIds: has
+                          ? prev.labelIds.filter(
+                              (id) => normalizeUuidKey(id) !== normalizeUuidKey(l.id),
+                            )
+                          : [...prev.labelIds, l.id],
+                      };
+                    });
+                  }}
+                  icon={
+                    <span
+                      className="size-3.5 shrink-0 rounded-full border border-(--border-subtle)"
+                      style={
+                        l.color
+                          ? { backgroundColor: l.color, borderColor: 'transparent' }
+                          : undefined
+                      }
+                      aria-hidden
+                    />
+                  }
+                  label={l.name}
+                />
+              ))}
         </CollapsibleSection>
 
         <CollapsibleSection

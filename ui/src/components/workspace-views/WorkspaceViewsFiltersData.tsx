@@ -90,15 +90,16 @@ const IconLow = () => (
   </span>
 );
 const IconNone = () => (
-  <span className="flex size-4 items-center justify-center text-[10px] text-(--txt-icon-tertiary)">
-    —
+  <span className="relative flex size-4 items-center justify-center text-(--txt-icon-tertiary)">
+    <span className="absolute size-3 rounded-full border border-(--border-subtle)" />
+    <span className="absolute h-px w-3.5 rotate-45 bg-(--border-subtle)" />
   </span>
 );
 const IconBacklog = () => (
-  <span className="flex size-4 items-center justify-center rounded-full border border-(--border-subtle)" />
+  <span className="flex size-4 items-center justify-center rounded-full border border-dotted border-(--border-subtle)" />
 );
 const IconUnstarted = () => (
-  <span className="flex size-4 items-center justify-center rounded-full border-2 border-(--border-subtle)" />
+  <span className="flex size-4 items-center justify-center rounded-full border-2 border-dashed border-(--border-subtle)" />
 );
 const IconStarted = () => (
   <span className="flex size-4 items-center justify-center rounded-full border-2 border-amber-500 bg-amber-500/20" />
@@ -148,10 +149,10 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
 
 export const STATE_GROUP_LABELS: Record<StateGroup, string> = {
   backlog: 'Backlog',
-  unstarted: 'Unstarted',
-  started: 'Started',
-  completed: 'Completed',
-  canceled: 'Canceled',
+  unstarted: 'Todo',
+  started: 'In Progress',
+  completed: 'Done',
+  canceled: 'Cancelled',
 };
 
 export const DATE_PRESET_LABELS: Record<DatePreset, string> = {

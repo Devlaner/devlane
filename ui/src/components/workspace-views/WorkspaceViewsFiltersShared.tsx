@@ -30,12 +30,26 @@ export function FiltersPanelOptionRow({
         aria-hidden
       >
         {checked && !radio ? (
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+          <svg
+            width="9"
+            height="9"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+          >
             <path d="M20 6 9 17l-5-5" />
           </svg>
         ) : null}
         {checked && radio ? (
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+          <svg
+            width="9"
+            height="9"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+          >
             <path d="M20 6 9 17l-5-5" />
           </svg>
         ) : null}
@@ -70,7 +84,9 @@ export function CollapsibleSection({
         onClick={onToggle}
         className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-(--bg-layer-1-hover)"
       >
-        <span className={`text-sm font-medium ${titleClassName ?? 'text-(--txt-primary)'}`}>{title}</span>
+        <span className={`text-sm font-medium ${titleClassName ?? 'text-(--txt-primary)'}`}>
+          {title}
+        </span>
         <span className="text-(--txt-icon-tertiary)">
           {controlledOpen ? <FILTER_ICONS.chevronUp /> : <FILTER_ICONS.chevronDown />}
         </span>
