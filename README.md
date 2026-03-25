@@ -86,6 +86,16 @@ Contributions are welcome. Please open an issue for bugs or feature ideas, and r
   <img src="https://contrib.rocks/image?repo=Devlaner/devlane" />
 </a>
 
+## Star History
+
+<a href="https://www.star-history.com/?repos=Devlaner%2Fdevlane&type=date&logscale=&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=Devlaner/devlane&type=date&theme=dark&logscale&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=Devlaner/devlane&type=date&logscale&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=Devlaner/devlane&type=date&logscale&legend=top-left" />
+ </picture>
+</a>
+
 ## License
 
 This project is licensed under the **Devlane Software License**. It grants you broad use and modification rights (MIT-style) but does not allow selling the software or offering it as a hosted/subscription service to third parties. See [LICENSE](LICENSE) for the full text. This license is not OSI-approved open source.
