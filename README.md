@@ -67,6 +67,9 @@ Contributions are welcome. Please open an issue for bugs or feature ideas, and r
 
 ---
 
+## Repo Activity
+![Devlane Repo Activity](https://repobeats.axiom.co/api/embed/8d9a7f7b4ce8af0dcc5a88f41ace0966b6c32ae8.svg "Repobeats analytics image")
+
 ## License
 
 This project is licensed under the **Devlane Software License**. It grants you broad use and modification rights (MIT-style) but does not allow selling the software or offering it as a hosted/subscription service to third parties. See [LICENSE](LICENSE) for the full text. This license is not OSI-approved open source.
