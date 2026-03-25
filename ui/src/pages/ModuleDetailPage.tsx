@@ -161,7 +161,15 @@ const IconEstimate = () => (
 );
 
 const IconPriorityNone = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <circle cx="12" cy="12" r="9" />
     <line x1="5" y1="19" x2="19" y2="5" />
   </svg>
@@ -300,11 +308,15 @@ export function ModuleDetailPage() {
 
   useEffect(() => {
     if (!workspaceSlug || !projectId || !resolvedModuleId) return;
-    const raw = localStorage.getItem(moduleWorkItemsPrefsKey(workspaceSlug, projectId, resolvedModuleId));
+    const raw = localStorage.getItem(
+      moduleWorkItemsPrefsKey(workspaceSlug, projectId, resolvedModuleId),
+    );
     const parsed = parseModuleWorkItemsPrefs(raw);
     if (parsed) {
-      setListFilters({ ...DEFAULT_MODULE_WORK_ITEMS_FILTERS, ...parsed.filters });
-      setListDisplay({ ...DEFAULT_MODULE_WORK_ITEMS_DISPLAY, ...parsed.display });
+      queueMicrotask(() => {
+        setListFilters({ ...DEFAULT_MODULE_WORK_ITEMS_FILTERS, ...parsed.filters });
+        setListDisplay({ ...DEFAULT_MODULE_WORK_ITEMS_DISPLAY, ...parsed.display });
+      });
     }
   }, [workspaceSlug, projectId, resolvedModuleId]);
 
@@ -565,7 +577,7 @@ export function ModuleDetailPage() {
                 ) : (
                   <Badge
                     variant={priorityVariant[pri]}
-                    className="!px-1 !py-0 text-[9px] uppercase"
+                    className="px-1! py-0! text-[9px] uppercase"
                   >
                     {pri[0] ?? pri}
                   </Badge>
@@ -583,9 +595,7 @@ export function ModuleDetailPage() {
             {listDisplay.showDueDate ? (
               <span
                 className="flex size-7 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-1)"
-                title={
-                  issue.target_date ? `Due: ${formatDate(issue.target_date)}` : 'Due date'
-                }
+                title={issue.target_date ? `Due: ${formatDate(issue.target_date)}` : 'Due date'}
               >
                 <IconCalendar />
               </span>
@@ -627,7 +637,13 @@ export function ModuleDetailPage() {
                 className="flex size-7 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-1)"
                 title={labelNames.length ? labelNames.join(', ') : 'Labels'}
               >
-                {labelNames.length > 0 ? <IconTag /> : <span className="opacity-40"><IconTag /></span>}
+                {labelNames.length > 0 ? (
+                  <IconTag />
+                ) : (
+                  <span className="opacity-40">
+                    <IconTag />
+                  </span>
+                )}
               </span>
             ) : null}
             {cycle ? (
@@ -754,7 +770,9 @@ export function ModuleDetailPage() {
             </div>
           ) : !listDisplay.groupByState ? (
             <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
-              <ul className="divide-y divide-(--border-subtle)">{visibleFlat.map(renderIssueRow)}</ul>
+              <ul className="divide-y divide-(--border-subtle)">
+                {visibleFlat.map(renderIssueRow)}
+              </ul>
               <div className="border-t border-(--border-subtle) px-4 py-2.5">
                 <button
                   type="button"
@@ -786,11 +804,15 @@ export function ModuleDetailPage() {
                     </span>
                     <h3 className="text-sm font-semibold text-(--txt-primary)">
                       {sec.title}
-                      <span className="ml-2 font-normal text-(--txt-tertiary)">{sec.items.length}</span>
+                      <span className="ml-2 font-normal text-(--txt-tertiary)">
+                        {sec.items.length}
+                      </span>
                     </h3>
                   </div>
                   <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
-                    <ul className="divide-y divide-(--border-subtle)">{sec.items.map(renderIssueRow)}</ul>
+                    <ul className="divide-y divide-(--border-subtle)">
+                      {sec.items.map(renderIssueRow)}
+                    </ul>
                   </div>
                 </section>
               ))}

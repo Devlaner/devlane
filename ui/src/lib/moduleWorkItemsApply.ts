@@ -1,5 +1,8 @@
 import type { IssueApiResponse } from '../api/types';
-import type { ModuleWorkItemsDisplayState, ModuleWorkItemsFiltersState } from './moduleWorkItemsPrefs';
+import type {
+  ModuleWorkItemsDisplayState,
+  ModuleWorkItemsFiltersState,
+} from './moduleWorkItemsPrefs';
 
 function startOfWeek(d: Date): Date {
   const x = new Date(d);

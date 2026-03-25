@@ -75,11 +75,7 @@ export function ModuleWorkItemsFiltersPanel({
 
   return (
     <div className="w-80 max-h-[min(70vh,28rem)] overflow-y-auto py-1">
-      <CollapsibleSection
-        title="Priority"
-        open={open.priority}
-        onToggle={() => toggle('priority')}
-      >
+      <CollapsibleSection title="Priority" open={open.priority} onToggle={() => toggle('priority')}>
         <div className="flex flex-wrap gap-1.5 px-3 pb-2">
           {PRIORITIES.map((p) => {
             const on = filters.priorityKeys.includes(p);
@@ -129,14 +125,16 @@ export function ModuleWorkItemsFiltersPanel({
           ))}
         </div>
       </CollapsibleSection>
-      <CollapsibleSection title="Assignees" open={open.assignee} onToggle={() => toggle('assignee')}>
+      <CollapsibleSection
+        title="Assignees"
+        open={open.assignee}
+        onToggle={() => toggle('assignee')}
+      >
         <div className="max-h-44 space-y-0.5 overflow-y-auto px-2 pb-2">
           {members.map((m) => {
             const id = m.member_id;
             const label =
-              m.member_display_name?.trim() ||
-              m.member_email?.split('@')[0]?.trim() ||
-              'Member';
+              m.member_display_name?.trim() || m.member_email?.split('@')[0]?.trim() || 'Member';
             const on = filters.assigneeMemberIds.includes(id);
             return (
               <button
@@ -223,7 +221,10 @@ export interface ModuleWorkItemsDisplayPanelProps {
   setDisplay: Dispatch<SetStateAction<ModuleWorkItemsDisplayState>>;
 }
 
-export function ModuleWorkItemsDisplayPanel({ display, setDisplay }: ModuleWorkItemsDisplayPanelProps) {
+export function ModuleWorkItemsDisplayPanel({
+  display,
+  setDisplay,
+}: ModuleWorkItemsDisplayPanelProps) {
   const [open, setOpen] = useState({ layout: true, props: true });
   const toggle = (key: keyof typeof open) => setOpen((o) => ({ ...o, [key]: !o[key] }));
 

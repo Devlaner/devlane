@@ -10,7 +10,11 @@ import {
 } from '../module-work-items/ModuleWorkItemsToolbarPanels';
 import { workspaceService } from '../../services/workspaceService';
 import { stateService } from '../../services/stateService';
-import type { ProjectApiResponse, StateApiResponse, WorkspaceMemberApiResponse } from '../../api/types';
+import type {
+  ProjectApiResponse,
+  StateApiResponse,
+  WorkspaceMemberApiResponse,
+} from '../../api/types';
 import {
   DEFAULT_MODULE_WORK_ITEMS_DISPLAY,
   DEFAULT_MODULE_WORK_ITEMS_FILTERS,
@@ -42,7 +46,15 @@ const IconChevronDown = () => (
 );
 
 const IconList = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <line x1="8" y1="6" x2="21" y2="6" />
     <line x1="8" y1="12" x2="21" y2="12" />
     <line x1="8" y1="18" x2="21" y2="18" />
@@ -53,7 +65,15 @@ const IconList = () => (
 );
 
 const IconKanban = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <rect width="18" height="18" x="3" y="3" rx="2" />
     <path d="M3 9h18" />
     <path d="M3 15h18" />
@@ -80,7 +100,15 @@ const IconCalendar = () => (
 );
 
 const IconSpreadsheet = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <rect width="7" height="7" x="3" y="3" rx="1" />
     <rect width="7" height="7" x="14" y="3" rx="1" />
     <rect width="7" height="7" x="14" y="14" rx="1" />
@@ -89,7 +117,15 @@ const IconSpreadsheet = () => (
 );
 
 const IconGantt = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <path d="M3 6v12" />
     <path d="M3 12h6" />
     <path d="M3 18h4" />
@@ -100,13 +136,29 @@ const IconGantt = () => (
 );
 
 const IconFilter = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
   </svg>
 );
 
 const IconSliders = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <line x1="4" y1="21" x2="4" y2="14" />
     <line x1="4" y1="10" x2="4" y2="3" />
     <line x1="12" y1="21" x2="12" y2="12" />
@@ -120,7 +172,15 @@ const IconSliders = () => (
 );
 
 const IconPlus = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
     <path d="M5 12h14" />
     <path d="M12 5v14" />
   </svg>
@@ -167,8 +227,12 @@ export function ModuleDetailHeader({
 
   const [states, setStates] = useState<StateApiResponse[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
-  const [filters, setFilters] = useState<ModuleWorkItemsFiltersState>(DEFAULT_MODULE_WORK_ITEMS_FILTERS);
-  const [display, setDisplay] = useState<ModuleWorkItemsDisplayState>(DEFAULT_MODULE_WORK_ITEMS_DISPLAY);
+  const [filters, setFilters] = useState<ModuleWorkItemsFiltersState>(
+    DEFAULT_MODULE_WORK_ITEMS_FILTERS,
+  );
+  const [display, setDisplay] = useState<ModuleWorkItemsDisplayState>(
+    DEFAULT_MODULE_WORK_ITEMS_DISPLAY,
+  );
   const [dateModal, setDateModal] = useState<'due' | 'start' | null>(null);
 
   useEffect(() => {
@@ -209,13 +273,15 @@ export function ModuleDetailHeader({
     const key = moduleWorkItemsPrefsKey(workspaceSlug, projectId, moduleId);
     const raw = localStorage.getItem(key);
     const parsed = parseModuleWorkItemsPrefs(raw);
-    if (parsed) {
-      setFilters({ ...DEFAULT_MODULE_WORK_ITEMS_FILTERS, ...parsed.filters });
-      setDisplay({ ...DEFAULT_MODULE_WORK_ITEMS_DISPLAY, ...parsed.display });
-    } else {
-      setFilters(DEFAULT_MODULE_WORK_ITEMS_FILTERS);
-      setDisplay(DEFAULT_MODULE_WORK_ITEMS_DISPLAY);
-    }
+    queueMicrotask(() => {
+      if (parsed) {
+        setFilters({ ...DEFAULT_MODULE_WORK_ITEMS_FILTERS, ...parsed.filters });
+        setDisplay({ ...DEFAULT_MODULE_WORK_ITEMS_DISPLAY, ...parsed.display });
+      } else {
+        setFilters(DEFAULT_MODULE_WORK_ITEMS_FILTERS);
+        setDisplay(DEFAULT_MODULE_WORK_ITEMS_DISPLAY);
+      }
+    });
   }, [workspaceSlug, projectId, moduleId]);
 
   useEffect(() => {
@@ -287,7 +353,7 @@ export function ModuleDetailHeader({
           <button
             type="button"
             onClick={() => setModuleDropdownOpen((o) => !o)}
-            className="flex min-w-0 max-w-[12rem] items-center gap-1 truncate rounded-md px-2.5 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover) md:max-w-[16rem]"
+            className="flex min-w-0 max-w-48 items-center gap-1 truncate rounded-md px-2.5 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover) md:max-w-64"
           >
             <span className="min-w-0 truncate">{moduleName}</span>
             <span className="shrink-0 text-(--txt-icon-tertiary)">
@@ -377,7 +443,10 @@ export function ModuleDetailHeader({
                   <IconChevronDown />
                 </span>
                 {filtersActive ? (
-                  <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-(--brand-default)" aria-hidden />
+                  <span
+                    className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-(--brand-default)"
+                    aria-hidden
+                  />
                 ) : null}
               </span>
             }

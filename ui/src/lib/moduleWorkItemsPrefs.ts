@@ -67,7 +67,9 @@ export function moduleWorkItemsPrefsKey(
   return `devlane:module-work-items:${workspaceSlug}:${projectId}:${moduleId}`;
 }
 
-export function parseModuleWorkItemsPrefs(raw: string | null): PersistedModuleWorkItemsPrefs | null {
+export function parseModuleWorkItemsPrefs(
+  raw: string | null,
+): PersistedModuleWorkItemsPrefs | null {
   if (!raw) return null;
   try {
     const p = JSON.parse(raw) as PersistedModuleWorkItemsPrefs;

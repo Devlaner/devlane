@@ -2895,7 +2895,7 @@ export function PageHeader() {
     const base = workspaceSlug && projectId ? `/${workspaceSlug}/projects/${projectId}` : '';
     const norm = pathname.replace(/\/+$/, '') || pathname;
     const onModuleDetail = Boolean(base && moduleId && norm === `${base}/modules/${moduleId}`);
-    if (!onModuleDetail) setModuleWorkItemCount(null);
+    if (!onModuleDetail) queueMicrotask(() => setModuleWorkItemCount(null));
   }, [pathname, workspaceSlug, projectId, moduleId]);
 
   // Match route patterns to pick header
