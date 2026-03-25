@@ -34,7 +34,11 @@ export function FiltersPanelOptionRow({
             <path d="M20 6 9 17l-5-5" />
           </svg>
         ) : null}
-        {checked && radio ? <span className="size-1.5 rounded-full bg-white" /> : null}
+        {checked && radio ? (
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        ) : null}
       </span>
       <span className="flex min-w-0 items-center gap-2">
         {icon ? <span className="grid w-5 shrink-0 place-items-center">{icon}</span> : null}

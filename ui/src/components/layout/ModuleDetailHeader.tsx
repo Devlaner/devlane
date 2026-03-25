@@ -482,7 +482,7 @@ export function ModuleDetailHeader({
             triggerClassName="inline-flex border-0 bg-transparent p-0 shadow-none hover:bg-transparent"
             triggerContent={
               <span className="relative inline-flex">
-                <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)">
+                <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 text-[13px] font-medium text-(--txt-secondary) shadow-sm hover:bg-(--bg-layer-1-hover)">
                   <IconFilter />
                   Filters
                   {filtersMenuOpen ? <IconChevronUp /> : <IconChevronDown />}
@@ -590,7 +590,7 @@ export function ModuleDetailHeader({
         onApply={(after, before) => {
           setFilters((p) => ({
             ...p,
-            duePreset: 'custom',
+            duePresets: p.duePresets.includes('custom') ? p.duePresets : [...p.duePresets, 'custom'],
             dueAfter: after,
             dueBefore: before,
           }));
@@ -608,6 +608,9 @@ export function ModuleDetailHeader({
             ...p,
             startAfter: after,
             startBefore: before,
+            startDatePresets: p.startDatePresets.includes('custom')
+              ? p.startDatePresets
+              : [...p.startDatePresets, 'custom'],
           }));
           setDateModal(null);
         }}

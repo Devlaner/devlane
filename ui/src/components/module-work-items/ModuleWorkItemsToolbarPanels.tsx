@@ -8,15 +8,21 @@ import {
   type ModuleWorkItemsFiltersState,
 } from '../../lib/moduleWorkItemsPrefs';
 import {
+  DATE_PRESET_LABELS,
   FILTER_ICONS,
   PRIORITY_ICONS,
   PRIORITY_LABELS,
   STATE_GROUP_ICONS,
 } from '../workspace-views/WorkspaceViewsFiltersData';
-import { type Priority, PRIORITIES, type StateGroup } from '../../types/workspaceViewFilters';
+import {
+  DATE_PRESETS,
+  type DatePreset,
+  type Priority,
+  PRIORITIES,
+  type StateGroup,
+} from '../../types/workspaceViewFilters';
 
 const DUE_PRESETS: { id: ModuleDueDatePreset; label: string }[] = [
-  { id: 'none', label: 'Any due date' },
   { id: 'overdue', label: 'Overdue' },
   { id: 'this_week', label: 'Due this week' },
   { id: 'no_due', label: 'No due date' },
@@ -64,7 +70,7 @@ export function ModuleWorkItemsFiltersPanel({
     state: true,
     assignee: true,
     due: true,
-    start: false,
+    start: true,
   });
 
   const toggle = (key: keyof typeof open) => setOpen((o) => ({ ...o, [key]: !o[key] }));
@@ -106,7 +112,15 @@ export function ModuleWorkItemsFiltersPanel({
     });
   };
 
-  const startCustomActive = Boolean(filters.startAfter && filters.startBefore);
+  const hasCustomStart = filters.startDatePresets.includes('custom');
+  const toggleStartPreset = (d: Exclude<DatePreset, 'custom'>) => {
+    setFilters((prev) => {
+      const hadCustom = prev.startDatePresets.includes('custom');
+      const rest = prev.startDatePresets.filter((x) => x !== 'custom');
+      const nextRest = rest.includes(d) ? rest.filter((x) => x !== d) : [...rest, d];
+      return { ...prev, startDatePresets: hadCustom ? [...nextRest, 'custom'] : nextRest };
+    });
+  };
 
   return (
     <>
@@ -209,24 +223,36 @@ export function ModuleWorkItemsFiltersPanel({
           {DUE_PRESETS.filter((pr) => filterSearch(pr.label)).map((pr) => (
             <FiltersPanelOptionRow
               key={pr.id}
-              radio
-              checked={filters.duePreset === pr.id}
+              checked={filters.duePresets.includes(pr.id)}
               onToggle={() => {
                 if (pr.id === 'custom') {
-                  setFilters((p) => ({ ...p, duePreset: 'custom' }));
-                  onRequestDueCustom();
+                  let openPicker = false;
+                  setFilters((p) => {
+                    if (p.duePresets.includes('custom')) {
+                      return {
+                        ...p,
+                        duePresets: p.duePresets.filter((x) => x !== 'custom'),
+                        dueAfter: null,
+                        dueBefore: null,
+                      };
+                    }
+                    openPicker = true;
+                    return { ...p, duePresets: [...p.duePresets, 'custom'] };
+                  });
+                  if (openPicker) queueMicrotask(() => onRequestDueCustom());
                 } else {
-                  setFilters((p) => ({
-                    ...p,
-                    duePreset: pr.id,
-                    dueAfter: null,
-                    dueBefore: null,
-                  }));
+                  setFilters((p) => {
+                    const has = p.duePresets.includes(pr.id);
+                    const next = has
+                      ? p.duePresets.filter((x) => x !== pr.id)
+                      : [...p.duePresets, pr.id];
+                    return { ...p, duePresets: next };
+                  });
                 }
               }}
               label={
                 pr.id === 'custom' &&
-                filters.duePreset === 'custom' &&
+                filters.duePresets.includes('custom') &&
                 (filters.dueAfter || filters.dueBefore) ? (
                   <span className="flex flex-col gap-0.5">
                     <span>{pr.label}</span>
@@ -248,30 +274,42 @@ export function ModuleWorkItemsFiltersPanel({
           onToggle={() => toggle('start')}
           titleClassName={PLANE_SECTION_TITLE}
         >
-          {filterSearch('Custom') ? (
-            <FiltersPanelOptionRow
-              checked={startCustomActive}
-              onToggle={() => {
-                if (startCustomActive) {
-                  setFilters((p) => ({ ...p, startAfter: null, startBefore: null }));
-                } else {
-                  onRequestStartCustom();
-                }
-              }}
-              label={
-                startCustomActive ? (
-                  <span className="flex flex-col gap-0.5">
-                    <span>Custom</span>
-                    <span className="text-[11px] font-normal text-(--txt-tertiary)">
-                      {[filters.startAfter, filters.startBefore].filter(Boolean).join(' → ')}
-                    </span>
-                  </span>
-                ) : (
-                  'Custom'
-                )
-              }
-            />
-          ) : null}
+          {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map((d) =>
+            d === 'custom' ? (
+              <FiltersPanelOptionRow
+                key={d}
+                checked={hasCustomStart}
+                onToggle={() => {
+                  if (hasCustomStart) {
+                    setFilters((prev) => ({
+                      ...prev,
+                      startDatePresets: prev.startDatePresets.filter((x) => x !== 'custom'),
+                      startAfter: null,
+                      startBefore: null,
+                    }));
+                  } else {
+                    let openPicker = false;
+                    setFilters((prev) => {
+                      if (prev.startDatePresets.includes('custom')) {
+                        return prev;
+                      }
+                      openPicker = true;
+                      return { ...prev, startDatePresets: [...prev.startDatePresets, 'custom'] };
+                    });
+                    if (openPicker) queueMicrotask(() => onRequestStartCustom());
+                  }
+                }}
+                label={DATE_PRESET_LABELS[d]}
+              />
+            ) : (
+              <FiltersPanelOptionRow
+                key={d}
+                checked={filters.startDatePresets.includes(d)}
+                onToggle={() => toggleStartPreset(d)}
+                label={DATE_PRESET_LABELS[d]}
+              />
+            ),
+          )}
         </CollapsibleSection>
       </div>
     </>

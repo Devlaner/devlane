@@ -1199,7 +1199,7 @@ function ProjectSectionHeader({
               displayValue="Filters"
               panelClassName="flex w-[min(400px,calc(100vw-24px))] max-h-[min(calc(100dvh-96px),36rem)] flex-col overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
               align="right"
-              triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+              triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) shadow-sm hover:bg-(--bg-layer-1-hover)"
               triggerContent={
                 <>
                   <span className="shrink-0 text-(--txt-icon-tertiary)">

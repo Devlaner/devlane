@@ -9,7 +9,12 @@ import {
   STATE_GROUP_ICONS,
   STATE_GROUP_LABELS,
 } from '../workspace-views/WorkspaceViewsFiltersData';
-import { DATE_PRESETS, PRIORITIES, STATE_GROUPS } from '../../types/workspaceViewFilters';
+import {
+  DATE_PRESETS,
+  PRIORITIES,
+  STATE_GROUPS,
+  type DatePreset,
+} from '../../types/workspaceViewFilters';
 import type { ProjectIssuesFiltersState } from '../../lib/projectIssuesEvents';
 import type { WorkspaceMemberApiResponse } from '../../api/types';
 import { getImageUrl, normalizeUuidKey } from '../../lib/utils';
@@ -70,6 +75,22 @@ export function ProjectIssuesFiltersPanel({
 
   const hasCustomStart = filters.startDate.includes('custom');
   const hasCustomDue = filters.dueDate.includes('custom');
+
+  const toggleStartPreset = (d: Exclude<DatePreset, 'custom'>) =>
+    setFilters((prev) => {
+      const hadCustom = prev.startDate.includes('custom');
+      const rest = prev.startDate.filter((x) => x !== 'custom');
+      const nextRest = rest.includes(d) ? rest.filter((x) => x !== d) : [...rest, d];
+      return { ...prev, startDate: hadCustom ? [...nextRest, 'custom'] : nextRest };
+    });
+
+  const toggleDuePreset = (d: Exclude<DatePreset, 'custom'>) =>
+    setFilters((prev) => {
+      const hadCustom = prev.dueDate.includes('custom');
+      const rest = prev.dueDate.filter((x) => x !== 'custom');
+      const nextRest = rest.includes(d) ? rest.filter((x) => x !== d) : [...rest, d];
+      return { ...prev, dueDate: hadCustom ? [...nextRest, 'custom'] : nextRest };
+    });
 
   return (
     <>
@@ -384,26 +405,8 @@ export function ProjectIssuesFiltersPanel({
             ) : (
               <FiltersPanelOptionRow
                 key={d}
-                checked={!hasCustomStart && filters.startDate.includes(d)}
-                onToggle={() => {
-                  setFilters((prev) => {
-                    if (hasCustomStart) {
-                      const next = prev.startDate.filter((x) => x !== 'custom');
-                      const withD = next.includes(d) ? next.filter((x) => x !== d) : [...next, d];
-                      return {
-                        ...prev,
-                        startDate: withD,
-                        startAfter: null,
-                        startBefore: null,
-                      };
-                    }
-                    const presets = prev.startDate.filter((x) => x !== 'custom');
-                    const nextList = presets.includes(d)
-                      ? presets.filter((x) => x !== d)
-                      : [...presets, d];
-                    return { ...prev, startDate: nextList };
-                  });
-                }}
+                checked={filters.startDate.includes(d)}
+                onToggle={() => toggleStartPreset(d)}
                 label={DATE_PRESET_LABELS[d]}
               />
             ),
@@ -444,26 +447,8 @@ export function ProjectIssuesFiltersPanel({
             ) : (
               <FiltersPanelOptionRow
                 key={d}
-                checked={!hasCustomDue && filters.dueDate.includes(d)}
-                onToggle={() => {
-                  setFilters((prev) => {
-                    if (hasCustomDue) {
-                      const next = prev.dueDate.filter((x) => x !== 'custom');
-                      const withD = next.includes(d) ? next.filter((x) => x !== d) : [...next, d];
-                      return {
-                        ...prev,
-                        dueDate: withD,
-                        dueAfter: null,
-                        dueBefore: null,
-                      };
-                    }
-                    const presets = prev.dueDate.filter((x) => x !== 'custom');
-                    const nextList = presets.includes(d)
-                      ? presets.filter((x) => x !== d)
-                      : [...presets, d];
-                    return { ...prev, dueDate: nextList };
-                  });
-                }}
+                checked={filters.dueDate.includes(d)}
+                onToggle={() => toggleDuePreset(d)}
                 label={DATE_PRESET_LABELS[d]}
               />
             ),

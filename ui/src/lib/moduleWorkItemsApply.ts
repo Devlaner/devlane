@@ -1,5 +1,5 @@
 import type { IssueApiResponse } from '../api/types';
-import type { ModuleWorkItemsFiltersState } from './moduleWorkItemsPrefs';
+import type { ModuleDueDatePreset, ModuleWorkItemsFiltersState } from './moduleWorkItemsPrefs';
 import type { ProjectIssuesDisplayState } from './projectIssuesDisplay';
 
 function startOfWeek(d: Date): Date {
@@ -23,64 +23,112 @@ export function filterModuleIssues(
   issues: IssueApiResponse[],
   f: ModuleWorkItemsFiltersState,
 ): IssueApiResponse[] {
+  const priorityKeys = f.priorityKeys ?? [];
+  const stateIds = f.stateIds ?? [];
+  const assigneeMemberIds = f.assigneeMemberIds ?? [];
+  let duePresets = f.duePresets ?? [];
+  const startDatePresets = f.startDatePresets ?? [];
+  const legacyDue = (f as ModuleWorkItemsFiltersState & { duePreset?: string }).duePreset;
+  if (duePresets.length === 0 && legacyDue && legacyDue !== 'none') {
+    duePresets = [legacyDue as ModuleDueDatePreset];
+  }
+
   const now = new Date();
   const sod = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const addDays = (days: number) => new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+  const duePresetsEff =
+    duePresets.length > 0
+      ? duePresets
+      : f.dueAfter || f.dueBefore
+        ? (['custom'] as const)
+        : [];
+  const startPresetsEff =
+    startDatePresets.length > 0
+      ? startDatePresets
+      : f.startAfter || f.startBefore
+        ? (['custom'] as const)
+        : [];
 
   return issues.filter((issue) => {
-    if (f.priorityKeys.length > 0) {
+    if (priorityKeys.length > 0) {
       const p = issue.priority ?? 'none';
-      if (!f.priorityKeys.includes(p)) return false;
+      if (!priorityKeys.includes(p)) return false;
     }
-    if (f.stateIds.length > 0) {
+    if (stateIds.length > 0) {
       const sid = issue.state_id ?? '';
-      const wantNone = f.stateIds.includes('__none__');
-      const inList = Boolean(sid) && f.stateIds.includes(sid);
+      const wantNone = stateIds.includes('__none__');
+      const inList = Boolean(sid) && stateIds.includes(sid);
       const isNone = !sid;
       if (!inList && !(isNone && wantNone)) return false;
     }
-    if (f.assigneeMemberIds.length > 0) {
+    if (assigneeMemberIds.length > 0) {
       const aids = issue.assignee_ids ?? [];
-      if (!aids.some((id) => f.assigneeMemberIds.includes(id))) return false;
+      if (!aids.some((id) => assigneeMemberIds.includes(id))) return false;
     }
 
-    if (f.duePreset !== 'none') {
+    const dueEffective =
+      duePresetsEff.length &&
+      !(
+        duePresetsEff.includes('custom') &&
+        (!f.dueAfter || !f.dueBefore)
+      );
+
+    if (dueEffective) {
       const td =
         issue.target_date != null && issue.target_date !== ''
           ? new Date(issue.target_date).getTime()
           : null;
-      if (f.duePreset === 'no_due') {
-        if (issue.target_date) return false;
-      } else if (f.duePreset === 'overdue') {
-        if (td == null || td >= sod) return false;
-      } else if (f.duePreset === 'this_week') {
-        if (issue.target_date == null || issue.target_date === '') return false;
-        const t = new Date(issue.target_date);
-        if (t < startOfWeek(now) || t > endOfWeek(now)) return false;
-      } else if (f.duePreset === 'custom') {
-        if (f.dueAfter) {
+      const ok = duePresetsEff.some((preset) => {
+        if (preset === 'no_due') return !issue.target_date;
+        if (preset === 'overdue') return td != null && td < sod;
+        if (preset === 'this_week') {
+          if (issue.target_date == null || issue.target_date === '') return false;
+          const t = new Date(issue.target_date);
+          return t >= startOfWeek(now) && t <= endOfWeek(now);
+        }
+        if (preset === 'custom') {
+          if (!f.dueAfter || !f.dueBefore) return false;
+          if (td == null) return false;
           const a = new Date(f.dueAfter).getTime();
-          if (td == null || td < a) return false;
-        }
-        if (f.dueBefore) {
           const b = new Date(f.dueBefore).getTime();
-          if (td == null || td > b) return false;
+          return td >= a && td <= b;
         }
-      }
+        return false;
+      });
+      if (!ok) return false;
     }
 
-    if (f.startAfter || f.startBefore) {
-      const sd =
-        issue.start_date != null && issue.start_date !== ''
-          ? new Date(issue.start_date).getTime()
-          : null;
-      if (f.startAfter) {
-        const a = new Date(f.startAfter).getTime();
-        if (sd == null || sd < a) return false;
-      }
-      if (f.startBefore) {
-        const b = new Date(f.startBefore).getTime();
-        if (sd == null || sd > b) return false;
-      }
+    const startEffective =
+      startPresetsEff.length &&
+      !(
+        startPresetsEff.includes('custom') &&
+        (!f.startAfter || !f.startBefore)
+      );
+
+    if (startEffective) {
+      const sd = issue.start_date ? new Date(issue.start_date) : null;
+      if (!sd) return false;
+      const ok = startPresetsEff.some((preset) => {
+        if (preset === 'custom' && f.startAfter && f.startBefore) {
+          const after = new Date(f.startAfter);
+          const before = new Date(f.startBefore);
+          return sd >= after && sd <= before;
+        }
+        if (preset === 'custom') return false;
+        const end =
+          preset === '1_week'
+            ? addDays(7)
+            : preset === '2_weeks'
+              ? addDays(14)
+              : preset === '1_month'
+                ? addDays(30)
+                : preset === '2_months'
+                  ? addDays(60)
+                  : null;
+        return Boolean(end && sd >= now && sd <= end);
+      });
+      if (!ok) return false;
     }
 
     return true;

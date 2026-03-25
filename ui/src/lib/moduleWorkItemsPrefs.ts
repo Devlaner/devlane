@@ -1,3 +1,4 @@
+import type { DatePreset } from '../types/workspaceViewFilters';
 import type { ProjectIssuesDisplayPayload } from './projectIssuesEvents';
 import {
   cloneDefaultProjectIssuesDisplay,
@@ -11,15 +12,18 @@ export const MODULE_WORK_ITEMS_COUNT_EVENT = 'devlane:module-work-items-count';
 export const MODULE_WORK_ITEMS_OPEN_ADD_EXISTING_EVENT =
   'devlane:module-work-items-open-add-existing';
 
-export type ModuleDueDatePreset = 'none' | 'overdue' | 'this_week' | 'no_due' | 'custom';
+/** Due-date filter chips (multi-select, OR). Empty = no due-date constraint. */
+export type ModuleDueDatePreset = 'overdue' | 'this_week' | 'no_due' | 'custom';
 
 export interface ModuleWorkItemsFiltersState {
   priorityKeys: string[];
   stateIds: string[];
   assigneeMemberIds: string[];
-  duePreset: ModuleDueDatePreset;
+  duePresets: ModuleDueDatePreset[];
   dueAfter: string | null;
   dueBefore: string | null;
+  /** Relative + custom start filters (multi-select, OR). Same semantics as project issues. */
+  startDatePresets: DatePreset[];
   startAfter: string | null;
   startBefore: string | null;
 }
@@ -28,9 +32,10 @@ export const DEFAULT_MODULE_WORK_ITEMS_FILTERS: ModuleWorkItemsFiltersState = {
   priorityKeys: [],
   stateIds: [],
   assigneeMemberIds: [],
-  duePreset: 'none',
+  duePresets: [],
   dueAfter: null,
   dueBefore: null,
+  startDatePresets: [],
   startAfter: null,
   startBefore: null,
 };
@@ -48,6 +53,45 @@ export function moduleWorkItemsPrefsKey(
   moduleId: string,
 ): string {
   return `devlane:module-work-items:${workspaceSlug}:${projectId}:${moduleId}`;
+}
+
+function normalizeModuleFilters(blob: Record<string, unknown>): ModuleWorkItemsFiltersState {
+  const legacyDue = blob.duePreset as string | undefined;
+  const rawDuePresets = blob.duePresets;
+  let duePresets: ModuleDueDatePreset[] = Array.isArray(rawDuePresets)
+    ? (rawDuePresets.filter((x): x is ModuleDueDatePreset =>
+        ['overdue', 'this_week', 'no_due', 'custom'].includes(String(x)),
+      ) as ModuleDueDatePreset[])
+    : [];
+  if (duePresets.length === 0 && legacyDue && legacyDue !== 'none') {
+    duePresets = [legacyDue as ModuleDueDatePreset];
+  }
+
+  const rawStartPresets = blob.startDatePresets;
+  const startAfter = (blob.startAfter as string | null | undefined) ?? null;
+  const startBefore = (blob.startBefore as string | null | undefined) ?? null;
+  let startDatePresets: DatePreset[] = Array.isArray(rawStartPresets)
+    ? (rawStartPresets.filter((x): x is DatePreset =>
+        ['1_week', '2_weeks', '1_month', '2_months', 'custom'].includes(String(x)),
+      ) as DatePreset[])
+    : [];
+  if (startDatePresets.length === 0 && (startAfter || startBefore)) {
+    startDatePresets = ['custom'];
+  }
+
+  return {
+    priorityKeys: Array.isArray(blob.priorityKeys) ? [...(blob.priorityKeys as string[])] : [],
+    stateIds: Array.isArray(blob.stateIds) ? [...(blob.stateIds as string[])] : [],
+    assigneeMemberIds: Array.isArray(blob.assigneeMemberIds)
+      ? [...(blob.assigneeMemberIds as string[])]
+      : [],
+    duePresets,
+    dueAfter: (blob.dueAfter as string | null | undefined) ?? null,
+    dueBefore: (blob.dueBefore as string | null | undefined) ?? null,
+    startDatePresets,
+    startAfter,
+    startBefore,
+  };
 }
 
 function normalizeModuleDisplay(raw: unknown): ProjectIssuesDisplayState {
@@ -70,9 +114,13 @@ export function parseModuleWorkItemsPrefs(
 ): PersistedModuleWorkItemsPrefs | null {
   if (!raw) return null;
   try {
-    const p = JSON.parse(raw) as PersistedModuleWorkItemsPrefs;
+    const p = JSON.parse(raw) as PersistedModuleWorkItemsPrefs & {
+      filters?: Record<string, unknown>;
+    };
     if (!p || typeof p !== 'object') return null;
-    const filters = { ...DEFAULT_MODULE_WORK_ITEMS_FILTERS, ...p.filters };
+    const filters = normalizeModuleFilters(
+      (p.filters && typeof p.filters === 'object' ? p.filters : {}) as Record<string, unknown>,
+    );
     const display = normalizeModuleDisplay(p.display);
     return { filters, display };
   } catch {
@@ -98,7 +146,8 @@ export function isModuleFiltersActive(f: ModuleWorkItemsFiltersState): boolean {
     f.priorityKeys.length > 0 ||
     f.stateIds.length > 0 ||
     f.assigneeMemberIds.length > 0 ||
-    f.duePreset !== 'none' ||
+    f.duePresets.length > 0 ||
+    f.startDatePresets.length > 0 ||
     Boolean(f.dueAfter) ||
     Boolean(f.dueBefore) ||
     Boolean(f.startAfter) ||
