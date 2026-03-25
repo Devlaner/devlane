@@ -19,6 +19,11 @@ export interface ModuleWorkItemsFiltersState {
   priorityKeys: string[];
   stateIds: string[];
   assigneeMemberIds: string[];
+  cycleIds: string[];
+  mentionedUserIds: string[];
+  createdByIds: string[];
+  labelIds: string[];
+  workItemGrouping: 'all' | 'active' | 'backlog';
   duePresets: ModuleDueDatePreset[];
   dueAfter: string | null;
   dueBefore: string | null;
@@ -32,6 +37,11 @@ export const DEFAULT_MODULE_WORK_ITEMS_FILTERS: ModuleWorkItemsFiltersState = {
   priorityKeys: [],
   stateIds: [],
   assigneeMemberIds: [],
+  cycleIds: [],
+  mentionedUserIds: [],
+  createdByIds: [],
+  labelIds: [],
+  workItemGrouping: 'all',
   duePresets: [],
   dueAfter: null,
   dueBefore: null,
@@ -85,6 +95,16 @@ function normalizeModuleFilters(blob: Record<string, unknown>): ModuleWorkItemsF
     assigneeMemberIds: Array.isArray(blob.assigneeMemberIds)
       ? [...(blob.assigneeMemberIds as string[])]
       : [],
+    cycleIds: Array.isArray(blob.cycleIds) ? [...(blob.cycleIds as string[])] : [],
+    mentionedUserIds: Array.isArray(blob.mentionedUserIds)
+      ? [...(blob.mentionedUserIds as string[])]
+      : [],
+    createdByIds: Array.isArray(blob.createdByIds) ? [...(blob.createdByIds as string[])] : [],
+    labelIds: Array.isArray(blob.labelIds) ? [...(blob.labelIds as string[])] : [],
+    workItemGrouping:
+      blob.workItemGrouping === 'active' || blob.workItemGrouping === 'backlog'
+        ? blob.workItemGrouping
+        : 'all',
     duePresets,
     dueAfter: (blob.dueAfter as string | null | undefined) ?? null,
     dueBefore: (blob.dueBefore as string | null | undefined) ?? null,
@@ -146,6 +166,11 @@ export function isModuleFiltersActive(f: ModuleWorkItemsFiltersState): boolean {
     f.priorityKeys.length > 0 ||
     f.stateIds.length > 0 ||
     f.assigneeMemberIds.length > 0 ||
+    f.cycleIds.length > 0 ||
+    f.mentionedUserIds.length > 0 ||
+    f.createdByIds.length > 0 ||
+    f.labelIds.length > 0 ||
+    f.workItemGrouping !== 'all' ||
     f.duePresets.length > 0 ||
     f.startDatePresets.length > 0 ||
     Boolean(f.dueAfter) ||

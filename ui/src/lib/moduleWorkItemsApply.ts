@@ -1,6 +1,7 @@
-import type { IssueApiResponse } from '../api/types';
+import type { IssueApiResponse, StateApiResponse } from '../api/types';
 import type { ModuleDueDatePreset, ModuleWorkItemsFiltersState } from './moduleWorkItemsPrefs';
 import type { ProjectIssuesDisplayState } from './projectIssuesDisplay';
+import { normalizeUuidKey } from './utils';
 
 function startOfWeek(d: Date): Date {
   const x = new Date(d);
@@ -22,16 +23,28 @@ function endOfWeek(d: Date): Date {
 export function filterModuleIssues(
   issues: IssueApiResponse[],
   f: ModuleWorkItemsFiltersState,
+  states: StateApiResponse[],
 ): IssueApiResponse[] {
   const priorityKeys = f.priorityKeys ?? [];
   const stateIds = f.stateIds ?? [];
   const assigneeMemberIds = f.assigneeMemberIds ?? [];
+  const cycleIds = f.cycleIds ?? [];
+  const mentionedUserIds = f.mentionedUserIds ?? [];
+  const createdByIds = f.createdByIds ?? [];
+  const labelIds = f.labelIds ?? [];
+  const workItemGrouping = f.workItemGrouping ?? 'all';
   let duePresets = f.duePresets ?? [];
   const startDatePresets = f.startDatePresets ?? [];
   const legacyDue = (f as ModuleWorkItemsFiltersState & { duePreset?: string }).duePreset;
   if (duePresets.length === 0 && legacyDue && legacyDue !== 'none') {
     duePresets = [legacyDue as ModuleDueDatePreset];
   }
+
+  const cycleKeySet = new Set(cycleIds.map((x) => normalizeUuidKey(x)));
+  const labelKeySet = new Set(labelIds.map((x) => normalizeUuidKey(x)));
+  const assigneeKeySet = new Set(assigneeMemberIds.map((x) => normalizeUuidKey(x)));
+  const createdByKeySet = new Set(createdByIds.map((x) => normalizeUuidKey(x)));
+  const mentionedKeySet = new Set(mentionedUserIds.map((x) => normalizeUuidKey(x)));
 
   const now = new Date();
   const sod = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -45,6 +58,47 @@ export function filterModuleIssues(
       : f.startAfter || f.startBefore
         ? (['custom'] as const)
         : [];
+
+  const stateGroupMap: Record<string, string> = {
+    backlog: 'backlog',
+    unstarted: 'unstarted',
+    started: 'started',
+    completed: 'completed',
+    canceled: 'canceled',
+    cancelled: 'canceled',
+  };
+
+  const getStateGroup = (stateId: string | null | undefined): string | undefined => {
+    if (!stateId) return undefined;
+    const s = states.find((x) => x.id === stateId);
+    const g = s?.group?.toLowerCase();
+    return g ? stateGroupMap[g] : undefined;
+  };
+
+  const issueMentionSearchBlob = (issue: IssueApiResponse): string => {
+    const parts: string[] = [];
+    if (issue.name) parts.push(issue.name);
+    if (issue.description_html) parts.push(issue.description_html);
+    if (issue.description && typeof issue.description === 'object') {
+      try {
+        parts.push(JSON.stringify(issue.description));
+      } catch {
+        // ignore
+      }
+    }
+    return parts.join('\n').toLowerCase();
+  };
+
+  const issueMentionsUserId = (issue: IssueApiResponse, userId: string): boolean => {
+    const blob = issueMentionSearchBlob(issue);
+    const uRaw = userId.trim().toLowerCase();
+    if (!uRaw) return false;
+    const uNorm = normalizeUuidKey(userId);
+    if (blob.includes(`@${uRaw}`)) return true;
+    if (blob.includes(uRaw)) return true;
+    if (uNorm && blob.includes(uNorm)) return true;
+    return false;
+  };
 
   return issues.filter((issue) => {
     if (priorityKeys.length > 0) {
@@ -60,7 +114,40 @@ export function filterModuleIssues(
     }
     if (assigneeMemberIds.length > 0) {
       const aids = issue.assignee_ids ?? [];
-      if (!aids.some((id) => assigneeMemberIds.includes(id))) return false;
+      if (!aids.some((id) => assigneeKeySet.has(normalizeUuidKey(id)))) return false;
+    }
+
+    if (cycleKeySet.size > 0) {
+      const cids = issue.cycle_ids ?? [];
+      if (!cids.some((id) => cycleKeySet.has(normalizeUuidKey(id)))) return false;
+    }
+
+    if (labelKeySet.size > 0) {
+      const lids = issue.label_ids ?? [];
+      if (!lids.some((id) => labelKeySet.has(normalizeUuidKey(id)))) return false;
+    }
+
+    if (createdByKeySet.size > 0) {
+      if (!createdByKeySet.has(normalizeUuidKey(issue.created_by_id))) return false;
+    }
+
+    if (mentionedKeySet.size > 0) {
+      if (
+        !mentionedUserIds.some((uid) => {
+          if (!uid) return false;
+          return issueMentionsUserId(issue, uid);
+        })
+      ) {
+        return false;
+      }
+    }
+
+    if (workItemGrouping === 'active') {
+      const g = getStateGroup(issue.state_id);
+      if (!(g === 'unstarted' || g === 'started')) return false;
+    } else if (workItemGrouping === 'backlog') {
+      const g = getStateGroup(issue.state_id);
+      if (g !== 'backlog') return false;
     }
 
     const dueEffective =

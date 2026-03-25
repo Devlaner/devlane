@@ -4,8 +4,13 @@ import {
   FiltersPanelOptionRow,
 } from '../workspace-views/WorkspaceViewsFiltersShared';
 import { Avatar } from '../ui';
-import { getImageUrl } from '../../lib/utils';
-import type { StateApiResponse, WorkspaceMemberApiResponse } from '../../api/types';
+import { getImageUrl, normalizeUuidKey } from '../../lib/utils';
+import type {
+  CycleApiResponse,
+  LabelApiResponse,
+  StateApiResponse,
+  WorkspaceMemberApiResponse,
+} from '../../api/types';
 import {
   type ModuleDueDatePreset,
   type ModuleWorkItemsFiltersState,
@@ -16,6 +21,7 @@ import {
   PRIORITY_ICONS,
   PRIORITY_LABELS,
   STATE_GROUP_ICONS,
+  STATE_GROUP_LABELS,
 } from '../workspace-views/WorkspaceViewsFiltersData';
 import {
   DATE_PRESETS,
@@ -43,18 +49,22 @@ const API_GROUP_TO_PLANE: Record<string, StateGroup> = {
   cancelled: 'canceled',
 };
 
-function stateRowIcon(s: StateApiResponse) {
+function stateGroupForState(s: StateApiResponse) {
   const g = s.group?.toLowerCase();
   const sg = g ? API_GROUP_TO_PLANE[g] : undefined;
-  if (sg) return STATE_GROUP_ICONS[sg];
-  return STATE_GROUP_ICONS.unstarted;
+  return sg ?? 'unstarted';
 }
 
 export interface ModuleWorkItemsFiltersPanelProps {
   filters: ModuleWorkItemsFiltersState;
   setFilters: Dispatch<SetStateAction<ModuleWorkItemsFiltersState>>;
   states: StateApiResponse[];
+  cycles: CycleApiResponse[];
+  labels: LabelApiResponse[];
   members: WorkspaceMemberApiResponse[];
+  currentUserId: string | null | undefined;
+  currentUserName: string;
+  currentUserAvatarUrl: string | null | undefined;
   onRequestDueCustom: () => void;
   onRequestStartCustom: () => void;
 }
@@ -63,7 +73,12 @@ export function ModuleWorkItemsFiltersPanel({
   filters,
   setFilters,
   states,
+  cycles,
+  labels,
   members,
+  currentUserId,
+  currentUserName,
+  currentUserAvatarUrl,
   onRequestDueCustom,
   onRequestStartCustom,
 }: ModuleWorkItemsFiltersPanelProps) {
@@ -72,6 +87,11 @@ export function ModuleWorkItemsFiltersPanel({
     priority: true,
     state: true,
     assignee: true,
+    cycle: true,
+    mention: true,
+    created_by: true,
+    label: true,
+    work_item_grouping: true,
     due: true,
     start: true,
   });
@@ -86,7 +106,22 @@ export function ModuleWorkItemsFiltersPanel({
     q(m.member_display_name ?? m.member_email ?? m.member_id).includes(q(search)),
   );
 
-  const filteredStates = states.filter((s) => filterSearch(s.name));
+  const emptyFilterHint = (
+    <div className="px-3 py-1.5 text-sm italic text-(--txt-tertiary)">No matches found</div>
+  );
+
+  const filteredCycles = cycles.filter((c) => filterSearch(c.name));
+  const filteredLabels = labels.filter((l) => filterSearch(l.name));
+
+  const groupOrder: StateGroup[] = ['backlog', 'unstarted', 'started', 'completed', 'canceled'];
+  const stateIdsByGroup = groupOrder.reduce((acc, g) => {
+    acc[g] = [];
+    return acc;
+  }, {} as Record<StateGroup, string[]>);
+  for (const s of states) {
+    const sg = stateGroupForState(s);
+    stateIdsByGroup[sg].push(s.id);
+  }
 
   const togglePriority = (p: string) => {
     setFilters((prev) => {
@@ -97,23 +132,53 @@ export function ModuleWorkItemsFiltersPanel({
     });
   };
 
-  const toggleState = (stateId: string) => {
+  const toggleStateGroup = (g: StateGroup) => {
+    const ids = stateIdsByGroup[g];
     setFilters((prev) => {
       const next = new Set(prev.stateIds);
-      if (next.has(stateId)) next.delete(stateId);
-      else next.add(stateId);
+      const allSelected = ids.length > 0 && ids.every((id) => next.has(id));
+      for (const id of ids) {
+        if (allSelected) next.delete(id);
+        else next.add(id);
+      }
       return { ...prev, stateIds: [...next] };
     });
   };
 
   const toggleAssignee = (memberId: string) => {
     setFilters((prev) => {
-      const next = new Set(prev.assigneeMemberIds);
-      if (next.has(memberId)) next.delete(memberId);
-      else next.add(memberId);
-      return { ...prev, assigneeMemberIds: [...next] };
+      const key = normalizeUuidKey(memberId);
+      const has = prev.assigneeMemberIds.some((id) => normalizeUuidKey(id) === key);
+      return {
+        ...prev,
+        assigneeMemberIds: has
+          ? prev.assigneeMemberIds.filter((id) => normalizeUuidKey(id) !== key)
+          : [...prev.assigneeMemberIds, memberId],
+      };
     });
   };
+
+  const toggleIdInArray = (arrKey: 'cycleIds' | 'mentionedUserIds' | 'createdByIds' | 'labelIds') => {
+    return (id: string) => {
+      setFilters((prev) => {
+        const key = normalizeUuidKey(id);
+        const current = prev[arrKey];
+        const has = current.some((x) => normalizeUuidKey(x) === key);
+        const next = has ? current.filter((x) => normalizeUuidKey(x) !== key) : [...current, id];
+        return { ...prev, [arrKey]: next } as ModuleWorkItemsFiltersState;
+      });
+    };
+  };
+
+  const toggleCycle = toggleIdInArray('cycleIds');
+  const toggleMentionUser = toggleIdInArray('mentionedUserIds');
+  const toggleCreatedBy = toggleIdInArray('createdByIds');
+  const toggleLabel = toggleIdInArray('labelIds');
+
+  const memberDisplayName = (m: WorkspaceMemberApiResponse) =>
+    m.member_display_name?.trim() ||
+    m.member_email?.split('@')[0]?.trim() ||
+    (m.member_id ? m.member_id.slice(0, 12) : 'Member');
 
   const hasCustomStart = filters.startDatePresets.includes('custom');
   const toggleStartPreset = (d: Exclude<DatePreset, 'custom'>) => {
@@ -165,25 +230,28 @@ export function ModuleWorkItemsFiltersPanel({
           onToggle={() => toggle('state')}
           titleClassName={PLANE_SECTION_TITLE}
         >
-          {filterSearch('No state') ? (
-            <FiltersPanelOptionRow
-              checked={filters.stateIds.includes('__none__')}
-              onToggle={() => toggleState('__none__')}
-              icon={STATE_GROUP_ICONS.backlog}
-              label="No state"
-            />
-          ) : null}
-          <div className="max-h-48 overflow-y-auto">
-            {filteredStates.map((s) => (
-              <FiltersPanelOptionRow
-                key={s.id}
-                checked={filters.stateIds.includes(s.id)}
-                onToggle={() => toggleState(s.id)}
-                icon={stateRowIcon(s)}
-                label={s.name}
-              />
-            ))}
-          </div>
+          {(() => {
+            const matchingGroups = groupOrder.filter((g) => filterSearch(STATE_GROUP_LABELS[g]));
+            if (matchingGroups.length === 0) return emptyFilterHint;
+
+            return (
+              <div className="max-h-48 overflow-y-auto">
+                {matchingGroups.map((g) => {
+                  const ids = stateIdsByGroup[g] ?? [];
+                  const checked = ids.length > 0 && ids.every((id) => filters.stateIds.includes(id));
+                  return (
+                    <FiltersPanelOptionRow
+                      key={g}
+                      checked={checked}
+                      onToggle={() => toggleStateGroup(g)}
+                      icon={STATE_GROUP_ICONS[g]}
+                      label={STATE_GROUP_LABELS[g]}
+                    />
+                  );
+                })}
+              </div>
+            );
+          })()}
         </CollapsibleSection>
 
         <CollapsibleSection
@@ -192,29 +260,300 @@ export function ModuleWorkItemsFiltersPanel({
           onToggle={() => toggle('assignee')}
           titleClassName={PLANE_SECTION_TITLE}
         >
-          <div className="max-h-52 overflow-y-auto">
-            {filteredMembers.map((m) => {
-              const id = m.member_id;
-              const label =
-                m.member_display_name?.trim() || m.member_email?.split('@')[0]?.trim() || 'Member';
-              return (
+          {(() => {
+            const youMatches =
+              Boolean(currentUserId) && (filterSearch('You') || filterSearch(currentUserName));
+            const excludingYou = currentUserId
+              ? filteredMembers.filter(
+                  (m) => normalizeUuidKey(m.member_id) !== normalizeUuidKey(currentUserId),
+                )
+              : filteredMembers;
+
+            if (!youMatches && excludingYou.length === 0) return emptyFilterHint;
+
+            return (
+              <div className="max-h-52 overflow-y-auto">
+                {youMatches && currentUserId ? (
+                  <FiltersPanelOptionRow
+                    checked={filters.assigneeMemberIds.some(
+                      (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
+                    )}
+                    onToggle={() => toggleAssignee(currentUserId)}
+                    icon={
+                      currentUserAvatarUrl ? (
+                        <Avatar
+                          name={currentUserName}
+                          src={getImageUrl(currentUserAvatarUrl) ?? undefined}
+                          size="sm"
+                          className="h-5 w-5 shrink-0 text-[10px]"
+                        />
+                      ) : (
+                        <span className="flex size-5 items-center justify-center rounded-full bg-(--brand-200) text-[10px] font-medium text-(--brand-default)">
+                          {currentUserName.charAt(0).toUpperCase()}
+                        </span>
+                      )
+                    }
+                    label="You"
+                  />
+                ) : null}
+                {excludingYou.map((m) => {
+                  const id = m.member_id;
+                  const label = memberDisplayName(m);
+                  return (
+                    <FiltersPanelOptionRow
+                      key={m.id}
+                      checked={filters.assigneeMemberIds.some(
+                        (aid) => normalizeUuidKey(aid) === normalizeUuidKey(id),
+                      )}
+                      onToggle={() => toggleAssignee(id)}
+                      icon={
+                        <Avatar
+                          name={label}
+                          src={getImageUrl(m.member_avatar) ?? undefined}
+                          size="sm"
+                          className="h-5 w-5 shrink-0 text-[10px]"
+                        />
+                      }
+                      label={label}
+                    />
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Cycle"
+          open={open.cycle}
+          onToggle={() => toggle('cycle')}
+          titleClassName={PLANE_SECTION_TITLE}
+        >
+          {filteredCycles.length === 0 ? (
+            emptyFilterHint
+          ) : (
+            <div className="max-h-52 overflow-y-auto">
+              {filteredCycles.map((c) => (
                 <FiltersPanelOptionRow
-                  key={m.id}
-                  checked={filters.assigneeMemberIds.includes(id)}
-                  onToggle={() => toggleAssignee(id)}
+                  key={c.id}
+                  checked={filters.cycleIds.some(
+                    (id) => normalizeUuidKey(id) === normalizeUuidKey(c.id),
+                  )}
+                  onToggle={() => toggleCycle(c.id)}
+                  icon={<span className="flex size-3 shrink-0 items-center justify-center rounded-full bg-amber-500/20" aria-hidden />}
+                  label={c.name}
+                />
+              ))}
+            </div>
+          )}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Mention"
+          open={open.mention}
+          onToggle={() => toggle('mention')}
+          titleClassName={PLANE_SECTION_TITLE}
+        >
+          {(() => {
+            const youMatches =
+              Boolean(currentUserId) && (filterSearch('You') || filterSearch(currentUserName));
+            const excludingYou = currentUserId
+              ? filteredMembers.filter(
+                  (m) => normalizeUuidKey(m.member_id) !== normalizeUuidKey(currentUserId),
+                )
+              : filteredMembers;
+            if (!youMatches && excludingYou.length === 0) return emptyFilterHint;
+
+            return (
+              <div className="max-h-52 overflow-y-auto">
+                {youMatches && currentUserId ? (
+                  <FiltersPanelOptionRow
+                    checked={filters.mentionedUserIds.some(
+                      (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
+                    )}
+                    onToggle={() => toggleMentionUser(currentUserId)}
+                    icon={
+                      currentUserAvatarUrl ? (
+                        <Avatar
+                          name={currentUserName}
+                          src={getImageUrl(currentUserAvatarUrl) ?? undefined}
+                          size="sm"
+                          className="h-5 w-5 shrink-0 text-[10px]"
+                        />
+                      ) : (
+                        <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--brand-200) text-[10px] font-medium text-(--brand-default)">
+                          {currentUserName.charAt(0).toUpperCase()}
+                        </span>
+                      )
+                    }
+                    label="You"
+                  />
+                ) : null}
+                {excludingYou.map((m) => {
+                  const id = m.member_id;
+                  const label = memberDisplayName(m);
+                  return (
+                    <FiltersPanelOptionRow
+                      key={m.id}
+                      checked={filters.mentionedUserIds.some(
+                        (uid) => normalizeUuidKey(uid) === normalizeUuidKey(id),
+                      )}
+                      onToggle={() => toggleMentionUser(id)}
+                      icon={
+                        <Avatar
+                          name={label}
+                          src={getImageUrl(m.member_avatar) ?? undefined}
+                          size="sm"
+                          className="h-5 w-5 shrink-0 text-[10px]"
+                        />
+                      }
+                      label={label}
+                    />
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Created by"
+          open={open.created_by}
+          onToggle={() => toggle('created_by')}
+          titleClassName={PLANE_SECTION_TITLE}
+        >
+          {filteredMembers.length === 0 ? (
+            emptyFilterHint
+          ) : (
+            <div className="max-h-52 overflow-y-auto">
+              {filteredMembers.map((m) => {
+                const id = m.member_id;
+                const label = memberDisplayName(m);
+                return (
+                  <FiltersPanelOptionRow
+                    key={m.id}
+                    checked={filters.createdByIds.some(
+                      (cid) => normalizeUuidKey(cid) === normalizeUuidKey(id),
+                    )}
+                    onToggle={() => toggleCreatedBy(id)}
+                    icon={
+                      <Avatar
+                        name={label}
+                        src={getImageUrl(m.member_avatar) ?? undefined}
+                        size="sm"
+                        className="h-5 w-5 shrink-0 text-[10px]"
+                      />
+                    }
+                    label={label}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Label"
+          open={open.label}
+          onToggle={() => toggle('label')}
+          titleClassName={PLANE_SECTION_TITLE}
+        >
+          {filteredLabels.length === 0 ? (
+            emptyFilterHint
+          ) : (
+            <div className="max-h-52 overflow-y-auto">
+              {filteredLabels.map((l) => (
+                <FiltersPanelOptionRow
+                  key={l.id}
+                  checked={filters.labelIds.some(
+                    (id) => normalizeUuidKey(id) === normalizeUuidKey(l.id),
+                  )}
+                  onToggle={() => toggleLabel(l.id)}
                   icon={
-                    <Avatar
-                      name={label}
-                      src={getImageUrl(m.member_avatar) ?? undefined}
-                      size="sm"
-                      className="h-5 w-5 shrink-0 text-[10px]"
+                    <span
+                      className="size-3.5 shrink-0 rounded-full border border-(--border-subtle)"
+                      style={{
+                        backgroundColor: l.color ? l.color : 'transparent',
+                        borderColor: 'transparent',
+                      }}
+                      aria-hidden
                     />
                   }
-                  label={label}
+                  label={l.name}
                 />
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Work item Grouping"
+          open={open.work_item_grouping}
+          onToggle={() => toggle('work_item_grouping')}
+          titleClassName={PLANE_SECTION_TITLE}
+        >
+          <FiltersPanelOptionRow
+            checked={filters.workItemGrouping === 'all'}
+            onToggle={() => setFilters((prev) => ({ ...prev, workItemGrouping: 'all' }))}
+            label="All Work items"
+            radio
+          />
+          <FiltersPanelOptionRow
+            checked={filters.workItemGrouping === 'active'}
+            onToggle={() => setFilters((prev) => ({ ...prev, workItemGrouping: 'active' }))}
+            label="Active Work items"
+            radio
+          />
+          <FiltersPanelOptionRow
+            checked={filters.workItemGrouping === 'backlog'}
+            onToggle={() => setFilters((prev) => ({ ...prev, workItemGrouping: 'backlog' }))}
+            label="Backlog Work items"
+            radio
+          />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Start date"
+          open={open.start}
+          onToggle={() => toggle('start')}
+          titleClassName={PLANE_SECTION_TITLE}
+        >
+          {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map((d) =>
+            d === 'custom' ? (
+              <FiltersPanelOptionRow
+                key={d}
+                checked={hasCustomStart}
+                onToggle={() => {
+                  if (hasCustomStart) {
+                    setFilters((prev) => ({
+                      ...prev,
+                      startDatePresets: prev.startDatePresets.filter((x) => x !== 'custom'),
+                      startAfter: null,
+                      startBefore: null,
+                    }));
+                  } else {
+                    let openPicker = false;
+                    setFilters((prev) => {
+                      if (prev.startDatePresets.includes('custom')) {
+                        return prev;
+                      }
+                      openPicker = true;
+                      return { ...prev, startDatePresets: [...prev.startDatePresets, 'custom'] };
+                    });
+                    if (openPicker) queueMicrotask(() => onRequestStartCustom());
+                  }
+                }}
+                label={DATE_PRESET_LABELS[d]}
+              />
+            ) : (
+              <FiltersPanelOptionRow
+                key={d}
+                checked={filters.startDatePresets.includes(d)}
+                onToggle={() => toggleStartPreset(d)}
+                label={DATE_PRESET_LABELS[d]}
+              />
+            ),
+          )}
         </CollapsibleSection>
 
         <CollapsibleSection
@@ -269,50 +608,6 @@ export function ModuleWorkItemsFiltersPanel({
               }
             />
           ))}
-        </CollapsibleSection>
-
-        <CollapsibleSection
-          title="Start date"
-          open={open.start}
-          onToggle={() => toggle('start')}
-          titleClassName={PLANE_SECTION_TITLE}
-        >
-          {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map((d) =>
-            d === 'custom' ? (
-              <FiltersPanelOptionRow
-                key={d}
-                checked={hasCustomStart}
-                onToggle={() => {
-                  if (hasCustomStart) {
-                    setFilters((prev) => ({
-                      ...prev,
-                      startDatePresets: prev.startDatePresets.filter((x) => x !== 'custom'),
-                      startAfter: null,
-                      startBefore: null,
-                    }));
-                  } else {
-                    let openPicker = false;
-                    setFilters((prev) => {
-                      if (prev.startDatePresets.includes('custom')) {
-                        return prev;
-                      }
-                      openPicker = true;
-                      return { ...prev, startDatePresets: [...prev.startDatePresets, 'custom'] };
-                    });
-                    if (openPicker) queueMicrotask(() => onRequestStartCustom());
-                  }
-                }}
-                label={DATE_PRESET_LABELS[d]}
-              />
-            ) : (
-              <FiltersPanelOptionRow
-                key={d}
-                checked={filters.startDatePresets.includes(d)}
-                onToggle={() => toggleStartPreset(d)}
-                label={DATE_PRESET_LABELS[d]}
-              />
-            ),
-          )}
         </CollapsibleSection>
       </div>
     </>

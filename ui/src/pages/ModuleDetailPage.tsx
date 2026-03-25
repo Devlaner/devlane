@@ -396,9 +396,9 @@ export function ModuleDetailPage() {
 
   const filteredIssues = useMemo(() => {
     let base = applyModuleSubWorkFilter(issues, listDisplay);
-    base = filterModuleIssues(base, listFilters);
+    base = filterModuleIssues(base, listFilters, states);
     return base;
-  }, [issues, listDisplay, listFilters]);
+  }, [issues, listDisplay, listFilters, states]);
 
   const groupedIssues = useMemo(
     () =>

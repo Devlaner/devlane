@@ -9,10 +9,15 @@ import { ProjectIssuesDisplayPanel } from '../project-issues/ProjectIssuesDispla
 import { ProjectSectionNavChevron } from './ProjectSectionNavChevron';
 import { workspaceService } from '../../services/workspaceService';
 import { stateService } from '../../services/stateService';
+import { cycleService } from '../../services/cycleService';
+import { labelService } from '../../services/labelService';
+import { useAuth } from '../../contexts/AuthContext';
 import type {
   ProjectApiResponse,
   StateApiResponse,
   WorkspaceMemberApiResponse,
+  CycleApiResponse,
+  LabelApiResponse,
 } from '../../api/types';
 import {
   DEFAULT_MODULE_WORK_ITEMS_FILTERS,
@@ -256,6 +261,8 @@ export function ModuleDetailHeader({
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
   const modulePath = `${baseUrl}/modules/${encodeURIComponent(moduleRouteParam)}`;
 
+  const { user: authUser } = useAuth();
+
   const [moduleDropdownOpen, setModuleDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -264,6 +271,8 @@ export function ModuleDetailHeader({
 
   const [states, setStates] = useState<StateApiResponse[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
+  const [cycles, setCycles] = useState<CycleApiResponse[]>([]);
+  const [labels, setLabels] = useState<LabelApiResponse[]>([]);
   const [filters, setFilters] = useState<ModuleWorkItemsFiltersState>(
     DEFAULT_MODULE_WORK_ITEMS_FILTERS,
   );
@@ -288,17 +297,23 @@ export function ModuleDetailHeader({
     Promise.all([
       stateService.list(workspaceSlug, projectId),
       workspaceService.listMembers(workspaceSlug),
+      cycleService.list(workspaceSlug, projectId),
+      labelService.list(workspaceSlug, projectId),
     ])
-      .then(([st, mem]) => {
+      .then(([st, mem, cyc, lab]) => {
         if (!cancelled) {
           setStates(st ?? []);
           setMembers(mem ?? []);
+          setCycles(cyc ?? []);
+          setLabels(lab ?? []);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setStates([]);
           setMembers([]);
+          setCycles([]);
+          setLabels([]);
         }
       });
     return () => {
@@ -501,6 +516,11 @@ export function ModuleDetailHeader({
               setFilters={setFilters}
               states={states}
               members={members}
+              cycles={cycles}
+              labels={labels}
+              currentUserId={authUser?.id}
+              currentUserName={authUser?.name ?? 'You'}
+              currentUserAvatarUrl={authUser?.avatarUrl}
               onRequestDueCustom={() => {
                 setToolbarOpen(null);
                 setDateModal('due');
