@@ -88,13 +88,7 @@ Contributions are welcome. Please open an issue for bugs or feature ideas, and r
 
 ## Star History
 
-<a href="https://star-history.com/#Devlaner/devlane&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=Devlaner/devlane&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=Devlaner/devlane&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=Devlaner/devlane&type=Date" />
- </picture>
-</a>
+[![Stargazers over time](https://starchart.cc/Devlaner/devlane.svg?variant=adaptive)](https://starchart.cc/Devlaner/devlane)
 
 ## License
 
