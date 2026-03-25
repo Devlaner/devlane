@@ -21,6 +21,8 @@ import { ProjectIssuesDisplayPanel } from '../project-issues/ProjectIssuesDispla
 import { useAuth } from '../../contexts/AuthContext';
 import { workspaceService } from '../../services/workspaceService';
 import { projectService } from '../../services/projectService';
+import { cycleService } from '../../services/cycleService';
+import { labelService } from '../../services/labelService';
 import { issueService } from '../../services/issueService';
 import { viewService } from '../../services/viewService';
 import { moduleService } from '../../services/moduleService';
@@ -31,6 +33,8 @@ import type {
   IssueViewApiResponse,
   ModuleApiResponse,
   WorkspaceMemberApiResponse,
+  CycleApiResponse,
+  LabelApiResponse,
 } from '../../api/types';
 import {
   PROJECT_CYCLES_FILTER_EVENT,
@@ -51,6 +55,10 @@ import {
   type ProjectIssuesDisplayState,
 } from '../../lib/projectIssuesDisplay';
 import { PROJECT_VIEWS_FILTER_EVENT } from '../../lib/projectViewsEvents';
+import { slugify } from '../../lib/slug';
+import { MODULE_WORK_ITEMS_COUNT_EVENT } from '../../lib/moduleWorkItemsPrefs';
+import { ModuleDetailHeader } from './ModuleDetailHeader';
+import { ProjectSectionNavChevron } from './ProjectSectionNavChevron';
 
 export type ProjectSection = 'issues' | 'cycles' | 'modules' | 'views' | 'pages';
 
@@ -190,6 +198,44 @@ const IconCalendar = () => (
     <line x1="3" y1="10" x2="21" y2="10" />
   </svg>
 );
+const IconSpreadsheet = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <rect width="7" height="7" x="3" y="3" rx="1" />
+    <rect width="7" height="7" x="14" y="3" rx="1" />
+    <rect width="7" height="7" x="14" y="14" rx="1" />
+    <rect width="7" height="7" x="3" y="14" rx="1" />
+  </svg>
+);
+const IconGantt = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M3 6v12" />
+    <path d="M3 12h6" />
+    <path d="M3 18h4" />
+    <path d="M13 8h8" />
+    <path d="M13 12h5" />
+    <path d="M13 16h6" />
+  </svg>
+);
 const IconArrowUpDown = () => (
   <svg
     width="16"
@@ -237,6 +283,29 @@ const IconPlus = () => (
   >
     <path d="M5 12h14" />
     <path d="M12 5v14" />
+  </svg>
+);
+const IconSliders = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <line x1="4" y1="21" x2="4" y2="14" />
+    <line x1="4" y1="10" x2="4" y2="3" />
+    <line x1="12" y1="21" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12" y2="3" />
+    <line x1="20" y1="21" x2="20" y2="16" />
+    <line x1="20" y1="12" x2="20" y2="3" />
+    <line x1="1" y1="14" x2="7" y2="14" />
+    <line x1="9" y1="8" x2="15" y2="8" />
+    <line x1="17" y1="16" x2="23" y2="16" />
   </svg>
 );
 const IconSettings = () => (
@@ -544,7 +613,7 @@ function ProjectSectionDropdown({
         </span>
         {currentLabel}
         {currentSection === 'issues' && (
-          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-(--brand-200) px-1.5 text-xs font-medium text-(--brand-default)">
+          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-sky-100 px-1.5 text-[11px] font-semibold text-sky-800 dark:bg-sky-950 dark:text-sky-200">
             {issueCount}
           </span>
         )}
@@ -801,217 +870,6 @@ function ProjectDetailHeader({
   );
 }
 
-const IconListAlt = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-  </svg>
-);
-const IconBarChartModule = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <path d="M12 20V10M18 20V4M6 20v-4" />
-  </svg>
-);
-const IconLayoutGridModule = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <rect width="7" height="7" x="3" y="3" rx="1" />
-    <rect width="7" height="7" x="14" y="3" rx="1" />
-    <rect width="7" height="7" x="14" y="14" rx="1" />
-    <rect width="7" height="7" x="3" y="14" rx="1" />
-  </svg>
-);
-const IconSliders = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <line x1="4" y1="21" x2="4" y2="14" />
-    <line x1="4" y1="10" x2="4" y2="3" />
-    <line x1="12" y1="21" x2="12" y2="12" />
-    <line x1="12" y1="8" x2="12" y2="3" />
-    <line x1="20" y1="21" x2="20" y2="16" />
-    <line x1="20" y1="12" x2="20" y2="3" />
-    <line x1="1" y1="14" x2="7" y2="14" />
-    <line x1="9" y1="8" x2="15" y2="8" />
-    <line x1="17" y1="16" x2="23" y2="16" />
-  </svg>
-);
-
-function ModuleDetailHeader({
-  workspaceSlug,
-  projectId,
-  project,
-  projectName,
-  moduleName,
-}: {
-  workspaceSlug: string;
-  projectId: string;
-  project: ProjectApiResponse;
-  projectName: string;
-  moduleId: string;
-  moduleName: string;
-}) {
-  const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
-  const [moduleDropdownOpen, setModuleDropdownOpen] = useState(false);
-  const [viewLayout, setViewLayout] = useState<
-    'list' | 'board' | 'calendar' | 'gallery' | 'timeline'
-  >('list');
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setModuleDropdownOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const viewButtons: {
-    id: typeof viewLayout;
-    icon: React.ReactNode;
-    label: string;
-  }[] = [
-    { id: 'list', icon: <IconListAlt />, label: 'List' },
-    { id: 'board', icon: <IconBarChartModule />, label: 'Board' },
-    { id: 'calendar', icon: <IconCalendar />, label: 'Calendar' },
-    { id: 'gallery', icon: <IconLayoutGridModule />, label: 'Gallery' },
-    { id: 'timeline', icon: <IconListAlt />, label: 'Timeline' },
-  ];
-
-  return (
-    <>
-      <div className="flex min-w-0 flex-1 items-center gap-1 text-sm text-(--txt-primary)">
-        <Link
-          to={baseUrl}
-          className="flex shrink-0 items-center gap-1.5 truncate font-medium text-(--txt-secondary) hover:text-(--txt-primary) hover:underline"
-        >
-          <span className="flex size-5 shrink-0 items-center justify-center">
-            <ProjectIconDisplay
-              emoji={project.emoji}
-              icon_prop={project.icon_prop}
-              size={16}
-              className="leading-none"
-            />
-          </span>
-          {projectName}
-        </Link>
-        <span className="shrink-0 text-(--txt-icon-tertiary)">/</span>
-        <Link
-          to={`${baseUrl}/modules`}
-          className="shrink-0 truncate font-medium text-(--txt-secondary) hover:text-(--txt-primary) hover:underline"
-        >
-          Modules
-        </Link>
-        <span className="shrink-0 text-(--txt-icon-tertiary)">/</span>
-        <div ref={ref} className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => setModuleDropdownOpen((o) => !o)}
-            className="flex items-center gap-1 truncate rounded-md px-2.5 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover)"
-          >
-            <span className="min-w-0 truncate">{moduleName}</span>
-            <span className="shrink-0 text-(--txt-icon-tertiary)">
-              <IconChevronDown />
-            </span>
-          </button>
-          {moduleDropdownOpen && (
-            <div className="absolute left-0 top-full z-50 mt-1 min-w-40 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)">
-              <Link
-                to={`${baseUrl}/modules`}
-                className="block px-3 py-2 text-left text-sm text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
-                onClick={() => setModuleDropdownOpen(false)}
-              >
-                All modules
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="flex shrink-0 items-center gap-1">
-        <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
-          {viewButtons.map((b, i) => (
-            <Tooltip key={b.id} content={b.label}>
-              <button
-                type="button"
-                onClick={() => setViewLayout(b.id)}
-                className={`flex size-7 items-center justify-center rounded-md text-(--txt-icon-secondary) transition-colors ${
-                  viewLayout === b.id
-                    ? 'bg-white shadow-sm text-(--txt-primary)'
-                    : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
-                } ${i === 0 ? 'rounded-l-md' : ''} ${i === viewButtons.length - 1 ? 'rounded-r-md' : ''}`}
-                aria-pressed={viewLayout === b.id}
-              >
-                {b.icon}
-              </button>
-            </Tooltip>
-          ))}
-        </div>
-        <button
-          type="button"
-          className="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
-        >
-          <IconFilter />
-          Filters
-        </button>
-        <button
-          type="button"
-          className="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
-        >
-          <IconSliders />
-          Display
-        </button>
-        <button
-          type="button"
-          className="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
-        >
-          Analytics
-        </button>
-        <Link to={`${baseUrl}/issues?create=1`}>
-          <Button size="sm" className="gap-1.5 text-[13px] font-medium">
-            <IconPlus />
-            Add work item
-          </Button>
-        </Link>
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
-          aria-label="More options"
-        >
-          <IconMoreVertical />
-        </button>
-      </div>
-    </>
-  );
-}
-
 function ProjectSectionHeader({
   workspaceSlug,
   projectId,
@@ -1074,6 +932,8 @@ function ProjectSectionHeader({
   const [issuesFiltersOpen, setIssuesFiltersOpen] = useState<string | null>(null);
   const [issuesFiltersSearch, setIssuesFiltersSearch] = useState('');
   const [issuesMembers, setIssuesMembers] = useState<WorkspaceMemberApiResponse[]>([]);
+  const [issuesCycles, setIssuesCycles] = useState<CycleApiResponse[]>([]);
+  const [issuesLabels, setIssuesLabels] = useState<LabelApiResponse[]>([]);
   const [issuesFilters, setIssuesFilters] = useState<ProjectIssuesFiltersState>(() => ({
     ...DEFAULT_PROJECT_ISSUES_FILTERS,
   }));
@@ -1158,6 +1018,30 @@ function ProjectSectionHeader({
       cancelled = true;
     };
   }, [section, workspaceSlug]);
+
+  useEffect(() => {
+    if (section !== 'issues' || !workspaceSlug || !projectId) return;
+    let cancelled = false;
+    Promise.all([
+      cycleService.list(workspaceSlug, projectId),
+      labelService.list(workspaceSlug, projectId),
+    ])
+      .then(([cyc, lab]) => {
+        if (!cancelled) {
+          setIssuesCycles(Array.isArray(cyc) ? cyc : []);
+          setIssuesLabels(Array.isArray(lab) ? lab : []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setIssuesCycles([]);
+          setIssuesLabels([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [section, workspaceSlug, projectId]);
 
   useEffect(() => {
     if (section !== 'issues' || !workspaceSlug || !projectId) return;
@@ -1292,51 +1176,48 @@ function ProjectSectionHeader({
     if (section === 'issues') {
       return (
         <>
-          <Tooltip content="List view">
+          <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
             <button
               type="button"
-              className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--brand-default) hover:bg-(--bg-layer-2-hover)"
-              aria-label="List view"
+              title="List view"
+              aria-pressed
+              className="flex size-7 items-center justify-center rounded-md bg-white text-(--txt-primary) shadow-sm"
             >
               <IconList />
             </button>
-          </Tooltip>
-          <Tooltip content="Kanban">
-            <button
-              type="button"
-              className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-              aria-label="Kanban"
-            >
-              <IconColumns />
-            </button>
-          </Tooltip>
-          <Tooltip content="Board">
             <Link
               to={`${baseUrl}/board`}
-              className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+              title="Board"
               aria-label="Board"
+              className="flex size-7 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-secondary)"
             >
-              <IconLayoutGrid />
+              <IconColumns />
             </Link>
-          </Tooltip>
-          <Tooltip content="Calendar">
             <button
               type="button"
-              className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-              aria-label="Calendar"
+              title="Calendar (coming soon)"
+              disabled
+              className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
             >
               <IconCalendar />
             </button>
-          </Tooltip>
-          <Tooltip content="Gallery">
             <button
               type="button"
-              className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-              aria-label="Gallery"
+              title="Spreadsheet (coming soon)"
+              disabled
+              className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
             >
-              <IconGrid />
+              <IconSpreadsheet />
             </button>
-          </Tooltip>
+            <button
+              type="button"
+              title="Timeline (coming soon)"
+              disabled
+              className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
+            >
+              <IconGantt />
+            </button>
+          </div>
           <div className="mx-1 w-px self-stretch bg-(--border-subtle)" />
           <div className="relative shrink-0">
             <Dropdown
@@ -1346,9 +1227,9 @@ function ProjectSectionHeader({
               label="Filters"
               icon={<IconFilter />}
               displayValue="Filters"
-              panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
+              panelClassName="flex w-[min(400px,calc(100vw-24px))] max-h-[min(calc(100dvh-96px),36rem)] flex-col overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
               align="right"
-              triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+              triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) shadow-sm hover:bg-(--bg-layer-1-hover)"
               triggerContent={
                 <>
                   <span className="shrink-0 text-(--txt-icon-tertiary)">
@@ -1356,7 +1237,11 @@ function ProjectSectionHeader({
                   </span>
                   <span className="truncate">Filters</span>
                   <span className="shrink-0 text-(--txt-icon-tertiary)">
-                    <IconChevronDown />
+                    {issuesFiltersOpen === 'project-issues-filters' ? (
+                      <IconChevronUp />
+                    ) : (
+                      <IconChevronDown />
+                    )}
                   </span>
                 </>
               }
@@ -1367,6 +1252,8 @@ function ProjectSectionHeader({
                 filters={issuesFilters}
                 setFilters={setIssuesFilters}
                 members={issuesMembers}
+                cycles={issuesCycles}
+                labels={issuesLabels}
                 currentUserId={authUser?.id}
                 currentUserName={authUser?.name ?? 'You'}
                 currentUserAvatarUrl={authUser?.avatarUrl}
@@ -1384,6 +1271,11 @@ function ProjectSectionHeader({
               issuesFilters.priorities.length,
               issuesFilters.stateGroups.length,
               issuesFilters.assigneeIds.length,
+              issuesFilters.cycleIds.length,
+              issuesFilters.mentionedUserIds.length,
+              issuesFilters.createdByIds.length,
+              issuesFilters.labelIds.length,
+              issuesFilters.workItemGrouping === 'all' ? 0 : 1,
               issuesFilters.startDate.length,
               issuesFilters.dueDate.length,
             ].some((n) => n > 0) && (
@@ -1398,16 +1290,23 @@ function ProjectSectionHeader({
             openId={issuesDisplayOpen}
             onOpen={setIssuesDisplayOpen}
             label="Display"
-            icon={<IconLayoutGrid />}
+            icon={<IconSliders />}
             displayValue="Display"
-            panelClassName="flex w-[min(340px,calc(100vw-24px))] max-h-[min(70vh,560px)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
+            panelClassName="w-[min(400px,calc(100vw-24px))] max-h-[min(calc(100dvh-96px),50rem)] overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
             align="right"
             triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
             triggerContent={
               <>
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
+                  <IconSliders />
+                </span>
                 <span className="truncate">Display</span>
                 <span className="shrink-0 text-(--txt-icon-tertiary)">
-                  <IconChevronDown />
+                  {issuesDisplayOpen === 'project-issues-display' ? (
+                    <IconChevronUp />
+                  ) : (
+                    <IconChevronDown />
+                  )}
                 </span>
               </>
             }
@@ -2361,6 +2260,7 @@ function ProjectSectionHeader({
             </div>
           </div>
         )}
+        <ProjectSectionNavChevron baseUrl={baseUrl} currentSection={section} />
         <ProjectSectionDropdown
           baseUrl={baseUrl}
           currentSection={section}
@@ -2902,8 +2802,8 @@ function ProjectSavedViewDetailHeader({
             </div>
           </div>
         )}
-        <span className="shrink-0 text-(--txt-tertiary)" aria-hidden>
-          /
+        <span className="shrink-0 px-0.5 text-(--txt-icon-tertiary)" aria-hidden>
+          &gt;
         </span>
         <Link
           to={`${baseUrl}/views`}
@@ -2914,8 +2814,8 @@ function ProjectSavedViewDetailHeader({
           </span>
           Views
         </Link>
-        <span className="shrink-0 text-(--txt-tertiary)" aria-hidden>
-          /
+        <span className="shrink-0 px-0.5 text-(--txt-icon-tertiary)" aria-hidden>
+          &gt;
         </span>
         <div className="flex min-w-0 max-w-[36vw] items-center gap-1.5 truncate rounded-md px-2.5 py-1.5 font-medium text-(--txt-primary)">
           <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
@@ -2925,51 +2825,48 @@ function ProjectSavedViewDetailHeader({
         </div>
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-1">
-        <Tooltip content="List view">
+        <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
           <button
             type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--brand-default) hover:bg-(--bg-layer-2-hover)"
-            aria-label="List view"
+            title="List view"
+            aria-pressed
+            className="flex size-7 items-center justify-center rounded-md bg-white text-(--txt-primary) shadow-sm"
           >
             <IconList />
           </button>
-        </Tooltip>
-        <Tooltip content="Kanban">
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-            aria-label="Kanban"
-          >
-            <IconColumns />
-          </button>
-        </Tooltip>
-        <Tooltip content="Board">
           <Link
             to={`${baseUrl}/board`}
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+            title="Board"
             aria-label="Board"
+            className="flex size-7 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-secondary)"
           >
-            <IconLayoutGrid />
+            <IconColumns />
           </Link>
-        </Tooltip>
-        <Tooltip content="Calendar">
           <button
             type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-            aria-label="Calendar"
+            title="Calendar (coming soon)"
+            disabled
+            className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
           >
             <IconCalendar />
           </button>
-        </Tooltip>
-        <Tooltip content="Gallery">
           <button
             type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-            aria-label="Gallery"
+            title="Spreadsheet (coming soon)"
+            disabled
+            className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
           >
-            <IconGrid />
+            <IconSpreadsheet />
           </button>
-        </Tooltip>
+          <button
+            type="button"
+            title="Timeline (coming soon)"
+            disabled
+            className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
+          >
+            <IconGantt />
+          </button>
+        </div>
         <div className="mx-1 w-px self-stretch bg-(--border-subtle)" />
         <div className="relative shrink-0">
           <WorkspaceViewsFiltersDropdown
@@ -3018,6 +2915,16 @@ export function PageHeader() {
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [projectIssueCount, setProjectIssueCount] = useState(0);
   const [module, setModule] = useState<ModuleApiResponse | null>(null);
+  const [moduleWorkItemCount, setModuleWorkItemCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const onCount = (e: Event) => {
+      const d = (e as CustomEvent<{ count: number }>).detail;
+      if (d && typeof d.count === 'number') setModuleWorkItemCount(d.count);
+    };
+    window.addEventListener(MODULE_WORK_ITEMS_COUNT_EVENT, onCount);
+    return () => window.removeEventListener(MODULE_WORK_ITEMS_COUNT_EVENT, onCount);
+  }, []);
 
   useEffect(() => {
     if (!workspaceSlug) {
@@ -3081,10 +2988,16 @@ export function PageHeader() {
       return;
     }
     let cancelled = false;
+    const key = moduleId.trim().toLowerCase();
     moduleService
-      .get(workspaceSlug, projectId, moduleId)
-      .then((m) => {
-        if (!cancelled) setModule(m ?? null);
+      .list(workspaceSlug, projectId)
+      .then((mods) => {
+        if (cancelled) return;
+        const found =
+          (mods ?? []).find((x) => x.id === moduleId) ??
+          (mods ?? []).find((x) => slugify(x.name) === key) ??
+          null;
+        setModule(found);
       })
       .catch(() => {
         if (!cancelled) setModule(null);
@@ -3096,6 +3009,13 @@ export function PageHeader() {
 
   const pathname = location.pathname;
 
+  useEffect(() => {
+    const base = workspaceSlug && projectId ? `/${workspaceSlug}/projects/${projectId}` : '';
+    const norm = pathname.replace(/\/+$/, '') || pathname;
+    const onModuleDetail = Boolean(base && moduleId && norm === `${base}/modules/${moduleId}`);
+    if (!onModuleDetail) queueMicrotask(() => setModuleWorkItemCount(null));
+  }, [pathname, workspaceSlug, projectId, moduleId]);
+
   // Match route patterns to pick header
   const isWorkspaceHome = workspaceSlug && pathname === `/${workspaceSlug}`;
   const isSettings =
@@ -3104,12 +3024,12 @@ export function PageHeader() {
       pathname.startsWith(`/${workspaceSlug}/settings/`));
   const isProjectsList = workspaceSlug && pathname === `/${workspaceSlug}/projects`;
   const projectBase = workspaceSlug && projectId ? `/${workspaceSlug}/projects/${projectId}` : '';
+  const pathNoTrailingSlash = pathname.replace(/\/+$/, '') || pathname;
   const isIssuesPage = projectBase && pathname === `${projectBase}/issues`;
   const isCyclesPage = projectBase && pathname === `${projectBase}/cycles`;
   const isModulesPage = projectBase && pathname === `${projectBase}/modules`;
   const isModuleDetailPage =
-    projectBase && moduleId && pathname === `${projectBase}/modules/${moduleId}`;
-  const pathNoTrailingSlash = pathname.replace(/\/+$/, '') || pathname;
+    projectBase && moduleId && pathNoTrailingSlash === `${projectBase}/modules/${moduleId}`;
   const isViewsListPage = projectBase && pathNoTrailingSlash === `${projectBase}/views`;
   const isProjectSavedViewDetailPage =
     projectBase && !!viewId && pathNoTrailingSlash === `${projectBase}/views/${viewId}`;
@@ -3155,7 +3075,7 @@ export function PageHeader() {
     content = <AnalyticsHeader workspaceSlug={workspaceSlug} />;
   } else if (isWorkspaceViewsPage && workspaceSlug) {
     content = <WorkspaceViewsHeader />;
-  } else if (isModuleDetailPage && workspaceSlug && projectId && project && module) {
+  } else if (isModuleDetailPage && workspaceSlug && projectId && project && module && moduleId) {
     content = (
       <ModuleDetailHeader
         workspaceSlug={workspaceSlug}
@@ -3164,6 +3084,8 @@ export function PageHeader() {
         projectName={project.name}
         moduleId={module.id}
         moduleName={module.name}
+        moduleRouteParam={moduleId}
+        issueCountBadge={moduleWorkItemCount ?? module.issue_count ?? 0}
       />
     );
   } else if (isProjectSavedViewDetailPage && workspaceSlug && projectId && viewId && project) {
