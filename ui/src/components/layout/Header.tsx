@@ -55,7 +55,7 @@ export function Header() {
     if (project) {
       breadcrumbs.push({
         label: project.name,
-        href: `/${workspace.slug}/projects/${project.id}`,
+        href: `/${workspace.slug}/projects/${project.id}/issues`,
       });
     }
   }

@@ -1,9 +1,10 @@
 /* eslint-disable react-refresh/only-export-components -- routes file exports router + layout components; keep for future use */
-import { lazy, Suspense } from 'react';
-import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
+import { lazy, Suspense, useEffect } from 'react';
+import { createBrowserRouter, Navigate, Outlet, useParams } from 'react-router-dom';
 import { AppShell, InstanceAdminLayout } from '../components/layout';
 import { RootRedirect } from '../components/RootRedirect';
 import { SetupGate } from '../components/SetupGate';
+import { recentsService } from '../services/recentsService';
 import { InstanceAdminProtectedRoute } from './InstanceAdminProtectedRoute';
 import { ProtectedRoute } from './ProtectedRoute';
 
@@ -50,9 +51,6 @@ const AnalyticsWorkItemsPage = lazy(() =>
   import('../pages/AnalyticsWorkItemsPage').then((m) =>
     page({ AnalyticsWorkItemsPage: m.AnalyticsWorkItemsPage }),
   ),
-);
-const ProjectHomePage = lazy(() =>
-  import('../pages/ProjectHomePage').then((m) => page({ ProjectHomePage: m.ProjectHomePage })),
 );
 const IssueListPage = lazy(() =>
   import('../pages/IssueListPage').then((m) => page({ IssueListPage: m.IssueListPage })),
@@ -168,6 +166,22 @@ function WorkspaceLayout() {
 }
 
 function ProjectLayout() {
+  const { workspaceSlug, projectId } = useParams<{
+    workspaceSlug?: string;
+    projectId?: string;
+  }>();
+
+  useEffect(() => {
+    if (!workspaceSlug || !projectId) return;
+    recentsService
+      .record(workspaceSlug, {
+        entity_name: 'project',
+        entity_identifier: projectId,
+        project_id: projectId,
+      })
+      .catch(() => {});
+  }, [workspaceSlug, projectId]);
+
   return <Outlet />;
 }
 
@@ -344,11 +358,7 @@ const router = createBrowserRouter([
                     children: [
                       {
                         index: true,
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <ProjectHomePage />
-                          </Suspense>
-                        ),
+                        element: <Navigate to="issues" replace />,
                       },
                       {
                         path: 'issues',
