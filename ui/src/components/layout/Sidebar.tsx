@@ -1154,7 +1154,7 @@ export function Sidebar() {
                   {favoriteProjects.map((project) => (
                     <Link
                       key={project.id}
-                      to={`${baseUrl}/projects/${project.id}`}
+                      to={`${baseUrl}/projects/${project.id}/issues`}
                       className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                     >
                       <div className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-(--bg-layer-1) text-(--txt-tertiary)">

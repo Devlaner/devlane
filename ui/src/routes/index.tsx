@@ -51,9 +51,6 @@ const AnalyticsWorkItemsPage = lazy(() =>
     page({ AnalyticsWorkItemsPage: m.AnalyticsWorkItemsPage }),
   ),
 );
-const ProjectHomePage = lazy(() =>
-  import('../pages/ProjectHomePage').then((m) => page({ ProjectHomePage: m.ProjectHomePage })),
-);
 const IssueListPage = lazy(() =>
   import('../pages/IssueListPage').then((m) => page({ IssueListPage: m.IssueListPage })),
 );
@@ -344,11 +341,7 @@ const router = createBrowserRouter([
                     children: [
                       {
                         index: true,
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <ProjectHomePage />
-                          </Suspense>
-                        ),
+                        element: <Navigate to="issues" replace />,
                       },
                       {
                         path: 'issues',

@@ -8,7 +8,6 @@ export { DraftsPage } from './DraftsPage';
 export { ArchivesPage } from './ArchivesPage';
 export { AnalyticsOverviewPage } from './AnalyticsOverviewPage';
 export { AnalyticsWorkItemsPage } from './AnalyticsWorkItemsPage';
-export { ProjectHomePage } from './ProjectHomePage';
 export { IssueListPage } from './IssueListPage';
 export { IssueDetailPage } from './IssueDetailPage';
 export { BoardPage } from './BoardPage';
