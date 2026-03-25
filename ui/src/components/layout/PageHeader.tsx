@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Button } from '../ui';
+import { Button, Tooltip } from '../ui';
 import { Dropdown } from '../work-item';
 import { useModulesFilter } from '../../contexts/ModulesFilterContext';
 import { useWorkspaceViewsState } from '../../contexts/WorkspaceViewsStateContext';
@@ -958,20 +958,20 @@ function ModuleDetailHeader({
       <div className="flex shrink-0 items-center gap-1">
         <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
           {viewButtons.map((b, i) => (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => setViewLayout(b.id)}
-              className={`flex size-7 items-center justify-center rounded-md text-(--txt-icon-secondary) transition-colors ${
-                viewLayout === b.id
-                  ? 'bg-white shadow-sm text-(--txt-primary)'
-                  : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
-              } ${i === 0 ? 'rounded-l-md' : ''} ${i === viewButtons.length - 1 ? 'rounded-r-md' : ''}`}
-              title={b.label}
-              aria-pressed={viewLayout === b.id}
-            >
-              {b.icon}
-            </button>
+            <Tooltip key={b.id} content={b.label}>
+              <button
+                type="button"
+                onClick={() => setViewLayout(b.id)}
+                className={`flex size-7 items-center justify-center rounded-md text-(--txt-icon-secondary) transition-colors ${
+                  viewLayout === b.id
+                    ? 'bg-white shadow-sm text-(--txt-primary)'
+                    : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
+                } ${i === 0 ? 'rounded-l-md' : ''} ${i === viewButtons.length - 1 ? 'rounded-r-md' : ''}`}
+                aria-pressed={viewLayout === b.id}
+              >
+                {b.icon}
+              </button>
+            </Tooltip>
           ))}
         </div>
         <button
@@ -1292,46 +1292,51 @@ function ProjectSectionHeader({
     if (section === 'issues') {
       return (
         <>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--brand-default) hover:bg-(--bg-layer-2-hover)"
-            aria-label="List view"
-            title="List view"
-          >
-            <IconList />
-          </button>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-            aria-label="Kanban"
-            title="Kanban"
-          >
-            <IconColumns />
-          </button>
-          <Link
-            to={`${baseUrl}/board`}
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-            aria-label="Board"
-            title="Board"
-          >
-            <IconLayoutGrid />
-          </Link>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-            aria-label="Calendar"
-            title="Calendar"
-          >
-            <IconCalendar />
-          </button>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-            aria-label="Gallery"
-            title="Gallery"
-          >
-            <IconGrid />
-          </button>
+          <Tooltip content="List view">
+            <button
+              type="button"
+              className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--brand-default) hover:bg-(--bg-layer-2-hover)"
+              aria-label="List view"
+            >
+              <IconList />
+            </button>
+          </Tooltip>
+          <Tooltip content="Kanban">
+            <button
+              type="button"
+              className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+              aria-label="Kanban"
+            >
+              <IconColumns />
+            </button>
+          </Tooltip>
+          <Tooltip content="Board">
+            <Link
+              to={`${baseUrl}/board`}
+              className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+              aria-label="Board"
+            >
+              <IconLayoutGrid />
+            </Link>
+          </Tooltip>
+          <Tooltip content="Calendar">
+            <button
+              type="button"
+              className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+              aria-label="Calendar"
+            >
+              <IconCalendar />
+            </button>
+          </Tooltip>
+          <Tooltip content="Gallery">
+            <button
+              type="button"
+              className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+              aria-label="Gallery"
+            >
+              <IconGrid />
+            </button>
+          </Tooltip>
           <div className="mx-1 w-px self-stretch bg-(--border-subtle)" />
           <div className="relative shrink-0">
             <Dropdown
@@ -1875,45 +1880,48 @@ function ProjectSectionHeader({
             )}
           </div>
           <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
-            <button
-              type="button"
-              onClick={() => modulesFilter.setLayout('list')}
-              className={`flex size-7 items-center justify-center rounded-l-md text-(--txt-icon-secondary) transition-colors ${
-                listActive
-                  ? 'bg-white shadow-sm text-(--txt-primary)'
-                  : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
-              }`}
-              aria-pressed={listActive}
-              title="List layout"
-            >
-              <IconList />
-            </button>
-            <button
-              type="button"
-              onClick={() => modulesFilter.setLayout('gallery')}
-              className={`flex size-7 items-center justify-center text-(--txt-icon-secondary) transition-colors ${
-                galleryActive
-                  ? 'bg-white shadow-sm text-(--txt-primary)'
-                  : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
-              }`}
-              aria-pressed={galleryActive}
-              title="Gallery layout"
-            >
-              <IconLayoutGrid />
-            </button>
-            <button
-              type="button"
-              onClick={() => modulesFilter.setLayout('timeline')}
-              className={`flex size-7 items-center justify-center rounded-r-md text-(--txt-icon-secondary) transition-colors ${
-                timelineActive
-                  ? 'bg-white shadow-sm text-(--txt-primary)'
-                  : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
-              }`}
-              aria-pressed={timelineActive}
-              title="Timeline layout"
-            >
-              <IconStack />
-            </button>
+            <Tooltip content="List layout">
+              <button
+                type="button"
+                onClick={() => modulesFilter.setLayout('list')}
+                className={`flex size-7 items-center justify-center rounded-l-md text-(--txt-icon-secondary) transition-colors ${
+                  listActive
+                    ? 'bg-white shadow-sm text-(--txt-primary)'
+                    : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
+                }`}
+                aria-pressed={listActive}
+              >
+                <IconList />
+              </button>
+            </Tooltip>
+            <Tooltip content="Gallery layout">
+              <button
+                type="button"
+                onClick={() => modulesFilter.setLayout('gallery')}
+                className={`flex size-7 items-center justify-center text-(--txt-icon-secondary) transition-colors ${
+                  galleryActive
+                    ? 'bg-white shadow-sm text-(--txt-primary)'
+                    : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
+                }`}
+                aria-pressed={galleryActive}
+              >
+                <IconLayoutGrid />
+              </button>
+            </Tooltip>
+            <Tooltip content="Timeline layout">
+              <button
+                type="button"
+                onClick={() => modulesFilter.setLayout('timeline')}
+                className={`flex size-7 items-center justify-center rounded-r-md text-(--txt-icon-secondary) transition-colors ${
+                  timelineActive
+                    ? 'bg-white shadow-sm text-(--txt-primary)'
+                    : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
+                }`}
+                aria-pressed={timelineActive}
+              >
+                <IconStack />
+              </button>
+            </Tooltip>
           </div>
           <Button
             size="sm"
@@ -2917,46 +2925,51 @@ function ProjectSavedViewDetailHeader({
         </div>
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-1">
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--brand-default) hover:bg-(--bg-layer-2-hover)"
-          aria-label="List view"
-          title="List view"
-        >
-          <IconList />
-        </button>
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-          aria-label="Kanban"
-          title="Kanban"
-        >
-          <IconColumns />
-        </button>
-        <Link
-          to={`${baseUrl}/board`}
-          className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-          aria-label="Board"
-          title="Board"
-        >
-          <IconLayoutGrid />
-        </Link>
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-          aria-label="Calendar"
-          title="Calendar"
-        >
-          <IconCalendar />
-        </button>
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-          aria-label="Gallery"
-          title="Gallery"
-        >
-          <IconGrid />
-        </button>
+        <Tooltip content="List view">
+          <button
+            type="button"
+            className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--brand-default) hover:bg-(--bg-layer-2-hover)"
+            aria-label="List view"
+          >
+            <IconList />
+          </button>
+        </Tooltip>
+        <Tooltip content="Kanban">
+          <button
+            type="button"
+            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+            aria-label="Kanban"
+          >
+            <IconColumns />
+          </button>
+        </Tooltip>
+        <Tooltip content="Board">
+          <Link
+            to={`${baseUrl}/board`}
+            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+            aria-label="Board"
+          >
+            <IconLayoutGrid />
+          </Link>
+        </Tooltip>
+        <Tooltip content="Calendar">
+          <button
+            type="button"
+            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+            aria-label="Calendar"
+          >
+            <IconCalendar />
+          </button>
+        </Tooltip>
+        <Tooltip content="Gallery">
+          <button
+            type="button"
+            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
+            aria-label="Gallery"
+          >
+            <IconGrid />
+          </button>
+        </Tooltip>
         <div className="mx-1 w-px self-stretch bg-(--border-subtle)" />
         <div className="relative shrink-0">
           <WorkspaceViewsFiltersDropdown

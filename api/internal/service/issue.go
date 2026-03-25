@@ -126,7 +126,14 @@ func (s *IssueService) Create(ctx context.Context, workspaceSlug string, project
 	if parentID != nil {
 		issue.ParentID = parentID
 	}
-	if err := s.is.Create(ctx, issue); err != nil {
+	if err := s.is.Transaction(ctx, func(tx *gorm.DB) error {
+		seq, err := s.is.NextSequenceID(ctx, tx, projectID)
+		if err != nil {
+			return err
+		}
+		issue.SequenceID = seq
+		return tx.WithContext(ctx).Create(issue).Error
+	}); err != nil {
 		return nil, err
 	}
 	if len(assigneeIDs) > 0 {

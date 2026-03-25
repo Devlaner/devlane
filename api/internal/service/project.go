@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/store"
@@ -13,8 +14,9 @@ import (
 )
 
 var (
-	ErrProjectNotFound  = errors.New("project not found")
-	ErrProjectForbidden = errors.New("no access to this project")
+	ErrProjectNotFound          = errors.New("project not found")
+	ErrProjectForbidden         = errors.New("no access to this project")
+	ErrProjectIdentifierTooLong = errors.New("project identifier must be at most 7 characters")
 )
 
 // ProjectService handles project business logic.
@@ -66,6 +68,9 @@ func (s *ProjectService) Create(ctx context.Context, workspaceSlug, name, identi
 	if !ok {
 		return nil, ErrProjectForbidden
 	}
+	if identifier != "" && utf8.RuneCountInString(identifier) > 7 {
+		return nil, ErrProjectIdentifierTooLong
+	}
 	p := &model.Project{
 		WorkspaceID: wrk.ID,
 		Name:        name,
@@ -87,6 +92,9 @@ func (s *ProjectService) Update(ctx context.Context, workspaceSlug string, proje
 		p.Name = *name
 	}
 	if identifier != nil {
+		if *identifier != "" && utf8.RuneCountInString(*identifier) > 7 {
+			return nil, ErrProjectIdentifierTooLong
+		}
 		p.Identifier = *identifier
 	}
 	if description != nil {

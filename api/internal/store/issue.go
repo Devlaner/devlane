@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/binary"
 
 	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/google/uuid"
@@ -15,6 +16,29 @@ func NewIssueStore(db *gorm.DB) *IssueStore { return &IssueStore{db: db} }
 
 func (s *IssueStore) Create(ctx context.Context, i *model.Issue) error {
 	return s.db.WithContext(ctx).Create(i).Error
+}
+
+// Transaction runs fn inside a DB transaction (same connection).
+func (s *IssueStore) Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error {
+	return s.db.WithContext(ctx).Transaction(fn)
+}
+
+// NextSequenceID returns the next per-project issue number (1-based), serialized with an advisory lock.
+func (s *IssueStore) NextSequenceID(ctx context.Context, tx *gorm.DB, projectID uuid.UUID) (int, error) {
+	k1 := int32(binary.BigEndian.Uint32(projectID[0:4]))
+	k2 := int32(binary.BigEndian.Uint32(projectID[4:8]))
+	if err := tx.Exec("SELECT pg_advisory_xact_lock(?, ?)", k1, k2).Error; err != nil {
+		return 0, err
+	}
+	var max int
+	err := tx.WithContext(ctx).Raw(
+		`SELECT COALESCE(MAX(sequence_id), 0) FROM issues WHERE project_id = ? AND deleted_at IS NULL`,
+		projectID,
+	).Scan(&max).Error
+	if err != nil {
+		return 0, err
+	}
+	return max + 1, nil
 }
 
 func (s *IssueStore) GetByID(ctx context.Context, id uuid.UUID) (*model.Issue, error) {

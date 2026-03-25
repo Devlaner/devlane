@@ -111,6 +111,10 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Workspace not found"})
 			return
 		}
+		if err == service.ErrProjectIdentifierTooLong {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create project"})
 		return
 	}
@@ -308,6 +312,10 @@ func (h *ProjectHandler) Update(c *gin.Context) {
 	if err != nil {
 		if err == service.ErrProjectNotFound || err == service.ErrProjectForbidden {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+			return
+		}
+		if err == service.ErrProjectIdentifierTooLong {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update project"})

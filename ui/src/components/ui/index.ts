@@ -6,3 +6,4 @@ export { Input } from './Input';
 export { Modal } from './Modal';
 export { IconEye, IconEyeOff } from './PasswordRevealIcons';
 export { Skeleton } from './Skeleton';
+export { Tooltip } from './Tooltip';

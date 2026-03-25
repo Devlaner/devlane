@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Button, Input } from './ui';
+import { Button, Input, Tooltip } from './ui';
 import { CoverImageModal } from './CoverImageModal';
 import {
   ProjectIconDisplay,
@@ -29,7 +29,8 @@ const COVER_GRADIENTS = [
   'linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #f9a8d4 100%)',
 ];
 
-const IconInfo = () => (
+/** Exclamation-in-circle — same tone as placeholder (tooltip explains project key). */
+const IconIdentifierHint = () => (
   <svg
     width="14"
     height="14"
@@ -42,8 +43,8 @@ const IconInfo = () => (
     aria-hidden
   >
     <circle cx="12" cy="12" r="10" />
-    <path d="M12 16v-4" />
-    <path d="M12 8h.01" />
+    <path d="M12 8v5" />
+    <path d="M12 17h.01" />
   </svg>
 );
 
@@ -232,18 +233,32 @@ export function CreateProjectModal({
               <Input
                 value={identifier}
                 onChange={(e) =>
-                  setIdentifier(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))
+                  setIdentifier(
+                    e.target.value
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9-]/g, '')
+                      .slice(0, 7),
+                  )
                 }
-                placeholder="e.g. PROJ"
+                placeholder="Project ID"
+                maxLength={7}
                 disabled={submitting}
                 className="w-full pr-9"
               />
-              <span
-                className="absolute right-3 top-9 text-(--txt-icon-tertiary)"
-                title="Short identifier used in issue IDs (e.g. PROJ-123)"
-              >
-                <IconInfo />
-              </span>
+              <div className="absolute right-3 top-1/2 z-[1] flex size-8 -translate-y-1/2 items-center justify-center text-(--txt-placeholder)">
+                <Tooltip
+                  content="Helps you identify work items in the project uniquely. Max 7 characters."
+                  placement="top"
+                >
+                  <button
+                    type="button"
+                    className="flex size-8 items-center justify-center rounded-md text-(--txt-placeholder) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-secondary) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--border-strong)"
+                    aria-label="About project ID"
+                  >
+                    <IconIdentifierHint />
+                  </button>
+                </Tooltip>
+              </div>
             </div>
           </div>
           <div className="mt-4">
