@@ -42,6 +42,46 @@ func (s *IssueService) ensureProjectAccess(ctx context.Context, workspaceSlug st
 	return nil
 }
 
+func (s *IssueService) ensureWorkspaceAccess(ctx context.Context, workspaceSlug string, userID uuid.UUID) (*model.Workspace, error) {
+	wrk, err := s.ws.GetBySlug(ctx, workspaceSlug)
+	if err != nil {
+		return nil, ErrWorkspaceForbidden
+	}
+	ok, _ := s.ws.IsMember(ctx, wrk.ID, userID)
+	if !ok {
+		return nil, ErrWorkspaceForbidden
+	}
+	return wrk, nil
+}
+
+// ListDraftsForWorkspace returns draft issues for all projects in the workspace the user can access.
+func (s *IssueService) ListDraftsForWorkspace(ctx context.Context, workspaceSlug string, userID uuid.UUID, limit, offset int) ([]model.Issue, error) {
+	wrk, err := s.ensureWorkspaceAccess(ctx, workspaceSlug, userID)
+	if err != nil {
+		return nil, err
+	}
+	list, err := s.is.ListDraftsByWorkspaceID(ctx, wrk.ID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	for i := range list {
+		issueID := list[i].ID
+		if ids, err := s.is.ListAssigneesForIssue(ctx, issueID); err == nil {
+			list[i].AssigneeIDs = ids
+		}
+		if ids, err := s.is.ListLabelsForIssue(ctx, issueID); err == nil {
+			list[i].LabelIDs = ids
+		}
+		if ids, err := s.is.ListCycleIDsForIssue(ctx, issueID); err == nil {
+			list[i].CycleIDs = ids
+		}
+		if ids, err := s.is.ListModuleIDsForIssue(ctx, issueID); err == nil {
+			list[i].ModuleIDs = ids
+		}
+	}
+	return list, nil
+}
+
 func (s *IssueService) List(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID, limit, offset int) ([]model.Issue, error) {
 	if err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
 		return nil, err
@@ -97,7 +137,7 @@ func (s *IssueService) GetByID(ctx context.Context, workspaceSlug string, projec
 	return issue, nil
 }
 
-func (s *IssueService) Create(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID, name, description, priority string, stateID *uuid.UUID, assigneeIDs []uuid.UUID, labelIDs []uuid.UUID, startDate, targetDate *time.Time, parentID *uuid.UUID) (*model.Issue, error) {
+func (s *IssueService) Create(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID, name, description, priority string, stateID *uuid.UUID, assigneeIDs []uuid.UUID, labelIDs []uuid.UUID, startDate, targetDate *time.Time, parentID *uuid.UUID, isDraft bool) (*model.Issue, error) {
 	if err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
 		return nil, err
 	}
@@ -107,6 +147,7 @@ func (s *IssueService) Create(ctx context.Context, workspaceSlug string, project
 		ProjectID:   projectID,
 		WorkspaceID: wrk.ID,
 		CreatedByID: &userID,
+		IsDraft:     isDraft,
 	}
 	if description != "" {
 		issue.DescriptionHTML = description
@@ -145,7 +186,7 @@ func (s *IssueService) Create(ctx context.Context, workspaceSlug string, project
 	return issue, nil
 }
 
-func (s *IssueService) Update(ctx context.Context, workspaceSlug string, projectID, issueID uuid.UUID, userID uuid.UUID, name, priority, description *string, stateID *uuid.UUID, assigneeIDs, labelIDs *[]uuid.UUID, startDate, targetDate *time.Time, parentID *uuid.UUID) (*model.Issue, error) {
+func (s *IssueService) Update(ctx context.Context, workspaceSlug string, projectID, issueID uuid.UUID, userID uuid.UUID, name, priority, description *string, stateID *uuid.UUID, assigneeIDs, labelIDs *[]uuid.UUID, startDate, targetDate *time.Time, parentID *uuid.UUID, isDraft *bool) (*model.Issue, error) {
 	issue, err := s.GetByID(ctx, workspaceSlug, projectID, issueID, userID)
 	if err != nil {
 		return nil, err
@@ -170,6 +211,9 @@ func (s *IssueService) Update(ctx context.Context, workspaceSlug string, project
 	}
 	if parentID != nil {
 		issue.ParentID = parentID
+	}
+	if isDraft != nil {
+		issue.IsDraft = *isDraft
 	}
 	issue.UpdatedByID = &userID
 	if err := s.is.Update(ctx, issue); err != nil {

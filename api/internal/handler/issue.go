@@ -29,6 +29,32 @@ func issueID(c *gin.Context) (uuid.UUID, bool) {
 	return id, true
 }
 
+// ListWorkspaceDrafts returns draft work items for the workspace (all projects).
+// GET /api/workspaces/:slug/draft-issues/
+func (h *IssueHandler) ListWorkspaceDrafts(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	slug := c.Param("slug")
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	list, err := h.Issue.ListDraftsForWorkspace(c.Request.Context(), slug, user.ID, limit, offset)
+	if err != nil {
+		if err == service.ErrWorkspaceForbidden {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list draft issues"})
+		return
+	}
+	c.JSON(http.StatusOK, list)
+}
+
 // List returns issues for the project.
 // GET /api/workspaces/:slug/projects/:projectId/issues/
 func (h *IssueHandler) List(c *gin.Context) {
@@ -114,6 +140,7 @@ func (h *IssueHandler) Create(c *gin.Context) {
 		TargetDate  *string     `json:"target_date"`
 		AssigneeIDs []uuid.UUID `json:"assignee_ids"`
 		LabelIDs    []uuid.UUID `json:"label_ids"`
+		IsDraft     bool        `json:"is_draft"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
@@ -137,7 +164,7 @@ func (h *IssueHandler) Create(c *gin.Context) {
 		}
 	}
 
-	issue, err := h.Issue.Create(c.Request.Context(), slug, projectID, user.ID, body.Name, body.Description, body.Priority, body.StateID, body.AssigneeIDs, body.LabelIDs, startDate, targetDate, body.ParentID)
+	issue, err := h.Issue.Create(c.Request.Context(), slug, projectID, user.ID, body.Name, body.Description, body.Priority, body.StateID, body.AssigneeIDs, body.LabelIDs, startDate, targetDate, body.ParentID, body.IsDraft)
 	if err != nil {
 		if err == service.ErrProjectForbidden || err == service.ErrProjectNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
@@ -177,6 +204,7 @@ func (h *IssueHandler) Update(c *gin.Context) {
 		TargetDate  *string     `json:"target_date"`
 		AssigneeIDs []uuid.UUID `json:"assignee_ids"`
 		LabelIDs    []uuid.UUID `json:"label_ids"`
+		IsDraft     *bool       `json:"is_draft"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
@@ -222,7 +250,7 @@ func (h *IssueHandler) Update(c *gin.Context) {
 		}
 	}
 
-	issue, err := h.Issue.Update(c.Request.Context(), slug, projectID, issueID, user.ID, name, priority, description, body.StateID, assigneeIDs, labelIDs, startDate, targetDate, body.ParentID)
+	issue, err := h.Issue.Update(c.Request.Context(), slug, projectID, issueID, user.ID, name, priority, description, body.StateID, assigneeIDs, labelIDs, startDate, targetDate, body.ParentID, body.IsDraft)
 	if err != nil {
 		if err == service.ErrIssueNotFound || err == service.ErrProjectForbidden {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Issue not found"})
