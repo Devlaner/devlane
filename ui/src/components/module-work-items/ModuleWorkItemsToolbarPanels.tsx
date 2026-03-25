@@ -3,11 +3,7 @@ import { CollapsibleSection } from '../workspace-views/WorkspaceViewsFiltersShar
 import { Avatar } from '../ui';
 import { getImageUrl } from '../../lib/utils';
 import type { StateApiResponse, WorkspaceMemberApiResponse } from '../../api/types';
-import {
-  type ModuleDueDatePreset,
-  type ModuleWorkItemsDisplayState,
-  type ModuleWorkItemsFiltersState,
-} from '../../lib/moduleWorkItemsPrefs';
+import { type ModuleDueDatePreset, type ModuleWorkItemsFiltersState } from '../../lib/moduleWorkItemsPrefs';
 
 const PRIORITIES = ['urgent', 'high', 'medium', 'low', 'none'] as const;
 
@@ -210,105 +206,6 @@ export function ModuleWorkItemsFiltersPanel({
               {[filters.startAfter, filters.startBefore].filter(Boolean).join(' → ')}
             </p>
           )}
-        </div>
-      </CollapsibleSection>
-    </div>
-  );
-}
-
-export interface ModuleWorkItemsDisplayPanelProps {
-  display: ModuleWorkItemsDisplayState;
-  setDisplay: Dispatch<SetStateAction<ModuleWorkItemsDisplayState>>;
-}
-
-export function ModuleWorkItemsDisplayPanel({
-  display,
-  setDisplay,
-}: ModuleWorkItemsDisplayPanelProps) {
-  const [open, setOpen] = useState({ layout: true, props: true });
-  const toggle = (key: keyof typeof open) => setOpen((o) => ({ ...o, [key]: !o[key] }));
-
-  const rowToggle = (key: keyof ModuleWorkItemsDisplayState) => {
-    setDisplay((p) => ({ ...p, [key]: !p[key] }));
-  };
-
-  return (
-    <div className="w-72 max-h-[min(70vh,28rem)] overflow-y-auto py-1">
-      <CollapsibleSection title="Layout" open={open.layout} onToggle={() => toggle('layout')}>
-        <div className="space-y-0.5 px-2 pb-2">
-          {(
-            [
-              [false, 'All work items'],
-              [true, 'Group by state'],
-            ] as const
-          ).map(([val, label]) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => setDisplay((p) => ({ ...p, groupByState: val }))}
-              className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] ${
-                display.groupByState === val
-                  ? 'bg-(--bg-accent-subtle) font-medium text-(--txt-accent-primary)'
-                  : 'text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)'
-              }`}
-            >
-              <span
-                className={`flex size-3.5 shrink-0 items-center justify-center rounded-full border-2 ${
-                  display.groupByState === val
-                    ? 'border-(--brand-default) bg-(--brand-default)'
-                    : 'border-(--border-strong)'
-                }`}
-              >
-                {display.groupByState === val ? (
-                  <span className="size-1.5 rounded-full bg-white" />
-                ) : null}
-              </span>
-              {label}
-            </button>
-          ))}
-          <label className="mt-2 flex cursor-pointer items-center gap-2 px-2 py-1.5 text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
-            <input
-              type="checkbox"
-              className="size-3.5 rounded border-(--border-strong)"
-              checked={display.showSubWorkItems}
-              onChange={(e) =>
-                setDisplay((p) => ({
-                  ...p,
-                  showSubWorkItems: e.target.checked,
-                }))
-              }
-            />
-            Show sub-work items
-          </label>
-        </div>
-      </CollapsibleSection>
-      <CollapsibleSection title="Properties" open={open.props} onToggle={() => toggle('props')}>
-        <div className="px-2 pb-2">
-          {(
-            [
-              ['showState', 'State'],
-              ['showPriority', 'Priority'],
-              ['showStartDate', 'Start date'],
-              ['showDueDate', 'Due date'],
-              ['showAssignee', 'Assignees'],
-              ['showModule', 'Module'],
-              ['showLabels', 'Labels'],
-              ['showVisibility', 'Visibility'],
-            ] as const
-          ).map(([k, label]) => (
-            <label
-              key={k}
-              className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-            >
-              <input
-                type="checkbox"
-                className="size-3.5 rounded border-(--border-strong)"
-                checked={Boolean(display[k])}
-                onChange={() => rowToggle(k)}
-              />
-              {label}
-            </label>
-          ))}
         </div>
       </CollapsibleSection>
     </div>

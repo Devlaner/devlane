@@ -4,10 +4,8 @@ import { Button } from '../ui';
 import { Dropdown } from '../work-item';
 import { DateRangeModal } from '../workspace-views/DateRangeModal';
 import { ProjectIconDisplay } from '../ProjectIconModal';
-import {
-  ModuleWorkItemsDisplayPanel,
-  ModuleWorkItemsFiltersPanel,
-} from '../module-work-items/ModuleWorkItemsToolbarPanels';
+import { ModuleWorkItemsFiltersPanel } from '../module-work-items/ModuleWorkItemsToolbarPanels';
+import { ProjectIssuesDisplayPanel } from '../project-issues/ProjectIssuesDisplayPanel';
 import { workspaceService } from '../../services/workspaceService';
 import { stateService } from '../../services/stateService';
 import type {
@@ -16,7 +14,6 @@ import type {
   WorkspaceMemberApiResponse,
 } from '../../api/types';
 import {
-  DEFAULT_MODULE_WORK_ITEMS_DISPLAY,
   DEFAULT_MODULE_WORK_ITEMS_FILTERS,
   MODULE_WORK_ITEMS_DISPLAY_EVENT,
   MODULE_WORK_ITEMS_FILTER_EVENT,
@@ -25,9 +22,12 @@ import {
   moduleWorkItemsPrefsKey,
   parseModuleWorkItemsPrefs,
   serializeModuleWorkItemsPrefs,
-  type ModuleWorkItemsDisplayState,
   type ModuleWorkItemsFiltersState,
 } from '../../lib/moduleWorkItemsPrefs';
+import {
+  cloneDefaultProjectIssuesDisplay,
+  type ProjectIssuesDisplayState,
+} from '../../lib/projectIssuesDisplay';
 
 const IconChevronDown = () => (
   <svg
@@ -230,8 +230,8 @@ export function ModuleDetailHeader({
   const [filters, setFilters] = useState<ModuleWorkItemsFiltersState>(
     DEFAULT_MODULE_WORK_ITEMS_FILTERS,
   );
-  const [display, setDisplay] = useState<ModuleWorkItemsDisplayState>(
-    DEFAULT_MODULE_WORK_ITEMS_DISPLAY,
+  const [display, setDisplay] = useState<ProjectIssuesDisplayState>(() =>
+    cloneDefaultProjectIssuesDisplay(),
   );
   const [dateModal, setDateModal] = useState<'due' | 'start' | null>(null);
 
@@ -276,10 +276,10 @@ export function ModuleDetailHeader({
     queueMicrotask(() => {
       if (parsed) {
         setFilters({ ...DEFAULT_MODULE_WORK_ITEMS_FILTERS, ...parsed.filters });
-        setDisplay({ ...DEFAULT_MODULE_WORK_ITEMS_DISPLAY, ...parsed.display });
+        setDisplay(parsed.display);
       } else {
         setFilters(DEFAULT_MODULE_WORK_ITEMS_FILTERS);
-        setDisplay(DEFAULT_MODULE_WORK_ITEMS_DISPLAY);
+        setDisplay(cloneDefaultProjectIssuesDisplay());
       }
     });
   }, [workspaceSlug, projectId, moduleId]);
@@ -481,7 +481,7 @@ export function ModuleDetailHeader({
             </span>
           }
         >
-          <ModuleWorkItemsDisplayPanel display={display} setDisplay={setDisplay} />
+          <ProjectIssuesDisplayPanel display={display} setDisplay={setDisplay} />
         </Dropdown>
 
         <Link

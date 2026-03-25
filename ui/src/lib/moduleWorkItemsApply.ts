@@ -1,8 +1,6 @@
 import type { IssueApiResponse } from '../api/types';
-import type {
-  ModuleWorkItemsDisplayState,
-  ModuleWorkItemsFiltersState,
-} from './moduleWorkItemsPrefs';
+import type { ModuleWorkItemsFiltersState } from './moduleWorkItemsPrefs';
+import type { ProjectIssuesDisplayState } from './projectIssuesDisplay';
 
 function startOfWeek(d: Date): Date {
   const x = new Date(d);
@@ -91,23 +89,8 @@ export function filterModuleIssues(
 
 export function applyModuleSubWorkFilter(
   issues: IssueApiResponse[],
-  display: ModuleWorkItemsDisplayState,
+  display: Pick<ProjectIssuesDisplayState, 'showSubWorkItems'>,
 ): IssueApiResponse[] {
   if (display.showSubWorkItems) return issues;
   return issues.filter((i) => !i.parent_id);
-}
-
-export function sortModuleIssuesDefault(
-  issues: IssueApiResponse[],
-  stateOrder: Map<string, number>,
-): IssueApiResponse[] {
-  return [...issues].sort((a, b) => {
-    const sa = a.state_id ? (stateOrder.get(a.state_id) ?? 999) : 999;
-    const sb = b.state_id ? (stateOrder.get(b.state_id) ?? 999) : 999;
-    if (sa !== sb) return sa - sb;
-    const na = a.sequence_id ?? 0;
-    const nb = b.sequence_id ?? 0;
-    if (na !== nb) return na - nb;
-    return (a.name || '').localeCompare(b.name || '');
-  });
 }

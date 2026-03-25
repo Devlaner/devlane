@@ -1,3 +1,10 @@
+import type { ProjectIssuesDisplayPayload } from './projectIssuesEvents';
+import {
+  cloneDefaultProjectIssuesDisplay,
+  fromDisplayPayload,
+  type ProjectIssuesDisplayState,
+} from './projectIssuesDisplay';
+
 export const MODULE_WORK_ITEMS_FILTER_EVENT = 'devlane:module-work-items-filter';
 export const MODULE_WORK_ITEMS_DISPLAY_EVENT = 'devlane:module-work-items-display';
 export const MODULE_WORK_ITEMS_COUNT_EVENT = 'devlane:module-work-items-count';
@@ -28,35 +35,11 @@ export const DEFAULT_MODULE_WORK_ITEMS_FILTERS: ModuleWorkItemsFiltersState = {
   startBefore: null,
 };
 
-export interface ModuleWorkItemsDisplayState {
-  groupByState: boolean;
-  showSubWorkItems: boolean;
-  showState: boolean;
-  showPriority: boolean;
-  showStartDate: boolean;
-  showDueDate: boolean;
-  showAssignee: boolean;
-  showModule: boolean;
-  showLabels: boolean;
-  showVisibility: boolean;
-}
-
-export const DEFAULT_MODULE_WORK_ITEMS_DISPLAY: ModuleWorkItemsDisplayState = {
-  groupByState: false,
-  showSubWorkItems: true,
-  showState: true,
-  showPriority: true,
-  showStartDate: true,
-  showDueDate: true,
-  showAssignee: true,
-  showModule: true,
-  showLabels: true,
-  showVisibility: true,
-};
+export type { ProjectIssuesDisplayState };
 
 export interface PersistedModuleWorkItemsPrefs {
   filters: ModuleWorkItemsFiltersState;
-  display: ModuleWorkItemsDisplayState;
+  display: ProjectIssuesDisplayState;
 }
 
 export function moduleWorkItemsPrefsKey(
@@ -67,6 +50,23 @@ export function moduleWorkItemsPrefsKey(
   return `devlane:module-work-items:${workspaceSlug}:${projectId}:${moduleId}`;
 }
 
+function normalizeModuleDisplay(raw: unknown): ProjectIssuesDisplayState {
+  if (!raw || typeof raw !== 'object') return cloneDefaultProjectIssuesDisplay();
+  const o = raw as Record<string, unknown>;
+  if (Array.isArray(o.displayProperties)) {
+    return fromDisplayPayload({
+      displayProperties: o.displayProperties as ProjectIssuesDisplayPayload['displayProperties'],
+      groupBy: (o.groupBy as ProjectIssuesDisplayPayload['groupBy']) ?? 'none',
+      orderBy: (o.orderBy as ProjectIssuesDisplayPayload['orderBy']) ?? 'last_created',
+      showSubWorkItems:
+        o.showSubWorkItems !== undefined ? Boolean(o.showSubWorkItems) : true,
+      showEmptyGroups:
+        o.showEmptyGroups !== undefined ? Boolean(o.showEmptyGroups) : true,
+    });
+  }
+  return cloneDefaultProjectIssuesDisplay();
+}
+
 export function parseModuleWorkItemsPrefs(
   raw: string | null,
 ): PersistedModuleWorkItemsPrefs | null {
@@ -75,7 +75,7 @@ export function parseModuleWorkItemsPrefs(
     const p = JSON.parse(raw) as PersistedModuleWorkItemsPrefs;
     if (!p || typeof p !== 'object') return null;
     const filters = { ...DEFAULT_MODULE_WORK_ITEMS_FILTERS, ...p.filters };
-    const display = { ...DEFAULT_MODULE_WORK_ITEMS_DISPLAY, ...p.display };
+    const display = normalizeModuleDisplay(p.display);
     return { filters, display };
   } catch {
     return null;
@@ -83,7 +83,16 @@ export function parseModuleWorkItemsPrefs(
 }
 
 export function serializeModuleWorkItemsPrefs(p: PersistedModuleWorkItemsPrefs): string {
-  return JSON.stringify(p);
+  return JSON.stringify({
+    filters: p.filters,
+    display: {
+      displayProperties: [...p.display.displayProperties],
+      groupBy: p.display.groupBy,
+      orderBy: p.display.orderBy,
+      showSubWorkItems: p.display.showSubWorkItems,
+      showEmptyGroups: p.display.showEmptyGroups,
+    },
+  });
 }
 
 export function isModuleFiltersActive(f: ModuleWorkItemsFiltersState): boolean {
