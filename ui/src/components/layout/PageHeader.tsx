@@ -193,6 +193,44 @@ const IconCalendar = () => (
     <line x1="3" y1="10" x2="21" y2="10" />
   </svg>
 );
+const IconSpreadsheet = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <rect width="7" height="7" x="3" y="3" rx="1" />
+    <rect width="7" height="7" x="14" y="3" rx="1" />
+    <rect width="7" height="7" x="14" y="14" rx="1" />
+    <rect width="7" height="7" x="3" y="14" rx="1" />
+  </svg>
+);
+const IconGantt = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M3 6v12" />
+    <path d="M3 12h6" />
+    <path d="M3 18h4" />
+    <path d="M13 8h8" />
+    <path d="M13 12h5" />
+    <path d="M13 16h6" />
+  </svg>
+);
 const IconArrowUpDown = () => (
   <svg
     width="16"
@@ -240,6 +278,29 @@ const IconPlus = () => (
   >
     <path d="M5 12h14" />
     <path d="M12 5v14" />
+  </svg>
+);
+const IconSliders = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <line x1="4" y1="21" x2="4" y2="14" />
+    <line x1="4" y1="10" x2="4" y2="3" />
+    <line x1="12" y1="21" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12" y2="3" />
+    <line x1="20" y1="21" x2="20" y2="16" />
+    <line x1="20" y1="12" x2="20" y2="3" />
+    <line x1="1" y1="14" x2="7" y2="14" />
+    <line x1="9" y1="8" x2="15" y2="8" />
+    <line x1="17" y1="16" x2="23" y2="16" />
   </svg>
 );
 const IconSettings = () => (
@@ -547,7 +608,7 @@ function ProjectSectionDropdown({
         </span>
         {currentLabel}
         {currentSection === 'issues' && (
-          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-(--brand-200) px-1.5 text-xs font-medium text-(--brand-default)">
+          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-sky-100 px-1.5 text-[11px] font-semibold text-sky-800 dark:bg-sky-950 dark:text-sky-200">
             {issueCount}
           </span>
         )}
@@ -1084,46 +1145,48 @@ function ProjectSectionHeader({
     if (section === 'issues') {
       return (
         <>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--brand-default) hover:bg-(--bg-layer-2-hover)"
-            aria-label="List view"
-            title="List view"
-          >
-            <IconList />
-          </button>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-            aria-label="Kanban"
-            title="Kanban"
-          >
-            <IconColumns />
-          </button>
-          <Link
-            to={`${baseUrl}/board`}
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-            aria-label="Board"
-            title="Board"
-          >
-            <IconLayoutGrid />
-          </Link>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-            aria-label="Calendar"
-            title="Calendar"
-          >
-            <IconCalendar />
-          </button>
-          <button
-            type="button"
-            className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-            aria-label="Gallery"
-            title="Gallery"
-          >
-            <IconGrid />
-          </button>
+          <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
+            <button
+              type="button"
+              title="List view"
+              aria-pressed
+              className="flex size-7 items-center justify-center rounded-md bg-white text-(--txt-primary) shadow-sm"
+            >
+              <IconList />
+            </button>
+            <Link
+              to={`${baseUrl}/board`}
+              title="Board"
+              aria-label="Board"
+              className="flex size-7 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-secondary)"
+            >
+              <IconColumns />
+            </Link>
+            <button
+              type="button"
+              title="Calendar (coming soon)"
+              disabled
+              className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
+            >
+              <IconCalendar />
+            </button>
+            <button
+              type="button"
+              title="Spreadsheet (coming soon)"
+              disabled
+              className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
+            >
+              <IconSpreadsheet />
+            </button>
+            <button
+              type="button"
+              title="Timeline (coming soon)"
+              disabled
+              className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
+            >
+              <IconGantt />
+            </button>
+          </div>
           <div className="mx-1 w-px self-stretch bg-(--border-subtle)" />
           <div className="relative shrink-0">
             <Dropdown
@@ -1185,13 +1248,16 @@ function ProjectSectionHeader({
             openId={issuesDisplayOpen}
             onOpen={setIssuesDisplayOpen}
             label="Display"
-            icon={<IconLayoutGrid />}
+            icon={<IconSliders />}
             displayValue="Display"
-            panelClassName="flex w-[min(340px,calc(100vw-24px))] max-h-[min(70vh,560px)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
+            panelClassName="overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
             align="right"
             triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
             triggerContent={
               <>
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
+                  <IconSliders />
+                </span>
                 <span className="truncate">Display</span>
                 <span className="shrink-0 text-(--txt-icon-tertiary)">
                   <IconChevronDown />
@@ -2145,6 +2211,9 @@ function ProjectSectionHeader({
             </div>
           </div>
         )}
+        <span className="shrink-0 px-0.5 text-(--txt-icon-tertiary)" aria-hidden>
+          &gt;
+        </span>
         <ProjectSectionDropdown
           baseUrl={baseUrl}
           currentSection={section}
@@ -2686,8 +2755,8 @@ function ProjectSavedViewDetailHeader({
             </div>
           </div>
         )}
-        <span className="shrink-0 text-(--txt-tertiary)" aria-hidden>
-          /
+        <span className="shrink-0 px-0.5 text-(--txt-icon-tertiary)" aria-hidden>
+          &gt;
         </span>
         <Link
           to={`${baseUrl}/views`}
@@ -2698,8 +2767,8 @@ function ProjectSavedViewDetailHeader({
           </span>
           Views
         </Link>
-        <span className="shrink-0 text-(--txt-tertiary)" aria-hidden>
-          /
+        <span className="shrink-0 px-0.5 text-(--txt-icon-tertiary)" aria-hidden>
+          &gt;
         </span>
         <div className="flex min-w-0 max-w-[36vw] items-center gap-1.5 truncate rounded-md px-2.5 py-1.5 font-medium text-(--txt-primary)">
           <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
@@ -2709,46 +2778,48 @@ function ProjectSavedViewDetailHeader({
         </div>
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-1">
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--brand-default) hover:bg-(--bg-layer-2-hover)"
-          aria-label="List view"
-          title="List view"
-        >
-          <IconList />
-        </button>
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-          aria-label="Kanban"
-          title="Kanban"
-        >
-          <IconColumns />
-        </button>
-        <Link
-          to={`${baseUrl}/board`}
-          className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-          aria-label="Board"
-          title="Board"
-        >
-          <IconLayoutGrid />
-        </Link>
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-          aria-label="Calendar"
-          title="Calendar"
-        >
-          <IconCalendar />
-        </button>
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2) hover:text-(--txt-icon-secondary)"
-          aria-label="Gallery"
-          title="Gallery"
-        >
-          <IconGrid />
-        </button>
+        <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
+          <button
+            type="button"
+            title="List view"
+            aria-pressed
+            className="flex size-7 items-center justify-center rounded-md bg-white text-(--txt-primary) shadow-sm"
+          >
+            <IconList />
+          </button>
+          <Link
+            to={`${baseUrl}/board`}
+            title="Board"
+            aria-label="Board"
+            className="flex size-7 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-secondary)"
+          >
+            <IconColumns />
+          </Link>
+          <button
+            type="button"
+            title="Calendar (coming soon)"
+            disabled
+            className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
+          >
+            <IconCalendar />
+          </button>
+          <button
+            type="button"
+            title="Spreadsheet (coming soon)"
+            disabled
+            className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
+          >
+            <IconSpreadsheet />
+          </button>
+          <button
+            type="button"
+            title="Timeline (coming soon)"
+            disabled
+            className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
+          >
+            <IconGantt />
+          </button>
+        </div>
         <div className="mx-1 w-px self-stretch bg-(--border-subtle)" />
         <div className="relative shrink-0">
           <WorkspaceViewsFiltersDropdown

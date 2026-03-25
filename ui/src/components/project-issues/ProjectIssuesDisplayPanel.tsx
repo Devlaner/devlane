@@ -84,7 +84,7 @@ function CollapsibleSection(props: {
       <button
         type="button"
         onClick={() => onToggle(id)}
-        className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-[11px] font-semibold tracking-wide text-slate-500 dark:text-slate-400"
+        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-slate-500 dark:text-slate-400"
       >
         <span>{title}</span>
         <span className="text-(--txt-icon-tertiary)">
@@ -107,7 +107,7 @@ function RadioRow<T extends string>(props: {
     <button
       type="button"
       onClick={() => onSelect(value)}
-      className={`flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-1-hover) ${selected ? 'bg-(--bg-layer-1-hover)' : ''}`}
+      className={`flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-1-hover) ${selected ? 'bg-(--bg-layer-1-hover)' : ''}`}
     >
       <span
         className={`flex size-4 shrink-0 items-center justify-center rounded-full border-2 ${
@@ -153,15 +153,15 @@ export function ProjectIssuesDisplayPanel({ display, setDisplay }: ProjectIssues
   };
 
   return (
-    <div className="flex max-h-[min(70vh,560px)] flex-col overflow-hidden rounded-md bg-(--bg-surface-1) shadow-(--shadow-raised)">
-      <div className="min-h-0 flex-1 overflow-y-auto py-1">
+    <div className="flex w-[min(280px,calc(100vw-24px))] max-w-[calc(100vw-24px)] max-h-[min(45dvh,380px)] flex-col overflow-hidden bg-(--bg-surface-1)">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1">
         <CollapsibleSection
           id="properties"
           title="Display Properties"
           expanded={sections.properties}
           onToggle={toggleSection}
         >
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex max-w-full flex-wrap gap-1.5">
             {ALL_SAVED_VIEW_DISPLAY_PROPERTIES.map((prop) => {
               const on = display.displayProperties.has(prop);
               return (
@@ -221,8 +221,8 @@ export function ProjectIssuesDisplayPanel({ display, setDisplay }: ProjectIssues
         </CollapsibleSection>
       </div>
 
-      <div className="shrink-0 border-t border-(--border-subtle) bg-(--bg-surface-1) px-2 py-2.5">
-        <label className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-2 text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
+      <div className="shrink-0 border-t border-(--border-subtle) bg-(--bg-surface-1) px-2 py-2">
+        <label className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
           <input
             type="checkbox"
             className={displayPanelCheckboxClass}
@@ -236,7 +236,7 @@ export function ProjectIssuesDisplayPanel({ display, setDisplay }: ProjectIssues
           />
           Show sub-work items
         </label>
-        <label className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-2 text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
+        <label className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
           <input
             type="checkbox"
             className={displayPanelCheckboxClass}

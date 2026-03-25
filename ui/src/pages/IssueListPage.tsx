@@ -674,6 +674,12 @@ export function IssueListPage() {
     <div className="w-full">
       <div className="flex items-center justify-between gap-4 border-b border-(--border-subtle) px-4 py-3">
         <h2 className="flex items-center gap-2 text-base font-semibold text-(--txt-primary)">
+          <span
+            className="flex size-4 shrink-0 items-center justify-center rounded border border-(--border-subtle) border-dashed text-(--txt-icon-tertiary)"
+            aria-hidden
+          >
+            <span className="size-2 rounded-full border border-current border-dashed" />
+          </span>
           All work items {filteredIssues.length}
           <button
             type="button"

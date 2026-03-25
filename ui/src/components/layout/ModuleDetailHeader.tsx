@@ -45,6 +45,26 @@ const IconChevronDown = () => (
   </svg>
 );
 
+/** 2×2 grid — matches “Modules” in Plane-style breadcrumbs */
+const IconLayoutGrid = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <rect width="7" height="7" x="3" y="3" rx="1" />
+    <rect width="7" height="7" x="14" y="3" rx="1" />
+    <rect width="7" height="7" x="14" y="14" rx="1" />
+    <rect width="7" height="7" x="3" y="14" rx="1" />
+  </svg>
+);
+
 const IconList = () => (
   <svg
     width="16"
@@ -329,7 +349,7 @@ export function ModuleDetailHeader({
       <div className="flex min-w-0 flex-1 items-center gap-1 text-sm text-(--txt-primary)">
         <Link
           to={baseUrl}
-          className="flex shrink-0 items-center gap-1.5 truncate font-medium text-(--txt-secondary) hover:text-(--txt-primary) hover:underline"
+          className="flex shrink-0 items-center gap-1.5 truncate font-medium text-(--txt-secondary) no-underline hover:text-(--txt-primary) hover:underline"
         >
           <span className="flex size-5 shrink-0 items-center justify-center">
             <ProjectIconDisplay
@@ -341,31 +361,41 @@ export function ModuleDetailHeader({
           </span>
           {projectName}
         </Link>
-        <span className="shrink-0 text-(--txt-icon-tertiary)">/</span>
+        <span className="shrink-0 px-0.5 text-(--txt-icon-tertiary)" aria-hidden>
+          &gt;
+        </span>
         <Link
           to={`${baseUrl}/modules`}
-          className="shrink-0 truncate font-medium text-(--txt-secondary) hover:text-(--txt-primary) hover:underline"
+          className="flex shrink-0 items-center gap-1.5 truncate font-medium text-(--txt-secondary) no-underline hover:text-(--txt-primary) hover:underline"
         >
+          <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
+            <IconLayoutGrid />
+          </span>
           Modules
         </Link>
-        <span className="shrink-0 text-(--txt-icon-tertiary)">/</span>
-        <div ref={dropdownRef} className="relative flex min-w-0 shrink-0 items-center gap-2">
+        <span className="shrink-0 px-0.5 text-(--txt-icon-tertiary)" aria-hidden>
+          &gt;
+        </span>
+        <div ref={dropdownRef} className="relative flex min-w-0 shrink-0 items-center">
           <button
             type="button"
             onClick={() => setModuleDropdownOpen((o) => !o)}
-            className="flex min-w-0 max-w-48 items-center gap-1 truncate rounded-md px-2.5 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover) md:max-w-64"
+            className="flex min-w-0 max-w-48 items-center gap-1.5 truncate rounded-md px-2.5 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover) md:max-w-72"
           >
+            <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
+              <IconLayoutGrid />
+            </span>
             <span className="min-w-0 truncate">{moduleName}</span>
             <span className="shrink-0 text-(--txt-icon-tertiary)">
               <IconChevronDown />
             </span>
+            <span
+              className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-sky-100 px-1.5 text-[11px] font-semibold text-sky-800 dark:bg-sky-950 dark:text-sky-200"
+              title="Work items in this module"
+            >
+              {issueCountBadge}
+            </span>
           </button>
-          <span
-            className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-sky-100 px-1.5 text-[11px] font-semibold text-sky-800 dark:bg-sky-950 dark:text-sky-200"
-            title="Work items in this module"
-          >
-            {issueCountBadge}
-          </span>
           {moduleDropdownOpen && (
             <div className="absolute left-0 top-full z-50 mt-1 min-w-40 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)">
               <Link
@@ -471,7 +501,7 @@ export function ModuleDetailHeader({
           displayValue=""
           align="right"
           compact
-          panelClassName="max-h-[min(85vh,32rem)] overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
+          panelClassName="overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
           triggerClassName="inline-flex border-0 bg-transparent p-0 shadow-none hover:bg-transparent"
           triggerContent={
             <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)">
