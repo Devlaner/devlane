@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Button } from '../ui';
+import { Button, Tooltip } from '../ui';
 import { Dropdown } from '../work-item';
 import { useModulesFilter } from '../../contexts/ModulesFilterContext';
 import { useWorkspaceViewsState } from '../../contexts/WorkspaceViewsStateContext';
@@ -1779,45 +1779,48 @@ function ProjectSectionHeader({
             )}
           </div>
           <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
-            <button
-              type="button"
-              onClick={() => modulesFilter.setLayout('list')}
-              className={`flex size-7 items-center justify-center rounded-l-md text-(--txt-icon-secondary) transition-colors ${
-                listActive
-                  ? 'bg-white shadow-sm text-(--txt-primary)'
-                  : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
-              }`}
-              aria-pressed={listActive}
-              title="List layout"
-            >
-              <IconList />
-            </button>
-            <button
-              type="button"
-              onClick={() => modulesFilter.setLayout('gallery')}
-              className={`flex size-7 items-center justify-center text-(--txt-icon-secondary) transition-colors ${
-                galleryActive
-                  ? 'bg-white shadow-sm text-(--txt-primary)'
-                  : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
-              }`}
-              aria-pressed={galleryActive}
-              title="Gallery layout"
-            >
-              <IconLayoutGrid />
-            </button>
-            <button
-              type="button"
-              onClick={() => modulesFilter.setLayout('timeline')}
-              className={`flex size-7 items-center justify-center rounded-r-md text-(--txt-icon-secondary) transition-colors ${
-                timelineActive
-                  ? 'bg-white shadow-sm text-(--txt-primary)'
-                  : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
-              }`}
-              aria-pressed={timelineActive}
-              title="Timeline layout"
-            >
-              <IconStack />
-            </button>
+            <Tooltip content="List layout">
+              <button
+                type="button"
+                onClick={() => modulesFilter.setLayout('list')}
+                className={`flex size-7 items-center justify-center rounded-l-md text-(--txt-icon-secondary) transition-colors ${
+                  listActive
+                    ? 'bg-white shadow-sm text-(--txt-primary)'
+                    : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
+                }`}
+                aria-pressed={listActive}
+              >
+                <IconList />
+              </button>
+            </Tooltip>
+            <Tooltip content="Gallery layout">
+              <button
+                type="button"
+                onClick={() => modulesFilter.setLayout('gallery')}
+                className={`flex size-7 items-center justify-center text-(--txt-icon-secondary) transition-colors ${
+                  galleryActive
+                    ? 'bg-white shadow-sm text-(--txt-primary)'
+                    : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
+                }`}
+                aria-pressed={galleryActive}
+              >
+                <IconLayoutGrid />
+              </button>
+            </Tooltip>
+            <Tooltip content="Timeline layout">
+              <button
+                type="button"
+                onClick={() => modulesFilter.setLayout('timeline')}
+                className={`flex size-7 items-center justify-center rounded-r-md text-(--txt-icon-secondary) transition-colors ${
+                  timelineActive
+                    ? 'bg-white shadow-sm text-(--txt-primary)'
+                    : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
+                }`}
+                aria-pressed={timelineActive}
+              >
+                <IconStack />
+              </button>
+            </Tooltip>
           </div>
           <Button
             size="sm"
