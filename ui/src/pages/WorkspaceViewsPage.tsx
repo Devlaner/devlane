@@ -165,7 +165,7 @@ export function WorkspaceViewsPage() {
   const [loading, setLoading] = useState(true);
   const { user: currentUser } = useAuth();
 
-  // When viewing a saved view, fetch it and apply its filters/display to state once (Plane-style; not in URL).
+  // When viewing a saved view, fetch it and apply its filters/display to state once (not driven by URL).
   useEffect(() => {
     if (prevViewIdRef.current !== viewId) {
       prevViewIdRef.current = viewId;
@@ -319,7 +319,7 @@ export function WorkspaceViewsPage() {
         });
       });
     }
-    // Static view filters (Plane-style: assigned to me, created by me, subscribed)
+    // Static view filters: assigned to me, created by me, subscribed
     if (viewId === 'assigned' && currentUser?.id) {
       list = list.filter((i) => i.assignee_ids?.includes(currentUser.id));
     } else if (viewId === 'created' && currentUser?.id) {
@@ -536,7 +536,7 @@ export function WorkspaceViewsPage() {
 
   const baseUrl = `/${workspace.slug}`;
 
-  // Plane-style: fixed column order, scrollable from Priority onward
+  // Fixed column order, scrollable from Priority onward
   const scrollableColumns = SPREADSHEET_COLUMN_ORDER.filter(
     (k) =>
       k === 'created_at' ||

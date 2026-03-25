@@ -1,0 +1,15 @@
+.git
+.gitignore
+.idea
+.vscode
+
+*.exe
+*.test
+*.out
+coverage.out
+
+.env
+.env.*
+!.env.example
+
+README.md

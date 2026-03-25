@@ -2,7 +2,7 @@ import type { IssueViewApiResponse } from '../api/types';
 import { parseWorkspaceViewFiltersFromSearchParams } from '../types/workspaceViewFilters';
 
 /**
- * Counts how many distinct filter "dimensions" a saved view applies (Plane-style “N filters” pill).
+ * Counts how many distinct filter "dimensions" a saved view applies (for the “N filters” pill).
  * Uses the same filter shape as `workspaceViewFiltersToSearchParams` / workspace views.
  */
 export function countSavedViewFilters(view: IssueViewApiResponse): number {

@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// computeCycleStatus derives status from start/end dates (Plane-style).
+// computeCycleStatus derives status from start/end dates.
 // draft: no dates; current: now in range; upcoming: start > now; completed: end < now.
 func computeCycleStatus(start, end *time.Time) string {
 	now := time.Now()
