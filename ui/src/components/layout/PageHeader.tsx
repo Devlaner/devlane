@@ -52,6 +52,8 @@ import {
 } from '../../lib/projectIssuesDisplay';
 import { PROJECT_VIEWS_FILTER_EVENT } from '../../lib/projectViewsEvents';
 import { slugify } from '../../lib/slug';
+import { MODULE_WORK_ITEMS_COUNT_EVENT } from '../../lib/moduleWorkItemsPrefs';
+import { ModuleDetailHeader } from './ModuleDetailHeader';
 
 export type ProjectSection = 'issues' | 'cycles' | 'modules' | 'views' | 'pages';
 
@@ -796,217 +798,6 @@ function ProjectDetailHeader({
           aria-label="Search"
         >
           <IconSearch />
-        </button>
-      </div>
-    </>
-  );
-}
-
-const IconListAlt = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-  </svg>
-);
-const IconBarChartModule = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <path d="M12 20V10M18 20V4M6 20v-4" />
-  </svg>
-);
-const IconLayoutGridModule = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <rect width="7" height="7" x="3" y="3" rx="1" />
-    <rect width="7" height="7" x="14" y="3" rx="1" />
-    <rect width="7" height="7" x="14" y="14" rx="1" />
-    <rect width="7" height="7" x="3" y="14" rx="1" />
-  </svg>
-);
-const IconSliders = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <line x1="4" y1="21" x2="4" y2="14" />
-    <line x1="4" y1="10" x2="4" y2="3" />
-    <line x1="12" y1="21" x2="12" y2="12" />
-    <line x1="12" y1="8" x2="12" y2="3" />
-    <line x1="20" y1="21" x2="20" y2="16" />
-    <line x1="20" y1="12" x2="20" y2="3" />
-    <line x1="1" y1="14" x2="7" y2="14" />
-    <line x1="9" y1="8" x2="15" y2="8" />
-    <line x1="17" y1="16" x2="23" y2="16" />
-  </svg>
-);
-
-function ModuleDetailHeader({
-  workspaceSlug,
-  projectId,
-  project,
-  projectName,
-  moduleName,
-}: {
-  workspaceSlug: string;
-  projectId: string;
-  project: ProjectApiResponse;
-  projectName: string;
-  moduleId: string;
-  moduleName: string;
-}) {
-  const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
-  const [moduleDropdownOpen, setModuleDropdownOpen] = useState(false);
-  const [viewLayout, setViewLayout] = useState<
-    'list' | 'board' | 'calendar' | 'gallery' | 'timeline'
-  >('list');
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setModuleDropdownOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const viewButtons: {
-    id: typeof viewLayout;
-    icon: React.ReactNode;
-    label: string;
-  }[] = [
-    { id: 'list', icon: <IconListAlt />, label: 'List' },
-    { id: 'board', icon: <IconBarChartModule />, label: 'Board' },
-    { id: 'calendar', icon: <IconCalendar />, label: 'Calendar' },
-    { id: 'gallery', icon: <IconLayoutGridModule />, label: 'Gallery' },
-    { id: 'timeline', icon: <IconListAlt />, label: 'Timeline' },
-  ];
-
-  return (
-    <>
-      <div className="flex min-w-0 flex-1 items-center gap-1 text-sm text-(--txt-primary)">
-        <Link
-          to={baseUrl}
-          className="flex shrink-0 items-center gap-1.5 truncate font-medium text-(--txt-secondary) hover:text-(--txt-primary) hover:underline"
-        >
-          <span className="flex size-5 shrink-0 items-center justify-center">
-            <ProjectIconDisplay
-              emoji={project.emoji}
-              icon_prop={project.icon_prop}
-              size={16}
-              className="leading-none"
-            />
-          </span>
-          {projectName}
-        </Link>
-        <span className="shrink-0 text-(--txt-icon-tertiary)">/</span>
-        <Link
-          to={`${baseUrl}/modules`}
-          className="shrink-0 truncate font-medium text-(--txt-secondary) hover:text-(--txt-primary) hover:underline"
-        >
-          Modules
-        </Link>
-        <span className="shrink-0 text-(--txt-icon-tertiary)">/</span>
-        <div ref={ref} className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => setModuleDropdownOpen((o) => !o)}
-            className="flex items-center gap-1 truncate rounded-md px-2.5 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover)"
-          >
-            <span className="min-w-0 truncate">{moduleName}</span>
-            <span className="shrink-0 text-(--txt-icon-tertiary)">
-              <IconChevronDown />
-            </span>
-          </button>
-          {moduleDropdownOpen && (
-            <div className="absolute left-0 top-full z-50 mt-1 min-w-40 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)">
-              <Link
-                to={`${baseUrl}/modules`}
-                className="block px-3 py-2 text-left text-sm text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
-                onClick={() => setModuleDropdownOpen(false)}
-              >
-                All modules
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="flex shrink-0 items-center gap-1">
-        <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
-          {viewButtons.map((b, i) => (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => setViewLayout(b.id)}
-              className={`flex size-7 items-center justify-center rounded-md text-(--txt-icon-secondary) transition-colors ${
-                viewLayout === b.id
-                  ? 'bg-white shadow-sm text-(--txt-primary)'
-                  : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
-              } ${i === 0 ? 'rounded-l-md' : ''} ${i === viewButtons.length - 1 ? 'rounded-r-md' : ''}`}
-              title={b.label}
-              aria-pressed={viewLayout === b.id}
-            >
-              {b.icon}
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          className="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
-        >
-          <IconFilter />
-          Filters
-        </button>
-        <button
-          type="button"
-          className="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
-        >
-          <IconSliders />
-          Display
-        </button>
-        <button
-          type="button"
-          className="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
-        >
-          Analytics
-        </button>
-        <Link to={`${baseUrl}/issues?create=1`}>
-          <Button size="sm" className="gap-1.5 text-[13px] font-medium">
-            <IconPlus />
-            Add work item
-          </Button>
-        </Link>
-        <button
-          type="button"
-          className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
-          aria-label="More options"
-        >
-          <IconMoreVertical />
         </button>
       </div>
     </>
@@ -3006,6 +2797,16 @@ export function PageHeader() {
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [projectIssueCount, setProjectIssueCount] = useState(0);
   const [module, setModule] = useState<ModuleApiResponse | null>(null);
+  const [moduleWorkItemCount, setModuleWorkItemCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const onCount = (e: Event) => {
+      const d = (e as CustomEvent<{ count: number }>).detail;
+      if (d && typeof d.count === 'number') setModuleWorkItemCount(d.count);
+    };
+    window.addEventListener(MODULE_WORK_ITEMS_COUNT_EVENT, onCount);
+    return () => window.removeEventListener(MODULE_WORK_ITEMS_COUNT_EVENT, onCount);
+  }, []);
 
   useEffect(() => {
     if (!workspaceSlug) {
@@ -3090,6 +2891,13 @@ export function PageHeader() {
 
   const pathname = location.pathname;
 
+  useEffect(() => {
+    const base = workspaceSlug && projectId ? `/${workspaceSlug}/projects/${projectId}` : '';
+    const norm = pathname.replace(/\/+$/, '') || pathname;
+    const onModuleDetail = Boolean(base && moduleId && norm === `${base}/modules/${moduleId}`);
+    if (!onModuleDetail) setModuleWorkItemCount(null);
+  }, [pathname, workspaceSlug, projectId, moduleId]);
+
   // Match route patterns to pick header
   const isWorkspaceHome = workspaceSlug && pathname === `/${workspaceSlug}`;
   const isSettings =
@@ -3098,12 +2906,12 @@ export function PageHeader() {
       pathname.startsWith(`/${workspaceSlug}/settings/`));
   const isProjectsList = workspaceSlug && pathname === `/${workspaceSlug}/projects`;
   const projectBase = workspaceSlug && projectId ? `/${workspaceSlug}/projects/${projectId}` : '';
+  const pathNoTrailingSlash = pathname.replace(/\/+$/, '') || pathname;
   const isIssuesPage = projectBase && pathname === `${projectBase}/issues`;
   const isCyclesPage = projectBase && pathname === `${projectBase}/cycles`;
   const isModulesPage = projectBase && pathname === `${projectBase}/modules`;
   const isModuleDetailPage =
-    projectBase && moduleId && pathname === `${projectBase}/modules/${moduleId}`;
-  const pathNoTrailingSlash = pathname.replace(/\/+$/, '') || pathname;
+    projectBase && moduleId && pathNoTrailingSlash === `${projectBase}/modules/${moduleId}`;
   const isViewsListPage = projectBase && pathNoTrailingSlash === `${projectBase}/views`;
   const isProjectSavedViewDetailPage =
     projectBase && !!viewId && pathNoTrailingSlash === `${projectBase}/views/${viewId}`;
@@ -3149,7 +2957,7 @@ export function PageHeader() {
     content = <AnalyticsHeader workspaceSlug={workspaceSlug} />;
   } else if (isWorkspaceViewsPage && workspaceSlug) {
     content = <WorkspaceViewsHeader />;
-  } else if (isModuleDetailPage && workspaceSlug && projectId && project && module) {
+  } else if (isModuleDetailPage && workspaceSlug && projectId && project && module && moduleId) {
     content = (
       <ModuleDetailHeader
         workspaceSlug={workspaceSlug}
@@ -3158,6 +2966,8 @@ export function PageHeader() {
         projectName={project.name}
         moduleId={module.id}
         moduleName={module.name}
+        moduleRouteParam={moduleId}
+        issueCountBadge={moduleWorkItemCount ?? module.issue_count ?? 0}
       />
     );
   } else if (isProjectSavedViewDetailPage && workspaceSlug && projectId && viewId && project) {

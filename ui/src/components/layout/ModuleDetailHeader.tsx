@@ -367,6 +367,8 @@ export function ModuleDetailHeader({
             displayValue=""
             align="right"
             compact
+            panelClassName="max-h-[min(85vh,32rem)] overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
+            triggerClassName="inline-flex border-0 bg-transparent p-0 shadow-none hover:bg-transparent"
             triggerContent={
               <span className="relative inline-flex">
                 <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)">
@@ -400,6 +402,8 @@ export function ModuleDetailHeader({
           displayValue=""
           align="right"
           compact
+          panelClassName="max-h-[min(85vh,32rem)] overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
+          triggerClassName="inline-flex border-0 bg-transparent p-0 shadow-none hover:bg-transparent"
           triggerContent={
             <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)">
               <IconSliders />
