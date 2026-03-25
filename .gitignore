@@ -1,5 +1,6 @@
 plane/
 planning/
+node_modules/
 .cursor
 .vscode
 .idea

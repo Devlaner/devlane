@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+set -e
+
+echo "🚀 pre-push: UI typecheck + API tests..."
+npm --prefix ui run typecheck
+(cd api && go test ./...)
+
+echo "✅ pre-push OK"
