@@ -296,6 +296,21 @@ export function IssueListPage() {
         ),
       );
     }
+    if (listFilters.createdByIds.length) {
+      list = list.filter((i) =>
+        listFilters.createdByIds.some(
+          (fid) => normalizeUuidKey(fid) === normalizeUuidKey(i.created_by_id),
+        ),
+      );
+    }
+    if (listFilters.workItemGrouping === 'active') {
+      list = list.filter((i) => {
+        const g = getStateGroup(i.state_id ?? undefined);
+        return g === 'unstarted' || g === 'started';
+      });
+    } else if (listFilters.workItemGrouping === 'backlog') {
+      list = list.filter((i) => getStateGroup(i.state_id ?? undefined) === 'backlog');
+    }
     const now = new Date();
     const addDays = (d: number) => new Date(now.getTime() + d * 24 * 60 * 60 * 1000);
     const startDateEffective =

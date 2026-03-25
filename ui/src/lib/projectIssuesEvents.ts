@@ -22,6 +22,8 @@ export interface ProjectIssuesFiltersState {
   priorities: Priority[];
   stateGroups: StateGroup[];
   assigneeIds: string[];
+  createdByIds: string[];
+  workItemGrouping: 'all' | 'active' | 'backlog';
   startDate: DatePreset[];
   dueDate: DatePreset[];
   startAfter: string | null;
@@ -34,6 +36,8 @@ export const DEFAULT_PROJECT_ISSUES_FILTERS: ProjectIssuesFiltersState = {
   priorities: [],
   stateGroups: [],
   assigneeIds: [],
+  createdByIds: [],
+  workItemGrouping: 'all',
   startDate: [],
   dueDate: [],
   startAfter: null,

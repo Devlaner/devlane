@@ -6,6 +6,7 @@ import { DateRangeModal } from '../workspace-views/DateRangeModal';
 import { ProjectIconDisplay } from '../ProjectIconModal';
 import { ModuleWorkItemsFiltersPanel } from '../module-work-items/ModuleWorkItemsToolbarPanels';
 import { ProjectIssuesDisplayPanel } from '../project-issues/ProjectIssuesDisplayPanel';
+import { ProjectSectionNavChevron } from './ProjectSectionNavChevron';
 import { workspaceService } from '../../services/workspaceService';
 import { stateService } from '../../services/stateService';
 import type {
@@ -42,6 +43,22 @@ const IconChevronDown = () => (
     aria-hidden
   >
     <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
+const IconChevronUp = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="m18 15-6-6-6 6" />
   </svg>
 );
 
@@ -324,6 +341,8 @@ export function ModuleDetailHeader({
   }, [display]);
 
   const filtersActive = isModuleFiltersActive(filters);
+  const filtersMenuOpen = toolbarOpen === 'module-filters';
+  const displayMenuOpen = toolbarOpen === 'module-display';
 
   const openAddExisting = () => {
     setMoreOpen(false);
@@ -361,9 +380,7 @@ export function ModuleDetailHeader({
           </span>
           {projectName}
         </Link>
-        <span className="shrink-0 px-0.5 text-(--txt-icon-tertiary)" aria-hidden>
-          &gt;
-        </span>
+        <ProjectSectionNavChevron baseUrl={baseUrl} currentSection="modules" />
         <Link
           to={`${baseUrl}/modules`}
           className="flex shrink-0 items-center gap-1.5 truncate font-medium text-(--txt-secondary) no-underline hover:text-(--txt-primary) hover:underline"
@@ -373,9 +390,7 @@ export function ModuleDetailHeader({
           </span>
           Modules
         </Link>
-        <span className="shrink-0 px-0.5 text-(--txt-icon-tertiary)" aria-hidden>
-          &gt;
-        </span>
+        <ProjectSectionNavChevron baseUrl={baseUrl} currentSection="modules" />
         <div ref={dropdownRef} className="relative flex min-w-0 shrink-0 items-center">
           <button
             type="button"
@@ -463,14 +478,14 @@ export function ModuleDetailHeader({
             displayValue=""
             align="right"
             compact
-            panelClassName="max-h-[min(85vh,32rem)] overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
+            panelClassName="flex w-[min(400px,calc(100vw-24px))] max-h-[min(calc(100dvh-96px),36rem)] flex-col overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
             triggerClassName="inline-flex border-0 bg-transparent p-0 shadow-none hover:bg-transparent"
             triggerContent={
               <span className="relative inline-flex">
                 <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)">
                   <IconFilter />
                   Filters
-                  <IconChevronDown />
+                  {filtersMenuOpen ? <IconChevronUp /> : <IconChevronDown />}
                 </span>
                 {filtersActive ? (
                   <span
@@ -501,13 +516,13 @@ export function ModuleDetailHeader({
           displayValue=""
           align="right"
           compact
-          panelClassName="overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
+          panelClassName="w-[min(400px,calc(100vw-24px))] max-h-[min(calc(100dvh-96px),50rem)] overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
           triggerClassName="inline-flex border-0 bg-transparent p-0 shadow-none hover:bg-transparent"
           triggerContent={
             <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)">
               <IconSliders />
               Display
-              <IconChevronDown />
+              {displayMenuOpen ? <IconChevronUp /> : <IconChevronDown />}
             </span>
           }
         >

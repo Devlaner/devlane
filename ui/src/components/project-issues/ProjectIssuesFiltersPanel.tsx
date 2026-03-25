@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Avatar } from '../ui';
-import { CollapsibleSection } from '../workspace-views/WorkspaceViewsFiltersShared';
+import { CollapsibleSection, FiltersPanelOptionRow } from '../workspace-views/WorkspaceViewsFiltersShared';
 import {
   DATE_PRESET_LABELS,
   FILTER_ICONS,
@@ -40,9 +40,14 @@ export function ProjectIssuesFiltersPanel({
   onOpenCustomDue,
 }: ProjectIssuesFiltersPanelProps) {
   const [sectionOpen, setSectionOpen] = useState({
+    cycle: true,
+    mention: true,
     priority: true,
     state: true,
     assignee: true,
+    created_by: true,
+    label: true,
+    work_item_grouping: true,
     start_date: true,
     due_date: true,
   });
@@ -58,6 +63,7 @@ export function ProjectIssuesFiltersPanel({
   const filteredMembers = members.filter((m) =>
     q(m.member_display_name ?? m.member_email ?? m.member_id).includes(q(search)),
   );
+  const creatorMembers = filteredMembers;
 
   const displayName = (m: WorkspaceMemberApiResponse) =>
     m.member_display_name?.trim() ?? m.member_email ?? m.member_id.slice(0, 12);
@@ -83,33 +89,83 @@ export function ProjectIssuesFiltersPanel({
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto py-1">
         <CollapsibleSection
+          title="Cycle"
+          open={sectionOpen.cycle}
+          onToggle={() => toggleSection('cycle')}
+          titleClassName="text-(--txt-tertiary)"
+        >
+          <FiltersPanelOptionRow checked={false} onToggle={() => {}} label="Cycle 1" />
+          <FiltersPanelOptionRow checked={false} onToggle={() => {}} label="Cycle 2" />
+          <FiltersPanelOptionRow checked={false} onToggle={() => {}} label="test-cycle" />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Mention"
+          open={sectionOpen.mention}
+          onToggle={() => toggleSection('mention')}
+          titleClassName="text-(--txt-tertiary)"
+        >
+          {currentUserId && (filterSearch('You') || filterSearch(currentUserName)) && (
+            <FiltersPanelOptionRow
+              checked={false}
+              onToggle={() => {}}
+              icon={
+                getImageUrl(currentUserAvatarUrl) ? (
+                  <img
+                    src={getImageUrl(currentUserAvatarUrl)!}
+                    alt=""
+                    className="size-5 shrink-0 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--brand-200) text-[10px] font-medium text-(--brand-default)">
+                    {currentUserName.charAt(0).toUpperCase()}
+                  </span>
+                )
+              }
+              label="You"
+            />
+          )}
+          {filteredMembers
+            .filter((m) => normalizeUuidKey(m.member_id) !== normalizeUuidKey(currentUserId))
+            .map((m) => (
+              <FiltersPanelOptionRow
+                key={`mention-${m.id}`}
+                checked={false}
+                onToggle={() => {}}
+                icon={
+                  <Avatar
+                    name={displayName(m)}
+                    src={getImageUrl(m.member_avatar) ?? undefined}
+                    size="sm"
+                    className="h-5 w-5 shrink-0 text-[10px]"
+                  />
+                }
+                label={displayName(m)}
+              />
+            ))}
+        </CollapsibleSection>
+
+        <CollapsibleSection
           title="Priority"
           open={sectionOpen.priority}
           onToggle={() => toggleSection('priority')}
+          titleClassName="text-(--txt-tertiary)"
         >
           {PRIORITIES.filter((p) => filterSearch(PRIORITY_LABELS[p])).map((p) => (
-            <label
+            <FiltersPanelOptionRow
               key={p}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-            >
-              <input
-                type="checkbox"
-                checked={filters.priorities.includes(p)}
-                onChange={() => {
-                  setFilters((prev) => ({
-                    ...prev,
-                    priorities: prev.priorities.includes(p)
-                      ? prev.priorities.filter((x) => x !== p)
-                      : [...prev.priorities, p],
-                  }));
-                }}
-                className="rounded border-(--border-subtle)"
-              />
-              <span className="flex size-4 shrink-0 items-center justify-center">
-                {PRIORITY_ICONS[p]}
-              </span>
-              <span>{PRIORITY_LABELS[p]}</span>
-            </label>
+              checked={filters.priorities.includes(p)}
+              onToggle={() => {
+                setFilters((prev) => ({
+                  ...prev,
+                  priorities: prev.priorities.includes(p)
+                    ? prev.priorities.filter((x) => x !== p)
+                    : [...prev.priorities, p],
+                }));
+              }}
+              icon={PRIORITY_ICONS[p]}
+              label={PRIORITY_LABELS[p]}
+            />
           ))}
         </CollapsibleSection>
 
@@ -117,30 +173,23 @@ export function ProjectIssuesFiltersPanel({
           title="State"
           open={sectionOpen.state}
           onToggle={() => toggleSection('state')}
+          titleClassName="text-(--txt-tertiary)"
         >
           {STATE_GROUPS.filter((g) => filterSearch(STATE_GROUP_LABELS[g])).map((g) => (
-            <label
+            <FiltersPanelOptionRow
               key={g}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-            >
-              <input
-                type="checkbox"
-                checked={filters.stateGroups.includes(g)}
-                onChange={() => {
-                  setFilters((prev) => ({
-                    ...prev,
-                    stateGroups: prev.stateGroups.includes(g)
-                      ? prev.stateGroups.filter((x) => x !== g)
-                      : [...prev.stateGroups, g],
-                  }));
-                }}
-                className="rounded border-(--border-subtle)"
-              />
-              <span className="flex size-4 shrink-0 items-center justify-center">
-                {STATE_GROUP_ICONS[g]}
-              </span>
-              <span>{STATE_GROUP_LABELS[g]}</span>
-            </label>
+              checked={filters.stateGroups.includes(g)}
+              onToggle={() => {
+                setFilters((prev) => ({
+                  ...prev,
+                  stateGroups: prev.stateGroups.includes(g)
+                    ? prev.stateGroups.filter((x) => x !== g)
+                    : [...prev.stateGroups, g],
+                }));
+              }}
+              icon={STATE_GROUP_ICONS[g]}
+              label={STATE_GROUP_LABELS[g]}
+            />
           ))}
         </CollapsibleSection>
 
@@ -148,152 +197,215 @@ export function ProjectIssuesFiltersPanel({
           title="Assignee"
           open={sectionOpen.assignee}
           onToggle={() => toggleSection('assignee')}
+          titleClassName="text-(--txt-tertiary)"
         >
           {currentUserId && (filterSearch('You') || filterSearch(currentUserName)) && (
-            <label className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
-              <input
-                type="checkbox"
+            <FiltersPanelOptionRow
+              checked={filters.assigneeIds.some(
+                (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
+              )}
+              onToggle={() => {
+                setFilters((prev) => {
+                  const has = prev.assigneeIds.some(
+                    (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
+                  );
+                  return {
+                    ...prev,
+                    assigneeIds: has
+                      ? prev.assigneeIds.filter(
+                          (id) => normalizeUuidKey(id) !== normalizeUuidKey(currentUserId),
+                        )
+                      : [...prev.assigneeIds, currentUserId],
+                  };
+                });
+              }}
+              icon={
+                getImageUrl(currentUserAvatarUrl) ? (
+                  <img
+                    src={getImageUrl(currentUserAvatarUrl)!}
+                    alt=""
+                    className="size-5 shrink-0 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--brand-200) text-[10px] font-medium text-(--brand-default)">
+                    {currentUserName.charAt(0).toUpperCase()}
+                  </span>
+                )
+              }
+              label="You"
+            />
+          )}
+          {filteredMembers
+            .filter((m) => normalizeUuidKey(m.member_id) !== normalizeUuidKey(currentUserId))
+            .map((m) => (
+              <FiltersPanelOptionRow
+                key={m.id}
                 checked={filters.assigneeIds.some(
-                  (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
+                  (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
                 )}
-                onChange={() => {
+                onToggle={() => {
                   setFilters((prev) => {
                     const has = prev.assigneeIds.some(
-                      (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
+                      (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
                     );
                     return {
                       ...prev,
                       assigneeIds: has
                         ? prev.assigneeIds.filter(
-                            (id) => normalizeUuidKey(id) !== normalizeUuidKey(currentUserId),
+                            (id) => normalizeUuidKey(id) !== normalizeUuidKey(m.member_id),
                           )
-                        : [...prev.assigneeIds, currentUserId],
+                        : [...prev.assigneeIds, m.member_id],
                     };
                   });
                 }}
-                className="rounded border-(--border-subtle)"
+                icon={
+                  <Avatar
+                    name={displayName(m)}
+                    src={getImageUrl(m.member_avatar) ?? undefined}
+                    size="sm"
+                    className="h-5 w-5 shrink-0 text-[10px]"
+                  />
+                }
+                label={displayName(m)}
               />
-              {getImageUrl(currentUserAvatarUrl) ? (
-                <img
-                  src={getImageUrl(currentUserAvatarUrl)!}
-                  alt=""
-                  className="size-5 shrink-0 rounded-full object-cover"
-                />
-              ) : (
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--brand-200) text-[10px] font-medium text-(--brand-default)">
-                  {currentUserName.charAt(0).toUpperCase()}
-                </span>
-              )}
-              <span>You</span>
-            </label>
-          )}
-          {filteredMembers
-            .filter((m) => normalizeUuidKey(m.member_id) !== normalizeUuidKey(currentUserId))
-            .map((m) => (
-              <label
-                key={m.id}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-              >
-                <input
-                  type="checkbox"
-                  checked={filters.assigneeIds.some(
-                    (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
-                  )}
-                  onChange={() => {
-                    setFilters((prev) => {
-                      const has = prev.assigneeIds.some(
-                        (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
-                      );
-                      return {
-                        ...prev,
-                        assigneeIds: has
-                          ? prev.assigneeIds.filter(
-                              (id) => normalizeUuidKey(id) !== normalizeUuidKey(m.member_id),
-                            )
-                          : [...prev.assigneeIds, m.member_id],
-                      };
-                    });
-                  }}
-                  className="rounded border-(--border-subtle)"
-                />
-                <Avatar
-                  name={displayName(m)}
-                  src={getImageUrl(m.member_avatar) ?? undefined}
-                  size="sm"
-                  className="h-5 w-5 shrink-0 text-[10px]"
-                />
-                <span className="truncate">{displayName(m)}</span>
-              </label>
             ))}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Created by"
+          open={sectionOpen.created_by}
+          onToggle={() => toggleSection('created_by')}
+          titleClassName="text-(--txt-tertiary)"
+        >
+          {creatorMembers.length === 0 ? (
+            <div className="px-3 py-1.5 text-sm text-(--txt-tertiary)">No matches found</div>
+          ) : (
+            creatorMembers.map((m) => (
+              <FiltersPanelOptionRow
+                key={`created-${m.id}`}
+                checked={filters.createdByIds.some(
+                  (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
+                )}
+                onToggle={() => {
+                  setFilters((prev) => {
+                    const has = prev.createdByIds.some(
+                      (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
+                    );
+                    return {
+                      ...prev,
+                      createdByIds: has
+                        ? prev.createdByIds.filter(
+                            (id) => normalizeUuidKey(id) !== normalizeUuidKey(m.member_id),
+                          )
+                        : [...prev.createdByIds, m.member_id],
+                    };
+                  });
+                }}
+                icon={
+                  <Avatar
+                    name={displayName(m)}
+                    src={getImageUrl(m.member_avatar) ?? undefined}
+                    size="sm"
+                    className="h-5 w-5 shrink-0 text-[10px]"
+                  />
+                }
+                label={displayName(m)}
+              />
+            ))
+          )}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Label"
+          open={sectionOpen.label}
+          onToggle={() => toggleSection('label')}
+          titleClassName="text-(--txt-tertiary)"
+        >
+          <div className="px-3 py-1.5 text-sm italic text-(--txt-tertiary)">No matches found</div>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Work item Grouping"
+          open={sectionOpen.work_item_grouping}
+          onToggle={() => toggleSection('work_item_grouping')}
+          titleClassName="text-(--txt-tertiary)"
+        >
+          <FiltersPanelOptionRow
+            checked={filters.workItemGrouping === 'all'}
+            onToggle={() => setFilters((prev) => ({ ...prev, workItemGrouping: 'all' }))}
+            label="All Work items"
+            radio
+          />
+          <FiltersPanelOptionRow
+            checked={filters.workItemGrouping === 'active'}
+            onToggle={() => setFilters((prev) => ({ ...prev, workItemGrouping: 'active' }))}
+            label="Active Work items"
+            radio
+          />
+          <FiltersPanelOptionRow
+            checked={filters.workItemGrouping === 'backlog'}
+            onToggle={() => setFilters((prev) => ({ ...prev, workItemGrouping: 'backlog' }))}
+            label="Backlog Work items"
+            radio
+          />
         </CollapsibleSection>
 
         <CollapsibleSection
           title="Start date"
           open={sectionOpen.start_date}
           onToggle={() => toggleSection('start_date')}
+          titleClassName="text-(--txt-tertiary)"
         >
           {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map((d) =>
             d === 'custom' ? (
-              <label
+              <FiltersPanelOptionRow
                 key={d}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-              >
-                <input
-                  type="checkbox"
-                  checked={hasCustomStart}
-                  onChange={() => {
+                checked={hasCustomStart}
+                onToggle={() => {
+                  if (hasCustomStart) {
+                    setFilters((prev) => ({
+                      ...prev,
+                      startDate: prev.startDate.filter((x) => x !== 'custom'),
+                      startAfter: null,
+                      startBefore: null,
+                    }));
+                  } else {
+                    setFilters((prev) => ({
+                      ...prev,
+                      startDate: prev.startDate.includes('custom')
+                        ? prev.startDate
+                        : [...prev.startDate, 'custom'],
+                    }));
+                    onOpenCustomStart();
+                  }
+                }}
+                label={DATE_PRESET_LABELS[d]}
+              />
+            ) : (
+              <FiltersPanelOptionRow
+                key={d}
+                checked={!hasCustomStart && filters.startDate.includes(d)}
+                onToggle={() => {
+                  setFilters((prev) => {
                     if (hasCustomStart) {
-                      setFilters((prev) => ({
+                      const next = prev.startDate.filter((x) => x !== 'custom');
+                      const withD = next.includes(d) ? next.filter((x) => x !== d) : [...next, d];
+                      return {
                         ...prev,
-                        startDate: prev.startDate.filter((x) => x !== 'custom'),
+                        startDate: withD,
                         startAfter: null,
                         startBefore: null,
-                      }));
-                    } else {
-                      setFilters((prev) => ({
-                        ...prev,
-                        startDate: prev.startDate.includes('custom')
-                          ? prev.startDate
-                          : [...prev.startDate, 'custom'],
-                      }));
-                      onOpenCustomStart();
+                      };
                     }
-                  }}
-                  className="rounded border-(--border-subtle)"
-                />
-                <span>{DATE_PRESET_LABELS[d]}</span>
-              </label>
-            ) : (
-              <label
-                key={d}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-              >
-                <input
-                  type="checkbox"
-                  checked={!hasCustomStart && filters.startDate.includes(d)}
-                  onChange={() => {
-                    setFilters((prev) => {
-                      if (hasCustomStart) {
-                        const next = prev.startDate.filter((x) => x !== 'custom');
-                        const withD = next.includes(d) ? next.filter((x) => x !== d) : [...next, d];
-                        return {
-                          ...prev,
-                          startDate: withD,
-                          startAfter: null,
-                          startBefore: null,
-                        };
-                      }
-                      const presets = prev.startDate.filter((x) => x !== 'custom');
-                      const nextList = presets.includes(d)
-                        ? presets.filter((x) => x !== d)
-                        : [...presets, d];
-                      return { ...prev, startDate: nextList };
-                    });
-                  }}
-                  className="rounded border-(--border-subtle)"
-                />
-                <span>{DATE_PRESET_LABELS[d]}</span>
-              </label>
+                    const presets = prev.startDate.filter((x) => x !== 'custom');
+                    const nextList = presets.includes(d)
+                      ? presets.filter((x) => x !== d)
+                      : [...presets, d];
+                    return { ...prev, startDate: nextList };
+                  });
+                }}
+                label={DATE_PRESET_LABELS[d]}
+              />
             ),
           )}
         </CollapsibleSection>
@@ -302,69 +414,58 @@ export function ProjectIssuesFiltersPanel({
           title="Due date"
           open={sectionOpen.due_date}
           onToggle={() => toggleSection('due_date')}
+          titleClassName="text-(--txt-tertiary)"
         >
           {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map((d) =>
             d === 'custom' ? (
-              <label
+              <FiltersPanelOptionRow
                 key={d}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-              >
-                <input
-                  type="checkbox"
-                  checked={hasCustomDue}
-                  onChange={() => {
+                checked={hasCustomDue}
+                onToggle={() => {
+                  if (hasCustomDue) {
+                    setFilters((prev) => ({
+                      ...prev,
+                      dueDate: prev.dueDate.filter((x) => x !== 'custom'),
+                      dueAfter: null,
+                      dueBefore: null,
+                    }));
+                  } else {
+                    setFilters((prev) => ({
+                      ...prev,
+                      dueDate: prev.dueDate.includes('custom')
+                        ? prev.dueDate
+                        : [...prev.dueDate, 'custom'],
+                    }));
+                    onOpenCustomDue();
+                  }
+                }}
+                label={DATE_PRESET_LABELS[d]}
+              />
+            ) : (
+              <FiltersPanelOptionRow
+                key={d}
+                checked={!hasCustomDue && filters.dueDate.includes(d)}
+                onToggle={() => {
+                  setFilters((prev) => {
                     if (hasCustomDue) {
-                      setFilters((prev) => ({
+                      const next = prev.dueDate.filter((x) => x !== 'custom');
+                      const withD = next.includes(d) ? next.filter((x) => x !== d) : [...next, d];
+                      return {
                         ...prev,
-                        dueDate: prev.dueDate.filter((x) => x !== 'custom'),
+                        dueDate: withD,
                         dueAfter: null,
                         dueBefore: null,
-                      }));
-                    } else {
-                      setFilters((prev) => ({
-                        ...prev,
-                        dueDate: prev.dueDate.includes('custom')
-                          ? prev.dueDate
-                          : [...prev.dueDate, 'custom'],
-                      }));
-                      onOpenCustomDue();
+                      };
                     }
-                  }}
-                  className="rounded border-(--border-subtle)"
-                />
-                <span>{DATE_PRESET_LABELS[d]}</span>
-              </label>
-            ) : (
-              <label
-                key={d}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-              >
-                <input
-                  type="checkbox"
-                  checked={!hasCustomDue && filters.dueDate.includes(d)}
-                  onChange={() => {
-                    setFilters((prev) => {
-                      if (hasCustomDue) {
-                        const next = prev.dueDate.filter((x) => x !== 'custom');
-                        const withD = next.includes(d) ? next.filter((x) => x !== d) : [...next, d];
-                        return {
-                          ...prev,
-                          dueDate: withD,
-                          dueAfter: null,
-                          dueBefore: null,
-                        };
-                      }
-                      const presets = prev.dueDate.filter((x) => x !== 'custom');
-                      const nextList = presets.includes(d)
-                        ? presets.filter((x) => x !== d)
-                        : [...presets, d];
-                      return { ...prev, dueDate: nextList };
-                    });
-                  }}
-                  className="rounded border-(--border-subtle)"
-                />
-                <span>{DATE_PRESET_LABELS[d]}</span>
-              </label>
+                    const presets = prev.dueDate.filter((x) => x !== 'custom');
+                    const nextList = presets.includes(d)
+                      ? presets.filter((x) => x !== d)
+                      : [...presets, d];
+                    return { ...prev, dueDate: nextList };
+                  });
+                }}
+                label={DATE_PRESET_LABELS[d]}
+              />
             ),
           )}
         </CollapsibleSection>

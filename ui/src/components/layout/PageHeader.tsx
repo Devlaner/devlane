@@ -54,6 +54,7 @@ import { PROJECT_VIEWS_FILTER_EVENT } from '../../lib/projectViewsEvents';
 import { slugify } from '../../lib/slug';
 import { MODULE_WORK_ITEMS_COUNT_EVENT } from '../../lib/moduleWorkItemsPrefs';
 import { ModuleDetailHeader } from './ModuleDetailHeader';
+import { ProjectSectionNavChevron } from './ProjectSectionNavChevron';
 
 export type ProjectSection = 'issues' | 'cycles' | 'modules' | 'views' | 'pages';
 
@@ -1196,7 +1197,7 @@ function ProjectSectionHeader({
               label="Filters"
               icon={<IconFilter />}
               displayValue="Filters"
-              panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
+              panelClassName="flex w-[min(400px,calc(100vw-24px))] max-h-[min(calc(100dvh-96px),36rem)] flex-col overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
               align="right"
               triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
               triggerContent={
@@ -1206,7 +1207,11 @@ function ProjectSectionHeader({
                   </span>
                   <span className="truncate">Filters</span>
                   <span className="shrink-0 text-(--txt-icon-tertiary)">
-                    <IconChevronDown />
+                    {issuesFiltersOpen === 'project-issues-filters' ? (
+                      <IconChevronUp />
+                    ) : (
+                      <IconChevronDown />
+                    )}
                   </span>
                 </>
               }
@@ -1234,6 +1239,8 @@ function ProjectSectionHeader({
               issuesFilters.priorities.length,
               issuesFilters.stateGroups.length,
               issuesFilters.assigneeIds.length,
+              issuesFilters.createdByIds.length,
+              issuesFilters.workItemGrouping === 'all' ? 0 : 1,
               issuesFilters.startDate.length,
               issuesFilters.dueDate.length,
             ].some((n) => n > 0) && (
@@ -1250,7 +1257,7 @@ function ProjectSectionHeader({
             label="Display"
             icon={<IconSliders />}
             displayValue="Display"
-            panelClassName="overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
+            panelClassName="w-[min(400px,calc(100vw-24px))] max-h-[min(calc(100dvh-96px),50rem)] overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
             align="right"
             triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
             triggerContent={
@@ -1260,7 +1267,11 @@ function ProjectSectionHeader({
                 </span>
                 <span className="truncate">Display</span>
                 <span className="shrink-0 text-(--txt-icon-tertiary)">
-                  <IconChevronDown />
+                  {issuesDisplayOpen === 'project-issues-display' ? (
+                    <IconChevronUp />
+                  ) : (
+                    <IconChevronDown />
+                  )}
                 </span>
               </>
             }
@@ -2211,9 +2222,7 @@ function ProjectSectionHeader({
             </div>
           </div>
         )}
-        <span className="shrink-0 px-0.5 text-(--txt-icon-tertiary)" aria-hidden>
-          &gt;
-        </span>
+        <ProjectSectionNavChevron baseUrl={baseUrl} currentSection={section} />
         <ProjectSectionDropdown
           baseUrl={baseUrl}
           currentSection={section}

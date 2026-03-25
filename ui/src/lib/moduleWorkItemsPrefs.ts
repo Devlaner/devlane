@@ -58,10 +58,8 @@ function normalizeModuleDisplay(raw: unknown): ProjectIssuesDisplayState {
       displayProperties: o.displayProperties as ProjectIssuesDisplayPayload['displayProperties'],
       groupBy: (o.groupBy as ProjectIssuesDisplayPayload['groupBy']) ?? 'none',
       orderBy: (o.orderBy as ProjectIssuesDisplayPayload['orderBy']) ?? 'last_created',
-      showSubWorkItems:
-        o.showSubWorkItems !== undefined ? Boolean(o.showSubWorkItems) : true,
-      showEmptyGroups:
-        o.showEmptyGroups !== undefined ? Boolean(o.showEmptyGroups) : true,
+      showSubWorkItems: o.showSubWorkItems !== undefined ? Boolean(o.showSubWorkItems) : true,
+      showEmptyGroups: o.showEmptyGroups !== undefined ? Boolean(o.showEmptyGroups) : true,
     });
   }
   return cloneDefaultProjectIssuesDisplay();

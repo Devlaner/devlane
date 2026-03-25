@@ -153,7 +153,7 @@ export function ProjectIssuesDisplayPanel({ display, setDisplay }: ProjectIssues
   };
 
   return (
-    <div className="flex w-[min(280px,calc(100vw-24px))] max-w-[calc(100vw-24px)] max-h-[min(45dvh,380px)] flex-col overflow-hidden bg-(--bg-surface-1)">
+    <div className="flex w-[min(400px,calc(100vw-24px))] max-w-[calc(100vw-24px)] max-h-[min(calc(100dvh-96px),50rem)] flex-col overflow-hidden bg-(--bg-surface-1)">
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1">
         <CollapsibleSection
           id="properties"

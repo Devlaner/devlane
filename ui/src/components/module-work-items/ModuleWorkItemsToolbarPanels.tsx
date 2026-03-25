@@ -1,5 +1,5 @@
 import { type Dispatch, type SetStateAction, useState } from 'react';
-import { CollapsibleSection } from '../workspace-views/WorkspaceViewsFiltersShared';
+import { CollapsibleSection, FiltersPanelOptionRow } from '../workspace-views/WorkspaceViewsFiltersShared';
 import { Avatar } from '../ui';
 import { getImageUrl } from '../../lib/utils';
 import type { StateApiResponse, WorkspaceMemberApiResponse } from '../../api/types';
@@ -7,16 +7,39 @@ import {
   type ModuleDueDatePreset,
   type ModuleWorkItemsFiltersState,
 } from '../../lib/moduleWorkItemsPrefs';
-
-const PRIORITIES = ['urgent', 'high', 'medium', 'low', 'none'] as const;
+import {
+  FILTER_ICONS,
+  PRIORITY_ICONS,
+  PRIORITY_LABELS,
+  STATE_GROUP_ICONS,
+} from '../workspace-views/WorkspaceViewsFiltersData';
+import { type Priority, PRIORITIES, type StateGroup } from '../../types/workspaceViewFilters';
 
 const DUE_PRESETS: { id: ModuleDueDatePreset; label: string }[] = [
   { id: 'none', label: 'Any due date' },
   { id: 'overdue', label: 'Overdue' },
   { id: 'this_week', label: 'Due this week' },
   { id: 'no_due', label: 'No due date' },
-  { id: 'custom', label: 'Custom range…' },
+  { id: 'custom', label: 'Custom' },
 ];
+
+const PLANE_SECTION_TITLE = 'text-[13px] font-medium text-(--txt-tertiary)';
+
+const API_GROUP_TO_PLANE: Record<string, StateGroup> = {
+  backlog: 'backlog',
+  unstarted: 'unstarted',
+  started: 'started',
+  completed: 'completed',
+  canceled: 'canceled',
+  cancelled: 'canceled',
+};
+
+function stateRowIcon(s: StateApiResponse) {
+  const g = s.group?.toLowerCase();
+  const sg = g ? API_GROUP_TO_PLANE[g] : undefined;
+  if (sg) return STATE_GROUP_ICONS[sg];
+  return STATE_GROUP_ICONS.unstarted;
+}
 
 export interface ModuleWorkItemsFiltersPanelProps {
   filters: ModuleWorkItemsFiltersState;
@@ -35,6 +58,7 @@ export function ModuleWorkItemsFiltersPanel({
   onRequestDueCustom,
   onRequestStartCustom,
 }: ModuleWorkItemsFiltersPanelProps) {
+  const [search, setSearch] = useState('');
   const [open, setOpen] = useState({
     priority: true,
     state: true,
@@ -44,6 +68,16 @@ export function ModuleWorkItemsFiltersPanel({
   });
 
   const toggle = (key: keyof typeof open) => setOpen((o) => ({ ...o, [key]: !o[key] }));
+
+  const q = (s: string) => s.trim().toLowerCase();
+  const filterSearch = (label: string) =>
+    !search.trim() || label.toLowerCase().includes(search.trim().toLowerCase());
+
+  const filteredMembers = members.filter((m) =>
+    q(m.member_display_name ?? m.member_email ?? m.member_id).includes(q(search)),
+  );
+
+  const filteredStates = states.filter((s) => filterSearch(s.name));
 
   const togglePriority = (p: string) => {
     setFilters((prev) => {
@@ -72,99 +106,112 @@ export function ModuleWorkItemsFiltersPanel({
     });
   };
 
+  const startCustomActive = Boolean(filters.startAfter && filters.startBefore);
+
   return (
-    <div className="w-80 max-h-[min(70vh,28rem)] overflow-y-auto py-1">
-      <CollapsibleSection title="Priority" open={open.priority} onToggle={() => toggle('priority')}>
-        <div className="flex flex-wrap gap-1.5 px-3 pb-2">
-          {PRIORITIES.map((p) => {
-            const on = filters.priorityKeys.includes(p);
-            return (
-              <button
-                key={p}
-                type="button"
-                onClick={() => togglePriority(p)}
-                className={`rounded-md border px-2 py-1 text-[12px] font-medium capitalize transition-colors ${
-                  on
-                    ? 'border-(--brand-default) bg-(--brand-default) text-white'
-                    : 'border-(--border-subtle) bg-(--bg-layer-1) text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)'
-                }`}
-              >
-                {p}
-              </button>
-            );
-          })}
+    <>
+      <div className="sticky top-0 z-1 shrink-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-2.5">
+        <div className="flex items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
+          <span className="shrink-0 text-(--txt-icon-tertiary)">
+            <FILTER_ICONS.search />
+          </span>
+          <input
+            type="text"
+            placeholder="Search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
+          />
         </div>
-      </CollapsibleSection>
-      <CollapsibleSection title="State" open={open.state} onToggle={() => toggle('state')}>
-        <div className="max-h-40 space-y-0.5 overflow-y-auto px-2 pb-2">
-          <button
-            type="button"
-            onClick={() => toggleState('__none__')}
-            className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] ${
-              filters.stateIds.includes('__none__')
-                ? 'bg-(--bg-accent-subtle) font-medium text-(--txt-accent-primary)'
-                : 'text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)'
-            }`}
-          >
-            No state
-          </button>
-          {states.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => toggleState(s.id)}
-              className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] ${
-                filters.stateIds.includes(s.id)
-                  ? 'bg-(--bg-accent-subtle) font-medium text-(--txt-accent-primary)'
-                  : 'text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)'
-              }`}
-            >
-              {s.name}
-            </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto py-1">
+        <CollapsibleSection
+          title="Priority"
+          open={open.priority}
+          onToggle={() => toggle('priority')}
+          titleClassName={PLANE_SECTION_TITLE}
+        >
+          {PRIORITIES.filter((p) => filterSearch(PRIORITY_LABELS[p])).map((p) => (
+            <FiltersPanelOptionRow
+              key={p}
+              checked={filters.priorityKeys.includes(p)}
+              onToggle={() => togglePriority(p)}
+              icon={PRIORITY_ICONS[p as Priority]}
+              label={PRIORITY_LABELS[p as Priority]}
+            />
           ))}
-        </div>
-      </CollapsibleSection>
-      <CollapsibleSection
-        title="Assignees"
-        open={open.assignee}
-        onToggle={() => toggle('assignee')}
-      >
-        <div className="max-h-44 space-y-0.5 overflow-y-auto px-2 pb-2">
-          {members.map((m) => {
-            const id = m.member_id;
-            const label =
-              m.member_display_name?.trim() || m.member_email?.split('@')[0]?.trim() || 'Member';
-            const on = filters.assigneeMemberIds.includes(id);
-            return (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => toggleAssignee(id)}
-                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] ${
-                  on
-                    ? 'bg-(--bg-accent-subtle) font-medium text-(--txt-accent-primary)'
-                    : 'text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)'
-                }`}
-              >
-                <Avatar
-                  name={label}
-                  src={getImageUrl(m.member_avatar) ?? undefined}
-                  size="sm"
-                  className="size-6 text-[10px]"
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="State"
+          open={open.state}
+          onToggle={() => toggle('state')}
+          titleClassName={PLANE_SECTION_TITLE}
+        >
+          {filterSearch('No state') ? (
+            <FiltersPanelOptionRow
+              checked={filters.stateIds.includes('__none__')}
+              onToggle={() => toggleState('__none__')}
+              icon={STATE_GROUP_ICONS.backlog}
+              label="No state"
+            />
+          ) : null}
+          <div className="max-h-48 overflow-y-auto">
+            {filteredStates.map((s) => (
+              <FiltersPanelOptionRow
+                key={s.id}
+                checked={filters.stateIds.includes(s.id)}
+                onToggle={() => toggleState(s.id)}
+                icon={stateRowIcon(s)}
+                label={s.name}
+              />
+            ))}
+          </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Assignee"
+          open={open.assignee}
+          onToggle={() => toggle('assignee')}
+          titleClassName={PLANE_SECTION_TITLE}
+        >
+          <div className="max-h-52 overflow-y-auto">
+            {filteredMembers.map((m) => {
+              const id = m.member_id;
+              const label =
+                m.member_display_name?.trim() || m.member_email?.split('@')[0]?.trim() || 'Member';
+              return (
+                <FiltersPanelOptionRow
+                  key={m.id}
+                  checked={filters.assigneeMemberIds.includes(id)}
+                  onToggle={() => toggleAssignee(id)}
+                  icon={
+                    <Avatar
+                      name={label}
+                      src={getImageUrl(m.member_avatar) ?? undefined}
+                      size="sm"
+                      className="h-5 w-5 shrink-0 text-[10px]"
+                    />
+                  }
+                  label={label}
                 />
-                <span className="min-w-0 truncate">{label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </CollapsibleSection>
-      <CollapsibleSection title="Due date" open={open.due} onToggle={() => toggle('due')}>
-        <div className="flex flex-col gap-0.5 px-2 pb-2">
-          {DUE_PRESETS.map((pr) => (
-            <button
+              );
+            })}
+          </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Due date"
+          open={open.due}
+          onToggle={() => toggle('due')}
+          titleClassName={PLANE_SECTION_TITLE}
+        >
+          {DUE_PRESETS.filter((pr) => filterSearch(pr.label)).map((pr) => (
+            <FiltersPanelOptionRow
               key={pr.id}
-              type="button"
-              onClick={() => {
+              radio
+              checked={filters.duePreset === pr.id}
+              onToggle={() => {
                 if (pr.id === 'custom') {
                   setFilters((p) => ({ ...p, duePreset: 'custom' }));
                   onRequestDueCustom();
@@ -177,40 +224,56 @@ export function ModuleWorkItemsFiltersPanel({
                   }));
                 }
               }}
-              className={`rounded-md px-2 py-1.5 text-left text-[13px] ${
-                filters.duePreset === pr.id
-                  ? 'bg-(--bg-accent-subtle) font-medium text-(--txt-accent-primary)'
-                  : 'text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)'
-              }`}
-            >
-              {pr.label}
-              {pr.id === 'custom' &&
+              label={
+                pr.id === 'custom' &&
                 filters.duePreset === 'custom' &&
-                (filters.dueAfter || filters.dueBefore) && (
-                  <span className="mt-0.5 block text-[11px] font-normal text-(--txt-tertiary)">
-                    {[filters.dueAfter, filters.dueBefore].filter(Boolean).join(' → ')}
+                (filters.dueAfter || filters.dueBefore) ? (
+                  <span className="flex flex-col gap-0.5">
+                    <span>{pr.label}</span>
+                    <span className="text-[11px] font-normal text-(--txt-tertiary)">
+                      {[filters.dueAfter, filters.dueBefore].filter(Boolean).join(' → ')}
+                    </span>
                   </span>
-                )}
-            </button>
+                ) : (
+                  pr.label
+                )
+              }
+            />
           ))}
-        </div>
-      </CollapsibleSection>
-      <CollapsibleSection title="Start date" open={open.start} onToggle={() => toggle('start')}>
-        <div className="px-2 pb-2">
-          <button
-            type="button"
-            onClick={() => onRequestStartCustom()}
-            className="w-full rounded-md border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5 text-left text-[13px] text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)"
-          >
-            Custom range…
-          </button>
-          {(filters.startAfter || filters.startBefore) && (
-            <p className="mt-1 text-[11px] text-(--txt-tertiary)">
-              {[filters.startAfter, filters.startBefore].filter(Boolean).join(' → ')}
-            </p>
-          )}
-        </div>
-      </CollapsibleSection>
-    </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Start date"
+          open={open.start}
+          onToggle={() => toggle('start')}
+          titleClassName={PLANE_SECTION_TITLE}
+        >
+          {filterSearch('Custom') ? (
+            <FiltersPanelOptionRow
+              checked={startCustomActive}
+              onToggle={() => {
+                if (startCustomActive) {
+                  setFilters((p) => ({ ...p, startAfter: null, startBefore: null }));
+                } else {
+                  onRequestStartCustom();
+                }
+              }}
+              label={
+                startCustomActive ? (
+                  <span className="flex flex-col gap-0.5">
+                    <span>Custom</span>
+                    <span className="text-[11px] font-normal text-(--txt-tertiary)">
+                      {[filters.startAfter, filters.startBefore].filter(Boolean).join(' → ')}
+                    </span>
+                  </span>
+                ) : (
+                  'Custom'
+                )
+              }
+            />
+          ) : null}
+        </CollapsibleSection>
+      </div>
+    </>
   );
 }
