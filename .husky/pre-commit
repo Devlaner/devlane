@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+set -e
+
+echo "🔍 lint-staged (ESLint/Prettier staged UI, gofmt staged API)..."
+npx lint-staged
+
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if echo "$STAGED_FILES" | grep -qE '^ui/'; then
+  echo "📦 UI: typecheck + full ESLint..."
+  npm --prefix ui run typecheck
+  npm --prefix ui run lint
+fi
+
+if echo "$STAGED_FILES" | grep -qE '^api/.*\.go$|^api/go\.(mod|sum)$'; then
+  echo "🔧 API: go vet + go test..."
+  (cd api && go vet ./... && go test ./...)
+fi
+
+echo "✅ pre-commit OK"

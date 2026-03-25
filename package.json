@@ -1,0 +1,23 @@
+{
+  "name": "devlane",
+  "version": "1.0.0",
+  "description": "![Devlane](./ui/public/devlane-1-dark.png)",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky",
+    "validate": "npm --prefix ui run typecheck && npm --prefix ui run lint && npm --prefix ui run format:check && cd api && go vet ./... && go test ./..."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0"
+  }
+}
