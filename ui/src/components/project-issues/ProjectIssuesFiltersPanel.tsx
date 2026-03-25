@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Avatar } from '../ui';
-import { CollapsibleSection } from '../workspace-views/WorkspaceViewsFiltersShared';
+import {
+  CollapsibleSection,
+  FiltersPanelOptionRow,
+} from '../workspace-views/WorkspaceViewsFiltersShared';
 import {
   DATE_PRESET_LABELS,
   FILTER_ICONS,
@@ -9,10 +12,23 @@ import {
   STATE_GROUP_ICONS,
   STATE_GROUP_LABELS,
 } from '../workspace-views/WorkspaceViewsFiltersData';
-import { DATE_PRESETS, PRIORITIES, STATE_GROUPS } from '../../types/workspaceViewFilters';
+import {
+  DATE_PRESETS,
+  PRIORITIES,
+  STATE_GROUPS,
+  type DatePreset,
+} from '../../types/workspaceViewFilters';
 import type { ProjectIssuesFiltersState } from '../../lib/projectIssuesEvents';
-import type { WorkspaceMemberApiResponse } from '../../api/types';
+import type {
+  CycleApiResponse,
+  LabelApiResponse,
+  WorkspaceMemberApiResponse,
+} from '../../api/types';
 import { getImageUrl, normalizeUuidKey } from '../../lib/utils';
+
+const emptyFilterHint = (
+  <div className="px-3 py-1.5 text-sm italic text-(--txt-tertiary)">No matches found</div>
+);
 
 export interface ProjectIssuesFiltersPanelProps {
   search: string;
@@ -20,6 +36,8 @@ export interface ProjectIssuesFiltersPanelProps {
   filters: ProjectIssuesFiltersState;
   setFilters: React.Dispatch<React.SetStateAction<ProjectIssuesFiltersState>>;
   members: WorkspaceMemberApiResponse[];
+  cycles: CycleApiResponse[];
+  labels: LabelApiResponse[];
   currentUserId: string | null | undefined;
   currentUserName: string;
   currentUserAvatarUrl: string | null | undefined;
@@ -33,6 +51,8 @@ export function ProjectIssuesFiltersPanel({
   filters,
   setFilters,
   members,
+  cycles,
+  labels,
   currentUserId,
   currentUserName,
   currentUserAvatarUrl,
@@ -43,6 +63,11 @@ export function ProjectIssuesFiltersPanel({
     priority: true,
     state: true,
     assignee: true,
+    cycle: true,
+    mention: true,
+    created_by: true,
+    label: true,
+    work_item_grouping: true,
     start_date: true,
     due_date: true,
   });
@@ -58,12 +83,48 @@ export function ProjectIssuesFiltersPanel({
   const filteredMembers = members.filter((m) =>
     q(m.member_display_name ?? m.member_email ?? m.member_id).includes(q(search)),
   );
+  const creatorMembers = filteredMembers;
 
   const displayName = (m: WorkspaceMemberApiResponse) =>
     m.member_display_name?.trim() ?? m.member_email ?? m.member_id.slice(0, 12);
 
+  const memberPickerHasRows =
+    Boolean(currentUserId && (filterSearch('You') || filterSearch(currentUserName))) ||
+    filteredMembers.some((m) => normalizeUuidKey(m.member_id) !== normalizeUuidKey(currentUserId));
+
+  const filteredCycles = cycles.filter((c) => q(c.name).includes(q(search)));
+  const filteredLabels = labels.filter((l) => q(l.name).includes(q(search)));
+
   const hasCustomStart = filters.startDate.includes('custom');
   const hasCustomDue = filters.dueDate.includes('custom');
+
+  const toggleStartPreset = (d: Exclude<DatePreset, 'custom'>) =>
+    setFilters((prev) => {
+      const hadCustom = prev.startDate.includes('custom');
+      const rest = prev.startDate.filter((x) => x !== 'custom');
+      const nextRest = rest.includes(d) ? rest.filter((x) => x !== d) : [...rest, d];
+      return { ...prev, startDate: hadCustom ? [...nextRest, 'custom'] : nextRest };
+    });
+
+  const toggleDuePreset = (d: Exclude<DatePreset, 'custom'>) =>
+    setFilters((prev) => {
+      const hadCustom = prev.dueDate.includes('custom');
+      const rest = prev.dueDate.filter((x) => x !== 'custom');
+      const nextRest = rest.includes(d) ? rest.filter((x) => x !== d) : [...rest, d];
+      return { ...prev, dueDate: hadCustom ? [...nextRest, 'custom'] : nextRest };
+    });
+
+  const youRowIcon = getImageUrl(currentUserAvatarUrl) ? (
+    <img
+      src={getImageUrl(currentUserAvatarUrl)!}
+      alt=""
+      className="size-5 shrink-0 rounded-full object-cover"
+    />
+  ) : (
+    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--brand-200) text-[10px] font-medium text-(--brand-default)">
+      {currentUserName.charAt(0).toUpperCase()}
+    </span>
+  );
 
   return (
     <>
@@ -86,30 +147,23 @@ export function ProjectIssuesFiltersPanel({
           title="Priority"
           open={sectionOpen.priority}
           onToggle={() => toggleSection('priority')}
+          titleClassName="text-(--txt-tertiary)"
         >
           {PRIORITIES.filter((p) => filterSearch(PRIORITY_LABELS[p])).map((p) => (
-            <label
+            <FiltersPanelOptionRow
               key={p}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-            >
-              <input
-                type="checkbox"
-                checked={filters.priorities.includes(p)}
-                onChange={() => {
-                  setFilters((prev) => ({
-                    ...prev,
-                    priorities: prev.priorities.includes(p)
-                      ? prev.priorities.filter((x) => x !== p)
-                      : [...prev.priorities, p],
-                  }));
-                }}
-                className="rounded border-(--border-subtle)"
-              />
-              <span className="flex size-4 shrink-0 items-center justify-center">
-                {PRIORITY_ICONS[p]}
-              </span>
-              <span>{PRIORITY_LABELS[p]}</span>
-            </label>
+              checked={filters.priorities.includes(p)}
+              onToggle={() => {
+                setFilters((prev) => ({
+                  ...prev,
+                  priorities: prev.priorities.includes(p)
+                    ? prev.priorities.filter((x) => x !== p)
+                    : [...prev.priorities, p],
+                }));
+              }}
+              icon={PRIORITY_ICONS[p]}
+              label={PRIORITY_LABELS[p]}
+            />
           ))}
         </CollapsibleSection>
 
@@ -117,30 +171,23 @@ export function ProjectIssuesFiltersPanel({
           title="State"
           open={sectionOpen.state}
           onToggle={() => toggleSection('state')}
+          titleClassName="text-(--txt-tertiary)"
         >
           {STATE_GROUPS.filter((g) => filterSearch(STATE_GROUP_LABELS[g])).map((g) => (
-            <label
+            <FiltersPanelOptionRow
               key={g}
-              className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-            >
-              <input
-                type="checkbox"
-                checked={filters.stateGroups.includes(g)}
-                onChange={() => {
-                  setFilters((prev) => ({
-                    ...prev,
-                    stateGroups: prev.stateGroups.includes(g)
-                      ? prev.stateGroups.filter((x) => x !== g)
-                      : [...prev.stateGroups, g],
-                  }));
-                }}
-                className="rounded border-(--border-subtle)"
-              />
-              <span className="flex size-4 shrink-0 items-center justify-center">
-                {STATE_GROUP_ICONS[g]}
-              </span>
-              <span>{STATE_GROUP_LABELS[g]}</span>
-            </label>
+              checked={filters.stateGroups.includes(g)}
+              onToggle={() => {
+                setFilters((prev) => ({
+                  ...prev,
+                  stateGroups: prev.stateGroups.includes(g)
+                    ? prev.stateGroups.filter((x) => x !== g)
+                    : [...prev.stateGroups, g],
+                }));
+              }}
+              icon={STATE_GROUP_ICONS[g]}
+              label={STATE_GROUP_LABELS[g]}
+            />
           ))}
         </CollapsibleSection>
 
@@ -148,152 +195,334 @@ export function ProjectIssuesFiltersPanel({
           title="Assignee"
           open={sectionOpen.assignee}
           onToggle={() => toggleSection('assignee')}
+          titleClassName="text-(--txt-tertiary)"
         >
-          {currentUserId && (filterSearch('You') || filterSearch(currentUserName)) && (
-            <label className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
-              <input
-                type="checkbox"
-                checked={filters.assigneeIds.some(
-                  (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
-                )}
-                onChange={() => {
-                  setFilters((prev) => {
-                    const has = prev.assigneeIds.some(
-                      (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
-                    );
-                    return {
-                      ...prev,
-                      assigneeIds: has
-                        ? prev.assigneeIds.filter(
-                            (id) => normalizeUuidKey(id) !== normalizeUuidKey(currentUserId),
-                          )
-                        : [...prev.assigneeIds, currentUserId],
-                    };
-                  });
-                }}
-                className="rounded border-(--border-subtle)"
-              />
-              {getImageUrl(currentUserAvatarUrl) ? (
-                <img
-                  src={getImageUrl(currentUserAvatarUrl)!}
-                  alt=""
-                  className="size-5 shrink-0 rounded-full object-cover"
-                />
-              ) : (
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--brand-200) text-[10px] font-medium text-(--brand-default)">
-                  {currentUserName.charAt(0).toUpperCase()}
-                </span>
-              )}
-              <span>You</span>
-            </label>
-          )}
-          {filteredMembers
-            .filter((m) => normalizeUuidKey(m.member_id) !== normalizeUuidKey(currentUserId))
-            .map((m) => (
-              <label
-                key={m.id}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-              >
-                <input
-                  type="checkbox"
+          {!memberPickerHasRows ? (
+            emptyFilterHint
+          ) : (
+            <>
+              {currentUserId && (filterSearch('You') || filterSearch(currentUserName)) && (
+                <FiltersPanelOptionRow
                   checked={filters.assigneeIds.some(
-                    (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
+                    (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
                   )}
-                  onChange={() => {
+                  onToggle={() => {
                     setFilters((prev) => {
                       const has = prev.assigneeIds.some(
-                        (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
+                        (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
                       );
                       return {
                         ...prev,
                         assigneeIds: has
                           ? prev.assigneeIds.filter(
-                              (id) => normalizeUuidKey(id) !== normalizeUuidKey(m.member_id),
+                              (id) => normalizeUuidKey(id) !== normalizeUuidKey(currentUserId),
                             )
-                          : [...prev.assigneeIds, m.member_id],
+                          : [...prev.assigneeIds, currentUserId],
                       };
                     });
                   }}
-                  className="rounded border-(--border-subtle)"
+                  icon={youRowIcon}
+                  label="You"
                 />
-                <Avatar
-                  name={displayName(m)}
-                  src={getImageUrl(m.member_avatar) ?? undefined}
-                  size="sm"
-                  className="h-5 w-5 shrink-0 text-[10px]"
+              )}
+              {filteredMembers
+                .filter((m) => normalizeUuidKey(m.member_id) !== normalizeUuidKey(currentUserId))
+                .map((m) => (
+                  <FiltersPanelOptionRow
+                    key={m.id}
+                    checked={filters.assigneeIds.some(
+                      (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
+                    )}
+                    onToggle={() => {
+                      setFilters((prev) => {
+                        const has = prev.assigneeIds.some(
+                          (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
+                        );
+                        return {
+                          ...prev,
+                          assigneeIds: has
+                            ? prev.assigneeIds.filter(
+                                (id) => normalizeUuidKey(id) !== normalizeUuidKey(m.member_id),
+                              )
+                            : [...prev.assigneeIds, m.member_id],
+                        };
+                      });
+                    }}
+                    icon={
+                      <Avatar
+                        name={displayName(m)}
+                        src={getImageUrl(m.member_avatar) ?? undefined}
+                        size="sm"
+                        className="h-5 w-5 shrink-0 text-[10px]"
+                      />
+                    }
+                    label={displayName(m)}
+                  />
+                ))}
+            </>
+          )}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Cycle"
+          open={sectionOpen.cycle}
+          onToggle={() => toggleSection('cycle')}
+          titleClassName="text-(--txt-tertiary)"
+        >
+          {filteredCycles.length === 0
+            ? emptyFilterHint
+            : filteredCycles.map((c) => (
+                <FiltersPanelOptionRow
+                  key={c.id}
+                  checked={filters.cycleIds.some(
+                    (id) => normalizeUuidKey(id) === normalizeUuidKey(c.id),
+                  )}
+                  onToggle={() => {
+                    setFilters((prev) => {
+                      const has = prev.cycleIds.some(
+                        (id) => normalizeUuidKey(id) === normalizeUuidKey(c.id),
+                      );
+                      return {
+                        ...prev,
+                        cycleIds: has
+                          ? prev.cycleIds.filter(
+                              (id) => normalizeUuidKey(id) !== normalizeUuidKey(c.id),
+                            )
+                          : [...prev.cycleIds, c.id],
+                      };
+                    });
+                  }}
+                  icon={
+                    <span className="size-3.5 shrink-0 rounded-full bg-amber-400" aria-hidden />
+                  }
+                  label={c.name}
                 />
-                <span className="truncate">{displayName(m)}</span>
-              </label>
-            ))}
+              ))}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Mention"
+          open={sectionOpen.mention}
+          onToggle={() => toggleSection('mention')}
+          titleClassName="text-(--txt-tertiary)"
+        >
+          {!memberPickerHasRows ? (
+            emptyFilterHint
+          ) : (
+            <>
+              {currentUserId && (filterSearch('You') || filterSearch(currentUserName)) && (
+                <FiltersPanelOptionRow
+                  checked={filters.mentionedUserIds.some(
+                    (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
+                  )}
+                  onToggle={() => {
+                    setFilters((prev) => {
+                      const has = prev.mentionedUserIds.some(
+                        (id) => normalizeUuidKey(id) === normalizeUuidKey(currentUserId),
+                      );
+                      return {
+                        ...prev,
+                        mentionedUserIds: has
+                          ? prev.mentionedUserIds.filter(
+                              (id) => normalizeUuidKey(id) !== normalizeUuidKey(currentUserId),
+                            )
+                          : [...prev.mentionedUserIds, currentUserId],
+                      };
+                    });
+                  }}
+                  icon={youRowIcon}
+                  label="You"
+                />
+              )}
+              {filteredMembers
+                .filter((m) => normalizeUuidKey(m.member_id) !== normalizeUuidKey(currentUserId))
+                .map((m) => (
+                  <FiltersPanelOptionRow
+                    key={`mention-${m.id}`}
+                    checked={filters.mentionedUserIds.some(
+                      (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
+                    )}
+                    onToggle={() => {
+                      setFilters((prev) => {
+                        const has = prev.mentionedUserIds.some(
+                          (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
+                        );
+                        return {
+                          ...prev,
+                          mentionedUserIds: has
+                            ? prev.mentionedUserIds.filter(
+                                (id) => normalizeUuidKey(id) !== normalizeUuidKey(m.member_id),
+                              )
+                            : [...prev.mentionedUserIds, m.member_id],
+                        };
+                      });
+                    }}
+                    icon={
+                      <Avatar
+                        name={displayName(m)}
+                        src={getImageUrl(m.member_avatar) ?? undefined}
+                        size="sm"
+                        className="h-5 w-5 shrink-0 text-[10px]"
+                      />
+                    }
+                    label={displayName(m)}
+                  />
+                ))}
+            </>
+          )}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Created by"
+          open={sectionOpen.created_by}
+          onToggle={() => toggleSection('created_by')}
+          titleClassName="text-(--txt-tertiary)"
+        >
+          {creatorMembers.length === 0
+            ? emptyFilterHint
+            : creatorMembers.map((m) => (
+                <FiltersPanelOptionRow
+                  key={`created-${m.id}`}
+                  checked={filters.createdByIds.some(
+                    (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
+                  )}
+                  onToggle={() => {
+                    setFilters((prev) => {
+                      const has = prev.createdByIds.some(
+                        (id) => normalizeUuidKey(id) === normalizeUuidKey(m.member_id),
+                      );
+                      return {
+                        ...prev,
+                        createdByIds: has
+                          ? prev.createdByIds.filter(
+                              (id) => normalizeUuidKey(id) !== normalizeUuidKey(m.member_id),
+                            )
+                          : [...prev.createdByIds, m.member_id],
+                      };
+                    });
+                  }}
+                  icon={
+                    <Avatar
+                      name={displayName(m)}
+                      src={getImageUrl(m.member_avatar) ?? undefined}
+                      size="sm"
+                      className="h-5 w-5 shrink-0 text-[10px]"
+                    />
+                  }
+                  label={displayName(m)}
+                />
+              ))}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Label"
+          open={sectionOpen.label}
+          onToggle={() => toggleSection('label')}
+          titleClassName="text-(--txt-tertiary)"
+        >
+          {filteredLabels.length === 0
+            ? emptyFilterHint
+            : filteredLabels.map((l) => (
+                <FiltersPanelOptionRow
+                  key={l.id}
+                  checked={filters.labelIds.some(
+                    (id) => normalizeUuidKey(id) === normalizeUuidKey(l.id),
+                  )}
+                  onToggle={() => {
+                    setFilters((prev) => {
+                      const has = prev.labelIds.some(
+                        (id) => normalizeUuidKey(id) === normalizeUuidKey(l.id),
+                      );
+                      return {
+                        ...prev,
+                        labelIds: has
+                          ? prev.labelIds.filter(
+                              (id) => normalizeUuidKey(id) !== normalizeUuidKey(l.id),
+                            )
+                          : [...prev.labelIds, l.id],
+                      };
+                    });
+                  }}
+                  icon={
+                    <span
+                      className="size-3.5 shrink-0 rounded-full border border-(--border-subtle)"
+                      style={
+                        l.color
+                          ? { backgroundColor: l.color, borderColor: 'transparent' }
+                          : undefined
+                      }
+                      aria-hidden
+                    />
+                  }
+                  label={l.name}
+                />
+              ))}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Work item Grouping"
+          open={sectionOpen.work_item_grouping}
+          onToggle={() => toggleSection('work_item_grouping')}
+          titleClassName="text-(--txt-tertiary)"
+        >
+          <FiltersPanelOptionRow
+            checked={filters.workItemGrouping === 'all'}
+            onToggle={() => setFilters((prev) => ({ ...prev, workItemGrouping: 'all' }))}
+            label="All Work items"
+            radio
+          />
+          <FiltersPanelOptionRow
+            checked={filters.workItemGrouping === 'active'}
+            onToggle={() => setFilters((prev) => ({ ...prev, workItemGrouping: 'active' }))}
+            label="Active Work items"
+            radio
+          />
+          <FiltersPanelOptionRow
+            checked={filters.workItemGrouping === 'backlog'}
+            onToggle={() => setFilters((prev) => ({ ...prev, workItemGrouping: 'backlog' }))}
+            label="Backlog Work items"
+            radio
+          />
         </CollapsibleSection>
 
         <CollapsibleSection
           title="Start date"
           open={sectionOpen.start_date}
           onToggle={() => toggleSection('start_date')}
+          titleClassName="text-(--txt-tertiary)"
         >
           {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map((d) =>
             d === 'custom' ? (
-              <label
+              <FiltersPanelOptionRow
                 key={d}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-              >
-                <input
-                  type="checkbox"
-                  checked={hasCustomStart}
-                  onChange={() => {
-                    if (hasCustomStart) {
-                      setFilters((prev) => ({
-                        ...prev,
-                        startDate: prev.startDate.filter((x) => x !== 'custom'),
-                        startAfter: null,
-                        startBefore: null,
-                      }));
-                    } else {
-                      setFilters((prev) => ({
-                        ...prev,
-                        startDate: prev.startDate.includes('custom')
-                          ? prev.startDate
-                          : [...prev.startDate, 'custom'],
-                      }));
-                      onOpenCustomStart();
-                    }
-                  }}
-                  className="rounded border-(--border-subtle)"
-                />
-                <span>{DATE_PRESET_LABELS[d]}</span>
-              </label>
+                checked={hasCustomStart}
+                onToggle={() => {
+                  if (hasCustomStart) {
+                    setFilters((prev) => ({
+                      ...prev,
+                      startDate: prev.startDate.filter((x) => x !== 'custom'),
+                      startAfter: null,
+                      startBefore: null,
+                    }));
+                  } else {
+                    setFilters((prev) => ({
+                      ...prev,
+                      startDate: prev.startDate.includes('custom')
+                        ? prev.startDate
+                        : [...prev.startDate, 'custom'],
+                    }));
+                    onOpenCustomStart();
+                  }
+                }}
+                label={DATE_PRESET_LABELS[d]}
+              />
             ) : (
-              <label
+              <FiltersPanelOptionRow
                 key={d}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-              >
-                <input
-                  type="checkbox"
-                  checked={!hasCustomStart && filters.startDate.includes(d)}
-                  onChange={() => {
-                    setFilters((prev) => {
-                      if (hasCustomStart) {
-                        const next = prev.startDate.filter((x) => x !== 'custom');
-                        const withD = next.includes(d) ? next.filter((x) => x !== d) : [...next, d];
-                        return {
-                          ...prev,
-                          startDate: withD,
-                          startAfter: null,
-                          startBefore: null,
-                        };
-                      }
-                      const presets = prev.startDate.filter((x) => x !== 'custom');
-                      const nextList = presets.includes(d)
-                        ? presets.filter((x) => x !== d)
-                        : [...presets, d];
-                      return { ...prev, startDate: nextList };
-                    });
-                  }}
-                  className="rounded border-(--border-subtle)"
-                />
-                <span>{DATE_PRESET_LABELS[d]}</span>
-              </label>
+                checked={filters.startDate.includes(d)}
+                onToggle={() => toggleStartPreset(d)}
+                label={DATE_PRESET_LABELS[d]}
+              />
             ),
           )}
         </CollapsibleSection>
@@ -302,69 +531,40 @@ export function ProjectIssuesFiltersPanel({
           title="Due date"
           open={sectionOpen.due_date}
           onToggle={() => toggleSection('due_date')}
+          titleClassName="text-(--txt-tertiary)"
         >
           {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map((d) =>
             d === 'custom' ? (
-              <label
+              <FiltersPanelOptionRow
                 key={d}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-              >
-                <input
-                  type="checkbox"
-                  checked={hasCustomDue}
-                  onChange={() => {
-                    if (hasCustomDue) {
-                      setFilters((prev) => ({
-                        ...prev,
-                        dueDate: prev.dueDate.filter((x) => x !== 'custom'),
-                        dueAfter: null,
-                        dueBefore: null,
-                      }));
-                    } else {
-                      setFilters((prev) => ({
-                        ...prev,
-                        dueDate: prev.dueDate.includes('custom')
-                          ? prev.dueDate
-                          : [...prev.dueDate, 'custom'],
-                      }));
-                      onOpenCustomDue();
-                    }
-                  }}
-                  className="rounded border-(--border-subtle)"
-                />
-                <span>{DATE_PRESET_LABELS[d]}</span>
-              </label>
+                checked={hasCustomDue}
+                onToggle={() => {
+                  if (hasCustomDue) {
+                    setFilters((prev) => ({
+                      ...prev,
+                      dueDate: prev.dueDate.filter((x) => x !== 'custom'),
+                      dueAfter: null,
+                      dueBefore: null,
+                    }));
+                  } else {
+                    setFilters((prev) => ({
+                      ...prev,
+                      dueDate: prev.dueDate.includes('custom')
+                        ? prev.dueDate
+                        : [...prev.dueDate, 'custom'],
+                    }));
+                    onOpenCustomDue();
+                  }
+                }}
+                label={DATE_PRESET_LABELS[d]}
+              />
             ) : (
-              <label
+              <FiltersPanelOptionRow
                 key={d}
-                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-              >
-                <input
-                  type="checkbox"
-                  checked={!hasCustomDue && filters.dueDate.includes(d)}
-                  onChange={() => {
-                    setFilters((prev) => {
-                      if (hasCustomDue) {
-                        const next = prev.dueDate.filter((x) => x !== 'custom');
-                        const withD = next.includes(d) ? next.filter((x) => x !== d) : [...next, d];
-                        return {
-                          ...prev,
-                          dueDate: withD,
-                          dueAfter: null,
-                          dueBefore: null,
-                        };
-                      }
-                      const presets = prev.dueDate.filter((x) => x !== 'custom');
-                      const nextList = presets.includes(d)
-                        ? presets.filter((x) => x !== d)
-                        : [...presets, d];
-                      return { ...prev, dueDate: nextList };
-                    });
-                  }}
-                  className="rounded border-(--border-subtle)"
-                />
-                <span>{DATE_PRESET_LABELS[d]}</span>
-              </label>
+                checked={filters.dueDate.includes(d)}
+                onToggle={() => toggleDuePreset(d)}
+                label={DATE_PRESET_LABELS[d]}
+              />
             ),
           )}
         </CollapsibleSection>
