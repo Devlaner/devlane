@@ -114,10 +114,13 @@ export function ModuleWorkItemsFiltersPanel({
   const filteredLabels = labels.filter((l) => filterSearch(l.name));
 
   const groupOrder: StateGroup[] = ['backlog', 'unstarted', 'started', 'completed', 'canceled'];
-  const stateIdsByGroup = groupOrder.reduce((acc, g) => {
-    acc[g] = [];
-    return acc;
-  }, {} as Record<StateGroup, string[]>);
+  const stateIdsByGroup = groupOrder.reduce(
+    (acc, g) => {
+      acc[g] = [];
+      return acc;
+    },
+    {} as Record<StateGroup, string[]>,
+  );
   for (const s of states) {
     const sg = stateGroupForState(s);
     stateIdsByGroup[sg].push(s.id);
@@ -158,7 +161,9 @@ export function ModuleWorkItemsFiltersPanel({
     });
   };
 
-  const toggleIdInArray = (arrKey: 'cycleIds' | 'mentionedUserIds' | 'createdByIds' | 'labelIds') => {
+  const toggleIdInArray = (
+    arrKey: 'cycleIds' | 'mentionedUserIds' | 'createdByIds' | 'labelIds',
+  ) => {
     return (id: string) => {
       setFilters((prev) => {
         const key = normalizeUuidKey(id);
@@ -238,7 +243,8 @@ export function ModuleWorkItemsFiltersPanel({
               <div className="max-h-48 overflow-y-auto">
                 {matchingGroups.map((g) => {
                   const ids = stateIdsByGroup[g] ?? [];
-                  const checked = ids.length > 0 && ids.every((id) => filters.stateIds.includes(id));
+                  const checked =
+                    ids.length > 0 && ids.every((id) => filters.stateIds.includes(id));
                   return (
                     <FiltersPanelOptionRow
                       key={g}
@@ -340,7 +346,12 @@ export function ModuleWorkItemsFiltersPanel({
                     (id) => normalizeUuidKey(id) === normalizeUuidKey(c.id),
                   )}
                   onToggle={() => toggleCycle(c.id)}
-                  icon={<span className="flex size-3 shrink-0 items-center justify-center rounded-full bg-amber-500/20" aria-hidden />}
+                  icon={
+                    <span
+                      className="flex size-3 shrink-0 items-center justify-center rounded-full bg-amber-500/20"
+                      aria-hidden
+                    />
+                  }
                   label={c.name}
                 />
               ))}
