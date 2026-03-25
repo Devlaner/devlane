@@ -49,8 +49,20 @@ For contribution workflow and code style, see [CONTRIBUTING](CONTRIBUTING.md) if
 
 ## Built with
 
-- **API:** Go, Gin, GORM, PostgreSQL, Redis; optional RabbitMQ and MinIO.
-- **UI:** React, React Router, Vite, TypeScript, Tailwind CSS, TipTap (rich text), Recharts.
+[![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev/)
+[![Gin](https://img.shields.io/badge/Gin-008ECF?style=for-the-badge&logo=go&logoColor=white)](https://gin-gonic.com/)
+[![GORM](https://img.shields.io/badge/GORM-000000?style=for-the-badge&logo=go&logoColor=white)](https://gorm.io/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
+[![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)](https://www.rabbitmq.com/)
+[![MinIO](https://img.shields.io/badge/MinIO-C72E49?style=for-the-badge&logo=minio&logoColor=white)](https://min.io/)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![React Router](https://img.shields.io/badge/React%20Router-CA4245?logo=react-router&style=for-the-badge&logoColor=white)](https://reactrouter.com/)
+[![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![TipTap](https://img.shields.io/badge/TipTap-000000?style=for-the-badge&logo=prosemirror&logoColor=white)](https://tiptap.dev/)
+[![Recharts](https://img.shields.io/badge/Recharts-FF7300?style=for-the-badge&logo=chartdotjs&logoColor=white)](https://recharts.org/)
 
 ---
 
