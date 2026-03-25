@@ -88,11 +88,11 @@ Contributions are welcome. Please open an issue for bugs or feature ideas, and r
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=Devlaner%2Fdevlane&type=date&logscale=&legend=top-left">
+<a href="https://star-history.com/#Devlaner/devlane&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=Devlaner/devlane&type=date&theme=dark&logscale&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=Devlaner/devlane&type=date&logscale&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=Devlaner/devlane&type=date&logscale&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=Devlaner/devlane&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=Devlaner/devlane&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=Devlaner/devlane&type=Date" />
  </picture>
 </a>
 
