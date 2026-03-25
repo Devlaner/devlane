@@ -198,7 +198,7 @@ export function ModuleDetailPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [listFilters, setListFilters] = useState<ModuleWorkItemsFiltersState>(
     DEFAULT_MODULE_WORK_ITEMS_FILTERS,
-  });
+  );
   const [listDisplay, setListDisplay] = useState<ProjectIssuesDisplayState>(() =>
     cloneDefaultProjectIssuesDisplay(),
   );
@@ -398,7 +398,7 @@ export function ModuleDetailPage() {
     let base = applyModuleSubWorkFilter(issues, listDisplay);
     base = filterModuleIssues(base, listFilters);
     return base;
-  }, [issues, listDisplay.showSubWorkItems, listFilters]);
+  }, [issues, listDisplay, listFilters]);
 
   const groupedIssues = useMemo(
     () =>
@@ -520,7 +520,10 @@ export function ModuleDetailPage() {
               </span>
             ) : null}
             {hasCol('priority') ? (
-              <span title={issue.priority ?? ''} className="flex size-6 items-center justify-center">
+              <span
+                title={issue.priority ?? ''}
+                className="flex size-6 items-center justify-center"
+              >
                 <Badge
                   variant={priorityVariant[(issue.priority as Priority) ?? 'none']}
                   className="px-1.5 py-0! text-[10px]"
@@ -538,7 +541,10 @@ export function ModuleDetailPage() {
               </span>
             ) : null}
             {hasCol('due_date') ? (
-              <span className="flex size-6 items-center justify-center" title={dueStr ?? 'Due date'}>
+              <span
+                className="flex size-6 items-center justify-center"
+                title={dueStr ?? 'Due date'}
+              >
                 <IconCalendar />
               </span>
             ) : null}

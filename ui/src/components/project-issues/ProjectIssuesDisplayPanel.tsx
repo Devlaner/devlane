@@ -201,7 +201,12 @@ export function ProjectIssuesDisplayPanel({ display, setDisplay }: ProjectIssues
           </div>
         </CollapsibleSection>
 
-        <CollapsibleSection id="order" title="Order by" expanded={sections.order} onToggle={toggleSection}>
+        <CollapsibleSection
+          id="order"
+          title="Order by"
+          expanded={sections.order}
+          onToggle={toggleSection}
+        >
           <div className="flex flex-col gap-0.5">
             {ORDER_OPTIONS.map((opt) => (
               <RadioRow

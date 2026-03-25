@@ -3,7 +3,10 @@ import { CollapsibleSection } from '../workspace-views/WorkspaceViewsFiltersShar
 import { Avatar } from '../ui';
 import { getImageUrl } from '../../lib/utils';
 import type { StateApiResponse, WorkspaceMemberApiResponse } from '../../api/types';
-import { type ModuleDueDatePreset, type ModuleWorkItemsFiltersState } from '../../lib/moduleWorkItemsPrefs';
+import {
+  type ModuleDueDatePreset,
+  type ModuleWorkItemsFiltersState,
+} from '../../lib/moduleWorkItemsPrefs';
 
 const PRIORITIES = ['urgent', 'high', 'medium', 'low', 'none'] as const;
 
