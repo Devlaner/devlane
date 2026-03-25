@@ -1,5 +1,3 @@
-# Devlane
-
 ![Devlane](./ui/public/devlane-1-dark.png)
 
 **Issue tracking and project management for development teams.**
