@@ -73,7 +73,6 @@ func (s *IssueStore) ListByProjectID(ctx context.Context, projectID uuid.UUID, l
 	return list, err
 }
 
-// ListDraftsByWorkspaceID returns draft work items (is_draft) across all projects in the workspace.
 func (s *IssueStore) ListDraftsByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, limit, offset int) ([]model.Issue, error) {
 	var list []model.Issue
 	q := s.db.WithContext(ctx).Where(

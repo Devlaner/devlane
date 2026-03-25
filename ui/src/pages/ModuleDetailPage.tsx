@@ -344,6 +344,7 @@ export function ModuleDetailPage() {
     cycleId?: string | null;
     moduleId?: string | null;
     parentId?: string | null;
+    isDraft?: boolean;
   }) => {
     if (!workspaceSlug || !data.title.trim() || !resolvedModuleId) return;
     setCreateError(null);
@@ -358,6 +359,7 @@ export function ModuleDetailPage() {
         start_date: data.startDate || undefined,
         target_date: data.dueDate || undefined,
         parent_id: data.parentId || undefined,
+        is_draft: data.isDraft === true ? true : undefined,
       });
       if (created?.id) {
         await moduleService.addIssue(workspaceSlug, data.projectId, resolvedModuleId, created.id);

@@ -195,6 +195,7 @@ export interface CreateIssueRequest {
   start_date?: string | null;
   target_date?: string | null;
   parent_id?: string | null;
+  is_draft?: boolean;
 }
 
 /** GET /api/instance/setup-status/ */

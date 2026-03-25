@@ -897,6 +897,7 @@ export function IssueDetailPage() {
               start_date: data.startDate || undefined,
               target_date: data.dueDate || undefined,
               parent_id: issue.id,
+              is_draft: data.isDraft === true ? true : undefined,
             });
             if (data.cycleId) {
               await cycleService

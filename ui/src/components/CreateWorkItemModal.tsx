@@ -102,6 +102,8 @@ export interface CreateWorkItemModalProps {
   defaultProjectId?: string;
   defaultModuleId?: string | null;
   createError?: string | null;
+  /** When true, creates a workspace draft (always sends is_draft). Title copy matches Plane drafts flow. */
+  draftOnly?: boolean;
   onSave?: (data: {
     title: string;
     description: string;
@@ -116,7 +118,8 @@ export interface CreateWorkItemModalProps {
     cycleId?: string | null;
     moduleId?: string | null;
     parentId?: string | null;
-  }) => void;
+    isDraft?: boolean;
+  }) => void | Promise<void>;
 }
 
 export function CreateWorkItemModal({
@@ -127,6 +130,7 @@ export function CreateWorkItemModal({
   defaultProjectId,
   defaultModuleId,
   createError,
+  draftOnly = false,
   onSave,
 }: CreateWorkItemModalProps) {
   const [title, setTitle] = useState('');
@@ -316,7 +320,7 @@ export function CreateWorkItemModal({
           title,
           description,
           projectId,
-          stateId: stateId || undefined,
+          stateId: draftOnly ? undefined : stateId || undefined,
           priority: priority !== 'none' ? priority : undefined,
           assigneeIds: assigneeIds.length ? assigneeIds : undefined,
           assigneeId: assigneeIds[0] ?? undefined,
@@ -326,6 +330,7 @@ export function CreateWorkItemModal({
           cycleId: cycleId ?? undefined,
           moduleId: moduleId ?? undefined,
           parentId: parentId ?? undefined,
+          isDraft: draftOnly ? true : undefined,
         });
         if (!createMore) onClose();
         else {
@@ -407,7 +412,7 @@ export function CreateWorkItemModal({
         >
           <div className="px-5 pt-5 pb-2">
             <h2 id="create-work-item-title" className="text-xl font-bold text-(--txt-primary)">
-              Create new work item
+              {draftOnly ? 'Create draft work item' : 'Create new work item'}
             </h2>
             <div className="mt-2">
               <Dropdown
