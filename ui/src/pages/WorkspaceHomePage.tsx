@@ -945,7 +945,7 @@ export function WorkspaceHomePage() {
                 r.entity_name === 'issue' && r.project_id && r.entity_identifier
                   ? `${baseUrl}/projects/${r.project_id}/issues/${r.entity_identifier}`
                   : r.entity_name === 'project' && r.entity_identifier
-                    ? `${baseUrl}/projects/${r.entity_identifier}`
+                    ? `${baseUrl}/projects/${r.entity_identifier}/issues`
                     : r.entity_name === 'page' && r.entity_identifier
                       ? `${baseUrl}/pages/${r.entity_identifier}`
                       : null;
