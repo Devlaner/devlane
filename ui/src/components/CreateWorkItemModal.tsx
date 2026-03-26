@@ -102,7 +102,13 @@ export interface CreateWorkItemModalProps {
   defaultProjectId?: string;
   defaultModuleId?: string | null;
   createError?: string | null;
-  /** When true, creates a workspace draft (always sends is_draft). Title copy matches Plane drafts flow. */
+  /**
+   * When true, configures the modal for the workspace drafts flow:
+   * - Draft-specific title copy
+   * - `onSave` receives `isDraft: true`
+   *
+   * Callers are still responsible for mapping `isDraft` to the API payload (e.g. `is_draft`).
+   */
   draftOnly?: boolean;
   onSave?: (data: {
     title: string;

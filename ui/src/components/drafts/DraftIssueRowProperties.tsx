@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Dropdown } from '../work-item/Dropdown';
 import { Avatar } from '../ui';
 import type {
@@ -6,6 +6,7 @@ import type {
   ProjectApiResponse,
   StateApiResponse,
   LabelApiResponse,
+  CycleApiResponse,
   ModuleApiResponse,
   WorkspaceMemberApiResponse,
 } from '../../api/types';
@@ -19,6 +20,17 @@ import {
 import { findWorkspaceMemberByUserId, getImageUrl } from '../../lib/utils';
 
 const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low', 'none'];
+const PRIORITY_TILE: Record<Priority, string> = {
+  urgent: 'border-red-200 bg-red-50 text-red-600',
+  high: 'border-orange-200 bg-orange-50 text-orange-600',
+  medium: 'border-yellow-200 bg-yellow-50 text-yellow-700',
+  low: 'border-blue-200 bg-blue-50 text-blue-600',
+  none: 'border-(--border-subtle) bg-(--bg-layer-1) text-(--txt-icon-tertiary)',
+};
+
+function cx(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(' ');
+}
 
 /** Plane-style start date: calendar + clock accent (simplified). */
 function IconStartDateProperty() {
@@ -145,6 +157,21 @@ const IconLayoutGrid = () => (
   </svg>
 );
 
+const IconCycle = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
+    <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+    <path d="M21 3v5h-5" />
+  </svg>
+);
+
 const IconEye = () => (
   <svg
     width="14"
@@ -182,12 +209,14 @@ export interface DraftIssueRowPropertiesProps {
   states: StateApiResponse[];
   labels: LabelApiResponse[];
   modules: ModuleApiResponse[];
+  cycles: CycleApiResponse[];
   members: WorkspaceMemberApiResponse[];
   busy: boolean;
   openDropdownId: string | null;
   setOpenDropdownId: (id: string | null) => void;
   onPatch: (issue: IssueApiResponse, payload: Record<string, unknown>) => Promise<void>;
   onModuleChange: (issue: IssueApiResponse, moduleId: string | null) => Promise<void>;
+  onCycleChange: (issue: IssueApiResponse, cycleId: string | null) => Promise<void>;
   onToggleRowMenu: () => void;
   rowMenuOpen: boolean;
   onPublish: () => void;
@@ -200,12 +229,14 @@ export function DraftIssueRowProperties({
   states,
   labels,
   modules,
+  cycles,
   members,
   busy,
   openDropdownId,
   setOpenDropdownId,
   onPatch,
   onModuleChange,
+  onCycleChange,
   onToggleRowMenu,
   rowMenuOpen,
   onPublish,
@@ -213,6 +244,9 @@ export function DraftIssueRowProperties({
 }: DraftIssueRowPropertiesProps) {
   const startInputRef = useRef<HTMLInputElement>(null);
   const dueInputRef = useRef<HTMLInputElement>(null);
+  const [stateSearch, setStateSearch] = useState('');
+  const [prioritySearch, setPrioritySearch] = useState('');
+  const [labelSearch, setLabelSearch] = useState('');
 
   const pri = (issue.priority ?? 'none') as Priority;
   const currentState = states.find((s) => s.id === issue.state_id);
@@ -229,6 +263,47 @@ export function DraftIssueRowProperties({
     .map((id) => labels.find((l) => l.id === id)?.name)
     .filter((n): n is string => Boolean(n));
   const currentModuleId = issue.module_ids?.[0] ?? null;
+  const moduleCount = issue.module_ids?.length ?? 0;
+  const currentCycleId = issue.cycle_ids?.[0] ?? null;
+  const cycleName = currentCycleId ? cycles.find((c) => c.id === currentCycleId)?.name : '';
+  const stateOptions = useMemo(() => {
+    const byGroup = new Map<string, StateApiResponse>();
+    for (const s of states) {
+      const g = (s.group ?? '').toLowerCase();
+      if (!g) continue;
+      if (!byGroup.has(g)) byGroup.set(g, s);
+    }
+    // Plane drafts shows these groups in this order
+    const ORDER: Array<{ group: string; label: string }> = [
+      { group: 'backlog', label: 'Backlog' },
+      { group: 'todo', label: 'Todo' },
+      { group: 'in_progress', label: 'In Progress' },
+      { group: 'done', label: 'Done' },
+      { group: 'cancelled', label: 'Cancelled' },
+    ];
+    return ORDER.map(({ group, label }) => {
+      const st = byGroup.get(group);
+      return { group, label, id: st?.id ?? null };
+    });
+  }, [states]);
+
+  const filteredStateOptions = useMemo(() => {
+    const q = stateSearch.trim().toLowerCase();
+    if (!q) return stateOptions;
+    return stateOptions.filter((o) => o.label.toLowerCase().includes(q));
+  }, [stateOptions, stateSearch]);
+
+  const filteredPriorities = useMemo(() => {
+    const q = prioritySearch.trim().toLowerCase();
+    if (!q) return PRIORITIES;
+    return PRIORITIES.filter((p) => PRIORITY_LABELS[p].toLowerCase().includes(q));
+  }, [prioritySearch]);
+
+  const filteredLabels = useMemo(() => {
+    const q = labelSearch.trim().toLowerCase();
+    if (!q) return labels;
+    return labels.filter((l) => l.name.toLowerCase().includes(q));
+  }, [labels, labelSearch]);
 
   const toggleLabel = (labelId: string) => {
     const cur = issue.label_ids ?? [];
@@ -240,10 +315,18 @@ export function DraftIssueRowProperties({
     'max-h-64 min-w-[180px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)';
 
   const showModules = Boolean(project?.module_view);
+  const showCycles = Boolean(project?.cycle_view);
+
+  const moduleLabel =
+    moduleCount > 1
+      ? `${moduleCount} Modules`
+      : moduleCount === 1
+        ? (modules.find((m) => m.id === currentModuleId)?.name ?? '1 Module')
+        : 'No module';
 
   return (
     <div
-      className="flex flex-shrink-0 flex-wrap items-center gap-1.5"
+      className="flex shrink-0 flex-wrap items-center gap-1.5"
       onClick={(e) => e.stopPropagation()}
     >
       {/* State —  StateDropdown border-with-text + dashed */}
@@ -256,7 +339,7 @@ export function DraftIssueRowProperties({
         displayValue=""
         align="right"
         disabled={busy}
-        triggerClassName="inline-flex h-7 max-w-[10rem] min-w-0 items-center gap-1 rounded border border-dashed border-(--border-subtle) bg-(--bg-surface-1) px-2 text-[12px] font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover) disabled:opacity-40"
+        triggerClassName="inline-flex h-7 max-w-[10rem] min-w-0 items-center gap-1 rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 text-[12px] font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover) disabled:opacity-40"
         triggerContent={
           <>
             <span className="flex size-3.5 shrink-0 items-center justify-center text-(--txt-icon-tertiary) [&_svg]:size-3.5">
@@ -268,33 +351,46 @@ export function DraftIssueRowProperties({
         }
         panelClassName={panelClass}
       >
-        {states.length === 0 ? (
+        <div className="sticky top-0 z-10 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
+          <input
+            type="text"
+            placeholder="Search"
+            value={stateSearch}
+            onChange={(e) => setStateSearch(e.target.value)}
+            className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:border-(--border-strong) focus:outline-none"
+          />
+        </div>
+        {filteredStateOptions.length === 0 ? (
           <div className="px-3 py-2 text-[13px] text-(--txt-tertiary)">No states</div>
         ) : (
           <>
-            <button
-              type="button"
-              className="block w-full px-3 py-2 text-left text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-              onClick={() => {
-                void onPatch(issue, { state_id: null });
-                setOpenDropdownId(null);
-              }}
-            >
-              Backlog
-            </button>
-            {states.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                className="block w-full px-3 py-2 text-left text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-                onClick={() => {
-                  void onPatch(issue, { state_id: s.id });
-                  setOpenDropdownId(null);
-                }}
-              >
-                {s.name}
-              </button>
-            ))}
+            {filteredStateOptions.map((opt) => {
+              const currentGroup = (currentState?.group ?? 'backlog').toLowerCase();
+              const isSelected =
+                currentGroup === opt.group ||
+                (!!opt.id && issue.state_id === opt.id) ||
+                (!opt.id && !issue.state_id && opt.group === 'backlog');
+              return (
+                <button
+                  key={opt.group}
+                  type="button"
+                  className={cx(
+                    'flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-1-hover)',
+                    isSelected && 'bg-(--bg-layer-1)',
+                  )}
+                  onClick={() => {
+                    void onPatch(issue, { state_id: opt.id });
+                    setOpenDropdownId(null);
+                  }}
+                >
+                  <span className="flex size-3.5 shrink-0 items-center justify-center text-(--txt-icon-tertiary) [&_svg]:size-3.5">
+                    {stateGroupIcon(opt.group)}
+                  </span>
+                  <span className="flex-1 truncate">{opt.label}</span>
+                  {isSelected ? <span className="text-(--txt-icon-secondary)">✓</span> : null}
+                </button>
+              );
+            })}
           </>
         )}
       </Dropdown>
@@ -322,16 +418,28 @@ export function DraftIssueRowProperties({
         disabled={busy}
         triggerClassName={propBtnSquare}
         triggerContent={
-          <span className={labelNames.length ? '' : 'opacity-50'}>
+          <span
+            className={labelNames.length ? '' : 'opacity-50'}
+            title={`Labels ${labelNames[0] ?? 'None'}`}
+          >
             <IconTag />
           </span>
         }
         panelClassName={panelClass}
       >
-        {labels.length === 0 ? (
-          <div className="px-3 py-2 text-[13px] text-(--txt-tertiary)">No labels</div>
+        <div className="sticky top-0 z-10 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
+          <input
+            type="text"
+            placeholder="Search"
+            value={labelSearch}
+            onChange={(e) => setLabelSearch(e.target.value)}
+            className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:border-(--border-strong) focus:outline-none"
+          />
+        </div>
+        {filteredLabels.length === 0 ? (
+          <div className="px-3 py-2 text-[13px] text-(--txt-tertiary)">Type to add a new label</div>
         ) : (
-          labels.map((l) => {
+          filteredLabels.map((l) => {
             const on = (issue.label_ids ?? []).includes(l.id);
             return (
               <button
@@ -351,7 +459,7 @@ export function DraftIssueRowProperties({
       {/* Start date — icon-only + hidden date input (Plane DateDropdown border-without-text) */}
       <div
         className={`${propBtnSquare}${busy ? ' pointer-events-none opacity-40' : ''}`}
-        title={issue.start_date ? `Start ${issue.start_date}` : 'Start date'}
+        title={`Start date ${issue.start_date ? issue.start_date.slice(0, 10) : 'None'}`}
       >
         <IconStartDateProperty />
         <input
@@ -371,7 +479,7 @@ export function DraftIssueRowProperties({
       {/* Due date */}
       <div
         className={`${propBtnSquare}${busy ? ' pointer-events-none opacity-40' : ''}`}
-        title={issue.target_date ? `Due ${issue.target_date}` : 'Due date'}
+        title={`Due date ${issue.target_date ? issue.target_date.slice(0, 10) : 'None'}`}
       >
         <IconDueDateProperty />
         <input
@@ -461,11 +569,15 @@ export function DraftIssueRowProperties({
           displayValue=""
           align="right"
           disabled={busy}
-          triggerClassName={propBtnSquare}
+          triggerClassName="inline-flex h-7 max-w-[10rem] min-w-0 items-center gap-1 rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 text-[12px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) disabled:opacity-40"
           triggerContent={
-            <span className={currentModuleId ? '' : 'opacity-50'}>
-              <IconLayoutGrid />
-            </span>
+            <>
+              <span className="shrink-0 text-(--txt-icon-tertiary)">
+                <IconLayoutGrid />
+              </span>
+              <span className="min-w-0 flex-1 truncate">{moduleLabel}</span>
+              <IconChevronDown />
+            </>
           }
           panelClassName={panelClass}
         >
@@ -495,6 +607,55 @@ export function DraftIssueRowProperties({
         </Dropdown>
       ) : null}
 
+      {/* Cycles — Plane CycleDropdown border-with-text */}
+      {showCycles ? (
+        <Dropdown
+          id={`${issue.id}:cycle`}
+          openId={openDropdownId}
+          onOpen={setOpenDropdownId}
+          label="Cycle"
+          icon={<IconCycle />}
+          displayValue=""
+          align="right"
+          disabled={busy}
+          triggerClassName="inline-flex h-7 max-w-[10rem] min-w-0 items-center gap-1 rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 text-[12px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) disabled:opacity-40"
+          triggerContent={
+            <>
+              <span className="shrink-0 text-(--txt-icon-tertiary)">
+                <IconCycle />
+              </span>
+              <span className="min-w-0 flex-1 truncate">{cycleName || 'No cycle'}</span>
+              <IconChevronDown />
+            </>
+          }
+          panelClassName={panelClass}
+        >
+          <button
+            type="button"
+            className="block w-full px-3 py-2 text-left text-[13px] text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
+            onClick={() => {
+              void onCycleChange(issue, null);
+              setOpenDropdownId(null);
+            }}
+          >
+            No cycle
+          </button>
+          {cycles.map((cy) => (
+            <button
+              key={cy.id}
+              type="button"
+              className="block w-full px-3 py-2 text-left text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+              onClick={() => {
+                void onCycleChange(issue, cy.id);
+                setOpenDropdownId(null);
+              }}
+            >
+              {cy.name}
+            </button>
+          ))}
+        </Dropdown>
+      ) : null}
+
       {/* Priority — Plane PriorityDropdown border-without-text */}
       <Dropdown
         id={`${issue.id}:priority`}
@@ -507,13 +668,25 @@ export function DraftIssueRowProperties({
         disabled={busy}
         triggerClassName={propBtnSquare}
         triggerContent={
-          <span className="flex size-[18px] items-center justify-center [&_svg]:size-[14px]">
+          <span
+            className="flex size-4.5 items-center justify-center [&_svg]:size-3.5"
+            title={`Priority ${PRIORITY_LABELS[pri]}`}
+          >
             {PRIORITY_ICONS[pri] ?? PRIORITY_ICONS.none}
           </span>
         }
         panelClassName={panelClass}
       >
-        {PRIORITIES.map((p) => (
+        <div className="sticky top-0 z-10 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
+          <input
+            type="text"
+            placeholder="Search"
+            value={prioritySearch}
+            onChange={(e) => setPrioritySearch(e.target.value)}
+            className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:border-(--border-strong) focus:outline-none"
+          />
+        </div>
+        {filteredPriorities.map((p) => (
           <button
             key={p}
             type="button"
@@ -523,10 +696,16 @@ export function DraftIssueRowProperties({
               setOpenDropdownId(null);
             }}
           >
-            <span className="flex w-5 justify-center text-(--txt-icon-tertiary)">
-              {PRIORITY_ICONS[p]}
+            <span
+              className={cx(
+                'flex size-6 items-center justify-center rounded-md border',
+                PRIORITY_TILE[p],
+              )}
+            >
+              <span className="[&_svg]:size-3.5">{PRIORITY_ICONS[p]}</span>
             </span>
-            {PRIORITY_LABELS[p]}
+            <span className="flex-1">{PRIORITY_LABELS[p]}</span>
+            {pri === p ? <span className="text-(--txt-icon-secondary)">✓</span> : null}
           </button>
         ))}
       </Dropdown>
@@ -555,7 +734,7 @@ export function DraftIssueRowProperties({
         </button>
         {rowMenuOpen ? (
           <div
-            className="absolute right-0 z-20 mt-1 min-w-[9rem] rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
+            className="absolute right-0 z-20 mt-1 min-w-36 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
             role="menu"
           >
             <button

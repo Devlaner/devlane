@@ -754,6 +754,20 @@ function HomeHeader() {
   );
 }
 
+function DraftsHeader() {
+  return (
+    <>
+      <div className="flex items-center gap-2 text-sm font-medium text-(--txt-secondary)">
+        <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
+          <IconPencil />
+        </span>
+        Drafts
+      </div>
+      <div className="flex items-center gap-2" />
+    </>
+  );
+}
+
 function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get('q') ?? '';
@@ -3047,6 +3061,7 @@ export function PageHeader() {
   const isWorkspaceViewsPage =
     workspaceSlug &&
     (pathname === `/${workspaceSlug}/views` || pathname.startsWith(`/${workspaceSlug}/views/`));
+  const isDraftsPage = workspaceSlug && pathname === `/${workspaceSlug}/drafts`;
 
   const projectSection: ProjectSection | null = isIssuesPage
     ? 'issues'
@@ -3075,6 +3090,8 @@ export function PageHeader() {
     content = <AnalyticsHeader workspaceSlug={workspaceSlug} />;
   } else if (isWorkspaceViewsPage && workspaceSlug) {
     content = <WorkspaceViewsHeader />;
+  } else if (isDraftsPage) {
+    content = <DraftsHeader />;
   } else if (isModuleDetailPage && workspaceSlug && projectId && project && module && moduleId) {
     content = (
       <ModuleDetailHeader

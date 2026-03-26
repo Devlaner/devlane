@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/ui';
 import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
 import { DraftIssueRowProperties } from '../components/drafts/DraftIssueRowProperties';
@@ -16,6 +16,7 @@ import type {
   IssueApiResponse,
   StateApiResponse,
   LabelApiResponse,
+  CycleApiResponse,
   ModuleApiResponse,
   WorkspaceMemberApiResponse,
 } from '../api/types';
@@ -78,6 +79,7 @@ const IconFileDraft = () => (
 
 export function DraftsPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
+  const navigate = useNavigate();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
@@ -89,6 +91,9 @@ export function DraftsPage() {
     new Map(),
   );
   const [modulesByProject, setModulesByProject] = useState<Map<string, ModuleApiResponse[]>>(
+    new Map(),
+  );
+  const [cyclesByProject, setCyclesByProject] = useState<Map<string, CycleApiResponse[]>>(
     new Map(),
   );
   const [loading, setLoading] = useState(true);
@@ -118,18 +123,20 @@ export function DraftsPage() {
       setStatesByProject(new Map());
       setLabelsByProject(new Map());
       setModulesByProject(new Map());
+      setCyclesByProject(new Map());
       return;
     }
     const ids = projectIdsKey.split(',').filter(Boolean);
     let cancelled = false;
     Promise.all(
       ids.map(async (pid) => {
-        const [states, labels, modules] = await Promise.all([
+        const [states, labels, modules, cycles] = await Promise.all([
           stateService.list(workspaceSlug, pid),
           labelService.list(workspaceSlug, pid),
           moduleService.list(workspaceSlug, pid),
+          cycleService.list(workspaceSlug, pid),
         ]);
-        return { pid, states, labels, modules };
+        return { pid, states, labels, modules, cycles };
       }),
     )
       .then((rows) => {
@@ -137,20 +144,24 @@ export function DraftsPage() {
         const sm = new Map<string, StateApiResponse[]>();
         const lm = new Map<string, LabelApiResponse[]>();
         const mm = new Map<string, ModuleApiResponse[]>();
-        for (const { pid, states, labels, modules } of rows) {
+        const cm = new Map<string, CycleApiResponse[]>();
+        for (const { pid, states, labels, modules, cycles } of rows) {
           sm.set(pid, states ?? []);
           lm.set(pid, labels ?? []);
           mm.set(pid, modules ?? []);
+          cm.set(pid, cycles ?? []);
         }
         setStatesByProject(sm);
         setLabelsByProject(lm);
         setModulesByProject(mm);
+        setCyclesByProject(cm);
       })
       .catch(() => {
         if (!cancelled) {
           setStatesByProject(new Map());
           setLabelsByProject(new Map());
           setModulesByProject(new Map());
+          setCyclesByProject(new Map());
         }
       });
     return () => {
@@ -163,6 +174,7 @@ export function DraftsPage() {
       if (!workspaceSlug) return;
       const nextOffset = reset ? 0 : offset;
       if (reset) setListLoading(true);
+      setError(null);
       try {
         const batch = await issueService.listWorkspaceDrafts(workspaceSlug, {
           limit: PAGE_SIZE + 1,
@@ -173,6 +185,7 @@ export function DraftsPage() {
         setDrafts((prev) => (reset ? slice : [...prev, ...slice]));
         setHasMore(more);
         setOffset(nextOffset + slice.length);
+        setError(null);
       } catch {
         if (reset) setDrafts([]);
         setError('Could not load drafts.');
@@ -220,33 +233,8 @@ export function DraftsPage() {
 
   useEffect(() => {
     if (!workspaceSlug || !workspace) return;
-    let cancelled = false;
-    setOffset(0);
-    setHasMore(false);
-    setListLoading(true);
-    issueService
-      .listWorkspaceDrafts(workspaceSlug, { limit: PAGE_SIZE + 1, offset: 0 })
-      .then((batch) => {
-        if (cancelled) return;
-        const more = batch.length > PAGE_SIZE;
-        const slice = more ? batch.slice(0, PAGE_SIZE) : batch;
-        setDrafts(slice);
-        setHasMore(more);
-        setOffset(slice.length);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setDrafts([]);
-          setError('Could not load drafts.');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setListLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaceSlug, workspace]);
+    void loadDrafts(true);
+  }, [workspaceSlug, workspace, loadDrafts]);
 
   const setPropDropdownOpen = useCallback((id: string | null) => {
     setPropDropdownId(id);
@@ -298,6 +286,27 @@ export function DraftsPage() {
       setDrafts((prev) => prev.map((i) => (i.id === issue.id ? { ...i, ...fresh } : i)));
     } catch {
       setError('Could not update module.');
+    } finally {
+      setRowBusy(null);
+    }
+  };
+
+  const handleCycleChange = async (issue: IssueApiResponse, cycleId: string | null) => {
+    if (!workspaceSlug) return;
+    const cur = issue.cycle_ids?.[0] ?? null;
+    if (cur === cycleId) return;
+    setRowBusy(issue.id);
+    try {
+      if (cur) {
+        await cycleService.removeIssue(workspaceSlug, issue.project_id, cur, issue.id);
+      }
+      if (cycleId) {
+        await cycleService.addIssue(workspaceSlug, issue.project_id, cycleId, issue.id);
+      }
+      const fresh = await issueService.get(workspaceSlug, issue.project_id, issue.id);
+      setDrafts((prev) => prev.map((i) => (i.id === issue.id ? { ...i, ...fresh } : i)));
+    } catch {
+      setError('Could not update cycle.');
     } finally {
       setRowBusy(null);
     }
@@ -467,22 +476,24 @@ export function DraftsPage() {
               const states = statesByProject.get(issue.project_id) ?? [];
               const labels = labelsByProject.get(issue.project_id) ?? [];
               const modules = modulesByProject.get(issue.project_id) ?? [];
+              const cycles = cyclesByProject.get(issue.project_id) ?? [];
               const issueUrl = `${base}/projects/${issue.project_id}/issues/${issue.id}`;
 
               return (
                 <li key={issue.id}>
                   <div className="flex min-h-11 w-full items-center justify-between gap-3 px-4 py-2.5">
-                    <Link
-                      to={issueUrl}
-                      className="group flex min-w-0 flex-1 items-center gap-2 truncate text-[13px] no-underline"
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className="group flex min-w-0 flex-1 cursor-default items-center gap-2 truncate text-[13px] no-underline"
+                      onDoubleClick={() => navigate(issueUrl)}
+                      aria-label={`Open draft ${issue.name}`}
                     >
                       <span className="shrink-0 font-medium text-(--txt-tertiary)">
                         {displayId}
                       </span>
-                      <span className="truncate text-(--txt-primary) group-hover:text-(--brand-default)">
-                        {issue.name}
-                      </span>
-                    </Link>
+                      <span className="truncate text-(--txt-primary)">{issue.name}</span>
+                    </div>
 
                     <DraftIssueRowProperties
                       issue={issue}
@@ -490,12 +501,14 @@ export function DraftsPage() {
                       states={states}
                       labels={labels}
                       modules={modules}
+                      cycles={cycles}
                       members={members}
                       busy={busy}
                       openDropdownId={propDropdownId}
                       setOpenDropdownId={setPropDropdownOpen}
                       onPatch={handlePatch}
                       onModuleChange={handleModuleChange}
+                      onCycleChange={handleCycleChange}
                       rowMenuOpen={menuOpenId === issue.id}
                       onToggleRowMenu={() =>
                         setMenuOpenId((id) => {
