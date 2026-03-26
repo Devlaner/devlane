@@ -94,6 +94,21 @@ const IconBuilding = () => (
 
 const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low', 'none'];
 
+export interface WorkItemInitialValues {
+  title?: string;
+  description?: string;
+  projectId?: string;
+  stateId?: string;
+  priority?: Priority;
+  assigneeIds?: string[];
+  labelIds?: string[];
+  startDate?: string;
+  dueDate?: string;
+  cycleId?: string | null;
+  moduleId?: string | null;
+  parentId?: string | null;
+}
+
 export interface CreateWorkItemModalProps {
   open: boolean;
   onClose: () => void;
@@ -102,6 +117,16 @@ export interface CreateWorkItemModalProps {
   defaultProjectId?: string;
   defaultModuleId?: string | null;
   createError?: string | null;
+  /** Pre-fill form fields (used by edit and duplicate flows). */
+  initialValues?: WorkItemInitialValues;
+  /**
+   * When true, configures the modal for the workspace drafts flow:
+   * - Draft-specific title copy
+   * - `onSave` receives `isDraft: true`
+   *
+   * Callers are still responsible for mapping `isDraft` to the API payload (e.g. `is_draft`).
+   */
+  draftOnly?: boolean;
   onSave?: (data: {
     title: string;
     description: string;
@@ -116,7 +141,8 @@ export interface CreateWorkItemModalProps {
     cycleId?: string | null;
     moduleId?: string | null;
     parentId?: string | null;
-  }) => void;
+    isDraft?: boolean;
+  }) => void | Promise<void>;
 }
 
 export function CreateWorkItemModal({
@@ -127,6 +153,8 @@ export function CreateWorkItemModal({
   defaultProjectId,
   defaultModuleId,
   createError,
+  initialValues,
+  draftOnly = false,
   onSave,
 }: CreateWorkItemModalProps) {
   const [title, setTitle] = useState('');
@@ -273,22 +301,23 @@ export function CreateWorkItemModal({
 
   useEffect(() => {
     if (open) {
-      setProjectId(defaultProjectId ?? projects[0]?.id ?? '');
-      setTitle('');
-      setDescription('');
-      setStateId('');
-      setPriority('none');
-      setAssigneeIds([]);
-      setLabelIds([]);
-      setStartDate('');
-      setDueDate('');
-      setCycleId(null);
-      setModuleId(defaultModuleId ?? null);
-      setParentId(null);
+      const iv = initialValues;
+      setProjectId(iv?.projectId ?? defaultProjectId ?? projects[0]?.id ?? '');
+      setTitle(iv?.title ?? '');
+      setDescription(iv?.description ?? '');
+      setStateId(iv?.stateId ?? '');
+      setPriority(iv?.priority ?? 'none');
+      setAssigneeIds(iv?.assigneeIds ?? []);
+      setLabelIds(iv?.labelIds ?? []);
+      setStartDate(iv?.startDate ?? '');
+      setDueDate(iv?.dueDate ?? '');
+      setCycleId(iv?.cycleId ?? null);
+      setModuleId(iv?.moduleId ?? defaultModuleId ?? null);
+      setParentId(iv?.parentId ?? null);
       setOpenDropdown(null);
       setParentModalOpen(false);
     }
-  }, [open, defaultProjectId, defaultModuleId, projects]);
+  }, [open, defaultProjectId, defaultModuleId, projects, initialValues]);
 
   useEffect(() => {
     if (!open) return;
@@ -316,7 +345,7 @@ export function CreateWorkItemModal({
           title,
           description,
           projectId,
-          stateId: stateId || undefined,
+          stateId: draftOnly ? undefined : stateId || undefined,
           priority: priority !== 'none' ? priority : undefined,
           assigneeIds: assigneeIds.length ? assigneeIds : undefined,
           assigneeId: assigneeIds[0] ?? undefined,
@@ -326,6 +355,7 @@ export function CreateWorkItemModal({
           cycleId: cycleId ?? undefined,
           moduleId: moduleId ?? undefined,
           parentId: parentId ?? undefined,
+          isDraft: draftOnly ? true : undefined,
         });
         if (!createMore) onClose();
         else {
@@ -407,7 +437,7 @@ export function CreateWorkItemModal({
         >
           <div className="px-5 pt-5 pb-2">
             <h2 id="create-work-item-title" className="text-xl font-bold text-(--txt-primary)">
-              Create new work item
+              {draftOnly ? 'Create draft work item' : 'Create new work item'}
             </h2>
             <div className="mt-2">
               <Dropdown

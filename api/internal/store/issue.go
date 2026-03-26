@@ -73,6 +73,22 @@ func (s *IssueStore) ListByProjectID(ctx context.Context, projectID uuid.UUID, l
 	return list, err
 }
 
+func (s *IssueStore) ListDraftsByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, limit, offset int) ([]model.Issue, error) {
+	var list []model.Issue
+	q := s.db.WithContext(ctx).Where(
+		"workspace_id = ? AND is_draft = ? AND deleted_at IS NULL",
+		workspaceID, true,
+	).Order("updated_at DESC")
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+	if offset > 0 {
+		q = q.Offset(offset)
+	}
+	err := q.Find(&list).Error
+	return list, err
+}
+
 func (s *IssueStore) Update(ctx context.Context, i *model.Issue) error {
 	return s.db.WithContext(ctx).Save(i).Error
 }

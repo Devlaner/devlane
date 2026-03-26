@@ -170,6 +170,8 @@ func New(cfg Config) *gin.Engine {
 
 		api.GET("/users/me/workspaces/:slug/projects/invitations/", projectHandler.ListUserProjectInvitations)
 		api.POST("/workspaces/:slug/projects/join/", projectHandler.JoinByToken)
+		api.GET("/workspaces/:slug/draft-issues/", issueHandler.ListWorkspaceDrafts)
+
 		api.GET("/workspaces/:slug/projects/", projectHandler.List)
 		api.POST("/workspaces/:slug/projects/", projectHandler.Create)
 		api.GET("/workspaces/:slug/projects/:projectId/", projectHandler.Get)

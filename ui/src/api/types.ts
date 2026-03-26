@@ -195,6 +195,7 @@ export interface CreateIssueRequest {
   start_date?: string | null;
   target_date?: string | null;
   parent_id?: string | null;
+  is_draft?: boolean;
 }
 
 /** GET /api/instance/setup-status/ */
@@ -419,6 +420,21 @@ export interface PageApiResponse {
   archived_at?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface CreatePageRequest {
+  name: string;
+  description_html?: string;
+  project_id?: string | null;
+  /** 0 public, 1 private */
+  access?: number;
+}
+
+export interface UpdatePageRequest {
+  name?: string;
+  description_html?: string;
+  /** 0 public, 1 private */
+  access?: number;
 }
 
 /** Notification as returned by the API */

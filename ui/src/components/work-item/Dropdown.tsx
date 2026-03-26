@@ -19,6 +19,11 @@ export interface DropdownProps {
   triggerClassName?: string;
   /** Optional custom trigger content (when set, icon and displayValue are ignored and this is rendered inside the trigger). */
   triggerContent?: React.ReactNode;
+  /** Optional tooltip (native title) for trigger button. */
+  triggerTitle?: string;
+  /** Optional accessible name for trigger button. */
+  triggerAriaLabel?: string;
+  disabled?: boolean;
 }
 
 export function Dropdown({
@@ -34,6 +39,9 @@ export function Dropdown({
   align = 'left',
   triggerClassName,
   triggerContent,
+  triggerTitle,
+  triggerAriaLabel,
+  disabled = false,
 }: DropdownProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -87,8 +95,11 @@ export function Dropdown({
       <button
         ref={triggerRef}
         type="button"
+        disabled={disabled}
         onClick={() => onOpen(open ? null : id)}
         className={triggerClassName ?? defaultTriggerClass}
+        title={triggerTitle}
+        aria-label={triggerAriaLabel}
       >
         {triggerContent ?? (
           <>
@@ -104,7 +115,7 @@ export function Dropdown({
             ref={panelRef}
             className={
               panelClassName ??
-              'max-h-60 min-w-[140px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)'
+              'max-h-60 min-w-35 overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)'
             }
             style={{
               position: 'fixed',

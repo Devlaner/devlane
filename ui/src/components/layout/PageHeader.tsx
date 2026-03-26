@@ -165,6 +165,22 @@ const IconChevronDown = () => (
   </svg>
 );
 
+const IconPencil = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+  </svg>
+);
+
 const IconChevronUp = () => (
   <svg
     width="14"
@@ -749,6 +765,26 @@ function HomeHeader() {
           <IconGitHub />
           Star us on GitHub
         </Button>
+      </div>
+    </>
+  );
+}
+
+function DraftsHeader() {
+  return (
+    <>
+      <div className="flex items-center gap-2 text-sm font-medium text-(--txt-secondary)">
+        <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
+          <IconPencil />
+        </span>
+        Drafts
+      </div>
+      <div className="flex items-center gap-2">
+        <Link to="?create=1" className="no-underline">
+          <Button size="sm" className="gap-1.5 text-[13px] font-medium">
+            Draft a work item
+          </Button>
+        </Link>
       </div>
     </>
   );
@@ -1440,7 +1476,7 @@ function ProjectSectionHeader({
                                   : [...prev, s.key],
                               );
                             }}
-                            className="rounded border-[var(--border-subtle)]"
+                            className="rounded border-(--border-subtle)"
                           />
                           <span>{s.label}</span>
                         </label>
@@ -1500,7 +1536,7 @@ function ProjectSectionHeader({
                                   : [...prev, p.key],
                               );
                             }}
-                            className="rounded border-[var(--border-subtle)]"
+                            className="rounded border-(--border-subtle)"
                           />
                           <span>{p.label}</span>
                         </label>
@@ -1561,7 +1597,7 @@ function ProjectSectionHeader({
                                   : [...prev, p.key],
                               );
                             }}
-                            className="rounded border-[var(--border-subtle)]"
+                            className="rounded border-(--border-subtle)"
                           />
                           <span>{p.label}</span>
                         </label>
@@ -3047,6 +3083,7 @@ export function PageHeader() {
   const isWorkspaceViewsPage =
     workspaceSlug &&
     (pathname === `/${workspaceSlug}/views` || pathname.startsWith(`/${workspaceSlug}/views/`));
+  const isDraftsPage = workspaceSlug && pathname === `/${workspaceSlug}/drafts`;
 
   const projectSection: ProjectSection | null = isIssuesPage
     ? 'issues'
@@ -3075,6 +3112,8 @@ export function PageHeader() {
     content = <AnalyticsHeader workspaceSlug={workspaceSlug} />;
   } else if (isWorkspaceViewsPage && workspaceSlug) {
     content = <WorkspaceViewsHeader />;
+  } else if (isDraftsPage) {
+    content = <DraftsHeader />;
   } else if (isModuleDetailPage && workspaceSlug && projectId && project && module && moduleId) {
     content = (
       <ModuleDetailHeader

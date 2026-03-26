@@ -7,6 +7,19 @@ export interface ListIssuesParams {
 }
 
 export const issueService = {
+  async listWorkspaceDrafts(
+    workspaceSlug: string,
+    params?: ListIssuesParams,
+  ): Promise<IssueApiResponse[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.limit != null) searchParams.set('limit', String(params.limit));
+    if (params?.offset != null) searchParams.set('offset', String(params.offset));
+    const qs = searchParams.toString();
+    const url = `/api/workspaces/${encodeURIComponent(workspaceSlug)}/draft-issues/${qs ? `?${qs}` : ''}`;
+    const { data } = await apiClient.get<IssueApiResponse[]>(url);
+    return data;
+  },
+
   async list(
     workspaceSlug: string,
     projectId: string,
@@ -44,7 +57,7 @@ export const issueService = {
     workspaceSlug: string,
     projectId: string,
     issueId: string,
-    payload: Partial<CreateIssueRequest & { state_id?: string | null }>,
+    payload: Partial<CreateIssueRequest & { state_id?: string | null; is_draft?: boolean }>,
   ): Promise<IssueApiResponse> {
     const { data } = await apiClient.patch<IssueApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/`,
