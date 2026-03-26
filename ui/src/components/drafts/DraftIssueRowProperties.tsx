@@ -23,14 +23,7 @@ const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low', 'none'];
 /** Plane-style start date: calendar + clock accent (simplified). */
 function IconStartDateProperty() {
   return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      className="shrink-0"
-      aria-hidden
-    >
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0" aria-hidden>
       <rect
         x="2.25"
         y="2.75"
@@ -54,14 +47,7 @@ function IconStartDateProperty() {
 
 function IconDueDateProperty() {
   return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      className="shrink-0"
-      aria-hidden
-    >
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0" aria-hidden>
       <rect
         x="2.25"
         y="2.75"

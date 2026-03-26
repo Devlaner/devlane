@@ -82,9 +82,15 @@ export function DraftsPage() {
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [drafts, setDrafts] = useState<IssueApiResponse[]>([]);
-  const [statesByProject, setStatesByProject] = useState<Map<string, StateApiResponse[]>>(new Map());
-  const [labelsByProject, setLabelsByProject] = useState<Map<string, LabelApiResponse[]>>(new Map());
-  const [modulesByProject, setModulesByProject] = useState<Map<string, ModuleApiResponse[]>>(new Map());
+  const [statesByProject, setStatesByProject] = useState<Map<string, StateApiResponse[]>>(
+    new Map(),
+  );
+  const [labelsByProject, setLabelsByProject] = useState<Map<string, LabelApiResponse[]>>(
+    new Map(),
+  );
+  const [modulesByProject, setModulesByProject] = useState<Map<string, ModuleApiResponse[]>>(
+    new Map(),
+  );
   const [loading, setLoading] = useState(true);
   const [listLoading, setListLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -411,11 +417,16 @@ export function DraftsPage() {
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-(--txt-primary)">Drafts</h1>
           <p className="mt-1 max-w-2xl text-[13px] text-(--txt-secondary)">
-            Draft work items stay out of the main backlog until you publish them. Use the row controls
-            like on the project board, or open the work item to edit in full.
+            Draft work items stay out of the main backlog until you publish them. Use the row
+            controls like on the project board, or open the work item to edit in full.
           </p>
         </div>
-        <Button variant="primary" type="button" className="shrink-0" onClick={() => setCreateOpen(true)}>
+        <Button
+          variant="primary"
+          type="button"
+          className="shrink-0"
+          onClick={() => setCreateOpen(true)}
+        >
           Draft a work item
         </Button>
       </div>
@@ -427,7 +438,9 @@ export function DraftsPage() {
       )}
 
       {listLoading && drafts.length === 0 ? (
-        <div className="mt-8 flex justify-center text-sm text-(--txt-tertiary)">Loading drafts…</div>
+        <div className="mt-8 flex justify-center text-sm text-(--txt-tertiary)">
+          Loading drafts…
+        </div>
       ) : drafts.length === 0 ? (
         <div className="mx-auto flex max-w-lg flex-col items-center px-4 py-16 text-center">
           <IconFileDraft />
@@ -435,7 +448,12 @@ export function DraftsPage() {
           <p className="mt-2 text-sm text-(--txt-secondary)">
             Capture ideas as drafts and publish them into a project when you are ready.
           </p>
-          <Button variant="primary" className="mt-6" type="button" onClick={() => setCreateOpen(true)}>
+          <Button
+            variant="primary"
+            className="mt-6"
+            type="button"
+            onClick={() => setCreateOpen(true)}
+          >
             Draft a work item
           </Button>
         </div>
@@ -458,7 +476,9 @@ export function DraftsPage() {
                       to={issueUrl}
                       className="group flex min-w-0 flex-1 items-center gap-2 truncate text-[13px] no-underline"
                     >
-                      <span className="shrink-0 font-medium text-(--txt-tertiary)">{displayId}</span>
+                      <span className="shrink-0 font-medium text-(--txt-tertiary)">
+                        {displayId}
+                      </span>
                       <span className="truncate text-(--txt-primary) group-hover:text-(--brand-default)">
                         {issue.name}
                       </span>

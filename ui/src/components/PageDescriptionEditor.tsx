@@ -25,9 +25,19 @@ export type PageDescriptionEditorProps = {
   onSaveShortcut?: () => void;
 };
 
-export const PageDescriptionEditor = forwardRef<PageDescriptionEditorHandle, PageDescriptionEditorProps>(
+export const PageDescriptionEditor = forwardRef<
+  PageDescriptionEditorHandle,
+  PageDescriptionEditorProps
+>(
   (
-    { initialHtml, placeholder, autoFocus, readOnly, className, onSaveShortcut }: PageDescriptionEditorProps,
+    {
+      initialHtml,
+      placeholder,
+      autoFocus,
+      readOnly,
+      className,
+      onSaveShortcut,
+    }: PageDescriptionEditorProps,
     ref,
   ) => {
     const editor = useEditor({
@@ -75,7 +85,9 @@ export const PageDescriptionEditor = forwardRef<PageDescriptionEditorHandle, Pag
       'inline-flex h-8 w-8 items-center justify-center rounded border border-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary) disabled:opacity-40';
 
     return (
-      <div className={cn('rounded-md border border-(--border-subtle) bg-(--bg-surface-1)', className)}>
+      <div
+        className={cn('rounded-md border border-(--border-subtle) bg-(--bg-surface-1)', className)}
+      >
         <div className="flex items-center gap-1 border-b border-(--border-subtle) px-2 py-1">
           <button
             type="button"
@@ -157,4 +169,3 @@ export const PageDescriptionEditor = forwardRef<PageDescriptionEditorHandle, Pag
 );
 
 PageDescriptionEditor.displayName = 'PageDescriptionEditor';
-

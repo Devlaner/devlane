@@ -422,6 +422,21 @@ export interface PageApiResponse {
   updated_at: string;
 }
 
+export interface CreatePageRequest {
+  name: string;
+  description_html?: string;
+  project_id?: string | null;
+  /** 0 public, 1 private */
+  access?: number;
+}
+
+export interface UpdatePageRequest {
+  name?: string;
+  description_html?: string;
+  /** 0 public, 1 private */
+  access?: number;
+}
+
 /** Notification as returned by the API */
 export interface NotificationApiResponse {
   id: string;

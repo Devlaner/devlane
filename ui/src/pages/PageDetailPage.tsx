@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Input } from '../components/ui';
 import { Modal } from '../components/ui/Modal';
-import { PageDescriptionEditor, type PageDescriptionEditorHandle } from '../components/PageDescriptionEditor';
+import {
+  PageDescriptionEditor,
+  type PageDescriptionEditorHandle,
+} from '../components/PageDescriptionEditor';
 import { pageService } from '../services/pageService';
 
 export function PageDetailPage() {
@@ -101,7 +104,11 @@ export function PageDetailPage() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">Loading…</div>;
+    return (
+      <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
+        Loading…
+      </div>
+    );
   }
 
   if (!workspaceSlug || !projectId || !pageId || !baseUrl) {
@@ -186,11 +193,8 @@ export function PageDetailPage() {
           </>
         }
       >
-        <div className="text-sm text-(--txt-secondary)">
-          This will permanently remove the page.
-        </div>
+        <div className="text-sm text-(--txt-secondary)">This will permanently remove the page.</div>
       </Modal>
     </div>
   );
 }
-
