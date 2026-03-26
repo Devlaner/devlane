@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui';
 import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
 import { DraftIssueRowProperties } from '../components/drafts/DraftIssueRowProperties';
@@ -80,6 +80,7 @@ const IconFileDraft = () => (
 export function DraftsPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
@@ -235,6 +236,11 @@ export function DraftsPage() {
     if (!workspaceSlug || !workspace) return;
     void loadDrafts(true);
   }, [workspaceSlug, workspace, loadDrafts]);
+
+  useEffect(() => {
+    const shouldOpen = searchParams.get('create') === '1';
+    if (shouldOpen) setCreateOpen(true);
+  }, [searchParams]);
 
   const setPropDropdownOpen = useCallback((id: string | null) => {
     setPropDropdownId(id);
@@ -421,33 +427,15 @@ export function DraftsPage() {
   }
 
   return (
-    <div className="pb-8">
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-(--border-subtle) px-1 pb-4">
-        <div className="min-w-0">
-          <h1 className="text-xl font-semibold text-(--txt-primary)">Drafts</h1>
-          <p className="mt-1 max-w-2xl text-[13px] text-(--txt-secondary)">
-            Draft work items stay out of the main backlog until you publish them. Use the row
-            controls like on the project board, or open the work item to edit in full.
-          </p>
-        </div>
-        <Button
-          variant="primary"
-          type="button"
-          className="shrink-0"
-          onClick={() => setCreateOpen(true)}
-        >
-          Draft a work item
-        </Button>
-      </div>
-
+    <div className="min-h-0">
       {error && (
-        <p className="mt-4 text-sm text-(--txt-danger-primary)" role="alert">
+        <p className="px-(--padding-page) pt-3 text-sm text-(--txt-danger-primary)" role="alert">
           {error}
         </p>
       )}
 
       {listLoading && drafts.length === 0 ? (
-        <div className="mt-8 flex justify-center text-sm text-(--txt-tertiary)">
+        <div className="flex justify-center px-(--padding-page) py-8 text-sm text-(--txt-tertiary)">
           Loading drafts…
         </div>
       ) : drafts.length === 0 ? (
@@ -467,7 +455,7 @@ export function DraftsPage() {
           </Button>
         </div>
       ) : (
-        <div className="mt-2 rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
+        <div className="bg-(--bg-canvas)">
           <ul className="divide-y divide-(--border-subtle)">
             {drafts.map((issue) => {
               const proj = projectById.get(issue.project_id);
@@ -480,12 +468,12 @@ export function DraftsPage() {
               const issueUrl = `${base}/projects/${issue.project_id}/issues/${issue.id}`;
 
               return (
-                <li key={issue.id}>
-                  <div className="flex min-h-11 w-full items-center justify-between gap-3 px-4 py-2.5">
+                <li key={issue.id} className="bg-(--bg-surface-1) hover:bg-(--bg-layer-1-hover)">
+                  <div className="flex min-h-11 w-full items-center justify-between gap-3 px-(--padding-page) py-2.5">
                     <div
                       role="button"
                       tabIndex={0}
-                      className="group flex min-w-0 flex-1 cursor-default items-center gap-2 truncate text-[13px] no-underline"
+                      className="flex min-w-0 flex-1 cursor-default items-center gap-2 truncate text-[13px]"
                       onDoubleClick={() => navigate(issueUrl)}
                       aria-label={`Open draft ${issue.name}`}
                     >
@@ -526,7 +514,7 @@ export function DraftsPage() {
             })}
           </ul>
           {hasMore ? (
-            <div className="border-t border-(--border-subtle) p-3 text-center">
+            <div className="border-t border-(--border-subtle) bg-(--bg-surface-1) p-3 text-center">
               <button
                 type="button"
                 className="text-[13px] font-medium text-(--brand-default) underline-offset-2 hover:underline"
@@ -544,6 +532,10 @@ export function DraftsPage() {
         onClose={() => {
           setCreateOpen(false);
           setCreateError(null);
+          if (searchParams.get('create') === '1') {
+            searchParams.delete('create');
+            setSearchParams(searchParams, { replace: true });
+          }
         }}
         workspaceSlug={workspace.slug}
         projects={projects}

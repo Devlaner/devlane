@@ -779,7 +779,13 @@ function DraftsHeader() {
         </span>
         Drafts
       </div>
-      <div className="flex items-center gap-2" />
+      <div className="flex items-center gap-2">
+        <Link to="?create=1" className="no-underline">
+          <Button size="sm" className="gap-1.5 text-[13px] font-medium">
+            Draft a work item
+          </Button>
+        </Link>
+      </div>
     </>
   );
 }
