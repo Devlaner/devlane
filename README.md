@@ -88,7 +88,8 @@ Contributions are welcome. Please open an issue for bugs or feature ideas, and r
 
 ## Star History
 
-[![Stargazers over time](https://starchart.cc/Devlaner/devlane.svg?variant=adaptive)](https://starchart.cc/Devlaner/devlane)
+[![Star History Chart](https://api.star-history.com/svg?repos=Devlaner/devlane&type=date&legend=top-left)](https://www.star-history.com/#Devlaner/devlane&type=date&legend=top-left)
+
 
 ## License
 
