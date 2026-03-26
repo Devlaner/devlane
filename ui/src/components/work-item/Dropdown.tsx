@@ -19,6 +19,7 @@ export interface DropdownProps {
   triggerClassName?: string;
   /** Optional custom trigger content (when set, icon and displayValue are ignored and this is rendered inside the trigger). */
   triggerContent?: React.ReactNode;
+  disabled?: boolean;
 }
 
 export function Dropdown({
@@ -34,6 +35,7 @@ export function Dropdown({
   align = 'left',
   triggerClassName,
   triggerContent,
+  disabled = false,
 }: DropdownProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -87,6 +89,7 @@ export function Dropdown({
       <button
         ref={triggerRef}
         type="button"
+        disabled={disabled}
         onClick={() => onOpen(open ? null : id)}
         className={triggerClassName ?? defaultTriggerClass}
       >

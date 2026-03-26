@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Button, Avatar } from '../components/ui';
+import { Button } from '../components/ui';
 import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
+import { DraftIssueRowProperties } from '../components/drafts/DraftIssueRowProperties';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
 import { issueService } from '../services/issueService';
@@ -15,27 +16,12 @@ import type {
   IssueApiResponse,
   StateApiResponse,
   LabelApiResponse,
+  ModuleApiResponse,
   WorkspaceMemberApiResponse,
 } from '../api/types';
 import type { Priority } from '../types';
-import type { StateGroup } from '../types/workspaceViewFilters';
-import {
-  PRIORITY_ICONS,
-  PRIORITY_LABELS,
-  STATE_GROUP_ICONS,
-} from '../components/workspace-views/WorkspaceViewsFiltersData';
-import { findWorkspaceMemberByUserId, getImageUrl } from '../lib/utils';
 
 const PAGE_SIZE = 50;
-
-const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low', 'none'];
-
-function formatShortDate(iso: string | null | undefined): string | null {
-  if (!iso?.trim()) return null;
-  const t = Date.parse(iso);
-  if (Number.isNaN(t)) return null;
-  return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
 
 /** Plane-style key + sequence (e.g. LOGI1). Never use placeholder em-dashes for the key. */
 function projectIssueKey(proj: ProjectApiResponse | undefined, issue: IssueApiResponse): string {
@@ -90,113 +76,6 @@ const IconFileDraft = () => (
   </svg>
 );
 
-const IconCalendar = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-    <line x1="16" y1="2" x2="16" y2="6" />
-    <line x1="8" y1="2" x2="8" y2="6" />
-    <line x1="3" y1="10" x2="21" y2="10" />
-  </svg>
-);
-
-const IconUser = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
-);
-
-const IconTag = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
-  </svg>
-);
-
-const IconEye = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-
-const IconCircleSlash = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <circle cx="12" cy="12" r="10" />
-    <path d="m4.9 4.9 14.2 14.2" />
-  </svg>
-);
-
-const IconMoreVertical = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-    <circle cx="12" cy="5" r="1.5" />
-    <circle cx="12" cy="12" r="1.5" />
-    <circle cx="12" cy="19" r="1.5" />
-  </svg>
-);
-
-const IconLayoutGrid = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <rect width="7" height="7" x="3" y="3" rx="1" />
-    <rect width="7" height="7" x="14" y="3" rx="1" />
-    <rect width="7" height="7" x="14" y="14" rx="1" />
-    <rect width="7" height="7" x="3" y="14" rx="1" />
-  </svg>
-);
-
-function stateGroupIcon(group: string | undefined) {
-  const g = (group ?? 'backlog').toLowerCase() as StateGroup;
-  const icon = STATE_GROUP_ICONS[g];
-  return icon ?? STATE_GROUP_ICONS.backlog;
-}
-
 export function DraftsPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
@@ -205,6 +84,7 @@ export function DraftsPage() {
   const [drafts, setDrafts] = useState<IssueApiResponse[]>([]);
   const [statesByProject, setStatesByProject] = useState<Map<string, StateApiResponse[]>>(new Map());
   const [labelsByProject, setLabelsByProject] = useState<Map<string, LabelApiResponse[]>>(new Map());
+  const [modulesByProject, setModulesByProject] = useState<Map<string, ModuleApiResponse[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [listLoading, setListLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -214,6 +94,7 @@ export function DraftsPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [rowBusy, setRowBusy] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [propDropdownId, setPropDropdownId] = useState<string | null>(null);
 
   const projectById = useMemo(() => {
     const m = new Map<string, ProjectApiResponse>();
@@ -230,34 +111,40 @@ export function DraftsPage() {
     if (!workspaceSlug || !projectIdsKey) {
       setStatesByProject(new Map());
       setLabelsByProject(new Map());
+      setModulesByProject(new Map());
       return;
     }
     const ids = projectIdsKey.split(',').filter(Boolean);
     let cancelled = false;
     Promise.all(
       ids.map(async (pid) => {
-        const [states, labels] = await Promise.all([
+        const [states, labels, modules] = await Promise.all([
           stateService.list(workspaceSlug, pid),
           labelService.list(workspaceSlug, pid),
+          moduleService.list(workspaceSlug, pid),
         ]);
-        return { pid, states, labels };
+        return { pid, states, labels, modules };
       }),
     )
       .then((rows) => {
         if (cancelled) return;
         const sm = new Map<string, StateApiResponse[]>();
         const lm = new Map<string, LabelApiResponse[]>();
-        for (const { pid, states, labels } of rows) {
+        const mm = new Map<string, ModuleApiResponse[]>();
+        for (const { pid, states, labels, modules } of rows) {
           sm.set(pid, states ?? []);
           lm.set(pid, labels ?? []);
+          mm.set(pid, modules ?? []);
         }
         setStatesByProject(sm);
         setLabelsByProject(lm);
+        setModulesByProject(mm);
       })
       .catch(() => {
         if (!cancelled) {
           setStatesByProject(new Map());
           setLabelsByProject(new Map());
+          setModulesByProject(new Map());
         }
       });
     return () => {
@@ -355,25 +242,56 @@ export function DraftsPage() {
     };
   }, [workspaceSlug, workspace]);
 
-  const getUser = (userId: string | null) => {
-    if (!userId) return null;
-    const m = findWorkspaceMemberByUserId(members, userId);
-    const display = m?.member_display_name?.trim() ?? '';
-    const emailUser = m?.member_email?.trim().split('@')[0]?.trim() ?? '';
-    const name = display !== '' ? display : emailUser !== '' ? emailUser : userId.slice(0, 8);
-    const raw = m?.member_avatar?.trim();
-    const avatarUrl = raw ? raw : null;
-    return { id: userId, name, avatarUrl };
-  };
+  const setPropDropdownOpen = useCallback((id: string | null) => {
+    setPropDropdownId(id);
+    if (id) setMenuOpenId(null);
+  }, []);
+
+  useEffect(() => {
+    if (!menuOpenId) return;
+    const onDown = (e: MouseEvent) => {
+      const el = e.target as HTMLElement;
+      if (el.closest?.('[data-draft-actions]')) return;
+      setMenuOpenId(null);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [menuOpenId]);
 
   const handlePatch = async (issue: IssueApiResponse, payload: Record<string, unknown>) => {
     if (!workspaceSlug) return;
     setRowBusy(issue.id);
     try {
-      const updated = await issueService.update(workspaceSlug, issue.project_id, issue.id, payload);
+      const updated = await issueService.update(
+        workspaceSlug,
+        issue.project_id,
+        issue.id,
+        payload as Parameters<typeof issueService.update>[3],
+      );
       setDrafts((prev) => prev.map((i) => (i.id === issue.id ? { ...i, ...updated } : i)));
     } catch {
       setError('Could not update draft.');
+    } finally {
+      setRowBusy(null);
+    }
+  };
+
+  const handleModuleChange = async (issue: IssueApiResponse, moduleId: string | null) => {
+    if (!workspaceSlug) return;
+    const cur = issue.module_ids?.[0] ?? null;
+    if (cur === moduleId) return;
+    setRowBusy(issue.id);
+    try {
+      if (cur) {
+        await moduleService.removeIssue(workspaceSlug, issue.project_id, cur, issue.id);
+      }
+      if (moduleId) {
+        await moduleService.addIssue(workspaceSlug, issue.project_id, moduleId, issue.id);
+      }
+      const fresh = await issueService.get(workspaceSlug, issue.project_id, issue.id);
+      setDrafts((prev) => prev.map((i) => (i.id === issue.id ? { ...i, ...fresh } : i)));
+    } catch {
+      setError('Could not update module.');
     } finally {
       setRowBusy(null);
     }
@@ -427,6 +345,7 @@ export function DraftsPage() {
   const handlePublish = async (issue: IssueApiResponse) => {
     if (!workspaceSlug) return;
     setMenuOpenId(null);
+    setPropDropdownId(null);
     setRowBusy(issue.id);
     try {
       await issueService.update(workspaceSlug, issue.project_id, issue.id, { is_draft: false });
@@ -442,6 +361,7 @@ export function DraftsPage() {
     if (!workspaceSlug) return;
     if (!window.confirm(`Delete draft “${issue.name}”?`)) return;
     setMenuOpenId(null);
+    setPropDropdownId(null);
     setRowBusy(issue.id);
     try {
       await issueService.delete(workspaceSlug, issue.project_id, issue.id);
@@ -526,236 +446,47 @@ export function DraftsPage() {
               const proj = projectById.get(issue.project_id);
               const displayId = draftDisplayId(proj, issue);
               const busy = rowBusy === issue.id;
-              const pri = (issue.priority ?? 'none') as Priority;
               const states = statesByProject.get(issue.project_id) ?? [];
               const labels = labelsByProject.get(issue.project_id) ?? [];
-              const currentState = states.find((s) => s.id === issue.state_id);
-              const stateName = currentState?.name ?? 'Backlog';
-              const primaryAssigneeId =
-                issue.assignee_ids && issue.assignee_ids.length > 0 ? issue.assignee_ids[0] : null;
-              const assignee = getUser(primaryAssigneeId);
-              const labelNames = (issue.label_ids ?? [])
-                .map((id) => labels.find((l) => l.id === id)?.name)
-                .filter((n): n is string => Boolean(n));
-              const startStr = formatShortDate(issue.start_date);
-              const dueStr = formatShortDate(issue.target_date);
+              const modules = modulesByProject.get(issue.project_id) ?? [];
               const issueUrl = `${base}/projects/${issue.project_id}/issues/${issue.id}`;
 
               return (
                 <li key={issue.id}>
-                  <div className="flex min-h-11 flex-col gap-2 py-2.5 pl-4 pr-3 lg:flex-row lg:items-center lg:gap-3">
+                  <div className="flex min-h-11 w-full items-center justify-between gap-3 px-4 py-2.5">
                     <Link
                       to={issueUrl}
-                      className="group flex min-w-0 flex-1 items-center gap-2 truncate text-sm no-underline"
+                      className="group flex min-w-0 flex-1 items-center gap-2 truncate text-[13px] no-underline"
                     >
-                      <span className="shrink-0 font-medium text-(--txt-accent-primary)">{displayId}</span>
+                      <span className="shrink-0 font-medium text-(--txt-tertiary)">{displayId}</span>
                       <span className="truncate text-(--txt-primary) group-hover:text-(--brand-default)">
                         {issue.name}
                       </span>
                     </Link>
 
-                    <div
-                      className="flex shrink-0 flex-wrap items-center gap-1.5 text-(--txt-icon-tertiary)"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {/* State (Plane-style dashed control) */}
-                      <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-dashed border-(--border-subtle) bg-(--bg-layer-2) px-2 py-1 text-[12px] text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)">
-                        <span className="flex size-3.5 shrink-0 items-center justify-center text-(--txt-icon-tertiary) [&_svg]:size-3.5">
-                          {stateGroupIcon(currentState?.group)}
-                        </span>
-                        <select
-                          className="max-w-[7rem] cursor-pointer truncate border-0 bg-transparent p-0 text-[12px] font-medium text-(--txt-primary) focus:outline-none focus:ring-0"
-                          value={issue.state_id ?? ''}
-                          disabled={busy || states.length === 0}
-                          aria-label="State"
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            void handlePatch(issue, { state_id: v || null });
-                          }}
-                        >
-                          {states.length === 0 ? (
-                            <option value="">{stateName}</option>
-                          ) : (
-                            [
-                              <option key="__backlog" value="">
-                                Backlog
-                              </option>,
-                              ...states.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                  {s.name}
-                                </option>
-                              )),
-                            ]
-                          )}
-                        </select>
-                      </label>
-
-                      <span
-                        className="flex size-7 items-center justify-center rounded text-(--txt-icon-tertiary) opacity-40"
-                        title="Blocked (coming soon)"
-                      >
-                        <IconCircleSlash />
-                      </span>
-
-                      <span
-                        className="flex size-7 items-center justify-center"
-                        title={labelNames.length ? labelNames.join(', ') : 'Labels'}
-                      >
-                        {labelNames.length > 0 ? (
-                          <IconTag />
-                        ) : (
-                          <span className="opacity-40">
-                            <IconTag />
-                          </span>
-                        )}
-                      </span>
-
-                      <label
-                        className="flex h-7 cursor-pointer items-center gap-0.5 rounded border border-(--border-subtle) bg-(--bg-layer-2) px-1.5 text-[11px] text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
-                        title={startStr ?? 'Start date'}
-                      >
-                        <IconCalendar />
-                        <input
-                          type="date"
-                          className="w-[108px] cursor-pointer border-0 bg-transparent p-0 text-[11px] focus:outline-none"
-                          value={issue.start_date?.slice(0, 10) ?? ''}
-                          disabled={busy}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            void handlePatch(issue, { start_date: v || null });
-                          }}
-                        />
-                      </label>
-
-                      <label
-                        className="flex h-7 cursor-pointer items-center gap-0.5 rounded border border-(--border-subtle) bg-(--bg-layer-2) px-1.5 text-[11px] text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
-                        title={dueStr ?? 'Due date'}
-                      >
-                        <IconCalendar />
-                        <input
-                          type="date"
-                          className="w-[108px] cursor-pointer border-0 bg-transparent p-0 text-[11px] focus:outline-none"
-                          value={issue.target_date?.slice(0, 10) ?? ''}
-                          disabled={busy}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            void handlePatch(issue, { target_date: v || null });
-                          }}
-                        />
-                      </label>
-
-                      <div className="flex items-center gap-1">
-                        <span
-                          className="flex size-7 shrink-0 items-center justify-center"
-                          title={assignee?.name ?? 'Unassigned'}
-                        >
-                          {assignee ? (
-                            <Avatar
-                              name={assignee.name}
-                              src={getImageUrl(assignee.avatarUrl) ?? undefined}
-                              size="sm"
-                              className="h-6 w-6 text-[10px]"
-                            />
-                          ) : (
-                            <IconUser />
-                          )}
-                        </span>
-                        <select
-                          className="h-7 max-w-[7rem] cursor-pointer rounded border border-(--border-subtle) bg-(--bg-layer-2) pl-1 pr-5 text-[11px] text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
-                          value={primaryAssigneeId ?? ''}
-                          disabled={busy}
-                          aria-label="Assignee"
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            void handlePatch(issue, { assignee_ids: v ? [v] : [] });
-                          }}
-                        >
-                          <option value="">—</option>
-                          {members.map((m) => {
-                            const uid = m.member_id ?? m.id;
-                            const nm =
-                              m.member_display_name?.trim() ||
-                              m.member_email?.split('@')[0] ||
-                              uid.slice(0, 8);
-                            return (
-                              <option key={m.id} value={uid}>
-                                {nm}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </div>
-
-                      <div
-                        className="relative flex size-7 items-center justify-center"
-                        title={PRIORITY_LABELS[pri]}
-                      >
-                        <select
-                          className="absolute inset-0 z-10 cursor-pointer opacity-0"
-                          value={pri}
-                          disabled={busy}
-                          aria-label="Priority"
-                          onChange={(e) => {
-                            void handlePatch(issue, { priority: e.target.value });
-                          }}
-                        >
-                          {PRIORITIES.map((p) => (
-                            <option key={p} value={p}>
-                              {PRIORITY_LABELS[p]}
-                            </option>
-                          ))}
-                        </select>
-                        <span className="pointer-events-none flex size-7 items-center justify-center rounded border border-(--border-subtle) bg-(--bg-layer-2)">
-                          {PRIORITY_ICONS[pri] ?? <IconLayoutGrid />}
-                        </span>
-                      </div>
-
-                      <span className="flex size-7 items-center justify-center opacity-50" title="Estimate">
-                        <IconLayoutGrid />
-                      </span>
-
-                      <span className="flex size-7 items-center justify-center" title="Visibility">
-                        <IconEye />
-                      </span>
-
-                      <div className="relative">
-                        <button
-                          type="button"
-                          className="flex size-7 items-center justify-center rounded hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-                          aria-expanded={menuOpenId === issue.id}
-                          aria-label="More options"
-                          disabled={busy}
-                          onClick={() =>
-                            setMenuOpenId((id) => (id === issue.id ? null : issue.id))
-                          }
-                        >
-                          <IconMoreVertical />
-                        </button>
-                        {menuOpenId === issue.id ? (
-                          <div
-                            className="absolute right-0 z-20 mt-1 min-w-[9rem] rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
-                            role="menu"
-                          >
-                            <button
-                              type="button"
-                              role="menuitem"
-                              className="block w-full px-3 py-2 text-left text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-                              onClick={() => void handlePublish(issue)}
-                            >
-                              Publish
-                            </button>
-                            <button
-                              type="button"
-                              role="menuitem"
-                              className="block w-full px-3 py-2 text-left text-[13px] text-(--txt-danger-primary) hover:bg-(--bg-layer-1-hover)"
-                              onClick={() => void handleDelete(issue)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
+                    <DraftIssueRowProperties
+                      issue={issue}
+                      project={proj}
+                      states={states}
+                      labels={labels}
+                      modules={modules}
+                      members={members}
+                      busy={busy}
+                      openDropdownId={propDropdownId}
+                      setOpenDropdownId={setPropDropdownOpen}
+                      onPatch={handlePatch}
+                      onModuleChange={handleModuleChange}
+                      rowMenuOpen={menuOpenId === issue.id}
+                      onToggleRowMenu={() =>
+                        setMenuOpenId((id) => {
+                          const next = id === issue.id ? null : issue.id;
+                          if (next) setPropDropdownId(null);
+                          return next;
+                        })
+                      }
+                      onPublish={() => void handlePublish(issue)}
+                      onDelete={() => void handleDelete(issue)}
+                    />
                   </div>
                 </li>
               );
