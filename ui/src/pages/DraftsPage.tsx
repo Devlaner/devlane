@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui';
 import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
+import type { WorkItemInitialValues } from '../components/CreateWorkItemModal';
 import { DraftIssueRowProperties } from '../components/drafts/DraftIssueRowProperties';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
@@ -104,6 +105,8 @@ export function DraftsPage() {
   const [hasMore, setHasMore] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
+  const [modalInitialValues, setModalInitialValues] = useState<WorkItemInitialValues | undefined>();
   const [rowBusy, setRowBusy] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [propDropdownId, setPropDropdownId] = useState<string | null>(null);
@@ -336,30 +339,49 @@ export function DraftsPage() {
     if (!workspaceSlug || !data.title.trim()) return;
     setCreateError(null);
     try {
-      const created = await issueService.create(workspaceSlug, data.projectId, {
-        name: data.title.trim(),
-        description: data.description || undefined,
-        state_id: data.stateId || undefined,
-        priority: data.priority || undefined,
-        assignee_ids: data.assigneeIds?.length ? data.assigneeIds : undefined,
-        label_ids: data.labelIds?.length ? data.labelIds : undefined,
-        start_date: data.startDate || undefined,
-        target_date: data.dueDate || undefined,
-        parent_id: data.parentId || undefined,
-        is_draft: data.isDraft === true ? true : undefined,
-      });
-      if (created?.id) {
-        if (data.cycleId) {
-          await cycleService.addIssue(workspaceSlug, data.projectId, data.cycleId, created.id);
+      if (editingIssueId) {
+        const existing = drafts.find((d) => d.id === editingIssueId);
+        if (existing) {
+          await issueService.update(workspaceSlug, existing.project_id, editingIssueId, {
+            name: data.title.trim(),
+            description: data.description || undefined,
+            state_id: data.stateId || undefined,
+            priority: data.priority || undefined,
+            assignee_ids: data.assigneeIds?.length ? data.assigneeIds : [],
+            label_ids: data.labelIds?.length ? data.labelIds : [],
+            start_date: data.startDate || null,
+            target_date: data.dueDate || null,
+            parent_id: data.parentId || null,
+          });
         }
-        if (data.moduleId) {
-          await moduleService.addIssue(workspaceSlug, data.projectId, data.moduleId, created.id);
+      } else {
+        const created = await issueService.create(workspaceSlug, data.projectId, {
+          name: data.title.trim(),
+          description: data.description || undefined,
+          state_id: data.stateId || undefined,
+          priority: data.priority || undefined,
+          assignee_ids: data.assigneeIds?.length ? data.assigneeIds : undefined,
+          label_ids: data.labelIds?.length ? data.labelIds : undefined,
+          start_date: data.startDate || undefined,
+          target_date: data.dueDate || undefined,
+          parent_id: data.parentId || undefined,
+          is_draft: data.isDraft === true ? true : undefined,
+        });
+        if (created?.id) {
+          if (data.cycleId) {
+            await cycleService.addIssue(workspaceSlug, data.projectId, data.cycleId, created.id);
+          }
+          if (data.moduleId) {
+            await moduleService.addIssue(workspaceSlug, data.projectId, data.moduleId, created.id);
+          }
         }
       }
       setCreateOpen(false);
+      setEditingIssueId(null);
+      setModalInitialValues(undefined);
       await loadDrafts(true);
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'Failed to create draft.');
+      setCreateError(err instanceof Error ? err.message : 'Failed to save draft.');
     }
   };
 
@@ -392,6 +414,40 @@ export function DraftsPage() {
     } finally {
       setRowBusy(null);
     }
+  };
+
+  const issueToInitialValues = (issue: IssueApiResponse): WorkItemInitialValues => ({
+    title: issue.name,
+    description: issue.description_html ?? '',
+    projectId: issue.project_id,
+    stateId: issue.state_id ?? undefined,
+    priority: (issue.priority as Priority) ?? undefined,
+    assigneeIds: issue.assignee_ids ?? [],
+    labelIds: issue.label_ids ?? [],
+    startDate: issue.start_date?.slice(0, 10) ?? undefined,
+    dueDate: issue.target_date?.slice(0, 10) ?? undefined,
+    cycleId: issue.cycle_ids?.[0] ?? null,
+    moduleId: issue.module_ids?.[0] ?? null,
+    parentId: issue.parent_id ?? null,
+  });
+
+  const handleEdit = (issue: IssueApiResponse) => {
+    setMenuOpenId(null);
+    setPropDropdownId(null);
+    setEditingIssueId(issue.id);
+    setModalInitialValues(issueToInitialValues(issue));
+    setCreateOpen(true);
+  };
+
+  const handleDuplicate = (issue: IssueApiResponse) => {
+    setMenuOpenId(null);
+    setPropDropdownId(null);
+    setEditingIssueId(null);
+    setModalInitialValues({
+      ...issueToInitialValues(issue),
+      title: `${issue.name} (copy)`,
+    });
+    setCreateOpen(true);
   };
 
   if (loading) {
@@ -484,6 +540,7 @@ export function DraftsPage() {
                     </div>
 
                     <DraftIssueRowProperties
+                      workspaceSlug={workspaceSlug}
                       issue={issue}
                       project={proj}
                       states={states}
@@ -505,7 +562,9 @@ export function DraftsPage() {
                           return next;
                         })
                       }
-                      onPublish={() => void handlePublish(issue)}
+                      onEdit={() => handleEdit(issue)}
+                      onDuplicate={() => handleDuplicate(issue)}
+                      onMoveToIssues={() => void handlePublish(issue)}
                       onDelete={() => void handleDelete(issue)}
                     />
                   </div>
@@ -532,6 +591,8 @@ export function DraftsPage() {
         onClose={() => {
           setCreateOpen(false);
           setCreateError(null);
+          setEditingIssueId(null);
+          setModalInitialValues(undefined);
           if (searchParams.get('create') === '1') {
             searchParams.delete('create');
             setSearchParams(searchParams, { replace: true });
@@ -540,6 +601,7 @@ export function DraftsPage() {
         workspaceSlug={workspace.slug}
         projects={projects}
         defaultProjectId={projects[0]?.id}
+        initialValues={modalInitialValues}
         draftOnly
         createError={createError}
         onSave={handleCreateSave}

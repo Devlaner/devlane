@@ -94,6 +94,21 @@ const IconBuilding = () => (
 
 const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low', 'none'];
 
+export interface WorkItemInitialValues {
+  title?: string;
+  description?: string;
+  projectId?: string;
+  stateId?: string;
+  priority?: Priority;
+  assigneeIds?: string[];
+  labelIds?: string[];
+  startDate?: string;
+  dueDate?: string;
+  cycleId?: string | null;
+  moduleId?: string | null;
+  parentId?: string | null;
+}
+
 export interface CreateWorkItemModalProps {
   open: boolean;
   onClose: () => void;
@@ -102,6 +117,8 @@ export interface CreateWorkItemModalProps {
   defaultProjectId?: string;
   defaultModuleId?: string | null;
   createError?: string | null;
+  /** Pre-fill form fields (used by edit and duplicate flows). */
+  initialValues?: WorkItemInitialValues;
   /**
    * When true, configures the modal for the workspace drafts flow:
    * - Draft-specific title copy
@@ -136,6 +153,7 @@ export function CreateWorkItemModal({
   defaultProjectId,
   defaultModuleId,
   createError,
+  initialValues,
   draftOnly = false,
   onSave,
 }: CreateWorkItemModalProps) {
@@ -283,22 +301,23 @@ export function CreateWorkItemModal({
 
   useEffect(() => {
     if (open) {
-      setProjectId(defaultProjectId ?? projects[0]?.id ?? '');
-      setTitle('');
-      setDescription('');
-      setStateId('');
-      setPriority('none');
-      setAssigneeIds([]);
-      setLabelIds([]);
-      setStartDate('');
-      setDueDate('');
-      setCycleId(null);
-      setModuleId(defaultModuleId ?? null);
-      setParentId(null);
+      const iv = initialValues;
+      setProjectId(iv?.projectId ?? defaultProjectId ?? projects[0]?.id ?? '');
+      setTitle(iv?.title ?? '');
+      setDescription(iv?.description ?? '');
+      setStateId(iv?.stateId ?? '');
+      setPriority(iv?.priority ?? 'none');
+      setAssigneeIds(iv?.assigneeIds ?? []);
+      setLabelIds(iv?.labelIds ?? []);
+      setStartDate(iv?.startDate ?? '');
+      setDueDate(iv?.dueDate ?? '');
+      setCycleId(iv?.cycleId ?? null);
+      setModuleId(iv?.moduleId ?? defaultModuleId ?? null);
+      setParentId(iv?.parentId ?? null);
       setOpenDropdown(null);
       setParentModalOpen(false);
     }
-  }, [open, defaultProjectId, defaultModuleId, projects]);
+  }, [open, defaultProjectId, defaultModuleId, projects, initialValues]);
 
   useEffect(() => {
     if (!open) return;
