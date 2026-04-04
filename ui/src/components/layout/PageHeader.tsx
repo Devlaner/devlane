@@ -2295,7 +2295,9 @@ function ProjectSectionHeader({
             </div>
           </div>
         )}
-        <span className="shrink-0 text-(--txt-placeholder)" aria-hidden>/</span>
+        <span className="shrink-0 text-(--txt-placeholder)" aria-hidden>
+          /
+        </span>
         <ProjectSectionDropdown
           baseUrl={baseUrl}
           currentSection={section}

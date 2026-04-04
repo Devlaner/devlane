@@ -70,9 +70,7 @@ function PasswordStrengthIndicator({ password }: { password: string }) {
           <div key={label} className="flex items-center gap-1.5 text-xs text-(--txt-secondary)">
             <span
               className={`flex size-3.5 shrink-0 items-center justify-center rounded-full ${
-                met
-                  ? 'bg-green-500 text-white'
-                  : 'border border-(--border-subtle) text-transparent'
+                met ? 'bg-green-500 text-white' : 'border border-(--border-subtle) text-transparent'
               }`}
             >
               <IconCheckSmall />
@@ -285,10 +283,7 @@ export function ResetPasswordPage() {
         </form>
 
         <p className="mt-6 text-center text-sm">
-          <Link
-            to="/login"
-            className="font-medium text-(--txt-accent) hover:underline"
-          >
+          <Link to="/login" className="font-medium text-(--txt-accent) hover:underline">
             Back to sign in
           </Link>
         </p>

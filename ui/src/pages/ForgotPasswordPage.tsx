@@ -7,8 +7,7 @@ const RESEND_COOLDOWN_SECONDS = 30;
 
 export function ForgotPasswordPage() {
   const location = useLocation();
-  const prefilledEmail =
-    (location.state as { email?: string } | null)?.email ?? '';
+  const prefilledEmail = (location.state as { email?: string } | null)?.email ?? '';
 
   const [email, setEmail] = useState(prefilledEmail);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,8 +103,8 @@ export function ForgotPasswordPage() {
               <path d="M20 6 9 17l-5-5" />
             </svg>
             <span>
-              If an account exists for <strong>{email}</strong>, we&apos;ve sent a reset link.
-              Check your inbox (and spam folder).
+              If an account exists for <strong>{email}</strong>, we&apos;ve sent a reset link. Check
+              your inbox (and spam folder).
             </span>
           </div>
         )}
@@ -143,10 +142,7 @@ export function ForgotPasswordPage() {
         </form>
 
         <p className="mt-6 text-center text-sm">
-          <Link
-            to="/login"
-            className="font-medium text-(--txt-accent) hover:underline"
-          >
+          <Link to="/login" className="font-medium text-(--txt-accent) hover:underline">
             Back to sign in
           </Link>
         </p>

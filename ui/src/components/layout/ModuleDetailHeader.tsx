@@ -394,7 +394,9 @@ export function ModuleDetailHeader({
           </span>
           {projectName}
         </Link>
-        <span className="shrink-0 text-(--txt-placeholder)" aria-hidden>/</span>
+        <span className="shrink-0 text-(--txt-placeholder)" aria-hidden>
+          /
+        </span>
         <Link
           to={`${baseUrl}/modules`}
           className="flex shrink-0 items-center gap-1.5 truncate font-medium text-(--txt-secondary) no-underline hover:text-(--txt-primary) hover:underline"
@@ -404,7 +406,9 @@ export function ModuleDetailHeader({
           </span>
           Modules
         </Link>
-        <span className="shrink-0 text-(--txt-placeholder)" aria-hidden>/</span>
+        <span className="shrink-0 text-(--txt-placeholder)" aria-hidden>
+          /
+        </span>
         <div ref={dropdownRef} className="relative flex min-w-0 shrink-0 items-center">
           <button
             type="button"

@@ -73,9 +73,7 @@ function PasswordStrengthIndicator({ password }: { password: string }) {
           <div key={label} className="flex items-center gap-1.5 text-xs text-(--txt-secondary)">
             <span
               className={`flex size-3.5 shrink-0 items-center justify-center rounded-full ${
-                met
-                  ? 'bg-green-500 text-white'
-                  : 'border border-(--border-subtle) text-transparent'
+                met ? 'bg-green-500 text-white' : 'border border-(--border-subtle) text-transparent'
               }`}
             >
               <IconCheck />
@@ -318,9 +316,7 @@ export function LoginPage() {
           <Button
             type="submit"
             className="w-full"
-            disabled={
-              isSubmitting || (isSignUp && (!strength.valid || !passwordsMatch))
-            }
+            disabled={isSubmitting || (isSignUp && (!strength.valid || !passwordsMatch))}
           >
             {isSubmitting
               ? isSignUp
