@@ -18,17 +18,24 @@ var (
 	ErrInvalidCredentials = errors.New("invalid email or password")
 	ErrEmailTaken         = errors.New("email already registered")
 	ErrUsernameTaken      = errors.New("username already taken")
+	ErrResetTokenInvalid  = errors.New("reset token is invalid or expired")
 )
 
 const bcryptCost = 12
 
 type Service struct {
-	userStore    *store.UserStore
-	sessionStore *store.SessionStore
+	userStore       *store.UserStore
+	sessionStore    *store.SessionStore
+	resetTokenStore *store.PasswordResetTokenStore
 }
 
 func NewService(userStore *store.UserStore, sessionStore *store.SessionStore) *Service {
 	return &Service{userStore: userStore, sessionStore: sessionStore}
+}
+
+// SetResetTokenStore attaches the password reset token store (optional dependency).
+func (s *Service) SetResetTokenStore(ts *store.PasswordResetTokenStore) {
+	s.resetTokenStore = ts
 }
 
 type SignUpRequest struct {
@@ -143,6 +150,52 @@ func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, currentP
 	}
 	u.Password = string(hash)
 	return s.userStore.Update(ctx, u)
+}
+
+// ForgotPassword generates a reset token for the given email.
+// Returns the plain token and the user. If the email is not found, returns ("", nil, nil)
+// so callers can respond with a generic success (no user enumeration).
+func (s *Service) ForgotPassword(ctx context.Context, email string) (token string, user *model.User, err error) {
+	if s.resetTokenStore == nil {
+		return "", nil, errors.New("password reset not configured")
+	}
+	email = strings.TrimSpace(strings.ToLower(email))
+	u, err := s.userStore.GetByEmail(ctx, email)
+	if err != nil || u == nil {
+		return "", nil, nil
+	}
+	if !u.IsActive {
+		return "", nil, nil
+	}
+	token, err = s.resetTokenStore.Create(ctx, u.ID)
+	if err != nil {
+		return "", nil, err
+	}
+	return token, u, nil
+}
+
+// ResetPassword validates a reset token and sets the new password.
+func (s *Service) ResetPassword(ctx context.Context, token, newPassword string) error {
+	if s.resetTokenStore == nil {
+		return errors.New("password reset not configured")
+	}
+	rec, err := s.resetTokenStore.GetValid(ctx, token)
+	if err != nil || rec == nil {
+		return ErrResetTokenInvalid
+	}
+	u, err := s.userStore.GetByID(ctx, rec.UserID)
+	if err != nil || u == nil {
+		return ErrResetTokenInvalid
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcryptCost)
+	if err != nil {
+		return err
+	}
+	u.Password = string(hash)
+	if err := s.userStore.Update(ctx, u); err != nil {
+		return err
+	}
+	return s.resetTokenStore.MarkUsed(ctx, rec.ID)
 }
 
 func (s *Service) createSession(ctx context.Context, userID uuid.UUID) (string, error) {

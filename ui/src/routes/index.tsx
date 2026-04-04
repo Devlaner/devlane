@@ -140,6 +140,16 @@ const InstanceSetupCompletePage = lazy(() =>
     page({ InstanceSetupCompletePage: m.InstanceSetupCompletePage }),
   ),
 );
+const ForgotPasswordPage = lazy(() =>
+  import('../pages/ForgotPasswordPage').then((m) =>
+    page({ ForgotPasswordPage: m.ForgotPasswordPage }),
+  ),
+);
+const ResetPasswordPage = lazy(() =>
+  import('../pages/ResetPasswordPage').then((m) =>
+    page({ ResetPasswordPage: m.ResetPasswordPage }),
+  ),
+);
 const InviteAcceptPage = lazy(() =>
   import('../pages/InviteAcceptPage').then((m) => page({ InviteAcceptPage: m.InviteAcceptPage })),
 );
@@ -290,6 +300,22 @@ const router = createBrowserRouter([
         element: (
           <Suspense fallback={<PageFallback />}>
             <LoginPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'forgot-password',
+        element: (
+          <Suspense fallback={<PageFallback />}>
+            <ForgotPasswordPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'reset-password',
+        element: (
+          <Suspense fallback={<PageFallback />}>
+            <ResetPasswordPage />
           </Suspense>
         ),
       },

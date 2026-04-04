@@ -3,6 +3,8 @@ package handler
 
 import (
 	"errors"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -10,6 +12,7 @@ import (
 	"github.com/Devlaner/devlane/api/internal/auth"
 	"github.com/Devlaner/devlane/api/internal/middleware"
 	"github.com/Devlaner/devlane/api/internal/model"
+	"github.com/Devlaner/devlane/api/internal/queue"
 	"github.com/Devlaner/devlane/api/internal/store"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -23,6 +26,8 @@ type AuthHandler struct {
 	Ws         *store.WorkspaceStore
 	NotifPrefs *store.UserNotificationPreferenceStore
 	ApiTokens  *store.ApiTokenStore
+	Queue      *queue.Publisher
+	AppBaseURL string
 }
 
 type SignInRequest struct {
@@ -162,6 +167,80 @@ func (h *AuthHandler) SignOut(c *gin.Context) {
 	}
 	clearSessionCookie(c)
 	c.Status(http.StatusNoContent)
+}
+
+type ForgotPasswordRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+type ResetPasswordRequest struct {
+	Token       string `json:"token" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=8"`
+}
+
+// ForgotPassword generates a password-reset token and emails the user a reset link.
+// POST /auth/forgot-password/
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
+
+	token, user, err := h.Auth.ForgotPassword(c.Request.Context(), req.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process request"})
+		return
+	}
+
+	// Always return success to prevent user enumeration.
+	if token == "" || user == nil {
+		c.JSON(http.StatusOK, gin.H{"message": "If that email is registered, a reset link has been sent."})
+		return
+	}
+
+	resetURL := fmt.Sprintf("%s/reset-password?token=%s", strings.TrimRight(h.AppBaseURL, "/"), token)
+
+	body := fmt.Sprintf(
+		"Hi %s,\n\nYou requested a password reset for your Devlane account.\n\nClick the link below to set a new password (valid for 30 minutes):\n%s\n\nIf you didn't request this, you can safely ignore this email.\n\n— Devlane",
+		strings.TrimSpace(user.FirstName+" "+user.LastName),
+		resetURL,
+	)
+
+	if h.Queue != nil {
+		if err := h.Queue.PublishSendEmail(c.Request.Context(), queue.SendEmailPayload{
+			To:      *user.Email,
+			Subject: "Devlane – Reset your password",
+			Body:    body,
+			Kind:    "forgot_password",
+		}); err != nil {
+			slog.Error("failed to enqueue password reset email", "email", *user.Email, "error", err)
+		}
+	} else {
+		slog.Warn("password reset link (queue not configured — use this URL to reset)",
+			"email", *user.Email, "reset_url", resetURL)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "If that email is registered, a reset link has been sent."})
+}
+
+// ResetPassword validates the token and sets a new password.
+// POST /auth/reset-password/
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
+	if err := h.Auth.ResetPassword(c.Request.Context(), req.Token, req.NewPassword); err != nil {
+		if err == auth.ErrResetTokenInvalid {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Reset link is invalid or has expired. Please request a new one."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset password"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Password has been reset successfully. You can now sign in."})
 }
 
 // Me returns the authenticated user.

@@ -1,8 +1,14 @@
 import { apiClient } from '../api/client';
-import type { UserApiResponse, SignInRequest, SignUpRequest } from '../api/types';
+import type {
+  UserApiResponse,
+  SignInRequest,
+  SignUpRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+} from '../api/types';
 
 /**
- * Auth API: sign-in, sign-up, sign-out, current user.
+ * Auth API: sign-in, sign-up, sign-out, forgot/reset password, current user.
  */
 export const authService = {
   async signIn(payload: SignInRequest): Promise<UserApiResponse> {
@@ -21,6 +27,18 @@ export const authService = {
 
   async signOut(): Promise<void> {
     await apiClient.post('/auth/sign-out/');
+  },
+
+  /** POST /auth/forgot-password/ */
+  async forgotPassword(payload: ForgotPasswordRequest): Promise<{ message: string }> {
+    const { data } = await apiClient.post<{ message: string }>('/auth/forgot-password/', payload);
+    return data;
+  },
+
+  /** POST /auth/reset-password/ */
+  async resetPassword(payload: ResetPasswordRequest): Promise<{ message: string }> {
+    const { data } = await apiClient.post<{ message: string }>('/auth/reset-password/', payload);
+    return data;
   },
 
   async getMe(): Promise<UserApiResponse | null> {

@@ -5,6 +5,13 @@ import tailwindcss from '@tailwindcss/vite';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // When VITE_API_BASE_URL is unset, the UI uses same-origin URLs; forward API + auth to the Go server.
+  server: {
+    proxy: {
+      '/api': { target: 'http://localhost:8080', changeOrigin: true },
+      '/auth': { target: 'http://localhost:8080', changeOrigin: true },
+    },
+  },
   build: {
     rollupOptions: {
       output: {

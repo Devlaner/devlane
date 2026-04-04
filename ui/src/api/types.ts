@@ -301,6 +301,17 @@ export interface SignUpRequest {
   invite_token?: string;
 }
 
+/** POST /auth/forgot-password/ request */
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+/** POST /auth/reset-password/ request */
+export interface ResetPasswordRequest {
+  token: string;
+  new_password: string;
+}
+
 /** Instance settings: section key -> value object (from GET /api/instance/settings/) */
 export type InstanceSettingsResponse = Record<string, Record<string, unknown>>;
 
