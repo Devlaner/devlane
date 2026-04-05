@@ -18,10 +18,18 @@ var (
 	ErrInvalidCredentials = errors.New("invalid email or password")
 	ErrEmailTaken         = errors.New("email already registered")
 	ErrUsernameTaken      = errors.New("username already taken")
-	ErrResetTokenInvalid  = errors.New("reset token is invalid or expired")
+	ErrResetTokenInvalid  = errors.New("invalid or expired reset token")
 )
 
 const bcryptCost = 12
+
+// dummyHash is used for timing-safe responses when a user is not found.
+var dummyHash []byte
+
+func init() {
+	h, _ := bcrypt.GenerateFromPassword([]byte("timing-safe-dummy"), bcryptCost)
+	dummyHash = h
+}
 
 type Service struct {
 	userStore       *store.UserStore
@@ -29,13 +37,8 @@ type Service struct {
 	resetTokenStore *store.PasswordResetTokenStore
 }
 
-func NewService(userStore *store.UserStore, sessionStore *store.SessionStore) *Service {
-	return &Service{userStore: userStore, sessionStore: sessionStore}
-}
-
-// SetResetTokenStore attaches the password reset token store (optional dependency).
-func (s *Service) SetResetTokenStore(ts *store.PasswordResetTokenStore) {
-	s.resetTokenStore = ts
+func NewService(userStore *store.UserStore, sessionStore *store.SessionStore, resetTokenStore *store.PasswordResetTokenStore) *Service {
+	return &Service{userStore: userStore, sessionStore: sessionStore, resetTokenStore: resetTokenStore}
 }
 
 type SignUpRequest struct {
@@ -87,11 +90,14 @@ func (s *Service) SignUp(ctx context.Context, req SignUpRequest) (sessionKey str
 	return sessionKey, u, nil
 }
 
+// SignIn authenticates a user with email+password. Uses a dummy bcrypt comparison
+// when the user is not found to prevent timing-based user enumeration.
 func (s *Service) SignIn(ctx context.Context, req SignInRequest) (sessionKey string, user *model.User, err error) {
 	email := strings.TrimSpace(strings.ToLower(req.Email))
 	u, err := s.userStore.GetByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			_ = bcrypt.CompareHashAndPassword(dummyHash, []byte(req.Password))
 			return "", nil, ErrInvalidCredentials
 		}
 		return "", nil, err
@@ -124,12 +130,10 @@ func (s *Service) UserFromSession(ctx context.Context, sessionKey string) (*mode
 	return s.userStore.GetByID(ctx, data.UserID)
 }
 
-// UpdateProfile updates the user's profile (first name, last name, display name, timezone). Email is not updatable.
 func (s *Service) UpdateProfile(ctx context.Context, u *model.User) error {
 	return s.userStore.Update(ctx, u)
 }
 
-// ChangePassword verifies current password and sets a new one. Returns ErrInvalidCredentials if current password is wrong or user not found.
 func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error {
 	u, err := s.userStore.GetByID(ctx, userID)
 	if err != nil {
@@ -152,50 +156,69 @@ func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, currentP
 	return s.userStore.Update(ctx, u)
 }
 
+// EmailCheck determines whether an email is already registered.
+func (s *Service) EmailCheck(ctx context.Context, email string) (exists bool, err error) {
+	email = strings.TrimSpace(strings.ToLower(email))
+	u, err := s.userStore.GetByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return u != nil, nil
+}
+
 // ForgotPassword generates a reset token for the given email.
-// Returns the plain token and the user. If the email is not found, returns ("", nil, nil)
-// so callers can respond with a generic success (no user enumeration).
-func (s *Service) ForgotPassword(ctx context.Context, email string) (token string, user *model.User, err error) {
+// Returns ("", nil) when the email does not exist (to prevent user enumeration).
+func (s *Service) ForgotPassword(ctx context.Context, email string) (token string, err error) {
 	if s.resetTokenStore == nil {
-		return "", nil, errors.New("password reset not configured")
+		return "", errors.New("password reset not configured")
 	}
 	email = strings.TrimSpace(strings.ToLower(email))
 	u, err := s.userStore.GetByEmail(ctx, email)
-	if err != nil || u == nil {
-		return "", nil, nil
-	}
-	if !u.IsActive {
-		return "", nil, nil
-	}
-	token, err = s.resetTokenStore.Create(ctx, u.ID)
 	if err != nil {
-		return "", nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", nil
+		}
+		return "", err
 	}
-	return token, u, nil
+	if u == nil || !u.IsActive {
+		return "", nil
+	}
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", err
+	}
+	token = hex.EncodeToString(tokenBytes)
+	if err := s.resetTokenStore.Create(ctx, u.ID, token); err != nil {
+		return "", err
+	}
+	return token, nil
 }
 
-// ResetPassword validates a reset token and sets the new password.
+// ResetPassword validates the reset token and sets a new password.
 func (s *Service) ResetPassword(ctx context.Context, token, newPassword string) error {
 	if s.resetTokenStore == nil {
-		return errors.New("password reset not configured")
-	}
-	rec, err := s.resetTokenStore.GetValid(ctx, token)
-	if err != nil || rec == nil {
 		return ErrResetTokenInvalid
 	}
-	u, err := s.userStore.GetByID(ctx, rec.UserID)
-	if err != nil || u == nil {
+	rt, err := s.resetTokenStore.GetValid(ctx, token)
+	if err != nil || rt == nil {
 		return ErrResetTokenInvalid
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcryptCost)
 	if err != nil {
 		return err
 	}
+	u, err := s.userStore.GetByID(ctx, rt.UserID)
+	if err != nil {
+		return ErrResetTokenInvalid
+	}
 	u.Password = string(hash)
 	if err := s.userStore.Update(ctx, u); err != nil {
 		return err
 	}
-	return s.resetTokenStore.MarkUsed(ctx, rec.ID)
+	return s.resetTokenStore.MarkUsed(ctx, rt.ID)
 }
 
 func (s *Service) createSession(ctx context.Context, userID uuid.UUID) (string, error) {

@@ -64,6 +64,22 @@ func (c *Consumer) handle(ctx context.Context, queue string, d amqp.Delivery, h 
 		if c.log != nil {
 			c.log.Warn("task failed", "queue", queue, "error", err)
 		}
+		retryCount := int64(0)
+		if d.Headers != nil {
+			if v, ok := d.Headers["x-retry-count"]; ok {
+				if n, ok := v.(int64); ok {
+					retryCount = n
+				}
+			}
+		}
+		const maxRetries = 3
+		if retryCount >= maxRetries {
+			if c.log != nil {
+				c.log.Error("task permanently failed, discarding", "queue", queue, "retries", retryCount, "error", err)
+			}
+			_ = d.Ack(false)
+			return
+		}
 		_ = d.Nack(false, true)
 		return
 	}

@@ -15,6 +15,16 @@ const page = (m: { [k: string]: React.ComponentType }) => ({
 const LoginPage = lazy(() =>
   import('../pages/LoginPage').then((m) => page({ LoginPage: m.LoginPage })),
 );
+const ForgotPasswordPage = lazy(() =>
+  import('../pages/ForgotPasswordPage').then((m) =>
+    page({ ForgotPasswordPage: m.ForgotPasswordPage }),
+  ),
+);
+const ResetPasswordPage = lazy(() =>
+  import('../pages/ResetPasswordPage').then((m) =>
+    page({ ResetPasswordPage: m.ResetPasswordPage }),
+  ),
+);
 const WorkspaceHomePage = lazy(() =>
   import('../pages/WorkspaceHomePage').then((m) =>
     page({ WorkspaceHomePage: m.WorkspaceHomePage }),

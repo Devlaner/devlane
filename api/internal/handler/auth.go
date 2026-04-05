@@ -1,4 +1,3 @@
-// Package handler implements HTTP handlers for the API.
 package handler
 
 import (
@@ -28,6 +27,7 @@ type AuthHandler struct {
 	ApiTokens  *store.ApiTokenStore
 	Queue      *queue.Publisher
 	AppBaseURL string
+	Log        *slog.Logger
 }
 
 type SignInRequest struct {
@@ -55,6 +55,13 @@ func authBool(v model.JSONMap, key string, defaultVal bool) bool {
 		return b
 	}
 	return defaultVal
+}
+
+func (h *AuthHandler) log() *slog.Logger {
+	if h.Log != nil {
+		return h.Log
+	}
+	return slog.Default()
 }
 
 // SignIn authenticates with email/password and sets a session cookie.
@@ -137,11 +144,7 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 	})
 	if err != nil {
 		if err == auth.ErrEmailTaken {
-			c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
-			return
-		}
-		if err == auth.ErrUsernameTaken {
-			c.JSON(http.StatusConflict, gin.H{"error": "Username already taken"})
+			c.JSON(http.StatusConflict, gin.H{"error": "An account with this email already exists"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Sign up failed"})
@@ -151,8 +154,12 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 		now := time.Now()
 		inv.Accepted = true
 		inv.RespondedAt = &now
-		_ = h.Winv.Update(ctx, inv)
-		_ = h.Ws.AddMember(ctx, &model.WorkspaceMember{WorkspaceID: inv.WorkspaceID, MemberID: user.ID, Role: inv.Role})
+		if err := h.Winv.Update(ctx, inv); err != nil {
+			h.log().Error("failed to mark invite accepted", "error", err, "invite_id", inv.ID)
+		}
+		if err := h.Ws.AddMember(ctx, &model.WorkspaceMember{WorkspaceID: inv.WorkspaceID, MemberID: user.ID, Role: inv.Role}); err != nil {
+			h.log().Error("failed to add member after signup", "error", err, "user_id", user.ID)
+		}
 	}
 	setSessionCookie(c, sessionKey)
 	c.JSON(http.StatusCreated, userResponse(user))
@@ -169,80 +176,6 @@ func (h *AuthHandler) SignOut(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-type ForgotPasswordRequest struct {
-	Email string `json:"email" binding:"required,email"`
-}
-
-type ResetPasswordRequest struct {
-	Token       string `json:"token" binding:"required"`
-	NewPassword string `json:"new_password" binding:"required,min=8"`
-}
-
-// ForgotPassword generates a password-reset token and emails the user a reset link.
-// POST /auth/forgot-password/
-func (h *AuthHandler) ForgotPassword(c *gin.Context) {
-	var req ForgotPasswordRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
-		return
-	}
-
-	token, user, err := h.Auth.ForgotPassword(c.Request.Context(), req.Email)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process request"})
-		return
-	}
-
-	// Always return success to prevent user enumeration.
-	if token == "" || user == nil {
-		c.JSON(http.StatusOK, gin.H{"message": "If that email is registered, a reset link has been sent."})
-		return
-	}
-
-	resetURL := fmt.Sprintf("%s/reset-password?token=%s", strings.TrimRight(h.AppBaseURL, "/"), token)
-
-	body := fmt.Sprintf(
-		"Hi %s,\n\nYou requested a password reset for your Devlane account.\n\nClick the link below to set a new password (valid for 30 minutes):\n%s\n\nIf you didn't request this, you can safely ignore this email.\n\n— Devlane",
-		strings.TrimSpace(user.FirstName+" "+user.LastName),
-		resetURL,
-	)
-
-	if h.Queue != nil {
-		if err := h.Queue.PublishSendEmail(c.Request.Context(), queue.SendEmailPayload{
-			To:      *user.Email,
-			Subject: "Devlane – Reset your password",
-			Body:    body,
-			Kind:    "forgot_password",
-		}); err != nil {
-			slog.Error("failed to enqueue password reset email", "email", *user.Email, "error", err)
-		}
-	} else {
-		slog.Warn("password reset link (queue not configured — use this URL to reset)",
-			"email", *user.Email, "reset_url", resetURL)
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "If that email is registered, a reset link has been sent."})
-}
-
-// ResetPassword validates the token and sets a new password.
-// POST /auth/reset-password/
-func (h *AuthHandler) ResetPassword(c *gin.Context) {
-	var req ResetPasswordRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
-		return
-	}
-	if err := h.Auth.ResetPassword(c.Request.Context(), req.Token, req.NewPassword); err != nil {
-		if err == auth.ErrResetTokenInvalid {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Reset link is invalid or has expired. Please request a new one."})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset password"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"message": "Password has been reset successfully. You can now sign in."})
-}
-
 // Me returns the authenticated user.
 // GET /api/users/me/
 func (h *AuthHandler) Me(c *gin.Context) {
@@ -256,12 +189,12 @@ func (h *AuthHandler) Me(c *gin.Context) {
 
 // UpdateMeRequest is the body for PATCH /api/users/me/
 type UpdateMeRequest struct {
-	FirstName    *string `json:"first_name"`
-	LastName     *string `json:"last_name"`
-	DisplayName  *string `json:"display_name"`
-	UserTimezone *string `json:"user_timezone"`
-	Avatar       *string `json:"avatar"`
-	CoverImage   *string `json:"cover_image"`
+	FirstName    *string `json:"first_name" binding:"omitempty,max=255"`
+	LastName     *string `json:"last_name" binding:"omitempty,max=255"`
+	DisplayName  *string `json:"display_name" binding:"omitempty,max=255"`
+	UserTimezone *string `json:"user_timezone" binding:"omitempty,max=100"`
+	Avatar       *string `json:"avatar" binding:"omitempty,max=2048"`
+	CoverImage   *string `json:"cover_image" binding:"omitempty,max=2048"`
 }
 
 // UpdateMe updates the authenticated user's profile (email is not updatable).
@@ -477,8 +410,8 @@ func (h *AuthHandler) ListTokens(c *gin.Context) {
 type CreateTokenRequest struct {
 	Label       string  `json:"label" binding:"required"`
 	Description string  `json:"description"`
-	ExpiresIn   *string `json:"expires_in"` // e.g. "7d", "30d", "90d", "365d", or empty for never
-	ExpiredAt   *string `json:"expired_at"` // ISO date for custom expiry
+	ExpiresIn   *string `json:"expires_in"`
+	ExpiredAt   *string `json:"expired_at"`
 }
 
 // CreateToken creates a new API token and returns it once (including secret).
@@ -574,6 +507,123 @@ func (h *AuthHandler) RevokeToken(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// InstanceAuthConfig returns public auth configuration (no auth required).
+// GET /auth/config/
+func (h *AuthHandler) InstanceAuthConfig(c *gin.Context) {
+	isPasswordEnabled := true
+	enableSignup := true
+	isSmtpConfigured := false
+	if h.Settings != nil {
+		ctx := c.Request.Context()
+		row, _ := h.Settings.Get(ctx, "auth")
+		if row != nil {
+			isPasswordEnabled = authBool(row.Value, "password", true)
+			enableSignup = authBool(row.Value, "allow_public_signup", true)
+		}
+		emailRow, _ := h.Settings.Get(ctx, "email")
+		if emailRow != nil && emailRow.Value != nil {
+			host, _ := emailRow.Value["host"].(string)
+			isSmtpConfigured = strings.TrimSpace(host) != ""
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"is_email_password_enabled": isPasswordEnabled,
+		"enable_signup":             enableSignup,
+		"is_smtp_configured":        isSmtpConfigured,
+	})
+}
+
+// EmailCheck checks whether an email is already registered.
+// POST /auth/email-check/
+func (h *AuthHandler) EmailCheck(c *gin.Context) {
+	var body struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+	exists, err := h.Auth.EmailCheck(c.Request.Context(), body.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Check failed"})
+		return
+	}
+	allowPublicSignup := true
+	if h.Settings != nil {
+		row, _ := h.Settings.Get(c.Request.Context(), "auth")
+		if row != nil {
+			allowPublicSignup = authBool(row.Value, "allow_public_signup", true)
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"existing":            exists,
+		"status":              "CREDENTIAL",
+		"allow_public_signup": allowPublicSignup,
+	})
+}
+
+// ForgotPassword initiates a password reset flow by sending an email.
+// POST /auth/forgot-password/
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var body struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+	ctx := c.Request.Context()
+	token, err := h.Auth.ForgotPassword(ctx, body.Email)
+	if err != nil {
+		h.log().Error("forgot password error", "error", err)
+	}
+	if token != "" && h.Queue != nil && h.AppBaseURL != "" {
+		resetLink := strings.TrimSuffix(h.AppBaseURL, "/") + "/reset-password?token=" + token
+		subject := "Reset your Devlane password"
+		bodyText := fmt.Sprintf(
+			"You requested a password reset.\n\nClick the link below to reset your password:\n%s\n\nThis link expires in 30 minutes. If you did not request a reset, ignore this email.\n",
+			resetLink,
+		)
+		_ = h.Queue.PublishSendEmail(ctx, queue.SendEmailPayload{
+			To:      body.Email,
+			Subject: subject,
+			Body:    bodyText,
+			Kind:    "forgot_password",
+			Extra:   map[string]string{"reset_link": resetLink},
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "If an account exists for that email, a reset link has been sent."})
+}
+
+// ResetPassword validates a reset token and sets a new password.
+// POST /auth/reset-password/
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var body struct {
+		Token       string `json:"token" binding:"required"`
+		NewPassword string `json:"new_password" binding:"required,min=8"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
+	if err := h.Auth.ResetPassword(c.Request.Context(), body.Token, body.NewPassword); err != nil {
+		if err == auth.ErrResetTokenInvalid {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired reset token"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset password"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Password has been reset successfully."})
+}
+
+func isSecureRequest(c *gin.Context) bool {
+	if c.Request.TLS != nil {
+		return true
+	}
+	return strings.EqualFold(c.GetHeader("X-Forwarded-Proto"), "https")
+}
+
 func setSessionCookie(c *gin.Context, sessionKey string) {
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     middleware.SessionCookieName,
@@ -582,7 +632,7 @@ func setSessionCookie(c *gin.Context, sessionKey string) {
 		MaxAge:   14 * 24 * 3600,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   false,
+		Secure:   isSecureRequest(c),
 	})
 }
 
@@ -594,6 +644,7 @@ func clearSessionCookie(c *gin.Context) {
 		MaxAge:   -1,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
+		Secure:   isSecureRequest(c),
 	})
 }
 

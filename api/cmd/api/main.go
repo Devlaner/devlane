@@ -44,7 +44,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	sqlDB, _ := db.DB()
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Error("get underlying sql.DB", "error", err)
+		os.Exit(1)
+	}
 	defer sqlDB.Close()
 
 	// Redis
@@ -86,6 +90,7 @@ func main() {
 		Queue:           queuePublisher,
 		Minio:           mc,
 		CORSAllowOrigin: cfg.CORSAllowOrigin,
+		AppBaseURL:      cfg.AppBaseURL,
 	})
 
 	// Start task consumer when RabbitMQ is available

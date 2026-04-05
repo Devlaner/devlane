@@ -1,84 +1,56 @@
-import { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Button } from '../components/ui';
-import { IconEye, IconEyeOff } from '../components/ui/PasswordRevealIcons';
+import { useState, useCallback, useMemo } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { Button, Input, Card, CardContent } from '../components/ui';
 import { authService } from '../services/authService';
+import { Eye, EyeOff, CircleAlert, CircleCheck } from 'lucide-react';
 
-function getPasswordStrength(password: string) {
-  const checks = {
-    minLength: password.length >= 8,
-    upper: /[A-Z]/.test(password),
-    lower: /[a-z]/.test(password),
-    number: /\d/.test(password),
-    special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
-  };
-  const passed = Object.values(checks).filter(Boolean).length;
-  return { checks, passed, valid: passed === 5 };
+interface PasswordCriteria {
+  minLength: boolean;
+  hasUpper: boolean;
+  hasLower: boolean;
+  hasDigit: boolean;
+  hasSpecial: boolean;
 }
 
-const IconCheckSmall = () => (
-  <svg
-    width="12"
-    height="12"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="3"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M20 6 9 17l-5-5" />
-  </svg>
-);
+function getPasswordCriteria(pw: string): PasswordCriteria {
+  return {
+    minLength: pw.length >= 8,
+    hasUpper: /[A-Z]/.test(pw),
+    hasLower: /[a-z]/.test(pw),
+    hasDigit: /\d/.test(pw),
+    hasSpecial: /[!@#$%^&*()\-_+=[\]{}|;:'",.<>?/]/.test(pw),
+  };
+}
+
+function isPasswordStrong(pw: string): boolean {
+  const c = getPasswordCriteria(pw);
+  return c.minLength && c.hasUpper && c.hasLower && c.hasDigit && c.hasSpecial;
+}
 
 function PasswordStrengthIndicator({ password }: { password: string }) {
-  const { checks, passed } = getPasswordStrength(password);
+  const criteria = getPasswordCriteria(password);
   if (!password) return null;
 
-  const barColor =
-    passed <= 1
-      ? 'bg-red-500'
-      : passed <= 2
-        ? 'bg-orange-500'
-        : passed <= 3
-          ? 'bg-yellow-500'
-          : passed <= 4
-            ? 'bg-lime-500'
-            : 'bg-green-500';
-
-  const criteria = [
-    { met: checks.minLength, label: 'Min 8 characters' },
-    { met: checks.upper, label: 'Uppercase letter' },
-    { met: checks.lower, label: 'Lowercase letter' },
-    { met: checks.number, label: 'A number' },
-    { met: checks.special, label: 'A special character' },
+  const items: [string, boolean][] = [
+    ['At least 8 characters', criteria.minLength],
+    ['Uppercase letter', criteria.hasUpper],
+    ['Lowercase letter', criteria.hasLower],
+    ['Number', criteria.hasDigit],
+    ['Special character', criteria.hasSpecial],
   ];
 
   return (
-    <div className="mt-2 space-y-2">
-      <div className="flex gap-1">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            className={`h-1 flex-1 rounded-full transition-colors ${i < passed ? barColor : 'bg-(--border-subtle)'}`}
-          />
-        ))}
-      </div>
-      <div className="grid grid-cols-1 gap-0.5 sm:grid-cols-2">
-        {criteria.map(({ met, label }) => (
-          <div key={label} className="flex items-center gap-1.5 text-xs text-(--txt-secondary)">
-            <span
-              className={`flex size-3.5 shrink-0 items-center justify-center rounded-full ${
-                met ? 'bg-green-500 text-white' : 'border border-(--border-subtle) text-transparent'
-              }`}
-            >
-              <IconCheckSmall />
-            </span>
-            {label}
-          </div>
-        ))}
-      </div>
+    <div className="mt-2 space-y-1">
+      {items.map(([label, met]) => (
+        <div key={label} className="flex items-center gap-1.5 text-xs">
+          {met ? (
+            <CircleCheck className="h-3.5 w-3.5 text-green-500" />
+          ) : (
+            <CircleAlert className="h-3.5 w-3.5 text-(--txt-tertiary)" />
+          )}
+          <span className={met ? 'text-green-600' : 'text-(--txt-tertiary)'}>{label}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -92,202 +64,170 @@ export function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const strength = useMemo(() => getPasswordStrength(password), [password]);
-  const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
+  const invalidToken = !token;
 
-  if (!token) {
+  const passwordsMatch = useMemo(
+    () => confirmPassword.length > 0 && password === confirmPassword,
+    [password, confirmPassword],
+  );
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError('');
+
+      if (!isPasswordStrong(password)) {
+        setError('Password does not meet strength requirements.');
+        return;
+      }
+      if (!passwordsMatch) {
+        setError('Passwords do not match.');
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        await authService.resetPassword({ token, new_password: password });
+        setSuccess(true);
+      } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'response' in err) {
+          const axiosErr = err as { response?: { data?: { error?: string } } };
+          setError(axiosErr.response?.data?.error ?? 'Something went wrong.');
+        } else {
+          setError('Something went wrong. Please try again.');
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [token, password, passwordsMatch],
+  );
+
+  if (invalidToken) {
     return (
-      <div className="relative flex min-h-screen w-full flex-col items-center overflow-y-auto bg-(--bg-canvas) px-6 pt-16 pb-10">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-(--txt-primary)">Devlane</h1>
-        </div>
-        <div className="w-full max-w-[22.5rem] text-center">
-          <h2 className="text-xl font-semibold text-(--txt-primary)">Invalid reset link</h2>
-          <p className="mt-2 text-sm text-(--txt-secondary)">
-            This password reset link is missing or invalid.
-          </p>
-          <Link
-            to="/forgot-password"
-            className="mt-4 inline-block text-sm font-medium text-(--txt-accent) hover:underline"
-          >
-            Request a new reset link
-          </Link>
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
+        <Card className="w-full max-w-[22.5rem]">
+          <CardContent className="p-6 text-center">
+            <CircleAlert className="mx-auto mb-3 h-10 w-10 text-red-400" />
+            <h1 className="mb-2 text-xl font-semibold text-(--txt-primary)">Invalid reset link</h1>
+            <p className="mb-4 text-sm text-(--txt-secondary)">
+              This password reset link is invalid or has expired. Please request a new one.
+            </p>
+            <Link
+              to="/forgot-password"
+              className="text-sm font-medium text-(--txt-accent) hover:underline"
+            >
+              Request new reset link
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (success) {
     return (
-      <div className="relative flex min-h-screen w-full flex-col items-center overflow-y-auto bg-(--bg-canvas) px-6 pt-16 pb-10">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-(--txt-primary)">Devlane</h1>
-        </div>
-        <div className="w-full max-w-[22.5rem] text-center">
-          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-950/40">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-green-600"
-              aria-hidden
-            >
-              <path d="M20 6 9 17l-5-5" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-semibold text-(--txt-primary)">Password reset</h2>
-          <p className="mt-2 text-sm text-(--txt-secondary)">
-            Your password has been successfully reset. You can now sign in with your new password.
-          </p>
-          <Link
-            to="/login"
-            className="mt-4 inline-block text-sm font-medium text-(--txt-accent) hover:underline"
-          >
-            Go to sign in
-          </Link>
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
+        <Card className="w-full max-w-[22.5rem]">
+          <CardContent className="p-6 text-center">
+            <CircleCheck className="mx-auto mb-3 h-10 w-10 text-green-500" />
+            <h1 className="mb-2 text-xl font-semibold text-(--txt-primary)">Password reset!</h1>
+            <p className="mb-4 text-sm text-(--txt-secondary)">
+              Your password has been reset successfully. You can now sign in with your new password.
+            </p>
+            <Link to="/login" className="text-sm font-medium text-(--txt-accent) hover:underline">
+              Go to sign in
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-    if (!strength.valid) {
-      setError('Please meet all password requirements.');
-      return;
-    }
-    if (!passwordsMatch) {
-      setError('Passwords do not match.');
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      await authService.resetPassword({ token, new_password: password });
-      setSuccess(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
   return (
-    <div className="relative flex min-h-screen w-full flex-col items-center overflow-y-auto bg-(--bg-canvas) px-6 pt-16 pb-10">
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-(--txt-primary)">Devlane</h1>
-      </div>
-
-      <div className="w-full max-w-[22.5rem]">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-(--txt-primary)">Create a new password</h2>
-          <p className="mt-1 text-sm text-(--txt-secondary)">
-            Choose a strong password for your account.
+    <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
+      <Card className="w-full max-w-[22.5rem]">
+        <CardContent className="p-6">
+          <h1 className="mb-1 text-2xl font-semibold text-(--txt-primary)">Set a new password</h1>
+          <p className="mb-6 text-sm text-(--txt-secondary)">
+            Choose a strong password to secure your account.
           </p>
-        </div>
 
-        {error && (
-          <div className="mb-4 rounded-(--radius-md) border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="mb-4 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="reset-password"
-              className="mb-1 block text-sm font-medium text-(--txt-secondary)"
-            >
-              New password
-            </label>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="relative">
-              <input
-                id="reset-password"
+              <Input
+                label="New password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Create a password"
+                placeholder="Enter new password"
                 required
-                minLength={8}
-                autoFocus
                 autoComplete="new-password"
-                className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-2 pl-3 pr-10 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:border-(--border-strong) focus:outline-none"
+                autoFocus
               />
               <button
                 type="button"
-                onClick={() => setShowPassword((p) => !p)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary) hover:text-(--txt-secondary)"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute top-[2.1rem] right-3 text-(--txt-tertiary) hover:text-(--txt-primary)"
+                onClick={() => setShowPassword((v) => !v)}
                 tabIndex={-1}
               >
-                {showPassword ? <IconEyeOff /> : <IconEye />}
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <PasswordStrengthIndicator password={password} />
-          </div>
 
-          <div>
-            <label
-              htmlFor="reset-confirm"
-              className="mb-1 block text-sm font-medium text-(--txt-secondary)"
-            >
-              Confirm password
-            </label>
+            <PasswordStrengthIndicator password={password} />
+
             <div className="relative">
-              <input
-                id="reset-confirm"
+              <Input
+                label="Confirm new password"
                 type={showConfirm ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm password"
+                placeholder="Re-enter new password"
                 required
                 autoComplete="new-password"
-                className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-2 pl-3 pr-10 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:border-(--border-strong) focus:outline-none"
               />
               <button
                 type="button"
-                onClick={() => setShowConfirm((p) => !p)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary) hover:text-(--txt-secondary)"
-                aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                className="absolute top-[2.1rem] right-3 text-(--txt-tertiary) hover:text-(--txt-primary)"
+                onClick={() => setShowConfirm((v) => !v)}
                 tabIndex={-1}
               >
-                {showConfirm ? <IconEyeOff /> : <IconEye />}
+                {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
+              {confirmPassword && !passwordsMatch && (
+                <p className="mt-1 text-xs text-red-500">Passwords do not match</p>
+              )}
+              {passwordsMatch && (
+                <p className="mt-1 flex items-center gap-1 text-xs text-green-600">
+                  <CircleCheck className="h-3 w-3" /> Passwords match
+                </p>
+              )}
             </div>
-            {confirmPassword.length > 0 && (
-              <p
-                className={`mt-1 text-xs ${
-                  passwordsMatch ? 'text-green-600' : 'text-(--txt-destructive)'
-                }`}
-              >
-                {passwordsMatch ? 'Passwords match' : "Passwords don't match"}
-              </p>
-            )}
-          </div>
 
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isSubmitting || !strength.valid || !passwordsMatch}
-          >
-            {isSubmitting ? 'Resetting…' : 'Reset password'}
-          </Button>
-        </form>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Resetting…' : 'Reset password'}
+            </Button>
 
-        <p className="mt-6 text-center text-sm">
-          <Link to="/login" className="font-medium text-(--txt-accent) hover:underline">
-            Back to sign in
-          </Link>
-        </p>
-      </div>
+            <p className="text-center text-sm text-(--txt-secondary)">
+              Remember your password?{' '}
+              <Link to="/login" className="font-medium text-(--txt-accent) hover:underline">
+                Sign in
+              </Link>
+            </p>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

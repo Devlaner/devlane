@@ -69,11 +69,11 @@ func New(cfg Config) *gin.Engine {
 	apiTokenStore := store.NewApiTokenStore(cfg.DB)
 	userFavoriteStore := store.NewUserFavoriteStore(cfg.DB)
 
-	// Auth
+	// Password reset tokens
 	passwordResetTokenStore := store.NewPasswordResetTokenStore(cfg.DB)
-	authSvc := auth.NewService(userStore, sessionStore)
-	authSvc.SetResetTokenStore(passwordResetTokenStore)
 
+	// Auth
+	authSvc := auth.NewService(userStore, sessionStore, passwordResetTokenStore)
 	appBaseURL := cfg.AppBaseURL
 	if appBaseURL == "" {
 		appBaseURL = cfg.CORSAllowOrigin
@@ -88,6 +88,7 @@ func New(cfg Config) *gin.Engine {
 		ApiTokens:  apiTokenStore,
 		Queue:      cfg.Queue,
 		AppBaseURL: appBaseURL,
+		Log:        cfg.Log,
 	}
 	// Instance setup (no auth) — first-run flow; seeds general settings (instance_id, admin_email, instance_name)
 	instanceHandler := &handler.InstanceHandler{Auth: authSvc, Users: userStore, Settings: instanceSettingStore}
@@ -285,6 +286,8 @@ func New(cfg Config) *gin.Engine {
 	// Auth routes (no auth required)
 	authGroup := r.Group("/auth")
 	{
+		authGroup.GET("/config/", authHandler.InstanceAuthConfig)
+		authGroup.POST("/email-check/", authHandler.EmailCheck)
 		authGroup.POST("/sign-in/", authHandler.SignIn)
 		authGroup.POST("/sign-up/", authHandler.SignUp)
 		authGroup.POST("/sign-out/", authHandler.SignOut)

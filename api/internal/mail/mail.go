@@ -64,6 +64,10 @@ func getEmailSettings(ctx context.Context, s *store.InstanceSettingStore) (*smtp
 // settings and sends mail. If not configured or send fails, logs and returns error.
 func NewSMTPEmailSender(instanceSettings *store.InstanceSettingStore, log *slog.Logger) func(ctx context.Context, to, subject, body string) error {
 	return func(ctx context.Context, to, subject, body string) error {
+		if instanceSettings == nil {
+			LogSkip(log, "instance settings store is nil", to, fmt.Errorf("no settings store"))
+			return fmt.Errorf("email not configured: no settings store")
+		}
 		cfg, err := getEmailSettings(ctx, instanceSettings)
 		if err != nil {
 			LogSkip(log, "instance email not configured", to, err)

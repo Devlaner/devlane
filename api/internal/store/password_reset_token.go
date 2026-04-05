@@ -2,8 +2,6 @@ package store
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"time"
 
 	"github.com/Devlaner/devlane/api/internal/model"
@@ -11,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-const resetTokenExpireMinutes = 30
+const resetTokenExpiry = 30 * time.Minute
 
 type PasswordResetTokenStore struct{ db *gorm.DB }
 
@@ -19,43 +17,29 @@ func NewPasswordResetTokenStore(db *gorm.DB) *PasswordResetTokenStore {
 	return &PasswordResetTokenStore{db: db}
 }
 
-// Create generates a cryptographically random token, stores it, and returns the plain token.
-func (s *PasswordResetTokenStore) Create(ctx context.Context, userID uuid.UUID) (string, error) {
-	// Invalidate any existing unused tokens for this user.
+func (s *PasswordResetTokenStore) Create(ctx context.Context, userID uuid.UUID, token string) error {
 	s.db.WithContext(ctx).
 		Where("user_id = ? AND used_at IS NULL", userID).
 		Delete(&model.PasswordResetToken{})
 
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	token := hex.EncodeToString(b)
-	rec := &model.PasswordResetToken{
-		ID:        uuid.New(),
+	return s.db.WithContext(ctx).Create(&model.PasswordResetToken{
 		UserID:    userID,
 		Token:     token,
-		ExpiresAt: time.Now().UTC().Add(time.Duration(resetTokenExpireMinutes) * time.Minute),
-	}
-	if err := s.db.WithContext(ctx).Create(rec).Error; err != nil {
-		return "", err
-	}
-	return token, nil
+		ExpiresAt: time.Now().UTC().Add(resetTokenExpiry),
+	}).Error
 }
 
-// GetValid returns the token record if it exists, has not expired, and has not been used.
 func (s *PasswordResetTokenStore) GetValid(ctx context.Context, token string) (*model.PasswordResetToken, error) {
-	var rec model.PasswordResetToken
+	var t model.PasswordResetToken
 	err := s.db.WithContext(ctx).
-		Where("token = ? AND expires_at > ? AND used_at IS NULL", token, time.Now().UTC()).
-		First(&rec).Error
+		Where("token = ? AND used_at IS NULL AND expires_at > ?", token, time.Now().UTC()).
+		First(&t).Error
 	if err != nil {
 		return nil, err
 	}
-	return &rec, nil
+	return &t, nil
 }
 
-// MarkUsed sets used_at so the token cannot be reused.
 func (s *PasswordResetTokenStore) MarkUsed(ctx context.Context, id uuid.UUID) error {
 	now := time.Now().UTC()
 	return s.db.WithContext(ctx).
