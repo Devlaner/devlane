@@ -3,6 +3,7 @@ package middleware
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/Devlaner/devlane/api/internal/auth"
 	"github.com/Devlaner/devlane/api/internal/model"
@@ -19,8 +20,7 @@ func RequireAuth(authSvc *auth.Service, log *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sessionKey, _ := c.Cookie(SessionCookieName)
 		if sessionKey == "" {
-			// Also check Authorization header for Bearer (session key) for API clients
-			if authHeader := c.GetHeader("Authorization"); len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+			if authHeader := c.GetHeader("Authorization"); len(authHeader) > 7 && strings.EqualFold(authHeader[:7], "bearer ") {
 				sessionKey = authHeader[7:]
 			}
 		}

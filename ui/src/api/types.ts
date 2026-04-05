@@ -301,6 +301,31 @@ export interface SignUpRequest {
   invite_token?: string;
 }
 
+/** POST /auth/email-check/ response */
+export interface EmailCheckResponse {
+  existing: boolean;
+  status: 'CREDENTIAL';
+  allow_public_signup: boolean;
+}
+
+/** POST /auth/forgot-password/ request */
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+/** POST /auth/reset-password/ request */
+export interface ResetPasswordRequest {
+  token: string;
+  new_password: string;
+}
+
+/** GET /auth/config/ response */
+export interface AuthConfigResponse {
+  is_email_password_enabled: boolean;
+  enable_signup: boolean;
+  is_smtp_configured: boolean;
+}
+
 /** Instance settings: section key -> value object (from GET /api/instance/settings/) */
 export type InstanceSettingsResponse = Record<string, Record<string, unknown>>;
 

@@ -1,8 +1,8 @@
-// Package handler implements HTTP handlers for the API.
 package handler
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -10,6 +10,7 @@ import (
 	"github.com/Devlaner/devlane/api/internal/auth"
 	"github.com/Devlaner/devlane/api/internal/middleware"
 	"github.com/Devlaner/devlane/api/internal/model"
+	"github.com/Devlaner/devlane/api/internal/queue"
 	"github.com/Devlaner/devlane/api/internal/store"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -23,6 +24,9 @@ type AuthHandler struct {
 	Ws         *store.WorkspaceStore
 	NotifPrefs *store.UserNotificationPreferenceStore
 	ApiTokens  *store.ApiTokenStore
+	Queue      *queue.Publisher
+	AppBaseURL string
+	Log        *slog.Logger
 }
 
 type SignInRequest struct {
@@ -50,6 +54,13 @@ func authBool(v model.JSONMap, key string, defaultVal bool) bool {
 		return b
 	}
 	return defaultVal
+}
+
+func (h *AuthHandler) log() *slog.Logger {
+	if h.Log != nil {
+		return h.Log
+	}
+	return slog.Default()
 }
 
 // SignIn authenticates with email/password and sets a session cookie.
@@ -132,11 +143,7 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 	})
 	if err != nil {
 		if err == auth.ErrEmailTaken {
-			c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
-			return
-		}
-		if err == auth.ErrUsernameTaken {
-			c.JSON(http.StatusConflict, gin.H{"error": "Username already taken"})
+			c.JSON(http.StatusConflict, gin.H{"error": "An account with this email already exists"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Sign up failed"})
@@ -146,8 +153,12 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 		now := time.Now()
 		inv.Accepted = true
 		inv.RespondedAt = &now
-		_ = h.Winv.Update(ctx, inv)
-		_ = h.Ws.AddMember(ctx, &model.WorkspaceMember{WorkspaceID: inv.WorkspaceID, MemberID: user.ID, Role: inv.Role})
+		if err := h.Winv.Update(ctx, inv); err != nil {
+			h.log().Error("failed to mark invite accepted", "error", err, "invite_id", inv.ID)
+		}
+		if err := h.Ws.AddMember(ctx, &model.WorkspaceMember{WorkspaceID: inv.WorkspaceID, MemberID: user.ID, Role: inv.Role}); err != nil {
+			h.log().Error("failed to add member after signup", "error", err, "user_id", user.ID)
+		}
 	}
 	setSessionCookie(c, sessionKey)
 	c.JSON(http.StatusCreated, userResponse(user))
@@ -164,6 +175,129 @@ func (h *AuthHandler) SignOut(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// EmailCheck determines if an email already exists (Plane-style step 1 of auth flow).
+// POST /auth/email-check/
+func (h *AuthHandler) EmailCheck(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email"})
+		return
+	}
+	exists, err := h.Auth.EmailCheck(c.Request.Context(), req.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Check failed"})
+		return
+	}
+
+	var allowPublicSignup = true
+	if h.Settings != nil {
+		row, _ := h.Settings.Get(c.Request.Context(), "auth")
+		if row != nil {
+			allowPublicSignup = authBool(row.Value, "allow_public_signup", true)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"existing":            exists,
+		"status":              "CREDENTIAL",
+		"allow_public_signup": allowPublicSignup,
+	})
+}
+
+// ForgotPassword generates a password reset token and enqueues an email.
+// POST /auth/forgot-password/
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email"})
+		return
+	}
+
+	token, err := h.Auth.ForgotPassword(c.Request.Context(), req.Email)
+	if err != nil {
+		h.log().Error("forgot password", "error", err)
+		c.JSON(http.StatusOK, gin.H{"message": "If your email is registered, you will receive a password reset link."})
+		return
+	}
+
+	if token != "" {
+		baseURL := h.AppBaseURL
+		if baseURL == "" {
+			baseURL = "http://localhost:5173"
+		}
+		resetLink := baseURL + "/reset-password?token=" + token
+
+		if h.Queue != nil {
+			if err := h.Queue.PublishSendEmail(c.Request.Context(), queue.SendEmailPayload{
+				To:      strings.TrimSpace(strings.ToLower(req.Email)),
+				Subject: "Reset your Devlane password",
+				Body:    "You requested a password reset.\n\nClick the link below to set a new password:\n" + resetLink + "\n\nThis link expires in 30 minutes.\n\nIf you did not request this, you can safely ignore this email.",
+				Kind:    "forgot_password",
+			}); err != nil {
+				h.log().Error("failed to enqueue reset email", "error", err, "to", req.Email)
+			}
+		} else {
+			h.log().Warn("queue not available, reset link not emailed", "to", req.Email, "link", resetLink)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "If your email is registered, you will receive a password reset link."})
+}
+
+// ResetPassword validates a reset token and sets a new password.
+// POST /auth/reset-password/
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req struct {
+		Token       string `json:"token" binding:"required"`
+		NewPassword string `json:"new_password" binding:"required,min=8"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
+
+	if err := h.Auth.ResetPassword(c.Request.Context(), req.Token, req.NewPassword); err != nil {
+		if err == auth.ErrResetTokenInvalid {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired reset link. Please request a new one."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Password reset failed"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Password has been reset successfully."})
+}
+
+// InstanceAuthConfig returns public-facing auth configuration (which methods are enabled).
+// GET /auth/config/
+func (h *AuthHandler) InstanceAuthConfig(c *gin.Context) {
+	cfg := gin.H{
+		"is_email_password_enabled": true,
+		"enable_signup":             true,
+		"is_smtp_configured":        false,
+	}
+
+	if h.Settings != nil {
+		row, _ := h.Settings.Get(c.Request.Context(), "auth")
+		if row != nil {
+			cfg["is_email_password_enabled"] = authBool(row.Value, "password", true)
+			cfg["enable_signup"] = authBool(row.Value, "allow_public_signup", true)
+		}
+
+		emailRow, _ := h.Settings.Get(c.Request.Context(), "email")
+		if emailRow != nil && emailRow.Value != nil {
+			if host, ok := emailRow.Value["host"].(string); ok && strings.TrimSpace(host) != "" {
+				cfg["is_smtp_configured"] = true
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, cfg)
+}
+
 // Me returns the authenticated user.
 // GET /api/users/me/
 func (h *AuthHandler) Me(c *gin.Context) {
@@ -177,12 +311,12 @@ func (h *AuthHandler) Me(c *gin.Context) {
 
 // UpdateMeRequest is the body for PATCH /api/users/me/
 type UpdateMeRequest struct {
-	FirstName    *string `json:"first_name"`
-	LastName     *string `json:"last_name"`
-	DisplayName  *string `json:"display_name"`
-	UserTimezone *string `json:"user_timezone"`
-	Avatar       *string `json:"avatar"`
-	CoverImage   *string `json:"cover_image"`
+	FirstName    *string `json:"first_name" binding:"omitempty,max=255"`
+	LastName     *string `json:"last_name" binding:"omitempty,max=255"`
+	DisplayName  *string `json:"display_name" binding:"omitempty,max=255"`
+	UserTimezone *string `json:"user_timezone" binding:"omitempty,max=100"`
+	Avatar       *string `json:"avatar" binding:"omitempty,max=2048"`
+	CoverImage   *string `json:"cover_image" binding:"omitempty,max=2048"`
 }
 
 // UpdateMe updates the authenticated user's profile (email is not updatable).
@@ -398,8 +532,8 @@ func (h *AuthHandler) ListTokens(c *gin.Context) {
 type CreateTokenRequest struct {
 	Label       string  `json:"label" binding:"required"`
 	Description string  `json:"description"`
-	ExpiresIn   *string `json:"expires_in"` // e.g. "7d", "30d", "90d", "365d", or empty for never
-	ExpiredAt   *string `json:"expired_at"` // ISO date for custom expiry
+	ExpiresIn   *string `json:"expires_in"`
+	ExpiredAt   *string `json:"expired_at"`
 }
 
 // CreateToken creates a new API token and returns it once (including secret).
@@ -495,6 +629,13 @@ func (h *AuthHandler) RevokeToken(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+func isSecureRequest(c *gin.Context) bool {
+	if c.Request.TLS != nil {
+		return true
+	}
+	return strings.EqualFold(c.GetHeader("X-Forwarded-Proto"), "https")
+}
+
 func setSessionCookie(c *gin.Context, sessionKey string) {
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     middleware.SessionCookieName,
@@ -503,7 +644,7 @@ func setSessionCookie(c *gin.Context, sessionKey string) {
 		MaxAge:   14 * 24 * 3600,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   false,
+		Secure:   isSecureRequest(c),
 	})
 }
 
@@ -515,6 +656,7 @@ func clearSessionCookie(c *gin.Context) {
 		MaxAge:   -1,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
+		Secure:   isSecureRequest(c),
 	})
 }
 

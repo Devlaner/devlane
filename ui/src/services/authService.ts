@@ -1,19 +1,20 @@
 import { apiClient } from '../api/client';
-import type { UserApiResponse, SignInRequest, SignUpRequest } from '../api/types';
+import type {
+  UserApiResponse,
+  SignInRequest,
+  SignUpRequest,
+  EmailCheckResponse,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  AuthConfigResponse,
+} from '../api/types';
 
-/**
- * Auth API: sign-in, sign-up, sign-out, current user.
- */
 export const authService = {
   async signIn(payload: SignInRequest): Promise<UserApiResponse> {
     const { data } = await apiClient.post<UserApiResponse>('/auth/sign-in/', payload);
     return data;
   },
 
-  /**
-   * Sign up a new user. When instance has allow_public_signup off, invite_token is required.
-   * POST /auth/sign-up/
-   */
   async signUp(payload: SignUpRequest): Promise<UserApiResponse> {
     const { data } = await apiClient.post<UserApiResponse>('/auth/sign-up/', payload);
     return data;
@@ -30,5 +31,25 @@ export const authService = {
     } catch {
       return null;
     }
+  },
+
+  async emailCheck(email: string): Promise<EmailCheckResponse> {
+    const { data } = await apiClient.post<EmailCheckResponse>('/auth/email-check/', { email });
+    return data;
+  },
+
+  async forgotPassword(payload: ForgotPasswordRequest): Promise<{ message: string }> {
+    const { data } = await apiClient.post<{ message: string }>('/auth/forgot-password/', payload);
+    return data;
+  },
+
+  async resetPassword(payload: ResetPasswordRequest): Promise<{ message: string }> {
+    const { data } = await apiClient.post<{ message: string }>('/auth/reset-password/', payload);
+    return data;
+  },
+
+  async getAuthConfig(): Promise<AuthConfigResponse> {
+    const { data } = await apiClient.get<AuthConfigResponse>('/auth/config/');
+    return data;
   },
 };
