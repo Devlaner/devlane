@@ -324,6 +324,9 @@ export interface AuthConfigResponse {
   is_email_password_enabled: boolean;
   enable_signup: boolean;
   is_smtp_configured: boolean;
+  is_google_enabled: boolean;
+  is_github_enabled: boolean;
+  is_gitlab_enabled: boolean;
 }
 
 /** Instance settings: section key -> value object (from GET /api/instance/settings/) */

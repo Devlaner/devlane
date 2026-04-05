@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/store"
@@ -35,11 +36,14 @@ type Service struct {
 	userStore       *store.UserStore
 	sessionStore    *store.SessionStore
 	resetTokenStore *store.PasswordResetTokenStore
+	accountStore    *store.AccountStore
 }
 
 func NewService(userStore *store.UserStore, sessionStore *store.SessionStore, resetTokenStore *store.PasswordResetTokenStore) *Service {
 	return &Service{userStore: userStore, sessionStore: sessionStore, resetTokenStore: resetTokenStore}
 }
+
+func (s *Service) SetAccountStore(as *store.AccountStore) { s.accountStore = as }
 
 type SignUpRequest struct {
 	Email     string `json:"email" binding:"required,email"`
@@ -198,6 +202,7 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) (token strin
 }
 
 // ResetPassword validates the reset token and sets a new password.
+// After a successful reset, ALL unused tokens for the user are invalidated.
 func (s *Service) ResetPassword(ctx context.Context, token, newPassword string) error {
 	if s.resetTokenStore == nil {
 		return ErrResetTokenInvalid
@@ -218,7 +223,71 @@ func (s *Service) ResetPassword(ctx context.Context, token, newPassword string) 
 	if err := s.userStore.Update(ctx, u); err != nil {
 		return err
 	}
-	return s.resetTokenStore.MarkUsed(ctx, rt.ID)
+	_ = s.resetTokenStore.InvalidateForUser(ctx, rt.UserID)
+	return nil
+}
+
+// OAuthLogin finds or creates a user from OAuth provider data and creates a session.
+// If the email already exists, it links the account; if not, it creates a new user.
+func (s *Service) OAuthLogin(ctx context.Context, provider, providerAccountID, email, firstName, lastName, avatar, accessToken, refreshToken, idToken string) (sessionKey string, user *model.User, err error) {
+	email = strings.TrimSpace(strings.ToLower(email))
+	if email == "" {
+		return "", nil, errors.New("oauth: email is required")
+	}
+
+	u, err := s.userStore.GetByEmail(ctx, email)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return "", nil, err
+	}
+
+	if u != nil && !u.IsActive {
+		return "", nil, errors.New("account is deactivated")
+	}
+
+	if u == nil {
+		username := email
+		if at := strings.Index(email, "@"); at > 0 {
+			username = strings.ReplaceAll(email[:at], ".", "_")
+		}
+		if existing, _ := s.userStore.GetByUsername(ctx, username); existing != nil {
+			username = email
+		}
+		dummyPwd := make([]byte, 32)
+		_, _ = rand.Read(dummyPwd)
+		hash, _ := bcrypt.GenerateFromPassword(dummyPwd, bcryptCost)
+		u = &model.User{
+			Username:    username,
+			Email:       &email,
+			Password:    string(hash),
+			FirstName:   firstName,
+			LastName:    lastName,
+			DisplayName: strings.TrimSpace(firstName + " " + lastName),
+			Avatar:      avatar,
+			IsActive:    true,
+		}
+		if err := s.userStore.Create(ctx, u); err != nil {
+			return "", nil, err
+		}
+	}
+
+	if s.accountStore != nil {
+		now := time.Now().UTC()
+		_ = s.accountStore.Upsert(ctx, &model.Account{
+			UserID:            u.ID,
+			Provider:          provider,
+			ProviderAccountID: providerAccountID,
+			AccessToken:       accessToken,
+			RefreshToken:      refreshToken,
+			IDToken:           idToken,
+			LastConnectedAt:   &now,
+		})
+	}
+
+	sessionKey, err = s.createSession(ctx, u.ID)
+	if err != nil {
+		return "", nil, err
+	}
+	return sessionKey, u, nil
 }
 
 func (s *Service) createSession(ctx context.Context, userID uuid.UUID) (string, error) {

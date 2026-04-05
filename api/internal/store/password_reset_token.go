@@ -18,15 +18,21 @@ func NewPasswordResetTokenStore(db *gorm.DB) *PasswordResetTokenStore {
 }
 
 func (s *PasswordResetTokenStore) Create(ctx context.Context, userID uuid.UUID, token string) error {
-	s.db.WithContext(ctx).
-		Where("user_id = ? AND used_at IS NULL", userID).
-		Delete(&model.PasswordResetToken{})
-
 	return s.db.WithContext(ctx).Create(&model.PasswordResetToken{
 		UserID:    userID,
 		Token:     token,
 		ExpiresAt: time.Now().UTC().Add(resetTokenExpiry),
 	}).Error
+}
+
+// InvalidateForUser marks all unused tokens for the given user as used.
+// Called after a successful password reset to prevent replay of older tokens.
+func (s *PasswordResetTokenStore) InvalidateForUser(ctx context.Context, userID uuid.UUID) error {
+	now := time.Now().UTC()
+	return s.db.WithContext(ctx).
+		Model(&model.PasswordResetToken{}).
+		Where("user_id = ? AND used_at IS NULL", userID).
+		Update("used_at", now).Error
 }
 
 func (s *PasswordResetTokenStore) GetValid(ctx context.Context, token string) (*model.PasswordResetToken, error) {

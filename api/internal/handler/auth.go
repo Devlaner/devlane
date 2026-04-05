@@ -19,15 +19,16 @@ import (
 )
 
 type AuthHandler struct {
-	Auth       *auth.Service
-	Settings   *store.InstanceSettingStore
-	Winv       *store.WorkspaceInviteStore
-	Ws         *store.WorkspaceStore
-	NotifPrefs *store.UserNotificationPreferenceStore
-	ApiTokens  *store.ApiTokenStore
-	Queue      *queue.Publisher
-	AppBaseURL string
-	Log        *slog.Logger
+	Auth           *auth.Service
+	Settings       *store.InstanceSettingStore
+	Winv           *store.WorkspaceInviteStore
+	Ws             *store.WorkspaceStore
+	NotifPrefs     *store.UserNotificationPreferenceStore
+	ApiTokens      *store.ApiTokenStore
+	Queue          *queue.Publisher
+	AppBaseURL     string
+	Log            *slog.Logger
+	OAuthProviders map[string]any
 }
 
 type SignInRequest struct {
@@ -81,7 +82,7 @@ func (h *AuthHandler) SignIn(c *gin.Context) {
 	}
 	sessionKey, user, err := h.Auth.SignIn(c.Request.Context(), auth.SignInRequest{Email: req.Email, Password: req.Password})
 	if err != nil {
-		if err == auth.ErrInvalidCredentials {
+		if errors.Is(err, auth.ErrInvalidCredentials) {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 			return
 		}
@@ -143,7 +144,7 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 		LastName:  req.LastName,
 	})
 	if err != nil {
-		if err == auth.ErrEmailTaken {
+		if errors.Is(err, auth.ErrEmailTaken) {
 			c.JSON(http.StatusConflict, gin.H{"error": "An account with this email already exists"})
 			return
 		}
@@ -255,7 +256,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 	if err := h.Auth.ChangePassword(c.Request.Context(), user.ID, req.CurrentPassword, req.NewPassword); err != nil {
-		if err == auth.ErrInvalidCredentials {
+		if errors.Is(err, auth.ErrInvalidCredentials) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Current password is incorrect"})
 			return
 		}
@@ -526,10 +527,20 @@ func (h *AuthHandler) InstanceAuthConfig(c *gin.Context) {
 			isSmtpConfigured = strings.TrimSpace(host) != ""
 		}
 	}
+	var isGoogleEnabled, isGitHubEnabled, isGitLabEnabled bool
+	if h.OAuthProviders != nil {
+		_, isGoogleEnabled = h.OAuthProviders["google"]
+		_, isGitHubEnabled = h.OAuthProviders["github"]
+		_, isGitLabEnabled = h.OAuthProviders["gitlab"]
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"is_email_password_enabled": isPasswordEnabled,
 		"enable_signup":             enableSignup,
 		"is_smtp_configured":        isSmtpConfigured,
+		"is_google_enabled":         isGoogleEnabled,
+		"is_github_enabled":         isGitHubEnabled,
+		"is_gitlab_enabled":         isGitLabEnabled,
 	})
 }
 
@@ -607,7 +618,7 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 	if err := h.Auth.ResetPassword(c.Request.Context(), body.Token, body.NewPassword); err != nil {
-		if err == auth.ErrResetTokenInvalid {
+		if errors.Is(err, auth.ErrResetTokenInvalid) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired reset token"})
 			return
 		}

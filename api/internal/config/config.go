@@ -42,6 +42,15 @@ type Config struct {
 	CORSAllowOrigin string
 	// AppBaseURL is the public URL of the frontend (e.g. https://app.example.com). Used for invite links in emails. If empty, CORSAllowOrigin is used.
 	AppBaseURL string
+
+	// OAuth providers
+	GoogleClientID     string
+	GoogleClientSecret string
+	GitHubClientID     string
+	GitHubClientSecret string
+	GitLabClientID     string
+	GitLabClientSecret string
+	GitLabHost         string // defaults to https://gitlab.com
 }
 
 func (c *Config) DSN() string {
@@ -87,6 +96,13 @@ func Load() (*Config, error) {
 		MigrationsPath:       getEnv("MIGRATIONS_PATH", "migrations"),
 		CORSAllowOrigin:      getEnv("CORS_ORIGIN", "http://localhost:5173"),
 		AppBaseURL:           getEnv("APP_BASE_URL", ""),
+		GoogleClientID:       getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret:   getEnv("GOOGLE_CLIENT_SECRET", ""),
+		GitHubClientID:       getEnv("GITHUB_CLIENT_ID", ""),
+		GitHubClientSecret:   getEnv("GITHUB_CLIENT_SECRET", ""),
+		GitLabClientID:       getEnv("GITLAB_CLIENT_ID", ""),
+		GitLabClientSecret:   getEnv("GITLAB_CLIENT_SECRET", ""),
+		GitLabHost:           getEnv("GITLAB_HOST", "https://gitlab.com"),
 	}
 
 	return cfg, nil

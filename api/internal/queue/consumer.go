@@ -61,14 +61,16 @@ func (c *Consumer) Run(ctx context.Context, queues []string) error {
 func (c *Consumer) handle(ctx context.Context, queue string, d amqp.Delivery, h TaskHandler) {
 	err := h(ctx, queue, d.Body)
 	if err != nil {
-		if c.log != nil {
-			c.log.Warn("task failed", "queue", queue, "error", err)
-		}
 		retryCount := int64(0)
 		if d.Headers != nil {
 			if v, ok := d.Headers["x-retry-count"]; ok {
-				if n, ok := v.(int64); ok {
+				switch n := v.(type) {
+				case int64:
 					retryCount = n
+				case int32:
+					retryCount = int64(n)
+				case int:
+					retryCount = int64(n)
 				}
 			}
 		}
@@ -80,7 +82,20 @@ func (c *Consumer) handle(ctx context.Context, queue string, d amqp.Delivery, h 
 			_ = d.Ack(false)
 			return
 		}
-		_ = d.Nack(false, true)
+		if c.log != nil {
+			c.log.Warn("task failed, retrying", "queue", queue, "retry", retryCount+1, "error", err)
+		}
+		headers := amqp.Table{"x-retry-count": retryCount + 1}
+		pubErr := c.ch.PublishWithContext(ctx, "", queue, false, false, amqp.Publishing{
+			DeliveryMode: amqp.Persistent,
+			ContentType:  d.ContentType,
+			Body:         d.Body,
+			Headers:      headers,
+		})
+		if pubErr != nil && c.log != nil {
+			c.log.Error("failed to republish for retry", "queue", queue, "error", pubErr)
+		}
+		_ = d.Ack(false)
 		return
 	}
 	_ = d.Ack(false)
