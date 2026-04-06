@@ -23,7 +23,10 @@ function escapeHtml(value: string): string {
 function htmlToPlainText(html: string): string {
   if (!html) return '';
   if (typeof document === 'undefined') {
-    return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    return html
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
   const root = document.createElement('div');
   root.innerHTML = html;
@@ -40,7 +43,13 @@ function getInitialStickyHtml(sticky: StickyApiResponse): string {
 
 function getContrastTextColor(bgHex: string): string {
   const normalized = bgHex.replace('#', '');
-  const full = normalized.length === 3 ? normalized.split('').map((c) => c + c).join('') : normalized;
+  const full =
+    normalized.length === 3
+      ? normalized
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : normalized;
   const r = parseInt(full.slice(0, 2), 16) / 255;
   const g = parseInt(full.slice(2, 4), 16) / 255;
   const b = parseInt(full.slice(4, 6), 16) / 255;
@@ -203,12 +212,7 @@ type StickyNoteCardProps = {
   onDelete: (id: string) => void;
 };
 
-export function StickyNoteCard({
-  workspaceSlug,
-  sticky,
-  onUpdate,
-  onDelete,
-}: StickyNoteCardProps) {
+export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: StickyNoteCardProps) {
   const initialHtml = getInitialStickyHtml(sticky);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [colorOpen, setColorOpen] = useState(false);
@@ -243,11 +247,15 @@ export function StickyNoteCard({
         const target = event.target as HTMLElement | null;
         if (!target || target.tagName !== 'INPUT' || node.type.name !== 'taskItem') return false;
         const checked = !(node.attrs.checked as boolean);
-        editor?.chain().focus().command(({ tr, dispatch }) => {
-          tr.setNodeMarkup(nodePos, undefined, { ...node.attrs, checked });
-          if (dispatch) dispatch(tr);
-          return true;
-        }).run();
+        editor
+          ?.chain()
+          .focus()
+          .command(({ tr, dispatch }) => {
+            tr.setNodeMarkup(nodePos, undefined, { ...node.attrs, checked });
+            if (dispatch) dispatch(tr);
+            return true;
+          })
+          .run();
         return true;
       },
     },
@@ -266,9 +274,7 @@ export function StickyNoteCard({
   );
 
   const isDefaultDark =
-    !sticky.color ||
-    sticky.color === '#0d0d0d' ||
-    sticky.color.toLowerCase() === '#0d0d0d';
+    !sticky.color || sticky.color === '#0d0d0d' || sticky.color.toLowerCase() === '#0d0d0d';
   const textColor = getContrastTextColor(sticky.color || '#2a2a2a');
 
   const cycleColor = () => {
