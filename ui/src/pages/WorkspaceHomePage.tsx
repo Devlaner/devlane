@@ -946,9 +946,9 @@ export function WorkspaceHomePage() {
                   type="text"
                   value={stickySearchQuery}
                   onChange={(e) => setStickySearchQuery(e.target.value)}
-                  placeholder="Search by title"
+                  placeholder="Search by title or content"
                   className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
-                  aria-label="Search stickies by title"
+                  aria-label="Search stickies by title or content"
                 />
                 <button
                   type="button"
@@ -1008,7 +1008,7 @@ export function WorkspaceHomePage() {
                 value={stickyContent}
                 onChange={(e) => setStickyContent(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.ctrlKey && e.key === 'Enter') {
+                  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'enter') {
                     e.preventDefault();
                     void handleAddSticky();
                   }

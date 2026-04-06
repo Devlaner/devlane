@@ -33,9 +33,21 @@ function htmlToPlainText(html: string): string {
   return (root.textContent || '').replace(/\s+/g, ' ').trim();
 }
 
+function normalizeStickyDescriptionToHtml(description: string): string {
+  const trimmed = description.trim();
+  if (!trimmed) return '';
+  const looksLikeHtml = /<[^>]+>/.test(trimmed);
+  if (looksLikeHtml) return trimmed;
+  return `<p>${escapeHtml(trimmed)}</p>`;
+}
+
 function getInitialStickyHtml(sticky: StickyApiResponse): string {
-  const description = (sticky.description || '').trim();
-  const title = (sticky.name || '').trim();
+  return getInitialStickyHtmlFromValues(sticky.description || '', sticky.name || '');
+}
+
+function getInitialStickyHtmlFromValues(descriptionValue: string, nameValue: string): string {
+  const description = normalizeStickyDescriptionToHtml(descriptionValue);
+  const title = nameValue.trim();
   if (description) return description;
   if (title && title !== 'Untitled') return `<p>${escapeHtml(title)}</p>`;
   return '';
@@ -215,6 +227,7 @@ type StickyNoteCardProps = {
 export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: StickyNoteCardProps) {
   const initialHtml = getInitialStickyHtml(sticky);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSyncedHtmlRef = useRef(initialHtml);
   const [colorOpen, setColorOpen] = useState(false);
   const colorPanelRef = useRef<HTMLDivElement | null>(null);
 
@@ -272,6 +285,19 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
     },
     [],
   );
+
+  useEffect(() => {
+    if (!editor) return;
+    const nextHtml = getInitialStickyHtmlFromValues(sticky.description || '', sticky.name || '');
+    if (nextHtml === lastSyncedHtmlRef.current) return;
+    if (editor.isFocused) return;
+    if (editor.getHTML() === nextHtml) {
+      lastSyncedHtmlRef.current = nextHtml;
+      return;
+    }
+    editor.commands.setContent(nextHtml, { emitUpdate: false });
+    lastSyncedHtmlRef.current = nextHtml;
+  }, [editor, sticky.description, sticky.name]);
 
   const isDefaultDark =
     !sticky.color || sticky.color === '#0d0d0d' || sticky.color.toLowerCase() === '#0d0d0d';
