@@ -6,6 +6,7 @@ import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
 import { quickLinksService } from '../services/quickLinksService';
 import { stickiesService } from '../services/stickiesService';
+import { StickyNoteCard } from '../components/stickies/StickyNoteCard';
 import { recentsService } from '../services/recentsService';
 import type {
   WorkspaceApiResponse,
@@ -153,78 +154,6 @@ const IconX = () => (
     <path d="m6 6 12 12" />
   </svg>
 );
-const IconPalette = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <circle cx="13.5" cy="6.5" r=".5" />
-    <circle cx="17.5" cy="10.5" r=".5" />
-    <circle cx="8.5" cy="7.5" r=".5" />
-    <circle cx="6.5" cy="12.5" r=".5" />
-    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.75-.2 2.5-.5" />
-  </svg>
-);
-const IconBold = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" />
-    <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" />
-  </svg>
-);
-const IconItalic = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <line x1="19" y1="4" x2="10" y2="4" />
-    <line x1="14" y1="20" x2="5" y2="20" />
-    <line x1="15" y1="4" x2="9" y2="20" />
-  </svg>
-);
-const IconList = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <line x1="8" y1="6" x2="21" y2="6" />
-    <line x1="8" y1="12" x2="21" y2="12" />
-    <line x1="8" y1="18" x2="21" y2="18" />
-    <line x1="3" y1="6" x2="3.01" y2="6" />
-    <line x1="3" y1="12" x2="3.01" y2="12" />
-    <line x1="3" y1="18" x2="3.01" y2="18" />
-  </svg>
-);
 const IconTrash = () => (
   <svg
     width="14"
@@ -346,6 +275,14 @@ function formatRelativeTime(iso: string): string {
   if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
   if (diffDays === 1) return '1 day ago';
   return `${diffDays} days ago`;
+}
+
+function getStickySearchText(sticky: StickyApiResponse): string {
+  const descriptionText = (sticky.description || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return `${sticky.name || ''} ${descriptionText}`.toLowerCase();
 }
 
 function quicklinkAbsoluteUrl(ql: QuickLinkApiResponse, baseUrl: string): string {
@@ -1070,6 +1007,12 @@ export function WorkspaceHomePage() {
               <textarea
                 value={stickyContent}
                 onChange={(e) => setStickyContent(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.ctrlKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    void handleAddSticky();
+                  }
+                }}
                 placeholder="Jot down an idea, capture an aha..."
                 rows={4}
                 className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
@@ -1078,8 +1021,9 @@ export function WorkspaceHomePage() {
           </div>
         </Modal>
         {(() => {
+          const query = stickySearchQuery.toLowerCase().trim();
           const filteredStickies = stickies.filter((s) =>
-            s.name.toLowerCase().includes(stickySearchQuery.toLowerCase().trim()),
+            query ? getStickySearchText(s).includes(query) : true,
           );
           if (filteredStickies.length === 0) {
             return (
@@ -1098,67 +1042,18 @@ export function WorkspaceHomePage() {
             );
           }
           return (
-            <div className="grid grid-cols-3 gap-4">
-              {filteredStickies.map((sticky) => {
-                const isDefaultDark =
-                  !sticky.color ||
-                  sticky.color === '#0d0d0d' ||
-                  sticky.color.toLowerCase() === '#0d0d0d';
-                return (
-                  <div
-                    key={sticky.id}
-                    className={`flex min-h-[120px] flex-col rounded-(--radius-md) border border-(--border-subtle) p-3 shadow-sm ${isDefaultDark ? 'bg-(--bg-layer-2)' : ''}`}
-                    style={isDefaultDark ? undefined : { backgroundColor: sticky.color }}
-                  >
-                    <div className="min-h-0 flex-1 text-sm text-(--txt-primary)">
-                      <p className="whitespace-pre-wrap break-words">{sticky.name}</p>
-                      {sticky.description && (
-                        <p className="mt-1 whitespace-pre-wrap break-words text-(--txt-secondary)">
-                          {sticky.description}
-                        </p>
-                      )}
-                    </div>
-                    <div className="mt-2 flex items-center gap-1 border-t border-(--border-subtle) pt-2">
-                      <button
-                        type="button"
-                        className="rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover)"
-                        aria-label="Change color"
-                      >
-                        <IconPalette />
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover)"
-                        aria-label="Bold"
-                      >
-                        <IconBold />
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover)"
-                        aria-label="Italic"
-                      >
-                        <IconItalic />
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover)"
-                        aria-label="List"
-                      >
-                        <IconList />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteSticky(sticky.id)}
-                        className="ml-auto rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-danger-primary)"
-                        aria-label="Delete"
-                      >
-                        <IconTrash />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="columns-1 gap-4 sm:columns-2 lg:columns-3">
+              {filteredStickies.map((sticky) => (
+                <StickyNoteCard
+                  key={sticky.id}
+                  workspaceSlug={workspaceSlug ?? ''}
+                  sticky={sticky}
+                  onUpdate={(next) =>
+                    setStickies((prev) => prev.map((item) => (item.id === next.id ? next : item)))
+                  }
+                  onDelete={handleDeleteSticky}
+                />
+              ))}
             </div>
           );
         })()}
