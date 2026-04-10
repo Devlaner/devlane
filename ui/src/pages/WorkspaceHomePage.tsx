@@ -1025,6 +1025,11 @@ export function WorkspaceHomePage() {
           const filteredStickies = stickies.filter((s) =>
             query ? getStickySearchText(s).includes(query) : true,
           );
+          const sortedStickies = [...filteredStickies].sort((a, b) => {
+            const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return tb - ta;
+          });
           if (filteredStickies.length === 0) {
             return (
               <Card variant="outlined" className="border-dashed">
@@ -1043,7 +1048,7 @@ export function WorkspaceHomePage() {
           }
           return (
             <div className="columns-1 gap-4 sm:columns-2 lg:columns-3">
-              {filteredStickies.map((sticky) => (
+              {sortedStickies.map((sticky) => (
                 <StickyNoteCard
                   key={sticky.id}
                   workspaceSlug={workspaceSlug ?? ''}

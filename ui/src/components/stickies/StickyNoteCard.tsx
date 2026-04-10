@@ -6,14 +6,14 @@ import type { StickyApiResponse } from '../../api/types';
 import { stickiesService } from '../../services/stickiesService';
 
 const STICKY_COLORS = [
-  '#fff7cc',
-  '#ffe4e6',
-  '#e8f7d4',
-  '#dff4ff',
-  '#ede9ff',
-  '#ffe8cc',
-  '#f5f5f5',
-  '#2a2a2a',
+  '#FEF3C7',
+  '#FCE7F3',
+  '#DCFCE7',
+  '#DBEAFE',
+  '#EDE9FE',
+  '#FFE4D5',
+  '#E0F2FE',
+  '#F3F4F6',
 ];
 
 function escapeHtml(value: string): string {
@@ -301,7 +301,8 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
 
   const isDefaultDark =
     !sticky.color || sticky.color === '#0d0d0d' || sticky.color.toLowerCase() === '#0d0d0d';
-  const textColor = getContrastTextColor(sticky.color || '#2a2a2a');
+  const stickyBg = isDefaultDark ? STICKY_COLORS[0] : sticky.color;
+  const textColor = getContrastTextColor(stickyBg);
 
   const cycleColor = () => {
     setColorOpen((open) => !open);
@@ -334,19 +335,16 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
   return (
     <div
       className={`mb-4 inline-block w-full break-inside-avoid rounded-(--radius-md) border border-(--border-subtle) p-3 shadow-sm ${isDefaultDark ? 'bg-(--bg-layer-2)' : ''}`}
-      style={
-        isDefaultDark
-          ? { backgroundColor: '#2a2a2a', color: '#f9fafb' }
-          : { backgroundColor: sticky.color, color: textColor }
-      }
+      style={{ backgroundColor: stickyBg, color: textColor }}
     >
       <div className="min-h-0 text-sm">
         <EditorContent
           editor={editor}
-          className="min-h-[4.5rem] max-w-none text-sm focus:outline-none [&_p]:my-0.5 [&_ul]:my-1 [&_ol]:my-1 [&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:p-0 [&_ul[data-type=taskList]]:m-0 [&_li[data-type=taskItem]]:flex [&_li[data-type=taskItem]]:items-start [&_li[data-type=taskItem]]:gap-2 [&_li[data-type=taskItem]>label]:mt-1 [&_li[data-type=taskItem]>label>input]:h-3.5 [&_li[data-type=taskItem]>label>input]:w-3.5 [&_li[data-type=taskItem][data-checked=true]>div]:line-through [&_li[data-type=taskItem][data-checked=true]>div]:opacity-70"
+          className="min-h-[4.5rem] min-w-0 max-w-full overflow-hidden text-sm focus:outline-none [&_p]:my-0.5 [&_p]:break-words [&_ul]:my-1 [&_ol]:my-1 [&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:p-0 [&_ul[data-type=taskList]]:m-0 [&_li[data-type=taskItem]]:flex [&_li[data-type=taskItem]]:items-start [&_li[data-type=taskItem]]:gap-2 [&_li[data-type=taskItem]>label]:mt-1 [&_li[data-type=taskItem]>label>input]:h-3.5 [&_li[data-type=taskItem]>label>input]:w-3.5 [&_li[data-type=taskItem][data-checked=true]>div]:line-through [&_li[data-type=taskItem][data-checked=true]>div]:opacity-70"
+          style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
         />
       </div>
-      <div className="mt-2 flex shrink-0 items-center gap-1 border-t border-(--border-subtle) pt-2">
+      <div className="mt-2 flex shrink-0 items-center gap-1 pt-2">
         <div className="relative" ref={colorPanelRef}>
           <button type="button" className={tb} aria-label="Change color" onClick={cycleColor}>
             <IconPalette />
