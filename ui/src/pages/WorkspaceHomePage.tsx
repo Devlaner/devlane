@@ -525,6 +525,7 @@ export function WorkspaceHomePage() {
   const [stickySearchQuery, setStickySearchQuery] = useState('');
   const recentsFilterTriggerRef = useRef<HTMLButtonElement>(null);
   const recentsFilterDropdownRef = useRef<HTMLDivElement>(null);
+  const stickyAddInFlightRef = useRef(false);
 
   useEffect(() => {
     if (!workspaceSlug) {
@@ -629,7 +630,8 @@ export function WorkspaceHomePage() {
     setStickyContent('');
   };
   const handleAddSticky = async () => {
-    if (!workspaceSlug) return;
+    if (!workspaceSlug || stickySubmitting || stickyAddInFlightRef.current) return;
+    stickyAddInFlightRef.current = true;
     setStickySubmitting(true);
     try {
       await stickiesService.create(workspaceSlug, {
@@ -640,6 +642,7 @@ export function WorkspaceHomePage() {
       refetchStickies();
       handleCloseSticky();
     } finally {
+      stickyAddInFlightRef.current = false;
       setStickySubmitting(false);
     }
   };
@@ -1010,6 +1013,7 @@ export function WorkspaceHomePage() {
                 value={stickyContent}
                 onChange={(e) => setStickyContent(e.target.value)}
                 onKeyDown={(e) => {
+                  if (stickySubmitting || e.repeat || stickyAddInFlightRef.current) return;
                   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'enter') {
                     e.preventDefault();
                     void handleAddSticky();

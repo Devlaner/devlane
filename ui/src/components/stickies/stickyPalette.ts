@@ -55,15 +55,16 @@ function normalizeHexColor(input: string): string | null {
   return null;
 }
 
-/** Palette slot 0–7, or -1 if unknown custom hex */
+/** Palette slot 0–7, or -1 if unknown / invalid */
 export function getStickyColorSlot(stored: string | undefined): number {
   const raw = (stored || '').trim();
-  if (!raw || raw.toLowerCase() === '#0d0d0d') return 0;
+  if (!raw) return -1;
+  if (raw.toLowerCase() === '#0d0d0d') return 0;
   const lower = raw.toLowerCase();
   const keyIndex = STICKY_KEY_ORDER.indexOf(lower as (typeof STICKY_KEY_ORDER)[number]);
   if (keyIndex >= 0) return keyIndex;
   const hex = normalizeHexColor(raw);
-  if (!hex) return 0;
+  if (!hex) return -1;
   const upgraded = LEGACY_STICKY_BACKGROUND_HEX[hex] ?? hex;
   let idx = (STICKY_BACKGROUND_COLORS_LIGHT as readonly string[]).indexOf(upgraded);
   if (idx >= 0) return idx;

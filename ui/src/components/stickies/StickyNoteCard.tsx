@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { findParentNode } from '@tiptap/core';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { TaskItem } from '@tiptap/extension-task-item';
@@ -72,10 +72,14 @@ function htmlToPlainText(html: string): string {
   return (root.textContent || '').replace(/\s+/g, ' ').trim();
 }
 
+function looksLikeEditorOutputHtml(description: string): boolean {
+  const t = description.trimStart().toLowerCase();
+  return t.startsWith('<p') || t.startsWith('<ul') || t.startsWith('<ol') || t.startsWith('<h');
+}
+
 function normalizeStickyDescriptionToHtml(description: string): string {
   if (!description.trim()) return '';
-  const looksLikeHtml = /<[^>]+>/.test(description);
-  if (looksLikeHtml) return description;
+  if (looksLikeEditorOutputHtml(description)) return description;
   const normalized = description.replace(/\r\n/g, '\n').trim();
   const paragraphs = normalized
     .split(/\n{2,}/)
@@ -201,7 +205,9 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
   const initialHtml = getInitialStickyHtml(sticky);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSyncedHtmlRef = useRef(initialHtml);
-  const latestRequestId = useRef(0);
+  const contentRequestIdRef = useRef(0);
+  const colorRequestIdRef = useRef(0);
+  const colorListboxId = useId();
   const [colorOpen, setColorOpen] = useState(false);
   const colorPanelRef = useRef<HTMLDivElement | null>(null);
 
@@ -209,14 +215,14 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
     (html: string) => {
       if (!safeSlug) return;
       const plain = htmlToPlainText(html).slice(0, 255);
-      const requestId = ++latestRequestId.current;
+      const requestId = ++contentRequestIdRef.current;
       stickiesService
         .update(safeSlug, sticky.id, {
           description: html,
           name: plain || 'Untitled',
         })
         .then((data) => {
-          if (requestId !== latestRequestId.current) return;
+          if (requestId !== contentRequestIdRef.current) return;
           onUpdate(data);
         })
         .catch(() => {});
@@ -285,11 +291,11 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
 
   const setStickyColor = (next: string) => {
     if (!safeSlug) return;
-    const requestId = ++latestRequestId.current;
+    const requestId = ++colorRequestIdRef.current;
     stickiesService
       .update(safeSlug, sticky.id, { color: next })
       .then((data) => {
-        if (requestId !== latestRequestId.current) return;
+        if (requestId !== colorRequestIdRef.current) return;
         onUpdate(data);
       })
       .catch(() => {});
@@ -327,11 +333,24 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
       </div>
       <div className="mt-2 flex shrink-0 items-center gap-1 pt-2">
         <div className="relative" ref={colorPanelRef}>
-          <button type="button" className={tb} aria-label="Change color" onClick={cycleColor}>
+          <button
+            type="button"
+            className={tb}
+            aria-label="Change color"
+            aria-expanded={colorOpen}
+            aria-haspopup="listbox"
+            aria-controls={colorOpen ? colorListboxId : undefined}
+            onClick={cycleColor}
+          >
             <IconPalette />
           </button>
           {colorOpen && (
-            <div className="absolute left-0 top-8 z-20 w-44 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) p-2 shadow-(--shadow-overlay)">
+            <div
+              id={colorListboxId}
+              role="listbox"
+              aria-label="Background color"
+              className="absolute left-0 top-8 z-20 w-44 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) p-2 shadow-(--shadow-overlay)"
+            >
               <p className="mb-2 text-xs font-medium text-(--txt-secondary)">Background color</p>
               <div className="grid grid-cols-6 gap-1.5">
                 {STICKY_BACKGROUND_COLORS_LIGHT.map((lightHex, i) => {
@@ -341,6 +360,8 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
                     <button
                       key={lightHex}
                       type="button"
+                      role="option"
+                      aria-selected={active}
                       aria-label={`Set sticky background slot ${i}`}
                       className={`h-5 w-5 rounded border ${active ? 'border-(--border-strong)' : 'border-(--border-subtle)'}`}
                       style={{ backgroundColor: swatch }}
