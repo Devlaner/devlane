@@ -1,9 +1,12 @@
 package handler
 
 import (
+	"crypto/rand"
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"net/http"
 	"strings"
 	"time"
@@ -12,6 +15,7 @@ import (
 	"github.com/Devlaner/devlane/api/internal/middleware"
 	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/queue"
+	"github.com/Devlaner/devlane/api/internal/redis"
 	"github.com/Devlaner/devlane/api/internal/store"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -19,16 +23,19 @@ import (
 )
 
 type AuthHandler struct {
-	Auth           *auth.Service
-	Settings       *store.InstanceSettingStore
-	Winv           *store.WorkspaceInviteStore
-	Ws             *store.WorkspaceStore
-	NotifPrefs     *store.UserNotificationPreferenceStore
-	ApiTokens      *store.ApiTokenStore
-	Queue          *queue.Publisher
-	AppBaseURL     string
-	Log            *slog.Logger
-	OAuthProviders map[string]any
+	Auth              *auth.Service
+	Settings          *store.InstanceSettingStore
+	Winv              *store.WorkspaceInviteStore
+	Ws                *store.WorkspaceStore
+	NotifPrefs        *store.UserNotificationPreferenceStore
+	ApiTokens         *store.ApiTokenStore
+	Queue             *queue.Publisher
+	Redis             *redis.Client
+	MagicCodeSecret   string
+	AppBaseURL        string
+	OAuthRedirectBase string // public API origin for OAuth callbacks (same as RedirectURI base)
+	Log               *slog.Logger
+	OAuthProviders    map[string]any
 }
 
 type SignInRequest struct {
@@ -512,6 +519,7 @@ func (h *AuthHandler) RevokeToken(c *gin.Context) {
 // GET /auth/config/
 func (h *AuthHandler) InstanceAuthConfig(c *gin.Context) {
 	isPasswordEnabled := true
+	isMagicCodeEnabled := true
 	enableSignup := true
 	isSmtpConfigured := false
 	if h.Settings != nil {
@@ -519,6 +527,7 @@ func (h *AuthHandler) InstanceAuthConfig(c *gin.Context) {
 		row, _ := h.Settings.Get(ctx, "auth")
 		if row != nil {
 			isPasswordEnabled = authBool(row.Value, "password", true)
+			isMagicCodeEnabled = authBool(row.Value, "magic_code", true)
 			enableSignup = authBool(row.Value, "allow_public_signup", true)
 		}
 		emailRow, _ := h.Settings.Get(ctx, "email")
@@ -534,14 +543,19 @@ func (h *AuthHandler) InstanceAuthConfig(c *gin.Context) {
 		_, isGitLabEnabled = h.OAuthProviders["gitlab"]
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	out := gin.H{
 		"is_email_password_enabled": isPasswordEnabled,
+		"is_magic_code_enabled":     isMagicCodeEnabled,
 		"enable_signup":             enableSignup,
 		"is_smtp_configured":        isSmtpConfigured,
 		"is_google_enabled":         isGoogleEnabled,
 		"is_github_enabled":         isGitHubEnabled,
 		"is_gitlab_enabled":         isGitLabEnabled,
-	})
+	}
+	if isGoogleEnabled || isGitHubEnabled || isGitLabEnabled {
+		out["oauth_redirect_base"] = strings.TrimSuffix(strings.TrimSpace(h.OAuthRedirectBase), "/")
+	}
+	c.JSON(http.StatusOK, out)
 }
 
 // EmailCheck checks whether an email is already registered.
@@ -626,6 +640,238 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Password has been reset successfully."})
+}
+
+// MagicCodeRequest sends a one-time login code to the email when magic-code auth is enabled.
+// POST /auth/magic-code/request/
+func (h *AuthHandler) MagicCodeRequest(c *gin.Context) {
+	var body struct {
+		Email       string `json:"email" binding:"required,email"`
+		InviteToken string `json:"invite_token"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
+	ctx := c.Request.Context()
+	magicEnabled := true
+	allowPublicSignup := true
+	isSmtpConfigured := false
+	if h.Settings != nil {
+		row, _ := h.Settings.Get(ctx, "auth")
+		if row != nil {
+			magicEnabled = authBool(row.Value, "magic_code", true)
+			allowPublicSignup = authBool(row.Value, "allow_public_signup", true)
+		}
+		emailRow, _ := h.Settings.Get(ctx, "email")
+		if emailRow != nil && emailRow.Value != nil {
+			host, _ := emailRow.Value["host"].(string)
+			isSmtpConfigured = strings.TrimSpace(host) != ""
+		}
+	}
+	if !magicEnabled {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Email code sign-in is disabled"})
+		return
+	}
+	if !isSmtpConfigured {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Outbound email is not configured. Set SMTP (host) in Instance admin → Email."})
+		return
+	}
+	if h.Queue == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Email queue unavailable. Start RabbitMQ and check RABBITMQ_URL (API logs show connection errors)."})
+		return
+	}
+	if h.Redis == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Login codes unavailable. Redis is required; check REDIS_ADDR and API logs."})
+		return
+	}
+
+	exists, err := h.Auth.EmailCheck(ctx, body.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Check failed"})
+		return
+	}
+
+	var inv *model.WorkspaceMemberInvite
+	if !exists {
+		if !allowPublicSignup {
+			if strings.TrimSpace(body.InviteToken) == "" {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Sign-up is by invite only. Use the link from your invitation email."})
+				return
+			}
+			if h.Winv == nil {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Sign-up is by invite only. Use the link from your invitation email."})
+				return
+			}
+			var ierr error
+			inv, ierr = h.Winv.GetByToken(ctx, strings.TrimSpace(body.InviteToken))
+			if ierr != nil || inv == nil {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Invalid or expired invite. Use the link from your invitation email."})
+				return
+			}
+			emailNorm := strings.TrimSpace(strings.ToLower(body.Email))
+			invEmailNorm := strings.TrimSpace(strings.ToLower(inv.Email))
+			if emailNorm != invEmailNorm {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Sign-up email must match the invited email address."})
+				return
+			}
+		}
+	}
+	_ = inv // invite validated when needed; stored in Redis for verify
+
+	code, err := randomSixDigitLoginCode()
+	if err != nil {
+		h.log().Error("magic code generate", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send code"})
+		return
+	}
+	mac := auth.MagicCodeHMAC(h.MagicCodeSecret, body.Email, code)
+	store := &redis.MagicCodeLoginData{
+		CodeMAC:     mac,
+		Attempts:    0,
+		InviteToken: strings.TrimSpace(body.InviteToken),
+		IsSignup:    !exists,
+	}
+	if err := h.Redis.SetMagicCodeLogin(ctx, body.Email, store, redis.MagicCodeLoginTTL); err != nil {
+		h.log().Error("magic code redis set", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send code"})
+		return
+	}
+
+	subject := "Your Devlane sign-in code"
+	bodyText := fmt.Sprintf(
+		"Your Devlane sign-in code is: %s\n\nThis code expires in 10 minutes. If you did not request it, you can ignore this email.\n",
+		code,
+	)
+	if err := h.Queue.PublishSendEmail(ctx, queue.SendEmailPayload{
+		To:      body.Email,
+		Subject: subject,
+		Body:    bodyText,
+		Kind:    "magic_code_login",
+		Extra:   map[string]string{"email": body.Email},
+	}); err != nil {
+		h.log().Error("magic code enqueue email", "error", err)
+		_ = h.Redis.DeleteMagicCodeLogin(ctx, body.Email)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send code"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "If that email can receive mail, a sign-in code has been sent."})
+}
+
+// MagicCodeVerify checks the code and creates a session (sign-in or sign-up).
+// POST /auth/magic-code/verify/
+func (h *AuthHandler) MagicCodeVerify(c *gin.Context) {
+	var body struct {
+		Email       string `json:"email" binding:"required,email"`
+		Code        string `json:"code" binding:"required"`
+		FirstName   string `json:"first_name"`
+		LastName    string `json:"last_name"`
+		InviteToken string `json:"invite_token"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
+	ctx := c.Request.Context()
+	magicEnabled := true
+	if h.Settings != nil {
+		row, _ := h.Settings.Get(ctx, "auth")
+		if row != nil {
+			magicEnabled = authBool(row.Value, "magic_code", true)
+		}
+	}
+	if !magicEnabled {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Email code sign-in is disabled"})
+		return
+	}
+	if h.Redis == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Login codes are temporarily unavailable"})
+		return
+	}
+
+	stored, err := h.Redis.GetMagicCodeLogin(ctx, body.Email)
+	if err != nil {
+		h.log().Error("magic code redis get", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Verification failed"})
+		return
+	}
+	if stored == nil || stored.CodeMAC == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired code"})
+		return
+	}
+
+	tryMAC := auth.MagicCodeHMAC(h.MagicCodeSecret, body.Email, body.Code)
+	if subtle.ConstantTimeCompare([]byte(stored.CodeMAC), []byte(tryMAC)) != 1 {
+		_ = h.Redis.BumpMagicCodeLoginFailedAttempt(ctx, body.Email)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired code"})
+		return
+	}
+
+	if st := strings.TrimSpace(stored.InviteToken); st != "" && strings.TrimSpace(body.InviteToken) != "" &&
+		st != strings.TrimSpace(body.InviteToken) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired code"})
+		return
+	}
+
+	_ = h.Redis.DeleteMagicCodeLogin(ctx, body.Email)
+
+	var inv *model.WorkspaceMemberInvite
+	if stored.IsSignup && strings.TrimSpace(stored.InviteToken) != "" && h.Winv != nil {
+		inv, _ = h.Winv.GetByToken(ctx, strings.TrimSpace(stored.InviteToken))
+	}
+
+	if stored.IsSignup {
+		sessionKey, user, err := h.Auth.SignUpMagic(ctx, body.Email, body.FirstName, body.LastName)
+		if err != nil {
+			if errors.Is(err, auth.ErrEmailTaken) {
+				sessionKey2, user2, err2 := h.Auth.SessionForEmailUser(ctx, body.Email)
+				if err2 != nil {
+					c.JSON(http.StatusConflict, gin.H{"error": "An account with this email already exists"})
+					return
+				}
+				setSessionCookie(c, sessionKey2)
+				c.JSON(http.StatusOK, userResponse(user2))
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Sign up failed"})
+			return
+		}
+		if inv != nil && h.Winv != nil && h.Ws != nil {
+			now := time.Now()
+			inv.Accepted = true
+			inv.RespondedAt = &now
+			if err := h.Winv.Update(ctx, inv); err != nil {
+				h.log().Error("failed to mark invite accepted (magic)", "error", err, "invite_id", inv.ID)
+			}
+			if err := h.Ws.AddMember(ctx, &model.WorkspaceMember{WorkspaceID: inv.WorkspaceID, MemberID: user.ID, Role: inv.Role}); err != nil {
+				h.log().Error("failed to add member after magic signup", "error", err, "user_id", user.ID)
+			}
+		}
+		setSessionCookie(c, sessionKey)
+		c.JSON(http.StatusCreated, userResponse(user))
+		return
+	}
+
+	sessionKey, user, err := h.Auth.SessionForEmailUser(ctx, body.Email)
+	if err != nil {
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired code"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Sign in failed"})
+		return
+	}
+	setSessionCookie(c, sessionKey)
+	c.JSON(http.StatusOK, userResponse(user))
+}
+
+func randomSixDigitLoginCode() (string, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%06d", n.Int64()), nil
 }
 
 func isSecureRequest(c *gin.Context) bool {
