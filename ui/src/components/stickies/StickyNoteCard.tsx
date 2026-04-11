@@ -196,30 +196,32 @@ type StickyNoteCardProps = {
 };
 
 export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: StickyNoteCardProps) {
+  const safeSlug = workspaceSlug.trim();
   const isDarkTheme = useIsDarkTheme();
   const initialHtml = getInitialStickyHtml(sticky);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSyncedHtmlRef = useRef(initialHtml);
-  const updateSeqRef = useRef(0);
+  const latestRequestId = useRef(0);
   const [colorOpen, setColorOpen] = useState(false);
   const colorPanelRef = useRef<HTMLDivElement | null>(null);
 
   const persistSticky = useCallback(
     (html: string) => {
+      if (!safeSlug) return;
       const plain = htmlToPlainText(html).slice(0, 255);
-      const seq = ++updateSeqRef.current;
+      const requestId = ++latestRequestId.current;
       stickiesService
-        .update(workspaceSlug, sticky.id, {
+        .update(safeSlug, sticky.id, {
           description: html,
           name: plain || 'Untitled',
         })
         .then((data) => {
-          if (seq !== updateSeqRef.current) return;
+          if (requestId !== latestRequestId.current) return;
           onUpdate(data);
         })
         .catch(() => {});
     },
-    [workspaceSlug, sticky.id, onUpdate],
+    [safeSlug, sticky.id, onUpdate],
   );
 
   const editor = useEditor({
@@ -282,11 +284,12 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
   };
 
   const setStickyColor = (next: string) => {
-    const seq = ++updateSeqRef.current;
+    if (!safeSlug) return;
+    const requestId = ++latestRequestId.current;
     stickiesService
-      .update(workspaceSlug, sticky.id, { color: next })
+      .update(safeSlug, sticky.id, { color: next })
       .then((data) => {
-        if (seq !== updateSeqRef.current) return;
+        if (requestId !== latestRequestId.current) return;
         onUpdate(data);
       })
       .catch(() => {});
@@ -308,6 +311,7 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
     'rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) disabled:opacity-40';
 
   if (!editor) return null;
+  if (!safeSlug) return null;
 
   return (
     <div

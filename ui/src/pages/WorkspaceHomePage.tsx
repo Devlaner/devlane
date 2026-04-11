@@ -1048,12 +1048,16 @@ export function WorkspaceHomePage() {
               </Card>
             );
           }
+          const stickyWorkspaceSlug = workspace.slug.trim();
+          if (!stickyWorkspaceSlug) {
+            return null;
+          }
           return (
             <div className="columns-1 gap-4 sm:columns-2 lg:columns-3">
               {sortedStickies.map((sticky) => (
                 <StickyNoteCard
                   key={sticky.id}
-                  workspaceSlug={workspace.slug}
+                  workspaceSlug={stickyWorkspaceSlug}
                   sticky={sticky}
                   onUpdate={(next) =>
                     setStickies((prev) =>
