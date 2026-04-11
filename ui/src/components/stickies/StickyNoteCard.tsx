@@ -1,20 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Node as TiptapNode, mergeAttributes } from '@tiptap/core';
 import { EditorContent, useEditor } from '@tiptap/react';
+import { TaskItem } from '@tiptap/extension-list/task-item';
+import { TaskList } from '@tiptap/extension-list/task-list';
 import StarterKit from '@tiptap/starter-kit';
 import type { StickyApiResponse } from '../../api/types';
 import { stickiesService } from '../../services/stickiesService';
+import {
+  STICKY_BACKGROUND_COLORS_DARK,
+  STICKY_BACKGROUND_COLORS_LIGHT,
+  getStickyColorSlot,
+  resolveStickyBackgroundForDisplay,
+} from './stickyPalette';
 
-const STICKY_COLORS = [
-  '#FEF3C7',
-  '#FCE7F3',
-  '#DCFCE7',
-  '#DBEAFE',
-  '#EDE9FE',
-  '#FFE4D5',
-  '#E0F2FE',
-  '#F3F4F6',
-];
+function useIsDarkTheme(): boolean {
+  const [isDark, setIsDark] = useState(
+    () => typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark',
+  );
+  useEffect(() => {
+    const el = document.documentElement;
+    const sync = () => setIsDark(el.getAttribute('data-theme') === 'dark');
+    sync();
+    const obs = new MutationObserver(sync);
+    obs.observe(el, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
+  return isDark;
+}
 
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -34,11 +45,15 @@ function htmlToPlainText(html: string): string {
 }
 
 function normalizeStickyDescriptionToHtml(description: string): string {
-  const trimmed = description.trim();
-  if (!trimmed) return '';
-  const looksLikeHtml = /<[^>]+>/.test(trimmed);
-  if (looksLikeHtml) return trimmed;
-  return `<p>${escapeHtml(trimmed)}</p>`;
+  if (!description.trim()) return '';
+  const looksLikeHtml = /<[^>]+>/.test(description);
+  if (looksLikeHtml) return description;
+  const normalized = description.replace(/\r\n/g, '\n').trim();
+  const paragraphs = normalized
+    .split(/\n{2,}/)
+    .map((block) => block.split('\n').map(escapeHtml).join('<br />'))
+    .filter(Boolean);
+  return paragraphs.map((p) => `<p>${p}</p>`).join('');
 }
 
 function getInitialStickyHtml(sticky: StickyApiResponse): string {
@@ -52,78 +67,6 @@ function getInitialStickyHtmlFromValues(descriptionValue: string, nameValue: str
   if (title && title !== 'Untitled') return `<p>${escapeHtml(title)}</p>`;
   return '';
 }
-
-function getContrastTextColor(bgHex: string): string {
-  const normalized = bgHex.replace('#', '');
-  const full =
-    normalized.length === 3
-      ? normalized
-          .split('')
-          .map((c) => c + c)
-          .join('')
-      : normalized;
-  const r = parseInt(full.slice(0, 2), 16) / 255;
-  const g = parseInt(full.slice(2, 4), 16) / 255;
-  const b = parseInt(full.slice(4, 6), 16) / 255;
-  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return luminance > 0.55 ? '#1f2937' : '#f9fafb';
-}
-
-const TaskList = TiptapNode.create({
-  name: 'taskList',
-  group: 'block',
-  content: 'taskItem+',
-  parseHTML() {
-    return [{ tag: 'ul[data-type="taskList"]' }];
-  },
-  renderHTML({ HTMLAttributes }) {
-    return ['ul', mergeAttributes(HTMLAttributes, { 'data-type': 'taskList' }), 0];
-  },
-  addCommands() {
-    return {
-      toggleTaskList:
-        () =>
-        ({ commands }) =>
-          commands.toggleList('taskList', 'taskItem'),
-    };
-  },
-});
-
-const TaskItem = TiptapNode.create({
-  name: 'taskItem',
-  content: 'paragraph block*',
-  defining: true,
-  addAttributes() {
-    return {
-      checked: {
-        default: false,
-        parseHTML: (el) => el.getAttribute('data-checked') === 'true',
-        renderHTML: (attrs) => ({ 'data-checked': attrs.checked ? 'true' : 'false' }),
-      },
-    };
-  },
-  parseHTML() {
-    return [{ tag: 'li[data-type="taskItem"]' }];
-  },
-  renderHTML({ node, HTMLAttributes }) {
-    return [
-      'li',
-      mergeAttributes(HTMLAttributes, { 'data-type': 'taskItem' }),
-      [
-        'label',
-        [
-          'input',
-          {
-            type: 'checkbox',
-            checked: node.attrs.checked ? 'checked' : null,
-          },
-        ],
-        ['span'],
-      ],
-      ['div', 0],
-    ];
-  },
-});
 
 const IconPalette = () => (
   <svg
@@ -225,6 +168,7 @@ type StickyNoteCardProps = {
 };
 
 export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: StickyNoteCardProps) {
+  const isDarkTheme = useIsDarkTheme();
   const initialHtml = getInitialStickyHtml(sticky);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSyncedHtmlRef = useRef(initialHtml);
@@ -251,27 +195,19 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
         bulletList: { keepMarks: true, keepAttributes: true },
         orderedList: { keepMarks: true, keepAttributes: true },
       }),
-      TaskList,
-      TaskItem,
+      TaskList.configure({
+        HTMLAttributes: {
+          class: 'not-prose list-none space-y-2 pl-2',
+        },
+      }),
+      TaskItem.configure({
+        nested: true,
+        HTMLAttributes: {
+          class: 'flex items-start gap-2',
+        },
+      }),
     ],
     content: initialHtml,
-    editorProps: {
-      handleClickOn: (_view, _pos, node, nodePos, event) => {
-        const target = event.target as HTMLElement | null;
-        if (!target || target.tagName !== 'INPUT' || node.type.name !== 'taskItem') return false;
-        const checked = !(node.attrs.checked as boolean);
-        editor
-          ?.chain()
-          .focus()
-          .command(({ tr, dispatch }) => {
-            tr.setNodeMarkup(nodePos, undefined, { ...node.attrs, checked });
-            if (dispatch) dispatch(tr);
-            return true;
-          })
-          .run();
-        return true;
-      },
-    },
     onUpdate: ({ editor: ed }) => {
       const html = ed.getHTML();
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -299,10 +235,8 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
     lastSyncedHtmlRef.current = nextHtml;
   }, [editor, sticky.description, sticky.name]);
 
-  const isDefaultDark =
-    !sticky.color || sticky.color === '#0d0d0d' || sticky.color.toLowerCase() === '#0d0d0d';
-  const stickyBg = isDefaultDark ? STICKY_COLORS[0] : sticky.color;
-  const textColor = getContrastTextColor(stickyBg);
+  const stickyBackground = resolveStickyBackgroundForDisplay(sticky.color, isDarkTheme);
+  const stickyColorSlot = getStickyColorSlot(sticky.color);
 
   const cycleColor = () => {
     setColorOpen((open) => !open);
@@ -334,13 +268,13 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
 
   return (
     <div
-      className={`mb-4 inline-block w-full break-inside-avoid rounded-(--radius-md) border border-(--border-subtle) p-3 shadow-sm ${isDefaultDark ? 'bg-(--bg-layer-2)' : ''}`}
-      style={{ backgroundColor: stickyBg, color: textColor }}
+      className="mb-4 inline-block w-full break-inside-avoid rounded-(--radius-md) border border-(--border-subtle) p-3 text-(--txt-primary) shadow-sm"
+      style={{ backgroundColor: stickyBackground }}
     >
       <div className="min-h-0 text-sm">
         <EditorContent
           editor={editor}
-          className="min-h-[4.5rem] min-w-0 max-w-full overflow-hidden text-sm focus:outline-none [&_p]:my-0.5 [&_p]:break-words [&_ul]:my-1 [&_ol]:my-1 [&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:p-0 [&_ul[data-type=taskList]]:m-0 [&_li[data-type=taskItem]]:flex [&_li[data-type=taskItem]]:items-start [&_li[data-type=taskItem]]:gap-2 [&_li[data-type=taskItem]>label]:mt-1 [&_li[data-type=taskItem]>label>input]:h-3.5 [&_li[data-type=taskItem]>label>input]:w-3.5 [&_li[data-type=taskItem][data-checked=true]>div]:line-through [&_li[data-type=taskItem][data-checked=true]>div]:opacity-70"
+          className="min-h-[4.5rem] min-w-0 max-w-full overflow-hidden text-sm text-(--txt-primary) focus:outline-none [&_p]:my-0.5 [&_p]:break-words [&_ul]:my-1 [&_ol]:my-1 [&_ul[data-type=taskList]]:m-0 [&_ul[data-type=taskList]]:p-0 [&_li[data-type=taskItem]>label]:mt-0.5 [&_li[data-type=taskItem]>label>input]:h-3.5 [&_li[data-type=taskItem]>label>input]:w-3.5 [&_li[data-type=taskItem][data-checked=true]>div]:opacity-60"
           style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
         />
       </div>
@@ -353,16 +287,17 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
             <div className="absolute left-0 top-8 z-20 w-44 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) p-2 shadow-(--shadow-overlay)">
               <p className="mb-2 text-xs font-medium text-(--txt-secondary)">Background color</p>
               <div className="grid grid-cols-6 gap-1.5">
-                {STICKY_COLORS.map((color) => {
-                  const active = (sticky.color || '#0d0d0d').toLowerCase() === color.toLowerCase();
+                {STICKY_BACKGROUND_COLORS_LIGHT.map((lightHex, i) => {
+                  const swatch = isDarkTheme ? STICKY_BACKGROUND_COLORS_DARK[i] : lightHex;
+                  const active = stickyColorSlot === i;
                   return (
                     <button
-                      key={color}
+                      key={lightHex}
                       type="button"
-                      aria-label={`Set color ${color}`}
+                      aria-label={`Set sticky background slot ${i}`}
                       className={`h-5 w-5 rounded border ${active ? 'border-(--border-strong)' : 'border-(--border-subtle)'}`}
-                      style={{ backgroundColor: color }}
-                      onClick={() => setStickyColor(color)}
+                      style={{ backgroundColor: swatch }}
+                      onClick={() => setStickyColor(lightHex)}
                     />
                   );
                 })}
@@ -390,26 +325,7 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
           type="button"
           className={tb}
           aria-label="Todo list"
-          onClick={() =>
-            editor
-              .chain()
-              .focus()
-              .toggleTaskList()
-              .command(({ editor: e, tr, dispatch }) => {
-                const { $from } = e.state.selection;
-                const parent = $from.parent;
-                const inTaskItem = parent.type.name === 'taskItem';
-                if (!inTaskItem) {
-                  return true;
-                }
-                const checked = !(parent.attrs.checked as boolean);
-                const pos = $from.before();
-                tr.setNodeMarkup(pos, undefined, { ...parent.attrs, checked });
-                if (dispatch) dispatch(tr);
-                return true;
-              })
-              .run()
-          }
+          onClick={() => editor.chain().focus().toggleTaskList().run()}
         >
           <IconTodo />
         </button>

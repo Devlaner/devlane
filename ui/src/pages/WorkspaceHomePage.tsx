@@ -7,6 +7,7 @@ import { projectService } from '../services/projectService';
 import { quickLinksService } from '../services/quickLinksService';
 import { stickiesService } from '../services/stickiesService';
 import { StickyNoteCard } from '../components/stickies/StickyNoteCard';
+import { pickRandomStickyBackground } from '../components/stickies/stickyPalette';
 import { recentsService } from '../services/recentsService';
 import type {
   WorkspaceApiResponse,
@@ -634,6 +635,7 @@ export function WorkspaceHomePage() {
       await stickiesService.create(workspaceSlug, {
         name: stickyContent.trim().slice(0, 255) || 'Untitled',
         description: stickyContent.trim() || '',
+        color: pickRandomStickyBackground(),
       });
       refetchStickies();
       handleCloseSticky();
