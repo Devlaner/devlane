@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { findParentNode } from '@tiptap/core';
 import { EditorContent, useEditor } from '@tiptap/react';
-import { TaskItem } from '@tiptap/extension-list/task-item';
-import { TaskList } from '@tiptap/extension-list/task-list';
+import { TaskItem } from '@tiptap/extension-task-item';
+import { TaskList } from '@tiptap/extension-task-list';
 import StarterKit from '@tiptap/starter-kit';
 import type { StickyApiResponse } from '../../api/types';
 import { stickiesService } from '../../services/stickiesService';
