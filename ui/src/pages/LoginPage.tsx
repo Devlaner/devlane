@@ -194,14 +194,7 @@ export function LoginPage() {
         setIsSubmitting(false);
       }
     },
-    [
-      email,
-      inviteToken,
-      isPasswordEnabled,
-      isMagicCodeEnabled,
-      isSmtpConfigured,
-      sendMagicCode,
-    ],
+    [email, inviteToken, isPasswordEnabled, isMagicCodeEnabled, isSmtpConfigured, sendMagicCode],
   );
 
   const switchToMagicCode = useCallback(async () => {
@@ -335,8 +328,7 @@ export function LoginPage() {
 
   const subtitle = useMemo(() => {
     if (step === 'email') return 'Enter your email to continue.';
-    if (step === 'code')
-      return 'We sent a 6-digit code to your inbox. It expires in 10 minutes.';
+    if (step === 'code') return 'We sent a 6-digit code to your inbox. It expires in 10 minutes.';
     return mode === 'sign-in'
       ? 'Enter your password to sign in.'
       : 'Set up your account to get started.';
@@ -547,7 +539,9 @@ export function LoginPage() {
                   disabled={isSubmitting}
                   className="w-full text-center text-xs font-medium text-(--txt-accent) hover:underline disabled:opacity-50"
                 >
-                  {mode === 'sign-in' ? 'Sign in with email code instead' : 'Sign up with email code instead'}
+                  {mode === 'sign-in'
+                    ? 'Sign in with email code instead'
+                    : 'Sign up with email code instead'}
                 </button>
               )}
 

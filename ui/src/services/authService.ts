@@ -56,7 +56,10 @@ export const authService = {
   },
 
   async requestMagicCode(payload: MagicCodeRequestPayload): Promise<{ message: string }> {
-    const { data } = await apiClient.post<{ message: string }>('/auth/magic-code/request/', payload);
+    const { data } = await apiClient.post<{ message: string }>(
+      '/auth/magic-code/request/',
+      payload,
+    );
     return data;
   },
 
