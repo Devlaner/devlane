@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/Devlaner/devlane/api/internal/store"
@@ -198,5 +199,32 @@ func TestForgotResetPassword(t *testing.T) {
 	// Token is no longer valid (invalidate-for-user)
 	if err := svc.ResetPassword(ctx, token, "AnotherP@ssw0rd!"); err == nil {
 		t.Fatalf("expected reused token to fail")
+	}
+}
+
+func TestSignUpMagicAndSessionForEmail(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	svc, _ := newTestService(t)
+
+	sk1, u1, err := svc.SignUpMagic(ctx, "magic-new@example.com", "A", "B")
+	if err != nil {
+		t.Fatalf("SignUpMagic: %v", err)
+	}
+	if sk1 == "" || u1 == nil {
+		t.Fatalf("expected session and user")
+	}
+
+	sk2, u2, err := svc.SessionForEmailUser(ctx, "magic-new@example.com")
+	if err != nil {
+		t.Fatalf("SessionForEmailUser: %v", err)
+	}
+	if sk2 == "" || u2 == nil || u2.ID != u1.ID {
+		t.Fatalf("unexpected second session user: %#v", u2)
+	}
+
+	_, _, err = svc.SignUpMagic(ctx, "magic-new@example.com", "X", "Y")
+	if err == nil || !errors.Is(err, ErrEmailTaken) {
+		t.Fatalf("expected ErrEmailTaken, got %v", err)
 	}
 }

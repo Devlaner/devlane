@@ -94,6 +94,67 @@ func (s *Service) SignUp(ctx context.Context, req SignUpRequest) (sessionKey str
 	return sessionKey, u, nil
 }
 
+// SignUpMagic creates a new user with a random password (same pattern as OAuth) and starts a session.
+func (s *Service) SignUpMagic(ctx context.Context, email, firstName, lastName string) (sessionKey string, user *model.User, err error) {
+	email = strings.TrimSpace(strings.ToLower(email))
+	existing, _ := s.userStore.GetByEmail(ctx, email)
+	if existing != nil {
+		return "", nil, ErrEmailTaken
+	}
+	username := email
+	if at := strings.Index(email, "@"); at > 0 {
+		username = strings.ReplaceAll(email[:at], ".", "_")
+	}
+	if existing, _ = s.userStore.GetByUsername(ctx, username); existing != nil {
+		username = email
+	}
+	dummyPwd := make([]byte, 32)
+	if _, err := rand.Read(dummyPwd); err != nil {
+		return "", nil, err
+	}
+	hash, err := bcrypt.GenerateFromPassword(dummyPwd, bcryptCost)
+	if err != nil {
+		return "", nil, err
+	}
+	u := &model.User{
+		Username:    username,
+		Email:       &email,
+		Password:    string(hash),
+		FirstName:   firstName,
+		LastName:    lastName,
+		DisplayName: strings.TrimSpace(firstName + " " + lastName),
+		IsActive:    true,
+	}
+	if err := s.userStore.Create(ctx, u); err != nil {
+		return "", nil, err
+	}
+	sessionKey, err = s.createSession(ctx, u.ID)
+	if err != nil {
+		return "", nil, err
+	}
+	return sessionKey, u, nil
+}
+
+// SessionForEmailUser creates a new session for an existing user by email (magic-code / trusted flows).
+func (s *Service) SessionForEmailUser(ctx context.Context, email string) (sessionKey string, user *model.User, err error) {
+	email = strings.TrimSpace(strings.ToLower(email))
+	u, err := s.userStore.GetByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", nil, ErrInvalidCredentials
+		}
+		return "", nil, err
+	}
+	if u == nil || !u.IsActive {
+		return "", nil, ErrInvalidCredentials
+	}
+	sessionKey, err = s.createSession(ctx, u.ID)
+	if err != nil {
+		return "", nil, err
+	}
+	return sessionKey, u, nil
+}
+
 // SignIn authenticates a user with email+password. Uses a dummy bcrypt comparison
 // when the user is not found to prevent timing-based user enumeration.
 func (s *Service) SignIn(ctx context.Context, req SignInRequest) (sessionKey string, user *model.User, err error) {
