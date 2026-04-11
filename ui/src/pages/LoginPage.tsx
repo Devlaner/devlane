@@ -3,10 +3,11 @@ import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-do
 import { Button, Input, Card, CardContent } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
+import { getApiErrorMessage } from '../api/client';
 import { config } from '../config/env';
 import { Eye, EyeOff, CircleAlert, CircleCheck } from 'lucide-react';
 
-type AuthStep = 'email' | 'password';
+type AuthStep = 'email' | 'password' | 'code';
 type AuthMode = 'sign-in' | 'sign-up';
 
 interface PasswordCriteria {
@@ -68,10 +69,19 @@ export function LoginPage() {
   const state = location.state as {
     from?: { pathname?: string; search?: string };
     email?: string;
+    inviteToken?: string;
   } | null;
   const from = state?.from;
   const returnPath = from ? (from.pathname ?? '/') + (from.search ?? '') : '/';
   const prefilledEmail = state?.email ?? '';
+
+  const [searchParams] = useSearchParams();
+  const oauthError = searchParams.get('error');
+  const inviteToken = useMemo(() => {
+    const q = searchParams.get('invite')?.trim() ?? '';
+    const st = state?.inviteToken?.trim() ?? '';
+    return q || st;
+  }, [searchParams, state?.inviteToken]);
 
   const [step, setStep] = useState<AuthStep>('email');
   const [mode, setMode] = useState<AuthMode>('sign-in');
@@ -80,20 +90,20 @@ export function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [magicCode, setMagicCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [allowSignup, setAllowSignup] = useState(true);
   const [isSmtpConfigured, setIsSmtpConfigured] = useState(false);
+  const [isPasswordEnabled, setIsPasswordEnabled] = useState(true);
+  const [isMagicCodeEnabled, setIsMagicCodeEnabled] = useState(true);
   const [oauthProviders, setOauthProviders] = useState({
     google: false,
     github: false,
     gitlab: false,
   });
-
-  const [searchParams] = useSearchParams();
-  const oauthError = searchParams.get('error');
 
   useEffect(() => {
     if (oauthError) {
@@ -107,6 +117,8 @@ export function LoginPage() {
       .then((cfg) => {
         setAllowSignup(cfg.enable_signup);
         setIsSmtpConfigured(cfg.is_smtp_configured);
+        setIsPasswordEnabled(cfg.is_email_password_enabled);
+        setIsMagicCodeEnabled(cfg.is_magic_code_enabled ?? true);
         setOauthProviders({
           google: cfg.is_google_enabled,
           github: cfg.is_github_enabled,
@@ -118,6 +130,11 @@ export function LoginPage() {
 
   const hasOAuth = oauthProviders.google || oauthProviders.github || oauthProviders.gitlab;
 
+  const canUseMagicCode =
+    isMagicCodeEnabled &&
+    isSmtpConfigured &&
+    (mode === 'sign-in' || (mode === 'sign-up' && (allowSignup || !!inviteToken)));
+
   const handleOAuth = useCallback(
     (provider: string) => {
       const base = config.apiBaseUrl || '';
@@ -126,6 +143,13 @@ export function LoginPage() {
     },
     [returnPath],
   );
+
+  const sendMagicCode = useCallback(async () => {
+    await authService.requestMagicCode({
+      email,
+      ...(inviteToken ? { invite_token: inviteToken } : {}),
+    });
+  }, [email, inviteToken]);
 
   const handleEmailSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -138,12 +162,30 @@ export function LoginPage() {
           setMode('sign-in');
         } else {
           if (!resp.allow_public_signup) {
-            setError('Sign-up is by invite only.');
-            setIsSubmitting(false);
-            return;
+            if (!inviteToken) {
+              setError('Sign-up is by invite only.');
+              setIsSubmitting(false);
+              return;
+            }
+            setMode('sign-up');
+          } else {
+            setMode('sign-up');
           }
-          setMode('sign-up');
         }
+
+        const magicOnly = !isPasswordEnabled && isMagicCodeEnabled && isSmtpConfigured;
+        if (magicOnly) {
+          try {
+            await sendMagicCode();
+            setStep('code');
+          } catch (err: unknown) {
+            setError(getApiErrorMessage(err) || 'Could not send sign-in code.');
+          } finally {
+            setIsSubmitting(false);
+          }
+          return;
+        }
+
         setStep('password');
       } catch {
         setStep('password');
@@ -152,8 +194,28 @@ export function LoginPage() {
         setIsSubmitting(false);
       }
     },
-    [email],
+    [
+      email,
+      inviteToken,
+      isPasswordEnabled,
+      isMagicCodeEnabled,
+      isSmtpConfigured,
+      sendMagicCode,
+    ],
   );
+
+  const switchToMagicCode = useCallback(async () => {
+    setError('');
+    setIsSubmitting(true);
+    try {
+      await sendMagicCode();
+      setStep('code');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err) || 'Could not send sign-in code.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [sendMagicCode]);
 
   const handlePasswordSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -186,17 +248,13 @@ export function LoginPage() {
             password,
             first_name: firstName,
             last_name: lastName,
+            ...(inviteToken ? { invite_token: inviteToken } : {}),
           });
           setUserFromApi(user);
           navigate(returnPath, { replace: true });
         }
       } catch (err: unknown) {
-        if (err && typeof err === 'object' && 'response' in err) {
-          const axiosErr = err as { response?: { data?: { error?: string } } };
-          setError(axiosErr.response?.data?.error ?? 'Something went wrong.');
-        } else {
-          setError('Something went wrong. Please try again.');
-        }
+        setError(getApiErrorMessage(err) || 'Something went wrong. Please try again.');
       } finally {
         setIsSubmitting(false);
       }
@@ -208,11 +266,41 @@ export function LoginPage() {
       confirmPassword,
       firstName,
       lastName,
+      inviteToken,
       login,
       setUserFromApi,
       navigate,
       returnPath,
     ],
+  );
+
+  const handleMagicCodeSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError('');
+      const code = magicCode.replace(/\D/g, '');
+      if (code.length !== 6) {
+        setError('Enter the 6-digit code from your email.');
+        return;
+      }
+      setIsSubmitting(true);
+      try {
+        const user = await authService.verifyMagicCode({
+          email,
+          code,
+          first_name: firstName,
+          last_name: lastName,
+          ...(inviteToken ? { invite_token: inviteToken } : {}),
+        });
+        setUserFromApi(user);
+        navigate(returnPath, { replace: true });
+      } catch (err: unknown) {
+        setError(getApiErrorMessage(err) || 'Invalid or expired code.');
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [magicCode, email, firstName, lastName, inviteToken, setUserFromApi, navigate, returnPath],
   );
 
   const goBackToEmail = useCallback(() => {
@@ -221,6 +309,13 @@ export function LoginPage() {
     setConfirmPassword('');
     setFirstName('');
     setLastName('');
+    setMagicCode('');
+    setError('');
+  }, []);
+
+  const goBackToPassword = useCallback(() => {
+    setStep('password');
+    setMagicCode('');
     setError('');
   }, []);
 
@@ -228,16 +323,20 @@ export function LoginPage() {
     setMode((prev) => (prev === 'sign-in' ? 'sign-up' : 'sign-in'));
     setPassword('');
     setConfirmPassword('');
+    setMagicCode('');
     setError('');
   }, []);
 
   const title = useMemo(() => {
     if (step === 'email') return 'Get started with Devlane';
+    if (step === 'code') return mode === 'sign-in' ? 'Check your email' : 'Verify your email';
     return mode === 'sign-in' ? 'Welcome back!' : 'Create your account';
   }, [step, mode]);
 
   const subtitle = useMemo(() => {
     if (step === 'email') return 'Enter your email to continue.';
+    if (step === 'code')
+      return 'We sent a 6-digit code to your inbox. It expires in 10 minutes.';
     return mode === 'sign-in'
       ? 'Enter your password to sign in.'
       : 'Set up your account to get started.';
@@ -249,6 +348,11 @@ export function LoginPage() {
         <CardContent className="p-6">
           <h1 className="mb-1 text-2xl font-semibold text-(--txt-primary)">{title}</h1>
           <p className="mb-6 text-sm text-(--txt-secondary)">{subtitle}</p>
+          {step === 'email' && isPasswordEnabled && canUseMagicCode && (
+            <p className="-mt-4 mb-4 text-xs text-(--txt-tertiary)">
+              After you continue, you can use your password or choose a one-time email code instead.
+            </p>
+          )}
 
           {error && (
             <div className="mb-4 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -424,7 +528,7 @@ export function LoginPage() {
                 </div>
               )}
 
-              {mode === 'sign-in' && isSmtpConfigured && (
+              {mode === 'sign-in' && isPasswordEnabled && isSmtpConfigured && (
                 <div className="text-right">
                   <Link
                     to="/forgot-password"
@@ -434,6 +538,17 @@ export function LoginPage() {
                     Forgot your password?
                   </Link>
                 </div>
+              )}
+
+              {canUseMagicCode && isPasswordEnabled && (
+                <button
+                  type="button"
+                  onClick={() => void switchToMagicCode()}
+                  disabled={isSubmitting}
+                  className="w-full text-center text-xs font-medium text-(--txt-accent) hover:underline disabled:opacity-50"
+                >
+                  {mode === 'sign-in' ? 'Sign in with email code instead' : 'Sign up with email code instead'}
+                </button>
               )}
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>
@@ -446,7 +561,7 @@ export function LoginPage() {
                     : 'Create account'}
               </Button>
 
-              {allowSignup && (
+              {(allowSignup || !!inviteToken) && (
                 <p className="text-center text-sm text-(--txt-secondary)">
                   {mode === 'sign-in' ? "Don't have an account?" : 'Already have an account?'}{' '}
                   <button
@@ -457,6 +572,75 @@ export function LoginPage() {
                     {mode === 'sign-in' ? 'Sign up' : 'Sign in'}
                   </button>
                 </p>
+              )}
+            </form>
+          )}
+
+          {step === 'code' && (
+            <form onSubmit={handleMagicCodeSubmit} className="flex flex-col gap-4">
+              <div>
+                <button
+                  type="button"
+                  onClick={goBackToEmail}
+                  className="mb-3 flex items-center gap-1 text-xs text-(--txt-tertiary) hover:text-(--txt-primary)"
+                >
+                  <span>←</span>
+                  <span>{email}</span>
+                </button>
+              </div>
+
+              {mode === 'sign-up' && (
+                <div className="flex gap-3">
+                  <Input
+                    label="First name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    autoComplete="given-name"
+                    autoFocus
+                  />
+                  <Input
+                    label="Last name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    autoComplete="family-name"
+                  />
+                </div>
+              )}
+
+              <Input
+                label="6-digit code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={magicCode}
+                onChange={(e) => setMagicCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="000000"
+                required
+                maxLength={6}
+                autoFocus={mode === 'sign-in'}
+              />
+
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? 'Verifying…' : 'Continue'}
+              </Button>
+
+              <button
+                type="button"
+                onClick={() => void switchToMagicCode()}
+                disabled={isSubmitting}
+                className="w-full text-center text-xs text-(--txt-accent) hover:underline disabled:opacity-50"
+              >
+                Resend code
+              </button>
+
+              {isPasswordEnabled && (
+                <button
+                  type="button"
+                  onClick={goBackToPassword}
+                  className="w-full text-center text-xs text-(--txt-tertiary) hover:text-(--txt-primary)"
+                >
+                  Use password instead
+                </button>
               )}
             </form>
           )}

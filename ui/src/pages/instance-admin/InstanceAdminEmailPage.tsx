@@ -206,7 +206,12 @@ export function InstanceAdminEmailPage() {
               value={smtpPasswordDisplay}
               onChange={(e) => setSmtpPasswordLocal(e.target.value)}
               onFocus={() => {
-                if (smtpPasswordLocal === undefined) setSmtpPasswordLocal(smtpPasswordDisplay);
+                // Only copy the loaded password into local edit state when it is non-empty.
+                // Otherwise we would set local state to "" and the next save would send an empty
+                // password, which skips the merge and can mask decryption/key issues.
+                if (smtpPasswordLocal === undefined && smtpPasswordDisplay !== '') {
+                  setSmtpPasswordLocal(smtpPasswordDisplay);
+                }
               }}
               placeholder={!smtpPasswordDisplay ? 'Set password' : ''}
               className="block w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 pr-9 text-xs text-(--txt-primary) focus:outline-none"

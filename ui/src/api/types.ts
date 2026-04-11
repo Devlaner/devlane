@@ -322,11 +322,29 @@ export interface ResetPasswordRequest {
 /** GET /auth/config/ response */
 export interface AuthConfigResponse {
   is_email_password_enabled: boolean;
+  is_magic_code_enabled: boolean;
   enable_signup: boolean;
   is_smtp_configured: boolean;
   is_google_enabled: boolean;
   is_github_enabled: boolean;
   is_gitlab_enabled: boolean;
+  /** Present when at least one OAuth provider is enabled; use for redirect URIs in provider consoles. */
+  oauth_redirect_base?: string;
+}
+
+/** POST /auth/magic-code/request/ */
+export interface MagicCodeRequestPayload {
+  email: string;
+  invite_token?: string;
+}
+
+/** POST /auth/magic-code/verify/ */
+export interface MagicCodeVerifyPayload {
+  email: string;
+  code: string;
+  first_name?: string;
+  last_name?: string;
+  invite_token?: string;
 }
 
 /** Instance settings: section key -> value object (from GET /api/instance/settings/) */

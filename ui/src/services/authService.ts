@@ -7,6 +7,8 @@ import type {
   ForgotPasswordRequest,
   ResetPasswordRequest,
   AuthConfigResponse,
+  MagicCodeRequestPayload,
+  MagicCodeVerifyPayload,
 } from '../api/types';
 
 export const authService = {
@@ -50,6 +52,16 @@ export const authService = {
 
   async getAuthConfig(): Promise<AuthConfigResponse> {
     const { data } = await apiClient.get<AuthConfigResponse>('/auth/config/');
+    return data;
+  },
+
+  async requestMagicCode(payload: MagicCodeRequestPayload): Promise<{ message: string }> {
+    const { data } = await apiClient.post<{ message: string }>('/auth/magic-code/request/', payload);
+    return data;
+  },
+
+  async verifyMagicCode(payload: MagicCodeVerifyPayload): Promise<UserApiResponse> {
+    const { data } = await apiClient.post<UserApiResponse>('/auth/magic-code/verify/', payload);
     return data;
   },
 };
