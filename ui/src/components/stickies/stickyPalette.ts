@@ -82,7 +82,7 @@ export function resolveStickyBackgroundForDisplay(
     return isDark ? STICKY_BACKGROUND_COLORS_DARK[slot] : STICKY_BACKGROUND_COLORS_LIGHT[slot];
   }
   const hex = normalizeHexColor((stored || '').trim());
-  return hex || STICKY_BACKGROUND_COLORS_LIGHT[0];
+  return hex || (isDark ? STICKY_BACKGROUND_COLORS_DARK[0] : STICKY_BACKGROUND_COLORS_LIGHT[0]);
 }
 
 export function pickRandomStickyBackground(): string {
