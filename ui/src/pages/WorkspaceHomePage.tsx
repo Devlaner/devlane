@@ -526,6 +526,19 @@ export function WorkspaceHomePage() {
   const recentsFilterTriggerRef = useRef<HTMLButtonElement>(null);
   const recentsFilterDropdownRef = useRef<HTMLDivElement>(null);
   const stickyAddInFlightRef = useRef(false);
+  const [stickiesDarkTheme, setStickiesDarkTheme] = useState(
+    () =>
+      typeof document !== 'undefined' &&
+      document.documentElement.getAttribute('data-theme') === 'dark',
+  );
+  useEffect(() => {
+    const el = document.documentElement;
+    const sync = () => setStickiesDarkTheme(el.getAttribute('data-theme') === 'dark');
+    sync();
+    const obs = new MutationObserver(sync);
+    obs.observe(el, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!workspaceSlug) {
@@ -1063,6 +1076,7 @@ export function WorkspaceHomePage() {
                   key={sticky.id}
                   workspaceSlug={stickyWorkspaceSlug}
                   sticky={sticky}
+                  isDarkTheme={stickiesDarkTheme}
                   onUpdate={(next) =>
                     setStickies((prev) =>
                       prev.map((item) => (item.id === next.id ? { ...item, ...next } : item)),

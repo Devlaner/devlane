@@ -38,23 +38,6 @@ const StickyTaskList = TaskList.extend({
   },
 });
 
-function useIsDarkTheme(): boolean {
-  const [isDark, setIsDark] = useState(
-    () =>
-      typeof document !== 'undefined' &&
-      document.documentElement.getAttribute('data-theme') === 'dark',
-  );
-  useEffect(() => {
-    const el = document.documentElement;
-    const sync = () => setIsDark(el.getAttribute('data-theme') === 'dark');
-    sync();
-    const obs = new MutationObserver(sync);
-    obs.observe(el, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => obs.disconnect();
-  }, []);
-  return isDark;
-}
-
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -195,13 +178,19 @@ const IconTrash = () => (
 type StickyNoteCardProps = {
   workspaceSlug: string;
   sticky: StickyApiResponse;
+  isDarkTheme: boolean;
   onUpdate: (next: StickyApiResponse) => void;
   onDelete: (id: string) => void;
 };
 
-export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: StickyNoteCardProps) {
+export function StickyNoteCard({
+  workspaceSlug,
+  sticky,
+  isDarkTheme,
+  onUpdate,
+  onDelete,
+}: StickyNoteCardProps) {
   const safeSlug = workspaceSlug.trim();
-  const isDarkTheme = useIsDarkTheme();
   const initialHtml = getInitialStickyHtml(sticky);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSyncedHtmlRef = useRef(initialHtml);
@@ -209,6 +198,7 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
   const colorRequestIdRef = useRef(0);
   const colorListboxId = useId();
   const [colorOpen, setColorOpen] = useState(false);
+  const [contentSaveError, setContentSaveError] = useState(false);
   const colorPanelRef = useRef<HTMLDivElement | null>(null);
 
   const persistSticky = useCallback(
@@ -223,9 +213,15 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
         })
         .then((data) => {
           if (requestId !== contentRequestIdRef.current) return;
+          setContentSaveError(false);
           onUpdate(data);
         })
-        .catch(() => {});
+        .catch((err) => {
+          if (requestId !== contentRequestIdRef.current) return;
+          // apiClient rejects with Error; no global toast — surface failure here
+          console.error('Sticky autosave failed', err);
+          setContentSaveError(true);
+        });
     },
     [safeSlug, sticky.id, onUpdate],
   );
@@ -297,9 +293,12 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
       .then((data) => {
         if (requestId !== colorRequestIdRef.current) return;
         onUpdate(data);
+        setColorOpen(false);
       })
-      .catch(() => {});
-    setColorOpen(false);
+      .catch((err) => {
+        if (requestId !== colorRequestIdRef.current) return;
+        console.error('Sticky color update failed', err);
+      });
   };
 
   useEffect(() => {
@@ -330,6 +329,11 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
           className="min-h-[4.5rem] min-w-0 max-w-full overflow-hidden text-sm text-(--txt-primary) focus:outline-none [&_p]:my-0.5 [&_p]:break-words [&_ul]:my-1 [&_ol]:my-1 [&_ul[data-type=taskList]]:m-0 [&_ul[data-type=taskList]]:p-0 [&_li[data-type=taskItem]>label]:mt-0.5 [&_li[data-type=taskItem]>label>input]:h-3.5 [&_li[data-type=taskItem]>label>input]:w-3.5 [&_li[data-type=taskItem][data-checked=true]>div]:opacity-60"
           style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
         />
+        {contentSaveError ? (
+          <p className="mt-1 text-xs text-(--txt-danger-primary)" role="alert">
+            Could not save. Edit again to retry.
+          </p>
+        ) : null}
       </div>
       <div className="mt-2 flex shrink-0 items-center gap-1 pt-2">
         <div className="relative" ref={colorPanelRef}>
