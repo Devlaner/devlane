@@ -46,6 +46,11 @@ func getEmailSettings(ctx context.Context, s *store.InstanceSettingStore) (*smtp
 	username, _ := v["username"].(string)
 	passRaw, _ := v["password"].(string)
 	password := crypto.DecryptOrPlain(passRaw)
+	if crypto.LooksEncrypted(passRaw) && password == "" {
+		return nil, fmt.Errorf(
+			"SMTP password cannot be decrypted: ensure INSTANCE_ENCRYPTION_KEY matches the key used when the password was saved, or open instance email settings and save the SMTP password again",
+		)
+	}
 	host = strings.TrimSpace(host)
 	if host == "" {
 		return nil, fmt.Errorf("email host not configured")

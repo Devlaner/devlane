@@ -91,6 +91,7 @@ func main() {
 		Minio:              mc,
 		CORSAllowOrigin:    cfg.CORSAllowOrigin,
 		AppBaseURL:         cfg.AppBaseURL,
+		APIPublicURL:       cfg.APIPublicURL,
 		GoogleClientID:     cfg.GoogleClientID,
 		GoogleClientSecret: cfg.GoogleClientSecret,
 		GitHubClientID:     cfg.GitHubClientID,
@@ -98,6 +99,7 @@ func main() {
 		GitLabClientID:     cfg.GitLabClientID,
 		GitLabClientSecret: cfg.GitLabClientSecret,
 		GitLabHost:         cfg.GitLabHost,
+		MagicCodeSecret:    cfg.MagicCodeSecret,
 	})
 
 	// Start task consumer when RabbitMQ is available

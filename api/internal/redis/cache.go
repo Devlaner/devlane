@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -11,14 +12,19 @@ import (
 // Cache key prefixes.
 const (
 	PrefixMagicLink = "magic_"
-	PrefixLock      = "lock_"
-	PrefixCache     = "cache_"
+	// PrefixMagicCodeLogin stores email login codes (numeric), separate from magic-link keys.
+	PrefixMagicCodeLogin = "logincode_"
+	PrefixLock           = "lock_"
+	PrefixCache          = "cache_"
 )
 
 // Default TTLs.
 const (
-	MagicLinkTTL = 600 * time.Second // 10 min
-	LockTTL      = 300 * time.Second // 5 min
+	MagicLinkTTL      = 600 * time.Second // 10 min
+	MagicCodeLoginTTL = 600 * time.Second // 10 min
+	// MagicCodeMaxAttempts before the stored code is invalidated.
+	MagicCodeMaxAttempts = 10
+	LockTTL              = 300 * time.Second // 5 min
 )
 
 // Get gets a string value. Returns redis.Nil when key does not exist.
@@ -126,6 +132,83 @@ func (c *Client) GetMagicLink(ctx context.Context, email string) (*MagicLinkData
 // DeleteMagicLink removes magic-link data after successful sign-in.
 func (c *Client) DeleteMagicLink(ctx context.Context, email string) error {
 	return c.Client.Del(ctx, PrefixMagicLink+email).Err()
+}
+
+// --- Email login code (magic code) ---
+
+// MagicCodeLoginData is stored in Redis for one-time email codes.
+type MagicCodeLoginData struct {
+	CodeMAC     string `json:"m"`
+	Attempts    int    `json:"a"`
+	InviteToken string `json:"it,omitempty"`
+	IsSignup    bool   `json:"su"`
+}
+
+// LoginCodeRedisKey returns the Redis key for magic-code login for an email address.
+func LoginCodeRedisKey(email string) string {
+	return PrefixMagicCodeLogin + strings.ToLower(strings.TrimSpace(email))
+}
+
+// SetMagicCodeLogin stores login code metadata for the email. Overwrites any prior code.
+func (c *Client) SetMagicCodeLogin(ctx context.Context, email string, data *MagicCodeLoginData, ttl time.Duration) error {
+	if ttl <= 0 {
+		ttl = MagicCodeLoginTTL
+	}
+	if data == nil {
+		data = &MagicCodeLoginData{}
+	}
+	b, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	return c.Client.Set(ctx, LoginCodeRedisKey(email), b, ttl).Err()
+}
+
+// GetMagicCodeLogin returns stored login code metadata, or (nil, nil) if missing.
+func (c *Client) GetMagicCodeLogin(ctx context.Context, email string) (*MagicCodeLoginData, error) {
+	key := LoginCodeRedisKey(email)
+	s, err := c.Client.Get(ctx, key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var out MagicCodeLoginData
+	if err := json.Unmarshal([]byte(s), &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// DeleteMagicCodeLogin removes the login code for an email (after success or lockout).
+func (c *Client) DeleteMagicCodeLogin(ctx context.Context, email string) error {
+	return c.Client.Del(ctx, LoginCodeRedisKey(email)).Err()
+}
+
+// BumpMagicCodeLoginFailedAttempt increments failed verification attempts and deletes the key after too many failures.
+func (c *Client) BumpMagicCodeLoginFailedAttempt(ctx context.Context, email string) error {
+	key := LoginCodeRedisKey(email)
+	data, err := c.GetMagicCodeLogin(ctx, email)
+	if err != nil || data == nil {
+		return err
+	}
+	data.Attempts++
+	if data.Attempts >= MagicCodeMaxAttempts {
+		return c.DeleteMagicCodeLogin(ctx, email)
+	}
+	b, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	ttl, err := c.Client.TTL(ctx, key).Result()
+	if err != nil {
+		return err
+	}
+	if ttl < 0 {
+		ttl = MagicCodeLoginTTL
+	}
+	return c.Client.Set(ctx, key, b, ttl).Err()
 }
 
 // --- Short-lived metadata (e.g. request origin per issue) ---
