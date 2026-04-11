@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { findParentNode } from '@tiptap/core';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { TaskItem } from '@tiptap/extension-list/task-item';
 import { TaskList } from '@tiptap/extension-list/task-list';
@@ -8,9 +9,34 @@ import { stickiesService } from '../../services/stickiesService';
 import {
   STICKY_BACKGROUND_COLORS_DARK,
   STICKY_BACKGROUND_COLORS_LIGHT,
-  getStickyColorSlot,
+  paletteLightHexForStored,
   resolveStickyBackgroundForDisplay,
 } from './stickyPalette';
+
+const StickyTaskList = TaskList.extend({
+  addCommands() {
+    return {
+      toggleTaskList:
+        () =>
+        ({ state, chain, commands }) => {
+          const taskListType = state.schema.nodes.taskList;
+          const taskItemType = state.schema.nodes.taskItem;
+          const listFound = findParentNode((n) => n.type === taskListType)(state.selection);
+          if (listFound) {
+            const itemFound = findParentNode((n) => n.type === taskItemType)(state.selection);
+            if (itemFound) {
+              return chain()
+                .focus()
+                .setNodeSelection(itemFound.pos)
+                .toggleList('taskList', 'taskItem')
+                .run();
+            }
+          }
+          return commands.toggleList('taskList', 'taskItem');
+        },
+    };
+  },
+});
 
 function useIsDarkTheme(): boolean {
   const [isDark, setIsDark] = useState(
@@ -174,18 +200,23 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
   const initialHtml = getInitialStickyHtml(sticky);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSyncedHtmlRef = useRef(initialHtml);
+  const updateSeqRef = useRef(0);
   const [colorOpen, setColorOpen] = useState(false);
   const colorPanelRef = useRef<HTMLDivElement | null>(null);
 
   const persistSticky = useCallback(
     (html: string) => {
       const plain = htmlToPlainText(html).slice(0, 255);
+      const seq = ++updateSeqRef.current;
       stickiesService
         .update(workspaceSlug, sticky.id, {
           description: html,
           name: plain || 'Untitled',
         })
-        .then(onUpdate)
+        .then((data) => {
+          if (seq !== updateSeqRef.current) return;
+          onUpdate(data);
+        })
         .catch(() => {});
     },
     [workspaceSlug, sticky.id, onUpdate],
@@ -197,7 +228,7 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
         bulletList: { keepMarks: true, keepAttributes: true },
         orderedList: { keepMarks: true, keepAttributes: true },
       }),
-      TaskList.configure({
+      StickyTaskList.configure({
         HTMLAttributes: {
           class: 'not-prose list-none space-y-2 pl-2',
         },
@@ -206,6 +237,12 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
         nested: true,
         HTMLAttributes: {
           class: 'flex items-start gap-2',
+        },
+        a11y: {
+          checkboxLabel: (node, checked) => {
+            const text = node.textContent.replace(/\s+/g, ' ').trim() || 'empty task item';
+            return checked ? `Completed task: ${text}` : `Task: ${text}`;
+          },
         },
       }),
     ],
@@ -238,16 +275,20 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
   }, [editor, sticky.description, sticky.name]);
 
   const stickyBackground = resolveStickyBackgroundForDisplay(sticky.color, isDarkTheme);
-  const stickyColorSlot = getStickyColorSlot(sticky.color);
+  const storedLightHex = paletteLightHexForStored(sticky.color);
 
   const cycleColor = () => {
     setColorOpen((open) => !open);
   };
 
   const setStickyColor = (next: string) => {
+    const seq = ++updateSeqRef.current;
     stickiesService
       .update(workspaceSlug, sticky.id, { color: next })
-      .then(onUpdate)
+      .then((data) => {
+        if (seq !== updateSeqRef.current) return;
+        onUpdate(data);
+      })
       .catch(() => {});
     setColorOpen(false);
   };
@@ -291,7 +332,7 @@ export function StickyNoteCard({ workspaceSlug, sticky, onUpdate, onDelete }: St
               <div className="grid grid-cols-6 gap-1.5">
                 {STICKY_BACKGROUND_COLORS_LIGHT.map((lightHex, i) => {
                   const swatch = isDarkTheme ? STICKY_BACKGROUND_COLORS_DARK[i] : lightHex;
-                  const active = stickyColorSlot === i;
+                  const active = storedLightHex !== null && storedLightHex === lightHex;
                   return (
                     <button
                       key={lightHex}

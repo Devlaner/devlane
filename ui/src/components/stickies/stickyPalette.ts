@@ -88,3 +88,11 @@ export function pickRandomStickyBackground(): string {
   const i = Math.floor(Math.random() * STICKY_BACKGROUND_COLORS_LIGHT.length);
   return STICKY_BACKGROUND_COLORS_LIGHT[i];
 }
+
+/** Canonical light-hex for this stored value (picker selection + API palette keys). */
+export function paletteLightHexForStored(stored: string | undefined): string | null {
+  const slot = getStickyColorSlot(stored);
+  if (slot >= 0) return STICKY_BACKGROUND_COLORS_LIGHT[slot];
+  const hex = normalizeHexColor((stored || '').trim());
+  return hex;
+}

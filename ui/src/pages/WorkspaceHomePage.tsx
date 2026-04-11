@@ -811,7 +811,7 @@ export function WorkspaceHomePage() {
               key={ql.id}
               ql={ql}
               baseUrl={baseUrl}
-              workspaceSlug={workspaceSlug ?? ''}
+              workspaceSlug={workspace.slug}
               onEdit={(row) => {
                 setEditQuicklink(row);
                 setEditQuicklinkUrl(row.url);
@@ -1053,10 +1053,12 @@ export function WorkspaceHomePage() {
               {sortedStickies.map((sticky) => (
                 <StickyNoteCard
                   key={sticky.id}
-                  workspaceSlug={workspaceSlug ?? ''}
+                  workspaceSlug={workspace.slug}
                   sticky={sticky}
                   onUpdate={(next) =>
-                    setStickies((prev) => prev.map((item) => (item.id === next.id ? next : item)))
+                    setStickies((prev) =>
+                      prev.map((item) => (item.id === next.id ? { ...item, ...next } : item)),
+                    )
                   }
                   onDelete={handleDeleteSticky}
                 />
