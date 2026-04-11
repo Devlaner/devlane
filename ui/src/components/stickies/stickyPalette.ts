@@ -72,7 +72,10 @@ export function getStickyColorSlot(stored: string | undefined): number {
   return -1;
 }
 
-export function resolveStickyBackgroundForDisplay(stored: string | undefined, isDark: boolean): string {
+export function resolveStickyBackgroundForDisplay(
+  stored: string | undefined,
+  isDark: boolean,
+): string {
   const slot = getStickyColorSlot(stored);
   if (slot >= 0) {
     return isDark ? STICKY_BACKGROUND_COLORS_DARK[slot] : STICKY_BACKGROUND_COLORS_LIGHT[slot];

@@ -14,7 +14,9 @@ import {
 
 function useIsDarkTheme(): boolean {
   const [isDark, setIsDark] = useState(
-    () => typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark',
+    () =>
+      typeof document !== 'undefined' &&
+      document.documentElement.getAttribute('data-theme') === 'dark',
   );
   useEffect(() => {
     const el = document.documentElement;
