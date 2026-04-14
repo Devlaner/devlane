@@ -89,8 +89,8 @@ func Load() (*Config, error) {
 		MinIOUseSSL:          minioSSL,
 		MigrationsPath:       getEnv("MIGRATIONS_PATH", "migrations"),
 		CORSAllowOrigin:      getEnv("CORS_ORIGIN", "http://localhost:5173"),
-		AppBaseURL:      getEnv("APP_BASE_URL", ""),
-		MagicCodeSecret: getEnv("MAGIC_CODE_SECRET", ""),
+		AppBaseURL:           getEnv("APP_BASE_URL", ""),
+		MagicCodeSecret:      getEnv("MAGIC_CODE_SECRET", ""),
 	}
 
 	return cfg, nil

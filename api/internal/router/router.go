@@ -23,7 +23,7 @@ type Config struct {
 	Queue           *queue.Publisher // optional: enqueue emails, webhooks
 	Minio           *minio.Client    // optional: file uploads (cover images, avatars, logos)
 	CORSAllowOrigin string           // optional: e.g. "http://localhost:5173" for UI dev
-	AppBaseURL string // optional: base URL for invite links; if empty, CORSAllowOrigin is used
+	AppBaseURL      string           // optional: base URL for invite links; if empty, CORSAllowOrigin is used
 
 	// MagicCodeSecret is the HMAC key for email login codes (see MAGIC_CODE_SECRET).
 	MagicCodeSecret string
