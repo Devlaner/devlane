@@ -165,6 +165,11 @@ const InstanceSetupCompletePage = lazy(() =>
     page({ InstanceSetupCompletePage: m.InstanceSetupCompletePage }),
   ),
 );
+const CreateWorkspacePage = lazy(() =>
+  import('../pages/CreateWorkspacePage').then((m) =>
+    page({ CreateWorkspacePage: m.CreateWorkspacePage }),
+  ),
+);
 const InviteAcceptPage = lazy(() =>
   import('../pages/InviteAcceptPage').then((m) => page({ InviteAcceptPage: m.InviteAcceptPage })),
 );
@@ -372,6 +377,16 @@ const router = createBrowserRouter([
             element: <InviteSignUpPage />,
           },
         ],
+      },
+      {
+        path: 'create-workspace',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<PageFallback />}>
+              <CreateWorkspacePage />
+            </Suspense>
+          </ProtectedRoute>
+        ),
       },
       {
         element: <AppLayout />,

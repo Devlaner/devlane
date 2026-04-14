@@ -834,11 +834,6 @@ func (h *AuthHandler) MagicCodeVerify(c *gin.Context) {
 
 	_ = h.Redis.DeleteMagicCodeLogin(ctx, body.Email)
 
-	var inv *model.WorkspaceMemberInvite
-	if stored.IsSignup && strings.TrimSpace(stored.InviteToken) != "" && h.Winv != nil {
-		inv, _ = h.Winv.GetByToken(ctx, strings.TrimSpace(stored.InviteToken))
-	}
-
 	if stored.IsSignup {
 		sessionKey, user, err := h.Auth.SignUpMagic(ctx, body.Email, body.FirstName, body.LastName)
 		if err != nil {
