@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
-import { Button, Input, Card, CardContent } from '../components/ui';
+import { Button, Input } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
 import { API_BASE, getApiErrorMessage } from '../api/client';
 import { Eye, EyeOff, CircleAlert, CircleCheck } from 'lucide-react';
+import { AuthPageShell } from '../components/auth/AuthPageShell';
 
 type AuthStep = 'email' | 'password' | 'code';
 type AuthMode = 'sign-in' | 'sign-up';
@@ -333,9 +334,8 @@ export function LoginPage() {
   }, [step, mode]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
-      <Card className="w-full max-w-[22.5rem]">
-        <CardContent className="p-6">
+    <AuthPageShell mode={mode === 'sign-up' ? 'sign-up' : 'sign-in'} enableSignup={allowSignup}>
+      <div className="w-full max-w-[22.5rem]">
           <h1 className="mb-1 text-2xl font-semibold text-(--txt-primary)">{title}</h1>
           <p className="mb-6 text-sm text-(--txt-secondary)">{subtitle}</p>
           {step === 'email' && isPasswordEnabled && canUseMagicCode && (
@@ -638,8 +638,7 @@ export function LoginPage() {
               )}
             </form>
           )}
-        </CardContent>
-      </Card>
-    </div>
+      </div>
+    </AuthPageShell>
   );
 }

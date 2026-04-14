@@ -154,6 +154,7 @@ func New(cfg Config) *gin.Engine {
 		api.GET("/users/me/", authHandler.Me)
 		api.PATCH("/users/me/", authHandler.UpdateMe)
 		api.POST("/users/me/change-password/", authHandler.ChangePassword)
+		api.POST("/users/me/set-password/", authHandler.SetPassword)
 		api.GET("/users/me/notification-preferences/", authHandler.GetNotificationPreferences)
 		api.PUT("/users/me/notification-preferences/", authHandler.UpdateNotificationPreferences)
 		api.GET("/users/me/activity/", userHandler.GetActivity)
@@ -302,6 +303,7 @@ func New(cfg Config) *gin.Engine {
 		authGroup.POST("/reset-password/", authHandler.ResetPassword)
 		authGroup.POST("/magic-code/request/", authHandler.MagicCodeRequest)
 		authGroup.POST("/magic-code/verify/", authHandler.MagicCodeVerify)
+		authGroup.POST("/set-password/", middleware.RequireAuth(authSvc, cfg.Log), authHandler.SetPassword)
 	}
 
 	// OAuth routes (no auth required); provider resolved from instance settings at request time.

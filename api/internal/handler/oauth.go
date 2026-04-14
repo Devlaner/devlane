@@ -187,6 +187,12 @@ func (h *OAuthHandler) Callback(c *gin.Context) {
 
 	if isNewUser {
 		postSignUpWorkflow(ctx, h.postSignUpDeps(), user)
+		nextPath = "/"
+	}
+
+	if !user.IsActive {
+		h.redirectError(c, "Your account has been deactivated. Please contact the administrator.")
+		return
 	}
 
 	http.SetCookie(c.Writer, &http.Cookie{

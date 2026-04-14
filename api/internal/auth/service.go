@@ -129,13 +129,14 @@ func (s *Service) SignUpMagic(ctx context.Context, email, firstName, lastName st
 		return "", nil, err
 	}
 	u := &model.User{
-		Username:    username,
-		Email:       &email,
-		Password:    string(hash),
-		FirstName:   firstName,
-		LastName:    lastName,
-		DisplayName: strings.TrimSpace(firstName + " " + lastName),
-		IsActive:    true,
+		Username:          username,
+		Email:             &email,
+		Password:          string(hash),
+		FirstName:         firstName,
+		LastName:          lastName,
+		DisplayName:       strings.TrimSpace(firstName + " " + lastName),
+		IsActive:          true,
+		IsPasswordAutoset: true,
 	}
 	if err := s.userStore.Create(ctx, u); err != nil {
 		return "", nil, err
@@ -300,6 +301,29 @@ func (s *Service) ResetPassword(ctx context.Context, token, newPassword string) 
 	return nil
 }
 
+var ErrPasswordAlreadySet = errors.New("password is already set")
+
+// SetPassword lets a user who signed up via OAuth/magic set their first password.
+func (s *Service) SetPassword(ctx context.Context, userID uuid.UUID, newPassword string) error {
+	u, err := s.userStore.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if u == nil {
+		return ErrInvalidCredentials
+	}
+	if !u.IsPasswordAutoset {
+		return ErrPasswordAlreadySet
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcryptCost)
+	if err != nil {
+		return err
+	}
+	u.Password = string(hash)
+	u.IsPasswordAutoset = false
+	return s.userStore.Update(ctx, u)
+}
+
 // OAuthLogin finds or creates a user from OAuth provider data and creates a session.
 // If the email already exists, it links the account; if not, it creates a new user.
 // isNewUser is true when a brand-new user row was created (first-time sign-up).
@@ -331,14 +355,15 @@ func (s *Service) OAuthLogin(ctx context.Context, provider, providerAccountID, e
 		_, _ = rand.Read(dummyPwd)
 		hash, _ := bcrypt.GenerateFromPassword(dummyPwd, bcryptCost)
 		u = &model.User{
-			Username:    username,
-			Email:       &email,
-			Password:    string(hash),
-			FirstName:   firstName,
-			LastName:    lastName,
-			DisplayName: strings.TrimSpace(firstName + " " + lastName),
-			Avatar:      avatar,
-			IsActive:    true,
+			Username:          username,
+			Email:             &email,
+			Password:          string(hash),
+			FirstName:         firstName,
+			LastName:          lastName,
+			DisplayName:       strings.TrimSpace(firstName + " " + lastName),
+			Avatar:            avatar,
+			IsActive:          true,
+			IsPasswordAutoset: true,
 		}
 		if err := s.userStore.Create(ctx, u); err != nil {
 			return "", nil, false, err

@@ -224,6 +224,7 @@ export interface UserApiResponse {
   cover_image?: string;
   is_active: boolean;
   is_onboarded: boolean;
+  is_password_autoset?: boolean;
   date_joined: string;
   created_at: string;
   updated_at: string;

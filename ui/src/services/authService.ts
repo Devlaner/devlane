@@ -67,4 +67,9 @@ export const authService = {
     const { data } = await apiClient.post<UserApiResponse>('/auth/magic-code/verify/', payload);
     return data;
   },
+
+  async setPassword(payload: { password: string }): Promise<UserApiResponse> {
+    const { data } = await apiClient.post<UserApiResponse>('/auth/set-password/', payload);
+    return data;
+  },
 };

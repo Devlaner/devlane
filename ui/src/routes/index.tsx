@@ -25,6 +25,12 @@ const ResetPasswordPage = lazy(() =>
     page({ ResetPasswordPage: m.ResetPasswordPage }),
   ),
 );
+const SignUpPage = lazy(() =>
+  import('../pages/SignUpPage').then((m) => page({ SignUpPage: m.SignUpPage })),
+);
+const SetPasswordPage = lazy(() =>
+  import('../pages/SetPasswordPage').then((m) => page({ SetPasswordPage: m.SetPasswordPage })),
+);
 const WorkspaceHomePage = lazy(() =>
   import('../pages/WorkspaceHomePage').then((m) =>
     page({ WorkspaceHomePage: m.WorkspaceHomePage }),
@@ -361,6 +367,24 @@ const router = createBrowserRouter([
           <Suspense fallback={<PageFallback />}>
             <ResetPasswordPage />
           </Suspense>
+        ),
+      },
+      {
+        path: 'sign-up',
+        element: (
+          <Suspense fallback={<PageFallback />}>
+            <SignUpPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'accounts/set-password',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<PageFallback />}>
+              <SetPasswordPage />
+            </Suspense>
+          </ProtectedRoute>
         ),
       },
       {

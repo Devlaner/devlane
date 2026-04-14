@@ -23,8 +23,9 @@ type User struct {
 	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 	IsActive     bool           `gorm:"column:is_active;default:true" json:"is_active"`
-	IsOnboarded  bool           `gorm:"column:is_onboarded;default:false" json:"is_onboarded"`
-	UserTimezone string         `gorm:"column:user_timezone;default:UTC" json:"user_timezone"`
+	IsOnboarded       bool           `gorm:"column:is_onboarded;default:false" json:"is_onboarded"`
+	IsPasswordAutoset bool           `gorm:"column:is_password_autoset;default:false" json:"is_password_autoset"`
+	UserTimezone      string         `gorm:"column:user_timezone;default:UTC" json:"user_timezone"`
 }
 
 func (User) TableName() string { return "users" }

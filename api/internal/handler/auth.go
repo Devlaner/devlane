@@ -1032,24 +1032,52 @@ func (h *AuthHandler) postSignUpDeps() postSignUpDeps {
 	}
 }
 
+// SetPassword lets OAuth/magic-code users set their first password.
+// POST /auth/set-password/
+func (h *AuthHandler) SetPassword(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	var body struct {
+		Password string `json:"password" binding:"required,min=8"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
+	if err := h.Auth.SetPassword(c.Request.Context(), user.ID, body.Password); err != nil {
+		if errors.Is(err, auth.ErrPasswordAlreadySet) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Password is already set. Use change-password instead."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set password"})
+		return
+	}
+	user.IsPasswordAutoset = false
+	c.JSON(http.StatusOK, userResponse(user))
+}
+
 func userResponse(u *model.User) gin.H {
 	if u == nil {
 		return gin.H{}
 	}
 	return gin.H{
-		"id":            u.ID.String(),
-		"email":         u.Email,
-		"username":      u.Username,
-		"first_name":    u.FirstName,
-		"last_name":     u.LastName,
-		"display_name":  u.DisplayName,
-		"avatar":        u.Avatar,
-		"cover_image":   u.CoverImage,
-		"is_active":     u.IsActive,
-		"is_onboarded":  u.IsOnboarded,
-		"date_joined":   u.DateJoined,
-		"created_at":    u.CreatedAt,
-		"updated_at":    u.UpdatedAt,
-		"user_timezone": u.UserTimezone,
+		"id":                  u.ID.String(),
+		"email":               u.Email,
+		"username":            u.Username,
+		"first_name":          u.FirstName,
+		"last_name":           u.LastName,
+		"display_name":        u.DisplayName,
+		"avatar":              u.Avatar,
+		"cover_image":         u.CoverImage,
+		"is_active":           u.IsActive,
+		"is_onboarded":        u.IsOnboarded,
+		"is_password_autoset": u.IsPasswordAutoset,
+		"date_joined":         u.DateJoined,
+		"created_at":          u.CreatedAt,
+		"updated_at":          u.UpdatedAt,
+		"user_timezone":       u.UserTimezone,
 	}
 }

@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Button, Input, Card, CardContent } from '../components/ui';
+import { Button, Input } from '../components/ui';
 import { authService } from '../services/authService';
 import { getApiErrorMessage } from '../api/client';
 import { CircleAlert, CircleCheck, ArrowLeft } from 'lucide-react';
+import { AuthPageShell } from '../components/auth/AuthPageShell';
 
 const RESEND_COOLDOWN_SECONDS = 30;
 
@@ -60,9 +61,8 @@ export function ForgotPasswordPage() {
   }, [email, cooldown]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
-      <Card className="w-full max-w-[22.5rem]">
-        <CardContent className="p-6">
+    <AuthPageShell mode="sign-in" enableSignup={true}>
+      <div className="w-full max-w-[22.5rem]">
           <Link
             to="/login"
             className="mb-4 flex items-center gap-1 text-xs text-(--txt-tertiary) hover:text-(--txt-primary)"
@@ -121,8 +121,7 @@ export function ForgotPasswordPage() {
               </Button>
             )}
           </form>
-        </CardContent>
-      </Card>
-    </div>
+      </div>
+    </AuthPageShell>
   );
 }

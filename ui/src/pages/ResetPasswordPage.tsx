@@ -1,8 +1,9 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Button, Input, Card, CardContent } from '../components/ui';
+import { Button, Input } from '../components/ui';
 import { authService } from '../services/authService';
 import { Eye, EyeOff, CircleAlert, CircleCheck } from 'lucide-react';
+import { AuthPageShell } from '../components/auth/AuthPageShell';
 
 interface PasswordCriteria {
   minLength: boolean;
@@ -108,9 +109,8 @@ export function ResetPasswordPage() {
 
   if (invalidToken) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
-        <Card className="w-full max-w-[22.5rem]">
-          <CardContent className="p-6 text-center">
+      <AuthPageShell mode="sign-in">
+        <div className="w-full max-w-[22.5rem] text-center">
             <CircleAlert className="mx-auto mb-3 h-10 w-10 text-red-400" />
             <h1 className="mb-2 text-xl font-semibold text-(--txt-primary)">Invalid reset link</h1>
             <p className="mb-4 text-sm text-(--txt-secondary)">
@@ -122,17 +122,15 @@ export function ResetPasswordPage() {
             >
               Request new reset link
             </Link>
-          </CardContent>
-        </Card>
-      </div>
+        </div>
+      </AuthPageShell>
     );
   }
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
-        <Card className="w-full max-w-[22.5rem]">
-          <CardContent className="p-6 text-center">
+      <AuthPageShell mode="sign-in">
+        <div className="w-full max-w-[22.5rem] text-center">
             <CircleCheck className="mx-auto mb-3 h-10 w-10 text-green-500" />
             <h1 className="mb-2 text-xl font-semibold text-(--txt-primary)">Password reset!</h1>
             <p className="mb-4 text-sm text-(--txt-secondary)">
@@ -141,16 +139,14 @@ export function ResetPasswordPage() {
             <Link to="/login" className="text-sm font-medium text-(--txt-accent) hover:underline">
               Go to sign in
             </Link>
-          </CardContent>
-        </Card>
-      </div>
+        </div>
+      </AuthPageShell>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
-      <Card className="w-full max-w-[22.5rem]">
-        <CardContent className="p-6">
+    <AuthPageShell mode="sign-in">
+      <div className="w-full max-w-[22.5rem]">
           <h1 className="mb-1 text-2xl font-semibold text-(--txt-primary)">Set a new password</h1>
           <p className="mb-6 text-sm text-(--txt-secondary)">
             Choose a strong password to secure your account.
@@ -228,8 +224,7 @@ export function ResetPasswordPage() {
               </Link>
             </p>
           </form>
-        </CardContent>
-      </Card>
-    </div>
+      </div>
+    </AuthPageShell>
   );
 }
