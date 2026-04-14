@@ -330,6 +330,8 @@ export interface AuthConfigResponse {
   is_gitlab_enabled: boolean;
   /** Present when at least one OAuth provider is enabled; use for redirect URIs in provider consoles. */
   oauth_redirect_base?: string;
+  /** SPA origin for provider “JavaScript origin” fields (from APP_BASE_URL / CORS). */
+  oauth_js_origin?: string;
 }
 
 /** POST /auth/magic-code/request/ */
@@ -380,6 +382,21 @@ export interface InstanceAuthSection {
   google?: boolean;
   github?: boolean;
   gitlab?: boolean;
+}
+
+/** OAuth app credentials (instance admin); secrets encrypted at rest */
+export interface InstanceOAuthSection {
+  google_client_id?: string;
+  google_client_secret?: string;
+  google_client_secret_set?: boolean;
+  github_client_id?: string;
+  github_client_secret?: string;
+  github_client_secret_set?: boolean;
+  gitlab_client_id?: string;
+  gitlab_client_secret?: string;
+  gitlab_client_secret_set?: boolean;
+  /** Self-managed GitLab base URL; empty defaults to https://gitlab.com */
+  gitlab_host?: string;
 }
 
 /** AI section shape (api_key is decrypted when returned from API) */

@@ -3,8 +3,7 @@ import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-do
 import { Button, Input, Card, CardContent } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
-import { getApiErrorMessage } from '../api/client';
-import { config } from '../config/env';
+import { API_BASE, getApiErrorMessage } from '../api/client';
 import { Eye, EyeOff, CircleAlert, CircleCheck } from 'lucide-react';
 
 type AuthStep = 'email' | 'password' | 'code';
@@ -137,9 +136,8 @@ export function LoginPage() {
 
   const handleOAuth = useCallback(
     (provider: string) => {
-      const base = config.apiBaseUrl || '';
       const nextPath = returnPath !== '/' ? `?next_path=${encodeURIComponent(returnPath)}` : '';
-      window.location.assign(`${base}/auth/${provider}/${nextPath}`);
+      window.location.assign(`${API_BASE}/auth/${provider}/${nextPath}`);
     },
     [returnPath],
   );
@@ -482,7 +480,8 @@ export function LoginPage() {
                   type="button"
                   className="absolute top-[2.1rem] right-3 text-(--txt-tertiary) hover:text-(--txt-primary)"
                   onClick={() => setShowPassword((v) => !v)}
-                  tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -505,7 +504,8 @@ export function LoginPage() {
                     type="button"
                     className="absolute top-[2.1rem] right-3 text-(--txt-tertiary) hover:text-(--txt-primary)"
                     onClick={() => setShowConfirm((v) => !v)}
-                    tabIndex={-1}
+                    aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
+                    aria-pressed={showConfirm}
                   >
                     {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>

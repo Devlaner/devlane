@@ -179,7 +179,8 @@ export function ResetPasswordPage() {
                 type="button"
                 className="absolute top-[2.1rem] right-3 text-(--txt-tertiary) hover:text-(--txt-primary)"
                 onClick={() => setShowPassword((v) => !v)}
-                tabIndex={-1}
+                aria-label={showPassword ? 'Hide new password' : 'Show new password'}
+                aria-pressed={showPassword}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -201,7 +202,8 @@ export function ResetPasswordPage() {
                 type="button"
                 className="absolute top-[2.1rem] right-3 text-(--txt-tertiary) hover:text-(--txt-primary)"
                 onClick={() => setShowConfirm((v) => !v)}
-                tabIndex={-1}
+                aria-label={showConfirm ? 'Hide confirm new password' : 'Show confirm new password'}
+                aria-pressed={showConfirm}
               >
                 {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>

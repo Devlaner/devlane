@@ -1,7 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import type { WorkspaceMemberApiResponse } from '../api/types';
-import { config } from '../config/env';
 
 /**
  * Merges Tailwind classes with clsx, resolving conflicts via tailwind-merge.
@@ -23,9 +22,8 @@ export function getImageUrl(url: string | null | undefined): string | null {
   ) {
     return t;
   }
-  const base = (config.apiBaseUrl ?? '').replace(/\/+$/, '');
   const path = t.startsWith('/') ? t : '/' + t;
-  return base + path;
+  return path;
 }
 
 /** Normalize UUID strings for comparison (case + hyphen insensitive). */

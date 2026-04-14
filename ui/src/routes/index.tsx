@@ -115,6 +115,21 @@ const InstanceAdminAuthenticationPage = lazy(() =>
     }),
   ),
 );
+const InstanceAdminAuthGooglePage = lazy(() =>
+  import('../pages/instance-admin').then((m) =>
+    page({ InstanceAdminAuthGooglePage: m.InstanceAdminAuthGooglePage }),
+  ),
+);
+const InstanceAdminAuthGitHubPage = lazy(() =>
+  import('../pages/instance-admin').then((m) =>
+    page({ InstanceAdminAuthGitHubPage: m.InstanceAdminAuthGitHubPage }),
+  ),
+);
+const InstanceAdminAuthGitLabPage = lazy(() =>
+  import('../pages/instance-admin').then((m) =>
+    page({ InstanceAdminAuthGitLabPage: m.InstanceAdminAuthGitLabPage }),
+  ),
+);
 const InstanceAdminAIPage = lazy(() =>
   import('../pages/instance-admin').then((m) =>
     page({ InstanceAdminAIPage: m.InstanceAdminAIPage }),
@@ -274,6 +289,30 @@ const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageFallback />}>
                 <InstanceAdminAuthenticationPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'authentication/google',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <InstanceAdminAuthGooglePage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'authentication/github',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <InstanceAdminAuthGitHubPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'authentication/gitlab',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <InstanceAdminAuthGitLabPage />
               </Suspense>
             ),
           },

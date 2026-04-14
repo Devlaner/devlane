@@ -1,14 +1,14 @@
 import axios, { type AxiosError } from 'axios';
-import { config } from '../config/env';
 
 /**
- * Shared Axios instance for all API requests.
- * - baseURL from config
- * - credentials included for cookie-based auth
- * - consistent error handling
+ * In dev the UI runs on :5173 (Vite) while the Go API runs on :8080.
+ * In production the UI is served by the same origin as the API,
+ * so an empty string keeps requests relative.
  */
+export const API_BASE = import.meta.env.DEV ? 'http://localhost:8080' : '';
+
 export const apiClient = axios.create({
-  baseURL: config.apiBaseUrl,
+  baseURL: API_BASE,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',

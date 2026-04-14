@@ -234,6 +234,7 @@ export function InviteSignUpPage() {
                   onClick={() => setShowPassword((p) => !p)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary) hover:text-(--txt-secondary)"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                 >
                   {showPassword ? <IconEyeOff /> : <IconEye />}
                 </button>
@@ -268,7 +269,10 @@ export function InviteSignUpPage() {
                   type="button"
                   onClick={() => setShowConfirmPassword((p) => !p)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary) hover:text-(--txt-secondary)"
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  aria-label={
+                    showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'
+                  }
+                  aria-pressed={showConfirmPassword}
                 >
                   {showConfirmPassword ? <IconEyeOff /> : <IconEye />}
                 </button>

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button, Input, Card, CardContent } from '../components/ui';
 import { authService } from '../services/authService';
+import { getApiErrorMessage } from '../api/client';
 import { CircleAlert, CircleCheck, ArrowLeft } from 'lucide-react';
 
 const RESEND_COOLDOWN_SECONDS = 30;
@@ -28,11 +29,13 @@ export function ForgotPasswordPage() {
       setError('');
       setIsSubmitting(true);
       try {
-        await authService.forgotPassword({ email });
+        const normalized = email.trim().toLowerCase();
+        await authService.forgotPassword({ email: normalized });
+        setEmail(normalized);
         setSuccess(true);
         setCooldown(RESEND_COOLDOWN_SECONDS);
-      } catch {
-        setError('Something went wrong. Please try again.');
+      } catch (err: unknown) {
+        setError(getApiErrorMessage(err) || 'Something went wrong. Please try again.');
       } finally {
         setIsSubmitting(false);
       }
@@ -45,10 +48,12 @@ export function ForgotPasswordPage() {
     setError('');
     setIsSubmitting(true);
     try {
-      await authService.forgotPassword({ email });
+      const normalized = email.trim().toLowerCase();
+      await authService.forgotPassword({ email: normalized });
+      setEmail(normalized);
       setCooldown(RESEND_COOLDOWN_SECONDS);
-    } catch {
-      setError('Something went wrong. Please try again.');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err) || 'Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

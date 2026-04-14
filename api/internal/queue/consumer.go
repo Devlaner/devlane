@@ -9,7 +9,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-// TaskHandler is called for each consumed message. Return nil to ack; non-nil to nack/requeue.
+// TaskHandler is called for each consumed message. Return nil to ack; non-nil triggers republish+ack with incremented x-retry-count (see handle).
 type TaskHandler func(ctx context.Context, queue string, body []byte) error
 
 // Consumer consumes from RabbitMQ queues and dispatches to handlers.
@@ -61,6 +61,8 @@ func (c *Consumer) Run(ctx context.Context, queues []string) error {
 func (c *Consumer) handle(ctx context.Context, queue string, d amqp.Delivery, h TaskHandler) {
 	err := h(ctx, queue, d.Body)
 	if err != nil {
+		// Retries: republish with incremented x-retry-count and Ack the original delivery.
+		// (Nack(requeue=true) would redeliver the same headers, so the count would never advance.)
 		retryCount := int64(0)
 		if d.Headers != nil {
 			if v, ok := d.Headers["x-retry-count"]; ok {

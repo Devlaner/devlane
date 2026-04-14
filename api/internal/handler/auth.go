@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"math/big"
 	"net/http"
+	"net/mail"
 	"strings"
 	"time"
 
@@ -23,19 +24,17 @@ import (
 )
 
 type AuthHandler struct {
-	Auth              *auth.Service
-	Settings          *store.InstanceSettingStore
-	Winv              *store.WorkspaceInviteStore
-	Ws                *store.WorkspaceStore
-	NotifPrefs        *store.UserNotificationPreferenceStore
-	ApiTokens         *store.ApiTokenStore
-	Queue             *queue.Publisher
-	Redis             *redis.Client
-	MagicCodeSecret   string
-	AppBaseURL        string
-	OAuthRedirectBase string // public API origin for OAuth callbacks (same as RedirectURI base)
-	Log               *slog.Logger
-	OAuthProviders    map[string]any
+	Auth            *auth.Service
+	Settings        *store.InstanceSettingStore
+	Winv            *store.WorkspaceInviteStore
+	Ws              *store.WorkspaceStore
+	NotifPrefs      *store.UserNotificationPreferenceStore
+	ApiTokens       *store.ApiTokenStore
+	Queue           *queue.Publisher
+	Redis           *redis.Client
+	MagicCodeSecret string
+	AppBaseURL      string
+	Log             *slog.Logger
 }
 
 type SignInRequest struct {
@@ -522,13 +521,19 @@ func (h *AuthHandler) InstanceAuthConfig(c *gin.Context) {
 	isMagicCodeEnabled := true
 	enableSignup := true
 	isSmtpConfigured := false
+	ctx := c.Request.Context()
+	googleAllowed := false
+	githubAllowed := false
+	gitlabAllowed := false
 	if h.Settings != nil {
-		ctx := c.Request.Context()
 		row, _ := h.Settings.Get(ctx, "auth")
 		if row != nil {
 			isPasswordEnabled = authBool(row.Value, "password", true)
 			isMagicCodeEnabled = authBool(row.Value, "magic_code", true)
 			enableSignup = authBool(row.Value, "allow_public_signup", true)
+			googleAllowed = authBool(row.Value, "google", false)
+			githubAllowed = authBool(row.Value, "github", false)
+			gitlabAllowed = authBool(row.Value, "gitlab", false)
 		}
 		emailRow, _ := h.Settings.Get(ctx, "email")
 		if emailRow != nil && emailRow.Value != nil {
@@ -536,12 +541,9 @@ func (h *AuthHandler) InstanceAuthConfig(c *gin.Context) {
 			isSmtpConfigured = strings.TrimSpace(host) != ""
 		}
 	}
-	var isGoogleEnabled, isGitHubEnabled, isGitLabEnabled bool
-	if h.OAuthProviders != nil {
-		_, isGoogleEnabled = h.OAuthProviders["google"]
-		_, isGitHubEnabled = h.OAuthProviders["github"]
-		_, isGitLabEnabled = h.OAuthProviders["gitlab"]
-	}
+	isGoogleEnabled := googleAllowed && oauthGoogleCredentialsReady(ctx, h.Settings)
+	isGitHubEnabled := githubAllowed && oauthGitHubCredentialsReady(ctx, h.Settings)
+	isGitLabEnabled := gitlabAllowed && oauthGitLabCredentialsReady(ctx, h.Settings)
 
 	out := gin.H{
 		"is_email_password_enabled": isPasswordEnabled,
@@ -552,8 +554,9 @@ func (h *AuthHandler) InstanceAuthConfig(c *gin.Context) {
 		"is_github_enabled":         isGitHubEnabled,
 		"is_gitlab_enabled":         isGitLabEnabled,
 	}
-	if isGoogleEnabled || isGitHubEnabled || isGitLabEnabled {
-		out["oauth_redirect_base"] = strings.TrimSuffix(strings.TrimSpace(h.OAuthRedirectBase), "/")
+	out["oauth_redirect_base"] = requestCallbackBase(c)
+	if s := strings.TrimSpace(h.AppBaseURL); s != "" {
+		out["oauth_js_origin"] = strings.TrimSuffix(s, "/")
 	}
 	c.JSON(http.StatusOK, out)
 }
@@ -591,13 +594,27 @@ func (h *AuthHandler) EmailCheck(c *gin.Context) {
 // POST /auth/forgot-password/
 func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 	var body struct {
-		Email string `json:"email" binding:"required,email"`
+		Email string `json:"email" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 	ctx := c.Request.Context()
+	if h.Settings != nil {
+		row, _ := h.Settings.Get(ctx, "auth")
+		if row != nil && !authBool(row.Value, "password", true) {
+			c.JSON(http.StatusOK, gin.H{"message": "If an account exists for that email, a reset link has been sent."})
+			return
+		}
+	}
+	body.Email = strings.TrimSpace(body.Email)
+	addr, err := mail.ParseAddress(body.Email)
+	if err != nil || addr.Address == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+	body.Email = strings.ToLower(addr.Address)
 	token, err := h.Auth.ForgotPassword(ctx, body.Email)
 	if err != nil {
 		h.log().Error("forgot password error", "error", err)
@@ -631,7 +648,15 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
 		return
 	}
-	if err := h.Auth.ResetPassword(c.Request.Context(), body.Token, body.NewPassword); err != nil {
+	ctx := c.Request.Context()
+	if h.Settings != nil {
+		row, _ := h.Settings.Get(ctx, "auth")
+		if row != nil && !authBool(row.Value, "password", true) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Password sign-in is disabled; password reset is not available."})
+			return
+		}
+	}
+	if err := h.Auth.ResetPassword(ctx, body.Token, body.NewPassword); err != nil {
 		if errors.Is(err, auth.ErrResetTokenInvalid) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired reset token"})
 			return

@@ -11,11 +11,12 @@ import (
 	"github.com/Devlaner/devlane/api/internal/auth"
 	"github.com/Devlaner/devlane/api/internal/middleware"
 	"github.com/Devlaner/devlane/api/internal/oauth"
+	"github.com/Devlaner/devlane/api/internal/store"
 	"github.com/gin-gonic/gin"
 )
 
 type OAuthHandler struct {
-	Providers  map[string]oauth.Provider
+	Settings   *store.InstanceSettingStore
 	Auth       *auth.Service
 	AppBaseURL string
 	Log        *slog.Logger
@@ -28,9 +29,35 @@ func (h *OAuthHandler) log() *slog.Logger {
 	return slog.Default()
 }
 
+// requestCallbackBase derives the OAuth callback base URL from the incoming
+// request, matching Plane's approach: scheme://host. This ensures the redirect
+// URI always points to the API server that handles the callback.
+func requestCallbackBase(c *gin.Context) string {
+	scheme := "http"
+	if c.Request.TLS != nil || strings.EqualFold(c.GetHeader("X-Forwarded-Proto"), "https") {
+		scheme = "https"
+	}
+	return scheme + "://" + c.Request.Host
+}
+
+func (h *OAuthHandler) resolveProvider(c *gin.Context, name string) (oauth.Provider, bool) {
+	ctx := c.Request.Context()
+	base := requestCallbackBase(c)
+	switch name {
+	case "google":
+		return BuildOAuthGoogleProvider(ctx, h.Settings, base)
+	case "github":
+		return BuildOAuthGitHubProvider(ctx, h.Settings, base)
+	case "gitlab":
+		return BuildOAuthGitLabProvider(ctx, h.Settings, base)
+	default:
+		return nil, false
+	}
+}
+
 func (h *OAuthHandler) Initiate(c *gin.Context) {
 	providerName := c.Param("provider")
-	provider, ok := h.Providers[providerName]
+	provider, ok := h.resolveProvider(c, providerName)
 	if !ok {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Unknown OAuth provider"})
 		return
@@ -55,7 +82,7 @@ func (h *OAuthHandler) Initiate(c *gin.Context) {
 
 func (h *OAuthHandler) Callback(c *gin.Context) {
 	providerName := c.Param("provider")
-	provider, ok := h.Providers[providerName]
+	provider, ok := h.resolveProvider(c, providerName)
 	if !ok {
 		h.redirectError(c, "Unknown OAuth provider")
 		return

@@ -18,7 +18,7 @@ import (
 
 // Allowed instance setting section keys (must match migration seed).
 var allowedSettingKeys = map[string]bool{
-	"general": true, "email": true, "auth": true, "ai": true, "image": true,
+	"general": true, "email": true, "auth": true, "oauth": true, "ai": true, "image": true,
 }
 
 // InstanceHandler serves instance setup (first-run); no auth required.
@@ -135,7 +135,7 @@ func (h *InstanceSettingsHandler) GetSettings(c *gin.Context) {
 		out[k] = decryptSectionSecrets(k, row.Value)
 	}
 	// Ensure all sections exist with defaults (migration seed may not have run if DB was created before seed)
-	for _, key := range []string{"general", "email", "auth", "ai", "image"} {
+	for _, key := range []string{"general", "email", "auth", "oauth", "ai", "image"} {
 		if _, ok := out[key]; !ok {
 			out[key] = defaultSettingValue(key)
 		}
@@ -152,6 +152,8 @@ func decryptSectionSecrets(sectionKey string, m model.JSONMap) model.JSONMap {
 	switch sectionKey {
 	case "email":
 		secretKeys = []string{"password"}
+	case "oauth":
+		secretKeys = []string{"google_client_secret", "github_client_secret", "gitlab_client_secret"}
 	case "ai":
 		secretKeys = []string{"api_key"}
 	case "image":
@@ -179,6 +181,12 @@ func defaultSettingValue(key string) model.JSONMap {
 		return model.JSONMap{"host": "", "port": "587", "sender_email": "", "security": "TLS", "username": "", "password_set": false}
 	case "auth":
 		return model.JSONMap{"allow_public_signup": true, "magic_code": true, "password": true, "google": false, "github": false, "gitlab": false}
+	case "oauth":
+		return model.JSONMap{
+			"google_client_id": "", "google_client_secret_set": false,
+			"github_client_id": "", "github_client_secret_set": false,
+			"gitlab_client_id": "", "gitlab_client_secret_set": false, "gitlab_host": "",
+		}
 	case "ai":
 		return model.JSONMap{"model": "gpt-4o-mini", "api_key_set": false}
 	case "image":
@@ -285,6 +293,35 @@ func (h *InstanceSettingsHandler) UpdateSetting(c *gin.Context) {
 			}
 			merged[k] = v
 		}
+		value = merged
+	}
+	if key == "oauth" {
+		existing, _ := h.Settings.Get(c.Request.Context(), "oauth")
+		merged := model.JSONMap{}
+		if existing != nil {
+			for k, v := range existing.Value {
+				merged[k] = v
+			}
+		}
+		secretField := func(field string, setKey string) {
+			if v, ok := req.Value[field]; ok {
+				if s, ok := v.(string); ok && s != "" {
+					merged[field] = crypto.EncryptOrPlain(s)
+					merged[setKey] = true
+				}
+			}
+		}
+		for k, v := range req.Value {
+			switch k {
+			case "google_client_secret", "github_client_secret", "gitlab_client_secret":
+				continue
+			default:
+				merged[k] = v
+			}
+		}
+		secretField("google_client_secret", "google_client_secret_set")
+		secretField("github_client_secret", "github_client_secret_set")
+		secretField("gitlab_client_secret", "gitlab_client_secret_set")
 		value = merged
 	}
 	if err := h.Settings.Upsert(c.Request.Context(), key, value); err != nil {

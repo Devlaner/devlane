@@ -2,13 +2,11 @@ package router
 
 import (
 	"log/slog"
-	"strings"
 
 	"github.com/Devlaner/devlane/api/internal/auth"
 	"github.com/Devlaner/devlane/api/internal/handler"
 	"github.com/Devlaner/devlane/api/internal/middleware"
 	"github.com/Devlaner/devlane/api/internal/minio"
-	"github.com/Devlaner/devlane/api/internal/oauth"
 	"github.com/Devlaner/devlane/api/internal/queue"
 	"github.com/Devlaner/devlane/api/internal/redis"
 	"github.com/Devlaner/devlane/api/internal/service"
@@ -25,17 +23,8 @@ type Config struct {
 	Queue           *queue.Publisher // optional: enqueue emails, webhooks
 	Minio           *minio.Client    // optional: file uploads (cover images, avatars, logos)
 	CORSAllowOrigin string           // optional: e.g. "http://localhost:5173" for UI dev
-	AppBaseURL      string           // optional: base URL for invite links; if empty, CORSAllowOrigin is used
-	APIPublicURL    string           // optional: public API origin for OAuth callbacks (see API_PUBLIC_URL)
+	AppBaseURL string // optional: base URL for invite links; if empty, CORSAllowOrigin is used
 
-	// OAuth providers (empty = disabled)
-	GoogleClientID     string
-	GoogleClientSecret string
-	GitHubClientID     string
-	GitHubClientSecret string
-	GitLabClientID     string
-	GitLabClientSecret string
-	GitLabHost         string
 	// MagicCodeSecret is the HMAC key for email login codes (see MAGIC_CODE_SECRET).
 	MagicCodeSecret string
 }
@@ -95,55 +84,18 @@ func New(cfg Config) *gin.Engine {
 		appBaseURL = cfg.CORSAllowOrigin
 	}
 
-	// OAuth redirect URIs must hit this API, not the SPA dev server. Use API_PUBLIC_URL when UI and API differ.
-	oauthCallbackBase := strings.TrimSuffix(strings.TrimSpace(cfg.APIPublicURL), "/")
-	if oauthCallbackBase == "" {
-		oauthCallbackBase = strings.TrimSuffix(appBaseURL, "/")
-	}
-
-	// OAuth providers
-	oauthProviders := make(map[string]oauth.Provider)
-	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" {
-		oauthProviders["google"] = oauth.NewGoogleProvider(oauth.ProviderConfig{
-			ClientID:     cfg.GoogleClientID,
-			ClientSecret: cfg.GoogleClientSecret,
-			RedirectURI:  oauthCallbackBase + "/auth/google/callback/",
-		})
-	}
-	if cfg.GitHubClientID != "" && cfg.GitHubClientSecret != "" {
-		oauthProviders["github"] = oauth.NewGitHubProvider(oauth.ProviderConfig{
-			ClientID:     cfg.GitHubClientID,
-			ClientSecret: cfg.GitHubClientSecret,
-			RedirectURI:  oauthCallbackBase + "/auth/github/callback/",
-		})
-	}
-	if cfg.GitLabClientID != "" && cfg.GitLabClientSecret != "" {
-		oauthProviders["gitlab"] = oauth.NewGitLabProvider(oauth.ProviderConfig{
-			ClientID:     cfg.GitLabClientID,
-			ClientSecret: cfg.GitLabClientSecret,
-			RedirectURI:  oauthCallbackBase + "/auth/gitlab/callback/",
-		}, cfg.GitLabHost)
-	}
-
-	oauthEnabled := make(map[string]any, len(oauthProviders))
-	for k, v := range oauthProviders {
-		oauthEnabled[k] = v
-	}
-
 	authHandler := &handler.AuthHandler{
-		Auth:              authSvc,
-		Settings:          instanceSettingStore,
-		Winv:              workspaceInviteStore,
-		Ws:                workspaceStore,
-		NotifPrefs:        userNotifPrefStore,
-		ApiTokens:         apiTokenStore,
-		Queue:             cfg.Queue,
-		Redis:             cfg.Redis,
-		MagicCodeSecret:   cfg.MagicCodeSecret,
-		AppBaseURL:        appBaseURL,
-		OAuthRedirectBase: oauthCallbackBase,
-		Log:               cfg.Log,
-		OAuthProviders:    oauthEnabled,
+		Auth:            authSvc,
+		Settings:        instanceSettingStore,
+		Winv:            workspaceInviteStore,
+		Ws:              workspaceStore,
+		NotifPrefs:      userNotifPrefStore,
+		ApiTokens:       apiTokenStore,
+		Queue:           cfg.Queue,
+		Redis:           cfg.Redis,
+		MagicCodeSecret: cfg.MagicCodeSecret,
+		AppBaseURL:      appBaseURL,
+		Log:             cfg.Log,
 	}
 	// Instance setup (no auth) — first-run flow; seeds general settings (instance_id, admin_email, instance_name)
 	instanceHandler := &handler.InstanceHandler{Auth: authSvc, Users: userStore, Settings: instanceSettingStore}
@@ -352,17 +304,15 @@ func New(cfg Config) *gin.Engine {
 		authGroup.POST("/magic-code/verify/", authHandler.MagicCodeVerify)
 	}
 
-	// OAuth routes (no auth required)
-	if len(oauthProviders) > 0 {
-		oauthHandler := &handler.OAuthHandler{
-			Providers:  oauthProviders,
-			Auth:       authSvc,
-			AppBaseURL: appBaseURL,
-			Log:        cfg.Log,
-		}
-		authGroup.GET("/:provider/", oauthHandler.Initiate)
-		authGroup.GET("/:provider/callback/", oauthHandler.Callback)
+	// OAuth routes (no auth required); provider resolved from instance settings at request time.
+	oauthHandler := &handler.OAuthHandler{
+		Settings:   instanceSettingStore,
+		Auth:       authSvc,
+		AppBaseURL: appBaseURL,
+		Log:        cfg.Log,
 	}
+	authGroup.GET("/:provider/", oauthHandler.Initiate)
+	authGroup.GET("/:provider/callback/", oauthHandler.Callback)
 
 	// Legacy /api/v1
 	v1 := r.Group("/api/v1")
