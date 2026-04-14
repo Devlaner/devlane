@@ -538,13 +538,14 @@ func (h *AuthHandler) InstanceAuthConfig(c *gin.Context) {
 	isGitLabEnabled := gitlabAllowed && oauthGitLabCredentialsReady(ctx, h.Settings)
 
 	out := gin.H{
-		"is_email_password_enabled": isPasswordEnabled,
-		"is_magic_code_enabled":     isMagicCodeEnabled,
-		"enable_signup":             enableSignup,
-		"is_smtp_configured":        isSmtpConfigured,
-		"is_google_enabled":         isGoogleEnabled,
-		"is_github_enabled":         isGitHubEnabled,
-		"is_gitlab_enabled":         isGitLabEnabled,
+		"is_email_password_enabled":      isPasswordEnabled,
+		"is_magic_code_enabled":          isMagicCodeEnabled,
+		"enable_signup":                  enableSignup,
+		"is_smtp_configured":             isSmtpConfigured,
+		"is_google_enabled":              isGoogleEnabled,
+		"is_github_enabled":              isGitHubEnabled,
+		"is_gitlab_enabled":              isGitLabEnabled,
+		"is_workspace_creation_disabled": isWorkspaceCreationRestricted(ctx, h.Settings),
 	}
 	out["oauth_redirect_base"] = requestCallbackBase(c)
 	if s := strings.TrimSpace(h.AppBaseURL); s != "" {

@@ -308,6 +308,7 @@ func New(cfg Config) *gin.Engine {
 	oauthHandler := &handler.OAuthHandler{
 		Settings:   instanceSettingStore,
 		Workspaces: workspaceStore,
+		Invites:    workspaceInviteStore,
 		Auth:       authSvc,
 		AppBaseURL: appBaseURL,
 		Log:        cfg.Log,

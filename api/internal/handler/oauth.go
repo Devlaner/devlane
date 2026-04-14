@@ -1,22 +1,18 @@
 package handler
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"log/slog"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"github.com/Devlaner/devlane/api/internal/auth"
 	"github.com/Devlaner/devlane/api/internal/middleware"
-	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/oauth"
 	"github.com/Devlaner/devlane/api/internal/store"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type OAuthHandler struct {
@@ -147,6 +143,30 @@ func (h *OAuthHandler) Callback(c *gin.Context) {
 		return
 	}
 
+	// Enforce allow_public_signup for new users — matches Plane's
+	// Adapter.__check_signup: if signup is disabled, only users with a
+	// pending workspace invite may register.
+	if !h.Auth.EmailExists(ctx, userInfo.Email) {
+		var allowPublicSignup = true
+		if h.Settings != nil {
+			row, _ := h.Settings.Get(ctx, "auth")
+			if row != nil {
+				allowPublicSignup = authBool(row.Value, "allow_public_signup", true)
+			}
+		}
+		if !allowPublicSignup {
+			hasInvite := false
+			if h.Invites != nil {
+				invites, _ := h.Invites.ListPendingByEmail(ctx, strings.TrimSpace(strings.ToLower(userInfo.Email)))
+				hasInvite = len(invites) > 0
+			}
+			if !hasInvite {
+				h.redirectError(c, "Sign-up is by invite only")
+				return
+			}
+		}
+	}
+
 	sessionKey, user, isNewUser, err := h.Auth.OAuthLogin(
 		ctx,
 		providerName,
@@ -166,7 +186,7 @@ func (h *OAuthHandler) Callback(c *gin.Context) {
 	}
 
 	if isNewUser {
-		h.ensureDefaultWorkspace(ctx, user)
+		postSignUpWorkflow(ctx, h.postSignUpDeps(), user)
 	}
 
 	http.SetCookie(c.Writer, &http.Cookie{
@@ -220,51 +240,12 @@ func sanitizeRedirectPath(path string) string {
 	return path
 }
 
-var defaultSlugRe = regexp.MustCompile(`[^a-z0-9-]+`)
-
-// ensureDefaultWorkspace creates a personal workspace for a newly signed-up
-// user so they land inside a workspace instead of an empty "no workspaces"
-// screen. Failures are logged but never block the sign-up.
-func (h *OAuthHandler) ensureDefaultWorkspace(ctx context.Context, u *model.User) {
-	if h.Workspaces == nil || u == nil {
-		return
-	}
-	list, _ := h.Workspaces.ListByMemberID(ctx, u.ID)
-	if len(list) > 0 {
-		return
-	}
-
-	displayName := strings.TrimSpace(u.DisplayName)
-	if displayName == "" {
-		displayName = strings.TrimSpace(u.FirstName)
-	}
-	if displayName == "" && u.Email != nil {
-		displayName = strings.Split(*u.Email, "@")[0]
-	}
-
-	wsName := displayName + "'s Workspace"
-	slug := strings.Trim(defaultSlugRe.ReplaceAllString(strings.ToLower(displayName), "-"), "-")
-	if slug == "" {
-		slug = "workspace"
-	}
-
-	exists, _ := h.Workspaces.SlugExists(ctx, slug, uuid.Nil)
-	if exists {
-		slug = slug + "-" + hex.EncodeToString([]byte{byte(u.ID[0]), byte(u.ID[1])})
-	}
-
-	w := &model.Workspace{
-		Name:        wsName,
-		Slug:        slug,
-		OwnerID:     u.ID,
-		CreatedByID: &u.ID,
-	}
-	if err := h.Workspaces.Create(ctx, w); err != nil {
-		h.log().Warn("auto-create workspace failed", "user_id", u.ID, "error", err)
-		return
-	}
-	m := &model.WorkspaceMember{WorkspaceID: w.ID, MemberID: u.ID, Role: 20}
-	if err := h.Workspaces.AddMember(ctx, m); err != nil {
-		h.log().Warn("auto-add workspace member failed", "user_id", u.ID, "error", err)
+func (h *OAuthHandler) postSignUpDeps() postSignUpDeps {
+	return postSignUpDeps{
+		Auth:       h.Auth,
+		Invites:    h.Invites,
+		Workspaces: h.Workspaces,
+		Settings:   h.Settings,
+		Logger:     h.Log,
 	}
 }

@@ -328,6 +328,7 @@ export interface AuthConfigResponse {
   is_google_enabled: boolean;
   is_github_enabled: boolean;
   is_gitlab_enabled: boolean;
+  is_workspace_creation_disabled: boolean;
   /** Present when at least one OAuth provider is enabled; use for redirect URIs in provider consoles. */
   oauth_redirect_base?: string;
   /** SPA origin for provider “JavaScript origin” fields (from APP_BASE_URL / CORS). */

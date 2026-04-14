@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { authService } from '../services/authService';
 import { instanceService } from '../services/instanceService';
 import { workspaceService } from '../services/workspaceService';
 
@@ -12,12 +13,15 @@ const PageFallback = () => (
 /**
  * At root "/", checks setup status then redirects:
  * - setup required → /setup
- * - authenticated → first workspace /:slug or "no workspaces" message
+ * - authenticated + has workspaces → first workspace /:slug
+ * - authenticated + no workspaces + creation allowed → /create-workspace
+ * - authenticated + no workspaces + creation restricted → info message
  */
 export function RootRedirect() {
   const [setupRequired, setSetupRequired] = useState<boolean | null>(null);
   const [firstSlug, setFirstSlug] = useState<string | null>(null);
   const [noWorkspaces, setNoWorkspaces] = useState(false);
+  const [wsCreationDisabled, setWsCreationDisabled] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,11 +34,17 @@ export function RootRedirect() {
           return;
         }
         setSetupRequired(false);
-        return workspaceService.list().then((list) => {
-          if (cancelled) return;
-          if (list.length > 0) setFirstSlug(list[0].slug);
-          else setNoWorkspaces(true);
-        });
+        return Promise.all([workspaceService.list(), authService.getAuthConfig()]).then(
+          ([list, config]) => {
+            if (cancelled) return;
+            if (list.length > 0) {
+              setFirstSlug(list[0].slug);
+            } else {
+              setWsCreationDisabled(config?.is_workspace_creation_disabled ?? false);
+              setNoWorkspaces(true);
+            }
+          },
+        );
       })
       .catch(() => {
         if (!cancelled) setSetupRequired(false);
@@ -54,11 +64,14 @@ export function RootRedirect() {
     return <Navigate to={`/${firstSlug}`} replace />;
   }
   if (noWorkspaces) {
+    if (!wsCreationDisabled) {
+      return <Navigate to="/create-workspace" replace />;
+    }
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <p className="text-(--txt-secondary)">You don’t have any workspaces yet.</p>
+        <p className="text-(--txt-secondary)">You don&apos;t have any workspaces yet.</p>
         <p className="text-sm text-(--txt-tertiary)">
-          Create one from instance admin or use the API to get started.
+          Workspace creation is restricted. Ask your instance admin to invite you to a workspace.
         </p>
       </div>
     );
