@@ -90,6 +90,10 @@ func (h *AuthHandler) SignIn(c *gin.Context) {
 	}
 	sessionKey, user, err := h.Auth.SignIn(c.Request.Context(), auth.SignInRequest{Email: req.Email, Password: req.Password})
 	if err != nil {
+		if errors.Is(err, auth.ErrUserDeactivated) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Your account has been deactivated. Please contact the administrator.", "error_code": "USER_ACCOUNT_DEACTIVATED"})
+			return
+		}
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 			return
@@ -858,6 +862,10 @@ func (h *AuthHandler) MagicCodeVerify(c *gin.Context) {
 
 	sessionKey, user, err := h.Auth.SessionForEmailUser(ctx, body.Email)
 	if err != nil {
+		if errors.Is(err, auth.ErrUserDeactivated) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Your account has been deactivated. Please contact the administrator.", "error_code": "USER_ACCOUNT_DEACTIVATED"})
+			return
+		}
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired code"})
 			return

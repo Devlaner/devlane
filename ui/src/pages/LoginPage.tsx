@@ -228,12 +228,8 @@ export function LoginPage() {
       setIsSubmitting(true);
       try {
         if (mode === 'sign-in') {
-          const success = await login(email, password);
-          if (success) {
-            navigate(returnPath, { replace: true });
-          } else {
-            setError('Invalid email or password.');
-          }
+          await login(email, password);
+          navigate(returnPath, { replace: true });
         } else {
           const user = await authService.signUp({
             email,

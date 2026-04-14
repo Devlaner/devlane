@@ -20,6 +20,7 @@ var (
 	ErrEmailTaken         = errors.New("email already registered")
 	ErrUsernameTaken      = errors.New("username already taken")
 	ErrResetTokenInvalid  = errors.New("invalid or expired reset token")
+	ErrUserDeactivated    = errors.New("user account deactivated")
 )
 
 const bcryptCost = 12
@@ -158,8 +159,11 @@ func (s *Service) SessionForEmailUser(ctx context.Context, email string) (sessio
 		}
 		return "", nil, err
 	}
-	if u == nil || !u.IsActive {
+	if u == nil {
 		return "", nil, ErrInvalidCredentials
+	}
+	if !u.IsActive {
+		return "", nil, ErrUserDeactivated
 	}
 	sessionKey, err = s.createSession(ctx, u.ID)
 	if err != nil {
@@ -181,7 +185,7 @@ func (s *Service) SignIn(ctx context.Context, req SignInRequest) (sessionKey str
 		return "", nil, err
 	}
 	if !u.IsActive {
-		return "", nil, ErrInvalidCredentials
+		return "", nil, ErrUserDeactivated
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(req.Password)); err != nil {
 		return "", nil, ErrInvalidCredentials
