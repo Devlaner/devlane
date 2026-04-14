@@ -25,6 +25,33 @@ var (
 
 const bcryptCost = 12
 
+var ErrPasswordTooWeak = errors.New("password does not meet complexity requirements")
+
+// ValidatePasswordStrength checks that a password meets complexity requirements:
+// min 8 chars, at least one uppercase, one lowercase, one digit, one special character.
+func ValidatePasswordStrength(pw string) error {
+	if len(pw) < 8 {
+		return ErrPasswordTooWeak
+	}
+	var hasUpper, hasLower, hasDigit, hasSpecial bool
+	for _, c := range pw {
+		switch {
+		case c >= 'A' && c <= 'Z':
+			hasUpper = true
+		case c >= 'a' && c <= 'z':
+			hasLower = true
+		case c >= '0' && c <= '9':
+			hasDigit = true
+		default:
+			hasSpecial = true
+		}
+	}
+	if !hasUpper || !hasLower || !hasDigit || !hasSpecial {
+		return ErrPasswordTooWeak
+	}
+	return nil
+}
+
 // dummyHash is used for timing-safe responses when a user is not found.
 var dummyHash []byte
 
@@ -59,6 +86,9 @@ type SignInRequest struct {
 }
 
 func (s *Service) SignUp(ctx context.Context, req SignUpRequest) (sessionKey string, user *model.User, err error) {
+	if err := ValidatePasswordStrength(req.Password); err != nil {
+		return "", nil, err
+	}
 	email := strings.TrimSpace(strings.ToLower(req.Email))
 	existing, _ := s.userStore.GetByEmail(ctx, email)
 	if existing != nil {
@@ -217,6 +247,9 @@ func (s *Service) UpdateProfile(ctx context.Context, u *model.User) error {
 }
 
 func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error {
+	if err := ValidatePasswordStrength(newPassword); err != nil {
+		return err
+	}
 	u, err := s.userStore.GetByID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -282,6 +315,9 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) (token strin
 // ResetPassword validates the reset token and sets a new password.
 // After a successful reset, ALL unused tokens for the user are invalidated.
 func (s *Service) ResetPassword(ctx context.Context, token, newPassword string) error {
+	if err := ValidatePasswordStrength(newPassword); err != nil {
+		return err
+	}
 	if s.resetTokenStore == nil {
 		return ErrResetTokenInvalid
 	}
@@ -309,6 +345,9 @@ var ErrPasswordAlreadySet = errors.New("password is already set")
 
 // SetPassword lets a user who signed up via OAuth/magic set their first password.
 func (s *Service) SetPassword(ctx context.Context, userID uuid.UUID, newPassword string) error {
+	if err := ValidatePasswordStrength(newPassword); err != nil {
+		return err
+	}
 	u, err := s.userStore.GetByID(ctx, userID)
 	if err != nil {
 		return err

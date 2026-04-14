@@ -516,15 +516,21 @@ export function LoginPage() {
                 </div>
               )}
 
-              {mode === 'sign-in' && isPasswordEnabled && isSmtpConfigured && (
+              {mode === 'sign-in' && isPasswordEnabled && (
                 <div className="text-right">
-                  <Link
-                    to="/forgot-password"
-                    state={{ email }}
-                    className="text-xs text-(--txt-accent) hover:underline"
-                  >
-                    Forgot your password?
-                  </Link>
+                  {isSmtpConfigured ? (
+                    <Link
+                      to="/forgot-password"
+                      state={{ email }}
+                      className="text-xs text-(--txt-accent) hover:underline"
+                    >
+                      Forgot your password?
+                    </Link>
+                  ) : (
+                    <span className="text-xs text-(--txt-tertiary)">
+                      To reset your password, ask your administrator to configure SMTP.
+                    </span>
+                  )}
                 </div>
               )}
 

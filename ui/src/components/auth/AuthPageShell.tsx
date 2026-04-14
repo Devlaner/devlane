@@ -30,6 +30,10 @@ export function AuthPageShell({ mode, enableSignup = true, children }: AuthPageS
       <div className="mt-10 flex w-full flex-grow flex-col items-center justify-center py-6">
         {children}
       </div>
+      <p className="mt-6 text-center text-xs text-(--txt-tertiary)">
+        By {mode === 'sign-in' ? 'signing in' : 'signing up'}, you agree to our terms of service and
+        privacy policy.
+      </p>
     </div>
   );
 }

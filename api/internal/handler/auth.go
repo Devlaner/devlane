@@ -156,6 +156,10 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 		LastName:  req.LastName,
 	})
 	if err != nil {
+		if errors.Is(err, auth.ErrPasswordTooWeak) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Password must contain at least 8 characters, one uppercase, one lowercase, one digit, and one special character."})
+			return
+		}
 		if errors.Is(err, auth.ErrEmailTaken) {
 			c.JSON(http.StatusConflict, gin.H{"error": "An account with this email already exists"})
 			return
@@ -258,6 +262,10 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 	if err := h.Auth.ChangePassword(c.Request.Context(), user.ID, req.CurrentPassword, req.NewPassword); err != nil {
+		if errors.Is(err, auth.ErrPasswordTooWeak) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Password must contain at least 8 characters, one uppercase, one lowercase, one digit, and one special character."})
+			return
+		}
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Current password is incorrect"})
 			return
@@ -654,6 +662,10 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		}
 	}
 	if err := h.Auth.ResetPassword(ctx, body.Token, body.NewPassword); err != nil {
+		if errors.Is(err, auth.ErrPasswordTooWeak) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Password must contain at least 8 characters, one uppercase, one lowercase, one digit, and one special character."})
+			return
+		}
 		if errors.Is(err, auth.ErrResetTokenInvalid) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired reset token"})
 			return
@@ -1056,6 +1068,10 @@ func (h *AuthHandler) SetPassword(c *gin.Context) {
 		return
 	}
 	if err := h.Auth.SetPassword(c.Request.Context(), user.ID, body.Password); err != nil {
+		if errors.Is(err, auth.ErrPasswordTooWeak) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Password must contain at least 8 characters, one uppercase, one lowercase, one digit, and one special character."})
+			return
+		}
 		if errors.Is(err, auth.ErrPasswordAlreadySet) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Password is already set. Use change-password instead."})
 			return
