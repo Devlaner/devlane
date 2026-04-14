@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/subtle"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/mail"
+	"regexp"
 	"strings"
 	"time"
 
@@ -167,6 +169,8 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 		if err := h.Ws.AddMember(ctx, &model.WorkspaceMember{WorkspaceID: inv.WorkspaceID, MemberID: user.ID, Role: inv.Role}); err != nil {
 			h.log().Error("failed to add member after signup", "error", err, "user_id", user.ID)
 		}
+	} else {
+		h.ensureDefaultWorkspace(ctx, user)
 	}
 	setSessionCookie(c, sessionKey)
 	c.JSON(http.StatusCreated, userResponse(user))
@@ -872,6 +876,8 @@ func (h *AuthHandler) MagicCodeVerify(c *gin.Context) {
 			if err := h.Ws.AddMember(ctx, &model.WorkspaceMember{WorkspaceID: inv.WorkspaceID, MemberID: user.ID, Role: inv.Role}); err != nil {
 				h.log().Error("failed to add member after magic signup", "error", err, "user_id", user.ID)
 			}
+		} else {
+			h.ensureDefaultWorkspace(ctx, user)
 		}
 		setSessionCookie(c, sessionKey)
 		c.JSON(http.StatusCreated, userResponse(user))
@@ -928,6 +934,55 @@ func clearSessionCookie(c *gin.Context) {
 		SameSite: http.SameSiteLaxMode,
 		Secure:   isSecureRequest(c),
 	})
+}
+
+var authSlugRe = regexp.MustCompile(`[^a-z0-9-]+`)
+
+// ensureDefaultWorkspace creates a personal workspace for a newly signed-up
+// user when they have no workspaces, so they land inside a workspace instead
+// of an empty "no workspaces" screen. Failures are logged but never block.
+func (h *AuthHandler) ensureDefaultWorkspace(ctx context.Context, u *model.User) {
+	if h.Ws == nil || u == nil {
+		return
+	}
+	list, _ := h.Ws.ListByMemberID(ctx, u.ID)
+	if len(list) > 0 {
+		return
+	}
+
+	displayName := strings.TrimSpace(u.DisplayName)
+	if displayName == "" {
+		displayName = strings.TrimSpace(u.FirstName)
+	}
+	if displayName == "" && u.Email != nil {
+		displayName = strings.Split(*u.Email, "@")[0]
+	}
+
+	wsName := displayName + "'s Workspace"
+	slug := strings.Trim(authSlugRe.ReplaceAllString(strings.ToLower(displayName), "-"), "-")
+	if slug == "" {
+		slug = "workspace"
+	}
+
+	exists, _ := h.Ws.SlugExists(ctx, slug, uuid.Nil)
+	if exists {
+		slug = slug + "-" + fmt.Sprintf("%x%x", u.ID[0], u.ID[1])
+	}
+
+	w := &model.Workspace{
+		Name:        wsName,
+		Slug:        slug,
+		OwnerID:     u.ID,
+		CreatedByID: &u.ID,
+	}
+	if err := h.Ws.Create(ctx, w); err != nil {
+		h.log().Warn("auto-create workspace failed", "user_id", u.ID, "error", err)
+		return
+	}
+	m := &model.WorkspaceMember{WorkspaceID: w.ID, MemberID: u.ID, Role: 20}
+	if err := h.Ws.AddMember(ctx, m); err != nil {
+		h.log().Warn("auto-add workspace member failed", "user_id", u.ID, "error", err)
+	}
 }
 
 func userResponse(u *model.User) gin.H {

@@ -1,22 +1,27 @@
 package handler
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"log/slog"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/Devlaner/devlane/api/internal/auth"
 	"github.com/Devlaner/devlane/api/internal/middleware"
+	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/oauth"
 	"github.com/Devlaner/devlane/api/internal/store"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type OAuthHandler struct {
 	Settings   *store.InstanceSettingStore
+	Workspaces *store.WorkspaceStore
 	Auth       *auth.Service
 	AppBaseURL string
 	Log        *slog.Logger
@@ -141,7 +146,7 @@ func (h *OAuthHandler) Callback(c *gin.Context) {
 		return
 	}
 
-	sessionKey, _, err := h.Auth.OAuthLogin(
+	sessionKey, user, isNewUser, err := h.Auth.OAuthLogin(
 		ctx,
 		providerName,
 		userInfo.ProviderID,
@@ -159,6 +164,10 @@ func (h *OAuthHandler) Callback(c *gin.Context) {
 		return
 	}
 
+	if isNewUser {
+		h.ensureDefaultWorkspace(ctx, user)
+	}
+
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     middleware.SessionCookieName,
 		Value:    sessionKey,
@@ -174,6 +183,16 @@ func (h *OAuthHandler) Callback(c *gin.Context) {
 		redirectURL = "/"
 	}
 	redirectURL = strings.TrimSuffix(redirectURL, "/") + sanitizeRedirectPath(nextPath)
+
+	// When the SPA runs on a different origin (dev mode), cross-origin cookies
+	// may not be sent back on the first XHR. Pass the session key in the URL
+	// fragment so the frontend can use it as a Bearer token. Fragments are never
+	// sent to servers, so this is safe for browser history / logs.
+	callbackOrigin := requestCallbackBase(c)
+	spaOrigin := strings.TrimSuffix(strings.TrimSpace(h.AppBaseURL), "/")
+	if spaOrigin != "" && !strings.EqualFold(spaOrigin, callbackOrigin) {
+		redirectURL += "#session_token=" + url.QueryEscape(sessionKey)
+	}
 
 	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 }
@@ -198,4 +217,53 @@ func sanitizeRedirectPath(path string) string {
 		return "/"
 	}
 	return path
+}
+
+var defaultSlugRe = regexp.MustCompile(`[^a-z0-9-]+`)
+
+// ensureDefaultWorkspace creates a personal workspace for a newly signed-up
+// user so they land inside a workspace instead of an empty "no workspaces"
+// screen. Failures are logged but never block the sign-up.
+func (h *OAuthHandler) ensureDefaultWorkspace(ctx context.Context, u *model.User) {
+	if h.Workspaces == nil || u == nil {
+		return
+	}
+	list, _ := h.Workspaces.ListByMemberID(ctx, u.ID)
+	if len(list) > 0 {
+		return
+	}
+
+	displayName := strings.TrimSpace(u.DisplayName)
+	if displayName == "" {
+		displayName = strings.TrimSpace(u.FirstName)
+	}
+	if displayName == "" && u.Email != nil {
+		displayName = strings.Split(*u.Email, "@")[0]
+	}
+
+	wsName := displayName + "'s Workspace"
+	slug := strings.Trim(defaultSlugRe.ReplaceAllString(strings.ToLower(displayName), "-"), "-")
+	if slug == "" {
+		slug = "workspace"
+	}
+
+	exists, _ := h.Workspaces.SlugExists(ctx, slug, uuid.Nil)
+	if exists {
+		slug = slug + "-" + hex.EncodeToString([]byte{byte(u.ID[0]), byte(u.ID[1])})
+	}
+
+	w := &model.Workspace{
+		Name:        wsName,
+		Slug:        slug,
+		OwnerID:     u.ID,
+		CreatedByID: &u.ID,
+	}
+	if err := h.Workspaces.Create(ctx, w); err != nil {
+		h.log().Warn("auto-create workspace failed", "user_id", u.ID, "error", err)
+		return
+	}
+	m := &model.WorkspaceMember{WorkspaceID: w.ID, MemberID: u.ID, Role: 20}
+	if err := h.Workspaces.AddMember(ctx, m); err != nil {
+		h.log().Warn("auto-add workspace member failed", "user_id", u.ID, "error", err)
+	}
 }

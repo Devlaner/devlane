@@ -290,22 +290,24 @@ func (s *Service) ResetPassword(ctx context.Context, token, newPassword string) 
 
 // OAuthLogin finds or creates a user from OAuth provider data and creates a session.
 // If the email already exists, it links the account; if not, it creates a new user.
-func (s *Service) OAuthLogin(ctx context.Context, provider, providerAccountID, email, firstName, lastName, avatar, accessToken, refreshToken, idToken string) (sessionKey string, user *model.User, err error) {
+// isNewUser is true when a brand-new user row was created (first-time sign-up).
+func (s *Service) OAuthLogin(ctx context.Context, provider, providerAccountID, email, firstName, lastName, avatar, accessToken, refreshToken, idToken string) (sessionKey string, user *model.User, isNewUser bool, err error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 	if email == "" {
-		return "", nil, errors.New("oauth: email is required")
+		return "", nil, false, errors.New("oauth: email is required")
 	}
 
 	u, err := s.userStore.GetByEmail(ctx, email)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return "", nil, err
+		return "", nil, false, err
 	}
 
 	if u != nil && !u.IsActive {
-		return "", nil, errors.New("account is deactivated")
+		return "", nil, false, errors.New("account is deactivated")
 	}
 
-	if u == nil {
+	newUser := u == nil
+	if newUser {
 		username := email
 		if at := strings.Index(email, "@"); at > 0 {
 			username = strings.ReplaceAll(email[:at], ".", "_")
@@ -327,7 +329,7 @@ func (s *Service) OAuthLogin(ctx context.Context, provider, providerAccountID, e
 			IsActive:    true,
 		}
 		if err := s.userStore.Create(ctx, u); err != nil {
-			return "", nil, err
+			return "", nil, false, err
 		}
 	}
 
@@ -346,9 +348,9 @@ func (s *Service) OAuthLogin(ctx context.Context, provider, providerAccountID, e
 
 	sessionKey, err = s.createSession(ctx, u.ID)
 	if err != nil {
-		return "", nil, err
+		return "", nil, false, err
 	}
-	return sessionKey, u, nil
+	return sessionKey, u, newUser, nil
 }
 
 func (s *Service) createSession(ctx context.Context, userID uuid.UUID) (string, error) {

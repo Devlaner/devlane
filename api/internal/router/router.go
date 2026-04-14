@@ -307,6 +307,7 @@ func New(cfg Config) *gin.Engine {
 	// OAuth routes (no auth required); provider resolved from instance settings at request time.
 	oauthHandler := &handler.OAuthHandler{
 		Settings:   instanceSettingStore,
+		Workspaces: workspaceStore,
 		Auth:       authSvc,
 		AppBaseURL: appBaseURL,
 		Log:        cfg.Log,
