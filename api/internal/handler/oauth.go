@@ -22,6 +22,7 @@ import (
 type OAuthHandler struct {
 	Settings   *store.InstanceSettingStore
 	Workspaces *store.WorkspaceStore
+	Invites    *store.WorkspaceInviteStore
 	Auth       *auth.Service
 	AppBaseURL string
 	Log        *slog.Logger

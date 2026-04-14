@@ -159,19 +159,7 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Sign up failed"})
 		return
 	}
-	if inv != nil && h.Winv != nil && h.Ws != nil {
-		now := time.Now()
-		inv.Accepted = true
-		inv.RespondedAt = &now
-		if err := h.Winv.Update(ctx, inv); err != nil {
-			h.log().Error("failed to mark invite accepted", "error", err, "invite_id", inv.ID)
-		}
-		if err := h.Ws.AddMember(ctx, &model.WorkspaceMember{WorkspaceID: inv.WorkspaceID, MemberID: user.ID, Role: inv.Role}); err != nil {
-			h.log().Error("failed to add member after signup", "error", err, "user_id", user.ID)
-		}
-	} else {
-		h.ensureDefaultWorkspace(ctx, user)
-	}
+	postSignUpWorkflow(ctx, h.postSignUpDeps(), user)
 	setSessionCookie(c, sessionKey)
 	c.JSON(http.StatusCreated, userResponse(user))
 }
@@ -866,19 +854,7 @@ func (h *AuthHandler) MagicCodeVerify(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Sign up failed"})
 			return
 		}
-		if inv != nil && h.Winv != nil && h.Ws != nil {
-			now := time.Now()
-			inv.Accepted = true
-			inv.RespondedAt = &now
-			if err := h.Winv.Update(ctx, inv); err != nil {
-				h.log().Error("failed to mark invite accepted (magic)", "error", err, "invite_id", inv.ID)
-			}
-			if err := h.Ws.AddMember(ctx, &model.WorkspaceMember{WorkspaceID: inv.WorkspaceID, MemberID: user.ID, Role: inv.Role}); err != nil {
-				h.log().Error("failed to add member after magic signup", "error", err, "user_id", user.ID)
-			}
-		} else {
-			h.ensureDefaultWorkspace(ctx, user)
-		}
+		postSignUpWorkflow(ctx, h.postSignUpDeps(), user)
 		setSessionCookie(c, sessionKey)
 		c.JSON(http.StatusCreated, userResponse(user))
 		return
@@ -936,20 +912,54 @@ func clearSessionCookie(c *gin.Context) {
 	})
 }
 
-var authSlugRe = regexp.MustCompile(`[^a-z0-9-]+`)
+var autoSlugRe = regexp.MustCompile(`[^a-z0-9-]+`)
 
-// ensureDefaultWorkspace creates a personal workspace for a newly signed-up
-// user when they have no workspaces, so they land inside a workspace instead
-// of an empty "no workspaces" screen. Failures are logged but never block.
-func (h *AuthHandler) ensureDefaultWorkspace(ctx context.Context, u *model.User) {
-	if h.Ws == nil || u == nil {
-		return
-	}
-	list, _ := h.Ws.ListByMemberID(ctx, u.ID)
-	if len(list) > 0 {
+// postSignUpWorkflow mirrors Plane's post_user_auth_workflow: auto-accepts all
+// pending workspace invites for the user's email, creates a default workspace
+// when the user ends up with none and workspace creation is allowed, and marks
+// is_onboarded. All failures are logged but never block the sign-up.
+func postSignUpWorkflow(ctx context.Context, deps postSignUpDeps, u *model.User) {
+	if u == nil {
 		return
 	}
 
+	// 1. Auto-accept every pending workspace invite for this email.
+	if deps.Invites != nil && u.Email != nil {
+		invites, _ := deps.Invites.ListPendingByEmail(ctx, strings.TrimSpace(strings.ToLower(*u.Email)))
+		now := time.Now()
+		for i := range invites {
+			invites[i].Accepted = true
+			invites[i].RespondedAt = &now
+			_ = deps.Invites.Update(ctx, &invites[i])
+			if deps.Workspaces != nil {
+				_ = deps.Workspaces.AddMember(ctx, &model.WorkspaceMember{
+					WorkspaceID: invites[i].WorkspaceID,
+					MemberID:    u.ID,
+					Role:        invites[i].Role,
+				})
+			}
+		}
+	}
+
+	// 2. If user still has no workspaces and workspace creation is allowed,
+	//    create a personal default workspace.
+	if deps.Workspaces != nil {
+		list, _ := deps.Workspaces.ListByMemberID(ctx, u.ID)
+		if len(list) == 0 && !isWorkspaceCreationRestricted(ctx, deps.Settings) {
+			createDefaultWorkspace(ctx, deps, u)
+		}
+	}
+
+	// 3. Mark user as onboarded.
+	if deps.Auth != nil && !u.IsOnboarded {
+		u.IsOnboarded = true
+		if err := deps.Auth.UpdateUser(ctx, u); err != nil {
+			deps.log().Warn("failed to set is_onboarded", "user_id", u.ID, "error", err)
+		}
+	}
+}
+
+func createDefaultWorkspace(ctx context.Context, deps postSignUpDeps, u *model.User) {
 	displayName := strings.TrimSpace(u.DisplayName)
 	if displayName == "" {
 		displayName = strings.TrimSpace(u.FirstName)
@@ -959,12 +969,12 @@ func (h *AuthHandler) ensureDefaultWorkspace(ctx context.Context, u *model.User)
 	}
 
 	wsName := displayName + "'s Workspace"
-	slug := strings.Trim(authSlugRe.ReplaceAllString(strings.ToLower(displayName), "-"), "-")
+	slug := strings.Trim(autoSlugRe.ReplaceAllString(strings.ToLower(displayName), "-"), "-")
 	if slug == "" {
 		slug = "workspace"
 	}
 
-	exists, _ := h.Ws.SlugExists(ctx, slug, uuid.Nil)
+	exists, _ := deps.Workspaces.SlugExists(ctx, slug, uuid.Nil)
 	if exists {
 		slug = slug + "-" + fmt.Sprintf("%x%x", u.ID[0], u.ID[1])
 	}
@@ -975,13 +985,54 @@ func (h *AuthHandler) ensureDefaultWorkspace(ctx context.Context, u *model.User)
 		OwnerID:     u.ID,
 		CreatedByID: &u.ID,
 	}
-	if err := h.Ws.Create(ctx, w); err != nil {
-		h.log().Warn("auto-create workspace failed", "user_id", u.ID, "error", err)
+	if err := deps.Workspaces.Create(ctx, w); err != nil {
+		deps.log().Warn("auto-create workspace failed", "user_id", u.ID, "error", err)
 		return
 	}
 	m := &model.WorkspaceMember{WorkspaceID: w.ID, MemberID: u.ID, Role: 20}
-	if err := h.Ws.AddMember(ctx, m); err != nil {
-		h.log().Warn("auto-add workspace member failed", "user_id", u.ID, "error", err)
+	if err := deps.Workspaces.AddMember(ctx, m); err != nil {
+		deps.log().Warn("auto-add workspace member failed", "user_id", u.ID, "error", err)
+	}
+}
+
+func isWorkspaceCreationRestricted(ctx context.Context, settings *store.InstanceSettingStore) bool {
+	if settings == nil {
+		return false
+	}
+	row, _ := settings.Get(ctx, "general")
+	if row == nil {
+		return false
+	}
+	if v, ok := row.Value["only_admin_can_create_workspace"]; ok {
+		if b, ok := v.(bool); ok {
+			return b
+		}
+	}
+	return false
+}
+
+type postSignUpDeps struct {
+	Auth       *auth.Service
+	Invites    *store.WorkspaceInviteStore
+	Workspaces *store.WorkspaceStore
+	Settings   *store.InstanceSettingStore
+	Logger     *slog.Logger
+}
+
+func (d postSignUpDeps) log() *slog.Logger {
+	if d.Logger != nil {
+		return d.Logger
+	}
+	return slog.Default()
+}
+
+func (h *AuthHandler) postSignUpDeps() postSignUpDeps {
+	return postSignUpDeps{
+		Auth:       h.Auth,
+		Invites:    h.Winv,
+		Workspaces: h.Ws,
+		Settings:   h.Settings,
+		Logger:     h.Log,
 	}
 }
 

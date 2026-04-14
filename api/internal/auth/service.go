@@ -94,6 +94,18 @@ func (s *Service) SignUp(ctx context.Context, req SignUpRequest) (sessionKey str
 	return sessionKey, u, nil
 }
 
+// EmailExists returns true if a user with the given email is registered.
+func (s *Service) EmailExists(ctx context.Context, email string) bool {
+	email = strings.TrimSpace(strings.ToLower(email))
+	u, err := s.userStore.GetByEmail(ctx, email)
+	return err == nil && u != nil
+}
+
+// UpdateUser persists changes to a user row (e.g. setting is_onboarded).
+func (s *Service) UpdateUser(ctx context.Context, u *model.User) error {
+	return s.userStore.Update(ctx, u)
+}
+
 // SignUpMagic creates a new user with a random password (same pattern as OAuth) and starts a session.
 func (s *Service) SignUpMagic(ctx context.Context, email, firstName, lastName string) (sessionKey string, user *model.User, err error) {
 	email = strings.TrimSpace(strings.ToLower(email))
