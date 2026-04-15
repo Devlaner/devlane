@@ -333,6 +333,9 @@ func (s *Service) ResetPassword(ctx context.Context, token, newPassword string) 
 	if err != nil {
 		return ErrResetTokenInvalid
 	}
+	if !u.IsActive {
+		return ErrResetTokenInvalid
+	}
 	u.Password = string(hash)
 	if err := s.userStore.Update(ctx, u); err != nil {
 		return err

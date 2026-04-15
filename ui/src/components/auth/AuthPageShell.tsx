@@ -15,9 +15,7 @@ export function AuthPageShell({ mode, enableSignup = true, children }: AuthPageS
         </Link>
         {enableSignup && (
           <div className="flex items-center gap-2 text-sm text-(--txt-secondary)">
-            <span>
-              {mode === 'sign-in' ? 'New to Devlane?' : 'Already have an account?'}
-            </span>
+            <span>{mode === 'sign-in' ? 'New to Devlane?' : 'Already have an account?'}</span>
             <Link
               to={mode === 'sign-in' ? '/sign-up' : '/login'}
               className="font-semibold text-(--txt-accent) hover:underline"

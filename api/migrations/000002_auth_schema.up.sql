@@ -18,16 +18,29 @@ CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tok
 
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS token_expires_at TIMESTAMPTZ;
 
-UPDATE accounts
-SET token_expires_at = access_token_expired_at
-WHERE token_expires_at IS NULL AND access_token_expired_at IS NOT NULL;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'accounts' AND column_name = 'access_token_expired_at'
+  ) THEN
+    UPDATE accounts
+    SET token_expires_at = access_token_expired_at
+    WHERE token_expires_at IS NULL AND access_token_expired_at IS NOT NULL;
+  END IF;
 
-UPDATE accounts
-SET token_expires_at = refresh_token_expired_at
-WHERE token_expires_at IS NULL AND refresh_token_expired_at IS NOT NULL;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'accounts' AND column_name = 'refresh_token_expired_at'
+  ) THEN
+    UPDATE accounts
+    SET token_expires_at = refresh_token_expired_at
+    WHERE token_expires_at IS NULL AND refresh_token_expired_at IS NOT NULL;
+  END IF;
+END $$;
 
-ALTER TABLE accounts DROP COLUMN access_token_expired_at;
-ALTER TABLE accounts DROP COLUMN refresh_token_expired_at;
+ALTER TABLE accounts DROP COLUMN IF EXISTS access_token_expired_at;
+ALTER TABLE accounts DROP COLUMN IF EXISTS refresh_token_expired_at;
 
 ALTER TABLE accounts ALTER COLUMN access_token SET DEFAULT '';
 ALTER TABLE accounts ALTER COLUMN access_token DROP NOT NULL;

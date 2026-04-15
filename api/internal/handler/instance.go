@@ -295,6 +295,24 @@ func (h *InstanceSettingsHandler) UpdateSetting(c *gin.Context) {
 		}
 		value = merged
 	}
+	if key == "auth" {
+		// Merge with existing so per-provider pages (Google/GitHub/GitLab) do not wipe other flags.
+		existing, _ := h.Settings.Get(c.Request.Context(), "auth")
+		merged := model.JSONMap{}
+		if existing != nil {
+			for k, v := range existing.Value {
+				merged[k] = v
+			}
+		} else {
+			for k, v := range defaultSettingValue("auth") {
+				merged[k] = v
+			}
+		}
+		for k, v := range req.Value {
+			merged[k] = v
+		}
+		value = merged
+	}
 	if key == "oauth" {
 		existing, _ := h.Settings.Get(c.Request.Context(), "oauth")
 		merged := model.JSONMap{}

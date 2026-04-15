@@ -63,6 +63,9 @@ func authBool(v model.JSONMap, key string, defaultVal bool) bool {
 	if b, ok := x.(bool); ok {
 		return b
 	}
+	if f, ok := x.(float64); ok {
+		return f != 0
+	}
 	return defaultVal
 }
 

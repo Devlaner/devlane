@@ -118,13 +118,7 @@ export function SetPasswordPage() {
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input
-            label="Email"
-            type="email"
-            value={user?.email ?? ''}
-            disabled
-            autoComplete="off"
-          />
+          <Input label="Email" type="email" value={user?.email ?? ''} disabled autoComplete="off" />
 
           <div className="relative">
             <Input

@@ -37,6 +37,7 @@ func newTestService(t *testing.T) (*Service, *gorm.DB) {
 			deleted_at DATETIME,
 			is_active INTEGER DEFAULT 1,
 			is_onboarded INTEGER DEFAULT 0,
+			is_password_autoset INTEGER DEFAULT 0,
 			user_timezone TEXT DEFAULT 'UTC'
 		);`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);`,
@@ -199,6 +200,38 @@ func TestForgotResetPassword(t *testing.T) {
 	// Token is no longer valid (invalidate-for-user)
 	if err := svc.ResetPassword(ctx, token, "AnotherP@ssw0rd!"); err == nil {
 		t.Fatalf("expected reused token to fail")
+	}
+}
+
+func TestResetPasswordInactiveUser(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	svc, db := newTestService(t)
+
+	_, user, err := svc.SignUp(ctx, SignUpRequest{
+		Email:    "inactive-reset@example.com",
+		Password: "OldP@ssw0rd!",
+	})
+	if err != nil {
+		t.Fatalf("SignUp: %v", err)
+	}
+
+	token, err := svc.ForgotPassword(ctx, "inactive-reset@example.com")
+	if err != nil {
+		t.Fatalf("ForgotPassword: %v", err)
+	}
+	if token == "" {
+		t.Fatalf("expected non-empty reset token")
+	}
+
+	if err := db.Exec("UPDATE users SET is_active = 0 WHERE id = ?", user.ID.String()).Error; err != nil {
+		t.Fatalf("deactivate user: %v", err)
+	}
+
+	err = svc.ResetPassword(ctx, token, "NewP@ssw0rd!")
+	if !errors.Is(err, ErrResetTokenInvalid) {
+		t.Fatalf("expected ErrResetTokenInvalid, got %v", err)
 	}
 }
 

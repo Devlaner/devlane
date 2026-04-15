@@ -61,8 +61,8 @@ func (c *Consumer) Run(ctx context.Context, queues []string) error {
 func (c *Consumer) handle(ctx context.Context, queue string, d amqp.Delivery, h TaskHandler) {
 	err := h(ctx, queue, d.Body)
 	if err != nil {
-		// Retries: republish with incremented x-retry-count and Ack the original delivery.
-		// (Nack(requeue=true) would redeliver the same headers, so the count would never advance.)
+		// Retries: republish with incremented x-retry-count, then Ack the original delivery.
+		// (Nack(requeue=true) on handler failure would redeliver the same headers, so the count would never advance.)
 		retryCount := int64(0)
 		if d.Headers != nil {
 			if v, ok := d.Headers["x-retry-count"]; ok {
@@ -94,8 +94,14 @@ func (c *Consumer) handle(ctx context.Context, queue string, d amqp.Delivery, h 
 			Body:         d.Body,
 			Headers:      headers,
 		})
-		if pubErr != nil && c.log != nil {
-			c.log.Error("failed to republish for retry", "queue", queue, "error", pubErr)
+		if pubErr != nil {
+			if c.log != nil {
+				c.log.Error("failed to republish for retry", "queue", queue, "error", pubErr)
+			}
+			if nackErr := d.Nack(false, true); nackErr != nil && c.log != nil {
+				c.log.Error("nack after republish failure", "queue", queue, "error", nackErr)
+			}
+			return
 		}
 		_ = d.Ack(false)
 		return
