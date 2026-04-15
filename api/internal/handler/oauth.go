@@ -85,7 +85,15 @@ func (h *OAuthHandler) Initiate(c *gin.Context) {
 		sessionVal = state + "|" + nextPath
 	}
 
-	c.SetCookie("oauth_state", sessionVal, 600, "/", "", isSecureRequest(c), true)
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "oauth_state",
+		Value:    sessionVal,
+		Path:     "/",
+		MaxAge:   600,
+		HttpOnly: true,
+		Secure:   isSecureRequest(c),
+		SameSite: http.SameSiteLaxMode,
+	})
 	c.Redirect(http.StatusTemporaryRedirect, provider.AuthURL(state))
 }
 
@@ -128,7 +136,15 @@ func (h *OAuthHandler) Callback(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("oauth_state", "", -1, "/", "", isSecureRequest(c), true)
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "oauth_state",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   isSecureRequest(c),
+		SameSite: http.SameSiteLaxMode,
+	})
 
 	ctx := c.Request.Context()
 	tokenData, err := provider.Exchange(ctx, code)
