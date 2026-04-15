@@ -1,1 +1,0 @@
-ALTER TABLE users ADD COLUMN IF NOT EXISTS is_password_autoset BOOLEAN NOT NULL DEFAULT false;
