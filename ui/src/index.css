@@ -84,20 +84,11 @@
 }
 
 /* Sticky checklist: checked items get placeholder-colored text (matches Plane) */
-.sticky-note-editor-content ul[data-type='taskList'] li[data-checked='true'] > div > p {
-  color: var(--txt-placeholder);
-  transition: color 0.2s ease;
-}
-
 .sticky-note-editor-content ul[data-type='taskList'] li[data-checked='true'] > div {
   color: var(--txt-placeholder);
-  transition: color 0.2s ease;
 }
 
+.sticky-note-editor-content ul[data-type='taskList'] li > div,
 .sticky-note-editor-content ul[data-type='taskList'] li > div > p {
-  transition: color 0.2s ease;
-}
-
-.sticky-note-editor-content ul[data-type='taskList'] li > div {
   transition: color 0.2s ease;
 }
