@@ -36,7 +36,7 @@ func (g *GoogleProvider) AuthURL(state string) string {
 	return googleAuthURL + "?" + params.Encode()
 }
 
-func (g *GoogleProvider) Exchange(_ context.Context, code string) (*TokenData, error) {
+func (g *GoogleProvider) Exchange(ctx context.Context, code string) (*TokenData, error) {
 	data := url.Values{
 		"code":          {code},
 		"client_id":     {g.cfg.ClientID},
@@ -44,7 +44,7 @@ func (g *GoogleProvider) Exchange(_ context.Context, code string) (*TokenData, e
 		"redirect_uri":  {g.cfg.RedirectURI},
 		"grant_type":    {"authorization_code"},
 	}
-	resp, err := httpPostForm(googleTokenURL, data, nil)
+	resp, err := httpPostForm(ctx, googleTokenURL, data, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -56,8 +56,8 @@ func (g *GoogleProvider) Exchange(_ context.Context, code string) (*TokenData, e
 	return td, nil
 }
 
-func (g *GoogleProvider) GetUserInfo(_ context.Context, token *TokenData) (*UserInfo, error) {
-	resp, err := httpGetJSON(googleUserURL, token.AccessToken)
+func (g *GoogleProvider) GetUserInfo(ctx context.Context, token *TokenData) (*UserInfo, error) {
+	resp, err := httpGetJSON(ctx, googleUserURL, token.AccessToken)
 	if err != nil {
 		return nil, err
 	}

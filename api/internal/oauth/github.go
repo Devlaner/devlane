@@ -37,14 +37,14 @@ func (g *GitHubProvider) AuthURL(state string) string {
 	return githubAuthURL + "?" + params.Encode()
 }
 
-func (g *GitHubProvider) Exchange(_ context.Context, code string) (*TokenData, error) {
+func (g *GitHubProvider) Exchange(ctx context.Context, code string) (*TokenData, error) {
 	data := url.Values{
 		"client_id":     {g.cfg.ClientID},
 		"client_secret": {g.cfg.ClientSecret},
 		"code":          {code},
 		"redirect_uri":  {g.cfg.RedirectURI},
 	}
-	resp, err := httpPostForm(githubTokenURL, data, map[string]string{"Accept": "application/json"})
+	resp, err := httpPostForm(ctx, githubTokenURL, data, map[string]string{"Accept": "application/json"})
 	if err != nil {
 		return nil, err
 	}
@@ -55,14 +55,14 @@ func (g *GitHubProvider) Exchange(_ context.Context, code string) (*TokenData, e
 	return td, nil
 }
 
-func (g *GitHubProvider) GetUserInfo(_ context.Context, token *TokenData) (*UserInfo, error) {
-	resp, err := httpGetJSON(githubUserURL, token.AccessToken)
+func (g *GitHubProvider) GetUserInfo(ctx context.Context, token *TokenData) (*UserInfo, error) {
+	resp, err := httpGetJSON(ctx, githubUserURL, token.AccessToken)
 	if err != nil {
 		return nil, err
 	}
 	email := strVal(resp, "email")
 	if email == "" {
-		email, _ = g.fetchPrimaryEmail(token.AccessToken)
+		email, _ = g.fetchPrimaryEmail(ctx, token.AccessToken)
 	}
 	return &UserInfo{
 		Email:      email,
@@ -72,14 +72,14 @@ func (g *GitHubProvider) GetUserInfo(_ context.Context, token *TokenData) (*User
 	}, nil
 }
 
-func (g *GitHubProvider) fetchPrimaryEmail(accessToken string) (string, error) {
-	req, err := http.NewRequest("GET", githubEmailURL, nil)
+func (g *GitHubProvider) fetchPrimaryEmail(ctx context.Context, accessToken string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, githubEmailURL, nil)
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Accept", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := oauthHTTPClient.Do(req)
 	if err != nil {
 		return "", err
 	}

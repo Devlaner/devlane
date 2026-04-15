@@ -20,6 +20,9 @@ var (
 	ErrUserInfo              = errors.New("oauth user info fetch failed")
 )
 
+// oauthHTTPClient bounds OAuth HTTP latency; requests also respect ctx cancellation.
+var oauthHTTPClient = &http.Client{Timeout: 30 * time.Second}
+
 type UserInfo struct {
 	Email      string
 	FirstName  string
@@ -41,8 +44,8 @@ type ProviderConfig struct {
 	RedirectURI  string
 }
 
-func httpPostForm(tokenURL string, data url.Values, extraHeaders map[string]string) (map[string]interface{}, error) {
-	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
+func httpPostForm(ctx context.Context, tokenURL string, data url.Values, extraHeaders map[string]string) (map[string]interface{}, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +53,7 @@ func httpPostForm(tokenURL string, data url.Values, extraHeaders map[string]stri
 	for k, v := range extraHeaders {
 		req.Header.Set(k, v)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := oauthHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -66,14 +69,14 @@ func httpPostForm(tokenURL string, data url.Values, extraHeaders map[string]stri
 	return result, nil
 }
 
-func httpGetJSON(url string, token string) (map[string]interface{}, error) {
-	req, err := http.NewRequest("GET", url, nil)
+func httpGetJSON(ctx context.Context, urlStr string, token string) (map[string]interface{}, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/json")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := oauthHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

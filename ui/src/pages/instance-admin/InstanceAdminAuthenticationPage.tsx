@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Settings2 } from 'lucide-react';
 import { Skeleton } from '../../components/ui';
+import { InstanceAdminToggleSwitch } from '../../components/instance-admin';
 import { instanceSettingsService } from '../../services/instanceService';
 import { getApiErrorMessage } from '../../api/client';
 import type { InstanceAuthSection, InstanceOAuthSection } from '../../api/types';
@@ -119,29 +120,6 @@ const AUTH_MODES: AuthMode[] = [
     editPath: '/instance-admin/authentication/gitlab',
   },
 ];
-
-function ToggleSwitch({
-  checked,
-  onChange,
-  disabled,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <label className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full bg-(--neutral-400) has-[:checked]:bg-(--brand-default)">
-      <input
-        type="checkbox"
-        className="peer sr-only"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        disabled={disabled}
-      />
-      <span className="pointer-events-none inline-block h-5 w-5 translate-x-0.5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
-    </label>
-  );
-}
 
 function isOAuthConfigured(oauthKey: OAuthProviderKey, oauth: InstanceOAuthSection): boolean {
   switch (oauthKey) {
@@ -293,7 +271,7 @@ export function InstanceAdminAuthenticationPage() {
             Toggling this off will only let users sign up when they are invited.
           </p>
         </div>
-        <ToggleSwitch
+        <InstanceAdminToggleSwitch
           checked={auth.allow_public_signup ?? true}
           onChange={(v) => handleToggle('allow_public_signup', v)}
           disabled={saving}
@@ -334,7 +312,7 @@ export function InstanceAdminAuthenticationPage() {
                       >
                         Edit
                       </Link>
-                      <ToggleSwitch
+                      <InstanceAdminToggleSwitch
                         checked={on}
                         onChange={(v) => handleToggle(item.key, v)}
                         disabled={saving}
@@ -351,7 +329,7 @@ export function InstanceAdminAuthenticationPage() {
                     </Link>
                   )}
                   {!item.isOAuth && (
-                    <ToggleSwitch
+                    <InstanceAdminToggleSwitch
                       checked={on}
                       onChange={(v) => handleToggle(item.key, v)}
                       disabled={saving}

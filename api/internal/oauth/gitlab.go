@@ -35,7 +35,7 @@ func (g *GitLabProvider) AuthURL(state string) string {
 	return g.host + "/oauth/authorize?" + params.Encode()
 }
 
-func (g *GitLabProvider) Exchange(_ context.Context, code string) (*TokenData, error) {
+func (g *GitLabProvider) Exchange(ctx context.Context, code string) (*TokenData, error) {
 	data := url.Values{
 		"client_id":     {g.cfg.ClientID},
 		"client_secret": {g.cfg.ClientSecret},
@@ -44,7 +44,7 @@ func (g *GitLabProvider) Exchange(_ context.Context, code string) (*TokenData, e
 		"grant_type":    {"authorization_code"},
 	}
 	tokenURL := g.host + "/oauth/token"
-	resp, err := httpPostForm(tokenURL, data, map[string]string{"Accept": "application/json"})
+	resp, err := httpPostForm(ctx, tokenURL, data, map[string]string{"Accept": "application/json"})
 	if err != nil {
 		return nil, err
 	}
@@ -56,9 +56,9 @@ func (g *GitLabProvider) Exchange(_ context.Context, code string) (*TokenData, e
 	return td, nil
 }
 
-func (g *GitLabProvider) GetUserInfo(_ context.Context, token *TokenData) (*UserInfo, error) {
+func (g *GitLabProvider) GetUserInfo(ctx context.Context, token *TokenData) (*UserInfo, error) {
 	userURL := g.host + "/api/v4/user"
-	resp, err := httpGetJSON(userURL, token.AccessToken)
+	resp, err := httpGetJSON(ctx, userURL, token.AccessToken)
 	if err != nil {
 		return nil, err
 	}
