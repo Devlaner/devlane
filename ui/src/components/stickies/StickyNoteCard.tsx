@@ -5,6 +5,7 @@ import { TaskItem } from '@tiptap/extension-task-item';
 import { TaskList } from '@tiptap/extension-task-list';
 import StarterKit from '@tiptap/starter-kit';
 import type { StickyApiResponse } from '../../api/types';
+import { Tooltip } from '../ui/Tooltip';
 import { stickiesService } from '../../services/stickiesService';
 import {
   STICKY_BACKGROUND_COLORS_DARK,
@@ -314,6 +315,12 @@ export function StickyNoteCard({
 
   const tb =
     'rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) disabled:opacity-40';
+  const isMac =
+    typeof navigator !== 'undefined' && /mac|iphone|ipad|ipod/i.test(navigator.platform);
+  const modKey = isMac ? 'Cmd' : 'Ctrl';
+  const boldShortcut = `${modKey} + B`;
+  const italicShortcut = `${modKey} + I`;
+  const todoShortcut = `${modKey} + Shift + 9`;
 
   if (!editor) return null;
   if (!safeSlug) return null;
@@ -326,7 +333,7 @@ export function StickyNoteCard({
       <div className="min-h-0 text-sm">
         <EditorContent
           editor={editor}
-          className="min-h-[4.5rem] min-w-0 max-w-full overflow-hidden text-sm text-(--txt-primary) focus:outline-none [&_p]:my-0.5 [&_p]:break-words [&_ul]:my-1 [&_ol]:my-1 [&_ul[data-type=taskList]]:m-0 [&_ul[data-type=taskList]]:p-0 [&_li[data-type=taskItem]>label]:mt-0.5 [&_li[data-type=taskItem]>label>input]:h-3.5 [&_li[data-type=taskItem]>label>input]:w-3.5 [&_li[data-type=taskItem][data-checked=true]>div]:opacity-60"
+          className="sticky-note-editor-content min-h-[4.5rem] min-w-0 max-w-full overflow-hidden text-sm text-(--txt-primary) focus:outline-none [&_p]:my-0.5 [&_p]:break-words [&_ul]:my-1 [&_ol]:my-1 [&_ul[data-type=taskList]]:m-0 [&_ul[data-type=taskList]]:p-0 [&_li[data-type=taskItem]>label]:mt-0.5 [&_li[data-type=taskItem]>label>input]:h-3.5 [&_li[data-type=taskItem]>label>input]:w-3.5"
           style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
         />
         {contentSaveError ? (
@@ -337,17 +344,19 @@ export function StickyNoteCard({
       </div>
       <div className="mt-2 flex shrink-0 items-center gap-1 pt-2">
         <div className="relative" ref={colorPanelRef}>
-          <button
-            type="button"
-            className={tb}
-            aria-label="Change color"
-            aria-expanded={colorOpen}
-            aria-haspopup="listbox"
-            aria-controls={colorOpen ? colorListboxId : undefined}
-            onClick={cycleColor}
-          >
-            <IconPalette />
-          </button>
+          <Tooltip content="Background color">
+            <button
+              type="button"
+              className={tb}
+              aria-label="Change color"
+              aria-expanded={colorOpen}
+              aria-haspopup="listbox"
+              aria-controls={colorOpen ? colorListboxId : undefined}
+              onClick={cycleColor}
+            >
+              <IconPalette />
+            </button>
+          </Tooltip>
           {colorOpen && (
             <div
               id={colorListboxId}
@@ -377,38 +386,69 @@ export function StickyNoteCard({
             </div>
           )}
         </div>
-        <button
-          type="button"
-          className={tb}
-          aria-label="Bold"
-          onClick={() => editor.chain().focus().toggleBold().run()}
+        <Tooltip
+          content={
+            <div className="text-center">
+              <p>Bold</p>
+              <p className="text-(--txt-tertiary)">{boldShortcut}</p>
+            </div>
+          }
         >
-          <IconBold />
-        </button>
-        <button
-          type="button"
-          className={tb}
-          aria-label="Italic"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
+          <button
+            type="button"
+            className={tb}
+            aria-label="Bold"
+            onClick={() => editor.chain().focus().toggleBold().run()}
+          >
+            <IconBold />
+          </button>
+        </Tooltip>
+        <Tooltip
+          content={
+            <div className="text-center">
+              <p>Italic</p>
+              <p className="text-(--txt-tertiary)">{italicShortcut}</p>
+            </div>
+          }
         >
-          <IconItalic />
-        </button>
-        <button
-          type="button"
-          className={tb}
-          aria-label="Todo list"
-          onClick={() => editor.chain().focus().toggleTaskList().run()}
+          <button
+            type="button"
+            className={tb}
+            aria-label="Italic"
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+          >
+            <IconItalic />
+          </button>
+        </Tooltip>
+        <Tooltip
+          content={
+            <div className="text-center">
+              <p>To-do list</p>
+              <p className="text-(--txt-tertiary)">{todoShortcut}</p>
+            </div>
+          }
         >
-          <IconTodo />
-        </button>
-        <button
-          type="button"
-          onClick={() => onDelete(sticky.id)}
-          className={`${tb} ml-auto hover:text-(--txt-danger-primary)`}
-          aria-label="Delete"
-        >
-          <IconTrash />
-        </button>
+          <button
+            type="button"
+            className={tb}
+            aria-label="Todo list"
+            onClick={() => editor.chain().focus().toggleTaskList().run()}
+          >
+            <IconTodo />
+          </button>
+        </Tooltip>
+        <div className="ml-auto">
+          <Tooltip content="Delete sticky note">
+            <button
+              type="button"
+              onClick={() => onDelete(sticky.id)}
+              className={`${tb} hover:text-(--txt-danger-primary)`}
+              aria-label="Delete"
+            >
+              <IconTrash />
+            </button>
+          </Tooltip>
+        </div>
       </div>
     </div>
   );
