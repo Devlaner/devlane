@@ -326,7 +326,7 @@ export function StickyNoteCard({
       <div className="min-h-0 text-sm">
         <EditorContent
           editor={editor}
-          className="min-h-[4.5rem] min-w-0 max-w-full overflow-hidden text-sm text-(--txt-primary) focus:outline-none [&_p]:my-0.5 [&_p]:break-words [&_ul]:my-1 [&_ol]:my-1 [&_ul[data-type=taskList]]:m-0 [&_ul[data-type=taskList]]:p-0 [&_li[data-type=taskItem]>label]:mt-0.5 [&_li[data-type=taskItem]>label>input]:h-3.5 [&_li[data-type=taskItem]>label>input]:w-3.5 [&_li[data-type=taskItem][data-checked=true]>div]:opacity-60"
+          className="sticky-note-editor-content min-h-[4.5rem] min-w-0 max-w-full overflow-hidden text-sm text-(--txt-primary) focus:outline-none [&_p]:my-0.5 [&_p]:break-words [&_ul]:my-1 [&_ol]:my-1 [&_ul[data-type=taskList]]:m-0 [&_ul[data-type=taskList]]:p-0 [&_li[data-type=taskItem]>label]:mt-0.5 [&_li[data-type=taskItem]>label>input]:h-3.5 [&_li[data-type=taskItem]>label>input]:w-3.5"
           style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
         />
         {contentSaveError ? (
