@@ -17,13 +17,15 @@ import (
 
 // Config holds dependencies for the router.
 type Config struct {
-	Log             *slog.Logger
-	DB              *gorm.DB
-	Redis           *redis.Client    // optional: cache, locks, magic-link
-	Queue           *queue.Publisher // optional: enqueue emails, webhooks
-	Minio           *minio.Client    // optional: file uploads (cover images, avatars, logos)
-	CORSAllowOrigin string           // optional: e.g. "http://localhost:5173" for UI dev
-	AppBaseURL      string           // optional: base URL for invite links; if empty, CORSAllowOrigin is used
+	Log               *slog.Logger
+	DB                *gorm.DB
+	Redis             *redis.Client    // optional: cache, locks, magic-link
+	Queue             *queue.Publisher // optional: enqueue emails, webhooks
+	Minio             *minio.Client    // optional: file uploads (cover images, avatars, logos)
+	CORSAllowOrigin   string           // optional: e.g. "http://localhost:5173" for UI dev
+	AppBaseURL        string           // optional: base URL for invite links; if empty, CORSAllowOrigin is used
+	FrontendPublicURL string           // optional: SPA origin for OAuth JS-origin hints; if empty, falls back to AppBaseURL chain
+	APIPublicURL      string           // optional: public API URL for OAuth callback generation
 
 	// MagicCodeSecret is the HMAC key for email login codes (see MAGIC_CODE_SECRET).
 	MagicCodeSecret string
@@ -85,17 +87,19 @@ func New(cfg Config) *gin.Engine {
 	}
 
 	authHandler := &handler.AuthHandler{
-		Auth:            authSvc,
-		Settings:        instanceSettingStore,
-		Winv:            workspaceInviteStore,
-		Ws:              workspaceStore,
-		NotifPrefs:      userNotifPrefStore,
-		ApiTokens:       apiTokenStore,
-		Queue:           cfg.Queue,
-		Redis:           cfg.Redis,
-		MagicCodeSecret: cfg.MagicCodeSecret,
-		AppBaseURL:      appBaseURL,
-		Log:             cfg.Log,
+		Auth:              authSvc,
+		Settings:          instanceSettingStore,
+		Winv:              workspaceInviteStore,
+		Ws:                workspaceStore,
+		NotifPrefs:        userNotifPrefStore,
+		ApiTokens:         apiTokenStore,
+		Queue:             cfg.Queue,
+		Redis:             cfg.Redis,
+		MagicCodeSecret:   cfg.MagicCodeSecret,
+		AppBaseURL:        appBaseURL,
+		FrontendPublicURL: cfg.FrontendPublicURL,
+		APIPublicURL:      cfg.APIPublicURL,
+		Log:               cfg.Log,
 	}
 	// Instance setup (no auth) — first-run flow; seeds general settings (instance_id, admin_email, instance_name)
 	instanceHandler := &handler.InstanceHandler{Auth: authSvc, Users: userStore, Settings: instanceSettingStore}
@@ -308,12 +312,13 @@ func New(cfg Config) *gin.Engine {
 
 	// OAuth routes (no auth required); provider resolved from instance settings at request time.
 	oauthHandler := &handler.OAuthHandler{
-		Settings:   instanceSettingStore,
-		Workspaces: workspaceStore,
-		Invites:    workspaceInviteStore,
-		Auth:       authSvc,
-		AppBaseURL: appBaseURL,
-		Log:        cfg.Log,
+		Settings:     instanceSettingStore,
+		Workspaces:   workspaceStore,
+		Invites:      workspaceInviteStore,
+		Auth:         authSvc,
+		AppBaseURL:   appBaseURL,
+		APIPublicURL: cfg.APIPublicURL,
+		Log:          cfg.Log,
 	}
 	authGroup.GET("/:provider/", oauthHandler.Initiate)
 	authGroup.GET("/:provider/callback/", oauthHandler.Callback)

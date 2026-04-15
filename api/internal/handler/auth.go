@@ -26,17 +26,19 @@ import (
 )
 
 type AuthHandler struct {
-	Auth            *auth.Service
-	Settings        *store.InstanceSettingStore
-	Winv            *store.WorkspaceInviteStore
-	Ws              *store.WorkspaceStore
-	NotifPrefs      *store.UserNotificationPreferenceStore
-	ApiTokens       *store.ApiTokenStore
-	Queue           *queue.Publisher
-	Redis           *redis.Client
-	MagicCodeSecret string
-	AppBaseURL      string
-	Log             *slog.Logger
+	Auth              *auth.Service
+	Settings          *store.InstanceSettingStore
+	Winv              *store.WorkspaceInviteStore
+	Ws                *store.WorkspaceStore
+	NotifPrefs        *store.UserNotificationPreferenceStore
+	ApiTokens         *store.ApiTokenStore
+	Queue             *queue.Publisher
+	Redis             *redis.Client
+	MagicCodeSecret   string
+	AppBaseURL        string
+	FrontendPublicURL string
+	APIPublicURL      string
+	Log               *slog.Logger
 }
 
 type SignInRequest struct {
@@ -562,11 +564,23 @@ func (h *AuthHandler) InstanceAuthConfig(c *gin.Context) {
 		"is_gitlab_enabled":              isGitLabEnabled,
 		"is_workspace_creation_disabled": isWorkspaceCreationRestricted(ctx, h.Settings),
 	}
-	out["oauth_redirect_base"] = requestCallbackBase(c)
-	if s := strings.TrimSpace(h.AppBaseURL); s != "" {
-		out["oauth_js_origin"] = strings.TrimSuffix(s, "/")
+	out["oauth_redirect_base"] = oauthCallbackBase(c, h.APIPublicURL)
+	if js := h.oauthJSOriginForProviders(); js != "" {
+		out["oauth_js_origin"] = js
 	}
 	c.JSON(http.StatusOK, out)
+}
+
+// oauthJSOriginForProviders is the SPA origin admins paste into Google "Authorized JavaScript origins",
+// GitHub "Homepage URL", etc. Prefer FRONTEND_PUBLIC_URL so CORS_ORIGIN can differ from the public app URL when needed.
+func (h *AuthHandler) oauthJSOriginForProviders() string {
+	if s := strings.TrimSpace(h.FrontendPublicURL); s != "" {
+		return strings.TrimSuffix(s, "/")
+	}
+	if s := strings.TrimSpace(h.AppBaseURL); s != "" {
+		return strings.TrimSuffix(s, "/")
+	}
+	return ""
 }
 
 // EmailCheck checks whether an email is already registered.

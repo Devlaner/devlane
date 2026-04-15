@@ -42,6 +42,11 @@ type Config struct {
 	CORSAllowOrigin string
 	// AppBaseURL is the public URL of the frontend (e.g. https://app.example.com). Used for invite links in emails. If empty, CORSAllowOrigin is used.
 	AppBaseURL string
+	// FrontendPublicURL is the browser-visible SPA origin (e.g. https://app.example.com). Used for OAuth "Authorized JavaScript origins" / homepage hints in instance-admin. If empty, AppBaseURL then CORSAllowOrigin apply (see router).
+	FrontendPublicURL string
+	// APIPublicURL is the public URL of the API (e.g. https://api.example.com or http://localhost:8080).
+	// Used to generate OAuth callback URLs shown in instance-admin and sent to providers.
+	APIPublicURL string
 
 	// MagicCodeSecret HMAC key for email login codes. If empty, a dev-only default is used (see auth package).
 	MagicCodeSecret string
@@ -90,6 +95,8 @@ func Load() (*Config, error) {
 		MigrationsPath:       getEnv("MIGRATIONS_PATH", "migrations"),
 		CORSAllowOrigin:      getEnv("CORS_ORIGIN", "http://localhost:5173"),
 		AppBaseURL:           getEnv("APP_BASE_URL", ""),
+		FrontendPublicURL:    getEnv("FRONTEND_PUBLIC_URL", ""),
+		APIPublicURL:         getEnv("API_PUBLIC_URL", ""),
 		MagicCodeSecret:      getEnv("MAGIC_CODE_SECRET", ""),
 	}
 

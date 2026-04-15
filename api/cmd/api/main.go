@@ -84,14 +84,16 @@ func main() {
 	}
 
 	r := router.New(router.Config{
-		Log:             log,
-		DB:              db,
-		Redis:           rdb,
-		Queue:           queuePublisher,
-		Minio:           mc,
-		CORSAllowOrigin: cfg.CORSAllowOrigin,
-		AppBaseURL:      cfg.AppBaseURL,
-		MagicCodeSecret: cfg.MagicCodeSecret,
+		Log:               log,
+		DB:                db,
+		Redis:             rdb,
+		Queue:             queuePublisher,
+		Minio:             mc,
+		CORSAllowOrigin:   cfg.CORSAllowOrigin,
+		AppBaseURL:        cfg.AppBaseURL,
+		FrontendPublicURL: cfg.FrontendPublicURL,
+		APIPublicURL:      cfg.APIPublicURL,
+		MagicCodeSecret:   cfg.MagicCodeSecret,
 	})
 
 	// Start task consumer when RabbitMQ is available
