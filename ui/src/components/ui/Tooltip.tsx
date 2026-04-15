@@ -43,6 +43,23 @@ function computeStyle(el: HTMLElement, placement: TooltipPlacement): CSSProperti
   };
 }
 
+function mergeDescribedBy(existing: string | null, token: string): string {
+  const parts = (existing || '')
+    .split(/\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!parts.includes(token)) parts.push(token);
+  return parts.join(' ');
+}
+
+function removeDescribedBy(existing: string | null, token: string): string | null {
+  const next = (existing || '')
+    .split(/\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s && s !== token);
+  return next.length ? next.join(' ') : null;
+}
+
 export function Tooltip({
   content,
   children,
@@ -90,7 +107,7 @@ export function Tooltip({
   }, [clearDelay]);
 
   const hideIfLeavingTrigger = useCallback(
-    (e: FocusEvent<HTMLSpanElement>) => {
+    (e: FocusEvent<HTMLElement>) => {
       const next = e.relatedTarget as Node | null;
       if (next && e.currentTarget.contains(next)) return;
       hide();
@@ -111,6 +128,28 @@ export function Tooltip({
       window.removeEventListener('resize', onScroll);
     };
   }, [open, updatePosition]);
+
+  useEffect(() => {
+    const root = triggerRef.current;
+    if (!root) return;
+    const focusable = root.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    if (!focusable) return;
+
+    if (open) {
+      const next = mergeDescribedBy(focusable.getAttribute('aria-describedby'), id);
+      focusable.setAttribute('aria-describedby', next);
+      return;
+    }
+
+    const next = removeDescribedBy(focusable.getAttribute('aria-describedby'), id);
+    if (next) {
+      focusable.setAttribute('aria-describedby', next);
+    } else {
+      focusable.removeAttribute('aria-describedby');
+    }
+  }, [open, id]);
 
   return (
     <>
