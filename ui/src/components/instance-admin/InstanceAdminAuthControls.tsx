@@ -1,6 +1,31 @@
 import { useState } from 'react';
 import { Copy } from 'lucide-react';
 
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 export function InstanceAdminCopyRow({
   label,
   hint,
@@ -10,13 +35,19 @@ export function InstanceAdminCopyRow({
   hint: string;
   value: string;
 }) {
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const onCopy = () => {
     if (!value) return;
-    void navigator.clipboard.writeText(value).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    void (async () => {
+      const ok = await copyTextToClipboard(value);
+      if (ok) {
+        setCopyState('copied');
+        setTimeout(() => setCopyState('idle'), 2000);
+      } else {
+        setCopyState('failed');
+        setTimeout(() => setCopyState('idle'), 2000);
+      }
+    })();
   };
   return (
     <div>
@@ -29,7 +60,7 @@ export function InstanceAdminCopyRow({
           className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-(--txt-accent) hover:bg-(--bg-subtle) disabled:opacity-40"
         >
           <Copy className="h-3.5 w-3.5" aria-hidden />
-          {copied ? 'Copied' : 'Copy'}
+          {copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : 'Copy'}
         </button>
       </div>
       <input

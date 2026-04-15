@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"testing"
 
@@ -13,7 +15,12 @@ import (
 func newTestService(t *testing.T) (*Service, *gorm.DB) {
 	t.Helper()
 
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	var id [8]byte
+	if _, err := rand.Read(id[:]); err != nil {
+		t.Fatalf("rand: %v", err)
+	}
+	dsn := "file:mem_" + hex.EncodeToString(id[:]) + "?mode=memory&cache=shared"
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
