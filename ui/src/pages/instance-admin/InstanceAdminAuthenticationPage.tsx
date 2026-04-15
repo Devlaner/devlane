@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { Settings2 } from 'lucide-react';
 import { Skeleton } from '../../components/ui';
 import { instanceSettingsService } from '../../services/instanceService';
-import { authService } from '../../services/authService';
 import { getApiErrorMessage } from '../../api/client';
 import type { InstanceAuthSection, InstanceOAuthSection } from '../../api/types';
 
@@ -183,8 +182,9 @@ export function InstanceAdminAuthenticationPage() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([instanceSettingsService.getSettings(), authService.getAuthConfig()])
-      .then(([settings]) => {
+    instanceSettingsService
+      .getSettings()
+      .then((settings) => {
         if (cancelled) return;
         const a = (settings.auth || {}) as InstanceAuthSection;
         setAuth({
@@ -198,7 +198,7 @@ export function InstanceAdminAuthenticationPage() {
         const o = (settings.oauth || {}) as InstanceOAuthSection;
         setOauth(o);
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (!cancelled) setError(getApiErrorMessage(err));
       })
       .finally(() => {

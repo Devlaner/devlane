@@ -63,7 +63,11 @@ export function CreateWorkspacePage() {
 
     setIsSubmitting(true);
     try {
-      const ws = await workspaceService.create({ name: trimmedName, slug: trimmedSlug });
+      const ws = await workspaceService.create({
+        name: trimmedName,
+        slug: trimmedSlug,
+        ...(organizationSize.trim() ? { organization_size: organizationSize.trim() } : {}),
+      });
       navigate(`/${ws.slug}`, { replace: true });
     } catch (err) {
       setError(getApiErrorMessage(err));

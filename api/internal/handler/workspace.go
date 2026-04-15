@@ -63,14 +63,15 @@ func (h *WorkspaceHandler) Create(c *gin.Context) {
 		}
 	}
 	var body struct {
-		Name string `json:"name" binding:"required"`
-		Slug string `json:"slug"`
+		Name             string `json:"name" binding:"required"`
+		Slug             string `json:"slug"`
+		OrganizationSize string `json:"organization_size"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
 		return
 	}
-	w, err := h.Workspace.Create(c.Request.Context(), body.Name, body.Slug, user.ID)
+	w, err := h.Workspace.Create(c.Request.Context(), body.Name, body.Slug, body.OrganizationSize, user.ID)
 	if err != nil {
 		if err == service.ErrSlugInvalid {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid slug"})

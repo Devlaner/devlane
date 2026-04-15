@@ -7,6 +7,8 @@
 export interface CreateWorkspaceRequest {
   name: string;
   slug: string;
+  /** Optional team size range (e.g. from create-workspace form). */
+  organization_size?: string;
 }
 
 /** Workspace as returned by the API (list + get) */

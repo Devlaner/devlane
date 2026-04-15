@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { API_BASE } from '../api/client';
 import type { WorkspaceMemberApiResponse } from '../api/types';
 
 /**
@@ -23,6 +24,9 @@ export function getImageUrl(url: string | null | undefined): string | null {
     return t;
   }
   const path = t.startsWith('/') ? t : '/' + t;
+  if (API_BASE && path.startsWith('/api/')) {
+    return `${API_BASE.replace(/\/$/, '')}${path}`;
+  }
   return path;
 }
 

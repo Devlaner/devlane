@@ -8,7 +8,7 @@ import (
 )
 
 type PasswordResetToken struct {
-	ID        uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	ID        uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
 	UserID    uuid.UUID  `gorm:"type:uuid;not null;index" json:"user_id"`
 	Token     string     `gorm:"type:varchar(128);uniqueIndex;not null" json:"-"`
 	ExpiresAt time.Time  `gorm:"not null" json:"expires_at"`

@@ -54,7 +54,7 @@ func (s *WorkspaceService) GetBySlug(ctx context.Context, slug string, userID uu
 	return w, nil
 }
 
-func (s *WorkspaceService) Create(ctx context.Context, name, slug string, ownerID uuid.UUID) (*model.Workspace, error) {
+func (s *WorkspaceService) Create(ctx context.Context, name, slug, organizationSize string, ownerID uuid.UUID) (*model.Workspace, error) {
 	slug = strings.TrimSpace(strings.ToLower(slug))
 	if slug == "" {
 		slug = strings.Trim(slugifyName.ReplaceAllString(strings.ToLower(name), "-"), "-")
@@ -69,11 +69,16 @@ func (s *WorkspaceService) Create(ctx context.Context, name, slug string, ownerI
 	if exists {
 		return nil, ErrSlugTaken
 	}
+	orgSize := strings.TrimSpace(organizationSize)
+	if len(orgSize) > 50 {
+		orgSize = orgSize[:50]
+	}
 	w := &model.Workspace{
-		Name:        name,
-		Slug:        slug,
-		OwnerID:     ownerID,
-		CreatedByID: &ownerID,
+		Name:             name,
+		Slug:             slug,
+		OwnerID:          ownerID,
+		CreatedByID:      &ownerID,
+		OrganizationSize: orgSize,
 	}
 	if err := s.ws.Create(ctx, w); err != nil {
 		return nil, err

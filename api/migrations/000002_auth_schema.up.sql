@@ -3,7 +3,7 @@
 -- apply the accounts section manually or coordinate a follow-up migration.
 
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     token VARCHAR(128) NOT NULL UNIQUE,
     expires_at TIMESTAMPTZ NOT NULL,
@@ -50,5 +50,3 @@ ALTER TABLE accounts ALTER COLUMN last_connected_at DROP DEFAULT;
 ALTER TABLE accounts ALTER COLUMN last_connected_at DROP NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_accounts_provider ON accounts (provider, user_id);
-
-ALTER TABLE accounts ALTER COLUMN id SET DEFAULT gen_random_uuid();
