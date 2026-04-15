@@ -320,21 +320,7 @@ const IconHelp = () => (
     <path d="M12 17h.01" />
   </svg>
 );
-const IconBook = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-  </svg>
-);
+
 const IconChevronDown = ({ className }: { className?: string }) => (
   <svg
     width="14"
@@ -1304,7 +1290,7 @@ export function Sidebar() {
             </div>
           </div>
 
-          {/* 8. Footer: Community + Help + Settings */}
+          {/* 8. Footer: Community + Help + Sidebar toggle */}
           <div className="flex items-center justify-between gap-2 border-t border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2.5">
             {/* <Button
               variant="secondary"
@@ -1321,13 +1307,15 @@ export function Sidebar() {
               >
                 <IconHelp />
               </button>
-              <Link
-                to={baseUrl ? `${baseUrl}/settings` : '/settings'}
+              <button
+                type="button"
+                onClick={() => setCollapsed((c) => !c)}
                 className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
-                aria-label="Settings"
+                aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               >
-                <IconBook />
-              </Link>
+                <IconPanelLeft />
+              </button>
             </div>
           </div>
         </aside>
