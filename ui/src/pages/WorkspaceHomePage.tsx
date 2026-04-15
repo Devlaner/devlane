@@ -770,7 +770,9 @@ export function WorkspaceHomePage() {
     }
   };
   const handleWidgetEnabledChange = (id: HomeWidgetId, enabled: boolean) => {
-    setWidgets((prev) => prev.map((widget) => (widget.id === id ? { ...widget, enabled } : widget)));
+    setWidgets((prev) =>
+      prev.map((widget) => (widget.id === id ? { ...widget, enabled } : widget)),
+    );
   };
 
   const handleWidgetDrop = (targetId: HomeWidgetId) => {
