@@ -19,7 +19,7 @@ func (s *AccountStore) Upsert(ctx context.Context, a *model.Account) error {
 	return s.db.WithContext(ctx).
 		Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "provider"}, {Name: "provider_account_id"}},
-			DoUpdates: clause.AssignmentColumns([]string{"access_token", "refresh_token", "id_token", "token_expires_at", "last_connected_at", "updated_at"}),
+			DoUpdates: clause.AssignmentColumns([]string{"access_token", "access_token_expired_at", "refresh_token", "refresh_token_expired_at", "id_token", "last_connected_at", "updated_at"}),
 		}).
 		Create(a).Error
 }

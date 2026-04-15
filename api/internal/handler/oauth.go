@@ -16,12 +16,13 @@ import (
 )
 
 type OAuthHandler struct {
-	Settings   *store.InstanceSettingStore
-	Workspaces *store.WorkspaceStore
-	Invites    *store.WorkspaceInviteStore
-	Auth       *auth.Service
-	AppBaseURL string
-	Log        *slog.Logger
+	Settings     *store.InstanceSettingStore
+	Workspaces   *store.WorkspaceStore
+	Invites      *store.WorkspaceInviteStore
+	Auth         *auth.Service
+	AppBaseURL   string
+	APIPublicURL string
+	Log          *slog.Logger
 }
 
 func (h *OAuthHandler) log() *slog.Logger {
@@ -31,9 +32,8 @@ func (h *OAuthHandler) log() *slog.Logger {
 	return slog.Default()
 }
 
-// requestCallbackBase derives the OAuth callback base URL from the incoming
-// request, matching Plane's approach: scheme://host. This ensures the redirect
-// URI always points to the API server that handles the callback.
+// requestCallbackBase derives the OAuth callback base URL from the incoming request.
+// This is used as a fallback when APIPublicURL is not configured.
 func requestCallbackBase(c *gin.Context) string {
 	scheme := "http"
 	if c.Request.TLS != nil || strings.EqualFold(c.GetHeader("X-Forwarded-Proto"), "https") {
@@ -42,9 +42,16 @@ func requestCallbackBase(c *gin.Context) string {
 	return scheme + "://" + c.Request.Host
 }
 
+func oauthCallbackBase(c *gin.Context, configuredBase string) string {
+	if b := strings.TrimSuffix(strings.TrimSpace(configuredBase), "/"); b != "" {
+		return b
+	}
+	return requestCallbackBase(c)
+}
+
 func (h *OAuthHandler) resolveProvider(c *gin.Context, name string) (oauth.Provider, bool) {
 	ctx := c.Request.Context()
-	base := requestCallbackBase(c)
+	base := oauthCallbackBase(c, h.APIPublicURL)
 	switch name {
 	case "google":
 		return BuildOAuthGoogleProvider(ctx, h.Settings, base)
@@ -215,7 +222,7 @@ func (h *OAuthHandler) Callback(c *gin.Context) {
 	// may not be sent back on the first XHR. Pass the session key in the URL
 	// fragment so the frontend can use it as a Bearer token. Fragments are never
 	// sent to servers, so this is safe for browser history / logs.
-	callbackOrigin := requestCallbackBase(c)
+	callbackOrigin := oauthCallbackBase(c, h.APIPublicURL)
 	spaOrigin := strings.TrimSuffix(strings.TrimSpace(h.AppBaseURL), "/")
 	if spaOrigin != "" && !strings.EqualFold(spaOrigin, callbackOrigin) {
 		redirectURL += "#session_token=" + url.QueryEscape(sessionKey)
