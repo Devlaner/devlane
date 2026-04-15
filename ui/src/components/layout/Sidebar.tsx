@@ -1290,7 +1290,7 @@ export function Sidebar() {
             </div>
           </div>
 
-          {/* 8. Footer: Community + Help + Settings */}
+          {/* 8. Footer: Community + Help + Sidebar toggle */}
           <div className="flex items-center justify-between gap-2 border-t border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2.5">
             {/* <Button
               variant="secondary"
@@ -1306,6 +1306,15 @@ export function Sidebar() {
                 aria-label="Help"
               >
                 <IconHelp />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCollapsed((c) => !c)}
+                className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
+                aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              >
+                <IconPanelLeft />
               </button>
             </div>
           </div>
