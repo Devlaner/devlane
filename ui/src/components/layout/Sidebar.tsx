@@ -320,21 +320,7 @@ const IconHelp = () => (
     <path d="M12 17h.01" />
   </svg>
 );
-const IconBook = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-  </svg>
-);
+
 const IconChevronDown = ({ className }: { className?: string }) => (
   <svg
     width="14"
@@ -1321,13 +1307,6 @@ export function Sidebar() {
               >
                 <IconHelp />
               </button>
-              <Link
-                to={baseUrl ? `${baseUrl}/settings` : '/settings'}
-                className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
-                aria-label="Settings"
-              >
-                <IconBook />
-              </Link>
             </div>
           </div>
         </aside>
