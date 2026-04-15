@@ -315,7 +315,8 @@ export function StickyNoteCard({
 
   const tb =
     'rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) disabled:opacity-40';
-  const isMac = typeof navigator !== 'undefined' && /mac|iphone|ipad|ipod/i.test(navigator.platform);
+  const isMac =
+    typeof navigator !== 'undefined' && /mac|iphone|ipad|ipod/i.test(navigator.platform);
   const modKey = isMac ? 'Cmd' : 'Ctrl';
   const boldShortcut = `${modKey} + B`;
   const italicShortcut = `${modKey} + I`;
