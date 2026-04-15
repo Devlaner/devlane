@@ -147,7 +147,11 @@ export function InstanceAdminAuthGooglePage() {
             </p>
           </div>
         </div>
-        <InstanceAdminToggleSwitch checked={enabled} onChange={(v) => setEnabled(v)} disabled={saving} />
+        <InstanceAdminToggleSwitch
+          checked={enabled}
+          onChange={(v) => setEnabled(v)}
+          disabled={saving}
+        />
       </div>
 
       {error && <p className="mb-4 text-sm text-(--txt-danger-primary)">{error}</p>}
