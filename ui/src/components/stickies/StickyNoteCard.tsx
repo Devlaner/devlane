@@ -437,16 +437,18 @@ export function StickyNoteCard({
             <IconTodo />
           </button>
         </Tooltip>
-        <Tooltip content="Delete sticky note">
-          <button
-            type="button"
-            onClick={() => onDelete(sticky.id)}
-            className={`${tb} ml-auto hover:text-(--txt-danger-primary)`}
-            aria-label="Delete"
-          >
-            <IconTrash />
-          </button>
-        </Tooltip>
+        <div className="ml-auto">
+          <Tooltip content="Delete sticky note">
+            <button
+              type="button"
+              onClick={() => onDelete(sticky.id)}
+              className={`${tb} hover:text-(--txt-danger-primary)`}
+              aria-label="Delete"
+            >
+              <IconTrash />
+            </button>
+          </Tooltip>
+        </div>
       </div>
     </div>
   );
