@@ -753,6 +753,9 @@ function HomeHeader() {
           variant="ghost"
           size="sm"
           className="gap-1.5 text-[13px] font-medium text-(--txt-secondary)"
+          onClick={() => {
+            window.dispatchEvent(new Event('devlane:open-home-widgets'));
+          }}
         >
           <IconGrid />
           Manage widgets
