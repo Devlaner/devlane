@@ -1,11 +1,12 @@
 import axios, { type AxiosError } from 'axios';
 
 /**
- * In dev the UI runs on :5173 (Vite) while the Go API runs on :8080.
- * In production the UI is served by the same origin as the API,
- * so an empty string keeps requests relative.
+ * Prefer env-driven API base (VITE_API_BASE_URL).
+ * In local dev, fallback remains http://localhost:8080.
+ * In production, empty string keeps requests relative (same-origin).
  */
-export const API_BASE = import.meta.env.DEV ? 'http://localhost:8080' : '';
+export const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://localhost:8080' : '');
 
 export const apiClient = axios.create({
   baseURL: API_BASE,
