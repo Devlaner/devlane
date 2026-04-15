@@ -4,6 +4,7 @@ import { Button, Input } from '../components/ui';
 import { authService } from '../services/authService';
 import { Eye, EyeOff, CircleAlert, CircleCheck } from 'lucide-react';
 import { AuthPageShell } from '../components/auth/AuthPageShell';
+import { getApiErrorMessage } from '../api/client';
 
 interface PasswordCriteria {
   minLength: boolean;
@@ -94,12 +95,7 @@ export function ResetPasswordPage() {
         await authService.resetPassword({ token, new_password: password });
         setSuccess(true);
       } catch (err: unknown) {
-        if (err && typeof err === 'object' && 'response' in err) {
-          const axiosErr = err as { response?: { data?: { error?: string } } };
-          setError(axiosErr.response?.data?.error ?? 'Something went wrong.');
-        } else {
-          setError('Something went wrong. Please try again.');
-        }
+        setError(getApiErrorMessage(err));
       } finally {
         setIsSubmitting(false);
       }
