@@ -304,29 +304,42 @@ export function InstanceAdminAuthenticationPage() {
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
-                  {item.isOAuth && item.editPath && configured && (
+                  {item.isOAuth && item.editPath && (
                     <>
                       <Link
                         to={item.editPath}
-                        className="rounded px-2.5 py-1 text-xs font-medium text-(--txt-accent) hover:bg-(--bg-accent-subtle)"
+                        className={
+                          configured
+                            ? 'rounded px-2.5 py-1 text-xs font-medium text-(--txt-accent) hover:bg-(--bg-accent-subtle)'
+                            : 'inline-flex items-center gap-1.5 rounded border border-(--border-subtle) px-2.5 py-1 text-xs font-medium text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)'
+                        }
                       >
-                        Edit
+                        {configured ? (
+                          'Edit'
+                        ) : (
+                          <>
+                            <Settings2 className="h-3.5 w-3.5" />
+                            Configure
+                          </>
+                        )}
                       </Link>
-                      <InstanceAdminToggleSwitch
-                        checked={on}
-                        onChange={(v) => handleToggle(item.key, v)}
-                        disabled={saving}
-                      />
+                      <span
+                        className="inline-flex"
+                        title={
+                          !configured && !on
+                            ? 'Add OAuth client credentials on the configuration page before enabling this provider.'
+                            : on && !configured
+                              ? 'OAuth credentials are missing or invalid. Open Configure to fix or turn this off.'
+                              : undefined
+                        }
+                      >
+                        <InstanceAdminToggleSwitch
+                          checked={on}
+                          onChange={(v) => handleToggle(item.key, v)}
+                          disabled={saving || (!configured && !on)}
+                        />
+                      </span>
                     </>
-                  )}
-                  {item.isOAuth && item.editPath && !configured && (
-                    <Link
-                      to={item.editPath}
-                      className="inline-flex items-center gap-1.5 rounded border border-(--border-subtle) px-2.5 py-1 text-xs font-medium text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
-                    >
-                      <Settings2 className="h-3.5 w-3.5" />
-                      Configure
-                    </Link>
                   )}
                   {!item.isOAuth && (
                     <InstanceAdminToggleSwitch

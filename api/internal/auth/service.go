@@ -16,11 +16,12 @@ import (
 )
 
 var (
-	ErrInvalidCredentials = errors.New("invalid email or password")
-	ErrEmailTaken         = errors.New("email already registered")
-	ErrUsernameTaken      = errors.New("username already taken")
-	ErrResetTokenInvalid  = errors.New("invalid or expired reset token")
-	ErrUserDeactivated    = errors.New("user account deactivated")
+	ErrInvalidCredentials         = errors.New("invalid email or password")
+	ErrEmailTaken                 = errors.New("email already registered")
+	ErrUsernameTaken              = errors.New("username already taken")
+	ErrResetTokenInvalid          = errors.New("invalid or expired reset token")
+	ErrUserDeactivated            = errors.New("user account deactivated")
+	ErrPasswordResetNotConfigured = errors.New("password reset not configured")
 )
 
 const bcryptCost = 12
@@ -288,7 +289,7 @@ func (s *Service) EmailCheck(ctx context.Context, email string) (exists bool, er
 // Returns ("", nil) when the email does not exist (to prevent user enumeration).
 func (s *Service) ForgotPassword(ctx context.Context, email string) (token string, err error) {
 	if s.resetTokenStore == nil {
-		return "", errors.New("password reset not configured")
+		return "", ErrPasswordResetNotConfigured
 	}
 	email = strings.TrimSpace(strings.ToLower(email))
 	u, err := s.userStore.GetByEmail(ctx, email)

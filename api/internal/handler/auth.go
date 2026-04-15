@@ -78,6 +78,33 @@ func (h *AuthHandler) log() *slog.Logger {
 	return slog.Default()
 }
 
+// smtpConfigured reports whether instance email settings include an SMTP host (outbound email).
+func (h *AuthHandler) smtpConfigured(ctx context.Context) bool {
+	if h.Settings == nil {
+		return false
+	}
+	emailRow, _ := h.Settings.Get(ctx, "email")
+	if emailRow != nil && emailRow.Value != nil {
+		host, _ := emailRow.Value["host"].(string)
+		return strings.TrimSpace(host) != ""
+	}
+	return false
+}
+
+// forgotPasswordInfraError returns a client-safe 503 message when reset email cannot be sent.
+func (h *AuthHandler) forgotPasswordInfraError(ctx context.Context) string {
+	if !h.smtpConfigured(ctx) {
+		return "Outbound email is not configured. Set SMTP (host) in Instance admin → Email."
+	}
+	if h.Queue == nil {
+		return "Email queue unavailable. Start RabbitMQ and check RABBITMQ_URL (API logs show connection errors)."
+	}
+	if strings.TrimSpace(h.AppBaseURL) == "" {
+		return "Password reset is unavailable: application base URL is not configured. Ask an administrator to set APP_BASE_URL (or equivalent) for the API."
+	}
+	return ""
+}
+
 // SignIn authenticates with email/password and sets a session cookie.
 // POST /auth/sign-in/
 func (h *AuthHandler) SignIn(c *gin.Context) {
@@ -637,24 +664,40 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 		return
 	}
 	body.Email = strings.ToLower(addr.Address)
+
+	if msg := h.forgotPasswordInfraError(ctx); msg != "" {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": msg})
+		return
+	}
+
 	token, err := h.Auth.ForgotPassword(ctx, body.Email)
 	if err != nil {
 		h.log().Error("forgot password error", "error", err)
+		if errors.Is(err, auth.ErrPasswordResetNotConfigured) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Password reset is not available on this instance."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong. Please try again later."})
+		return
 	}
-	if token != "" && h.Queue != nil && h.AppBaseURL != "" {
+	if token != "" {
 		resetLink := strings.TrimSuffix(h.AppBaseURL, "/") + "/reset-password?token=" + token
 		subject := "Reset your Devlane password"
 		bodyText := fmt.Sprintf(
 			"You requested a password reset.\n\nClick the link below to reset your password:\n%s\n\nThis link expires in 30 minutes. If you did not request a reset, ignore this email.\n",
 			resetLink,
 		)
-		_ = h.Queue.PublishSendEmail(ctx, queue.SendEmailPayload{
+		if pubErr := h.Queue.PublishSendEmail(ctx, queue.SendEmailPayload{
 			To:      body.Email,
 			Subject: subject,
 			Body:    bodyText,
 			Kind:    "forgot_password",
 			Extra:   map[string]string{"reset_link": resetLink},
-		})
+		}); pubErr != nil {
+			h.log().Error("forgot password publish email", "error", pubErr)
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Password reset email could not be sent right now. Please try again later."})
+			return
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "If an account exists for that email, a reset link has been sent."})
 }
