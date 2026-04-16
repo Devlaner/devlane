@@ -10,7 +10,7 @@ import {
 } from 'react';
 import type { User } from '../types';
 import type { UserApiResponse } from '../api/types';
-import { apiClient } from '../api/client';
+import { apiClient, clearApiBearerAuthHeader } from '../api/client';
 import { authService } from '../services/authService';
 
 function mapApiUserToUser(api: UserApiResponse): User {
@@ -79,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authService.signOut();
     } finally {
+      clearApiBearerAuthHeader();
       setUser(null);
     }
   }, []);

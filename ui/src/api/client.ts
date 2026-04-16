@@ -16,6 +16,11 @@ export const apiClient = axios.create({
   },
 });
 
+/** Clears Bearer token set from OAuth URL fragment (dev / cross-origin); cookie sessions unaffected. */
+export function clearApiBearerAuthHeader(): void {
+  delete apiClient.defaults.headers.common['Authorization'];
+}
+
 // When sending FormData (e.g. file upload), omit Content-Type so the browser sets
 // multipart/form-data with the correct boundary. Otherwise the server gets
 // Content-Type: application/json and cannot parse the multipart form → 400.

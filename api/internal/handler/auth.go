@@ -207,7 +207,7 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 // SignOut invalidates the session and clears the session cookie.
 // POST /auth/sign-out/
 func (h *AuthHandler) SignOut(c *gin.Context) {
-	sessionKey, _ := c.Cookie(middleware.SessionCookieName)
+	sessionKey := middleware.SessionKeyFromCookieOrBearer(c)
 	if sessionKey != "" {
 		_ = h.Auth.SignOut(c.Request.Context(), sessionKey)
 	}
