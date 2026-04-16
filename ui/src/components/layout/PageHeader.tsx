@@ -58,7 +58,6 @@ import { PROJECT_VIEWS_FILTER_EVENT } from '../../lib/projectViewsEvents';
 import { slugify } from '../../lib/slug';
 import { MODULE_WORK_ITEMS_COUNT_EVENT } from '../../lib/moduleWorkItemsPrefs';
 import { ModuleDetailHeader } from './ModuleDetailHeader';
-import { ProjectSectionNavChevron } from './ProjectSectionNavChevron';
 
 export type ProjectSection = 'issues' | 'cycles' | 'modules' | 'views' | 'pages';
 
@@ -2296,7 +2295,9 @@ function ProjectSectionHeader({
             </div>
           </div>
         )}
-        <ProjectSectionNavChevron baseUrl={baseUrl} currentSection={section} />
+        <span className="shrink-0 text-(--txt-placeholder)" aria-hidden>
+          /
+        </span>
         <ProjectSectionDropdown
           baseUrl={baseUrl}
           currentSection={section}

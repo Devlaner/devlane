@@ -9,7 +9,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-// TaskHandler is called for each consumed message. Return nil to ack; non-nil to nack/requeue.
+// TaskHandler is called for each consumed message. Return nil to ack; non-nil triggers republish+ack with incremented x-retry-count (see handle).
 type TaskHandler func(ctx context.Context, queue string, body []byte) error
 
 // Consumer consumes from RabbitMQ queues and dispatches to handlers.
@@ -61,10 +61,49 @@ func (c *Consumer) Run(ctx context.Context, queues []string) error {
 func (c *Consumer) handle(ctx context.Context, queue string, d amqp.Delivery, h TaskHandler) {
 	err := h(ctx, queue, d.Body)
 	if err != nil {
-		if c.log != nil {
-			c.log.Warn("task failed", "queue", queue, "error", err)
+		// Retries: republish with incremented x-retry-count, then Ack the original delivery.
+		// (Nack(requeue=true) on handler failure would redeliver the same headers, so the count would never advance.)
+		retryCount := int64(0)
+		if d.Headers != nil {
+			if v, ok := d.Headers["x-retry-count"]; ok {
+				switch n := v.(type) {
+				case int64:
+					retryCount = n
+				case int32:
+					retryCount = int64(n)
+				case int:
+					retryCount = int64(n)
+				}
+			}
 		}
-		_ = d.Nack(false, true)
+		const maxRetries = 3
+		if retryCount >= maxRetries {
+			if c.log != nil {
+				c.log.Error("task permanently failed, discarding", "queue", queue, "retries", retryCount, "error", err)
+			}
+			_ = d.Ack(false)
+			return
+		}
+		if c.log != nil {
+			c.log.Warn("task failed, retrying", "queue", queue, "retry", retryCount+1, "error", err)
+		}
+		headers := amqp.Table{"x-retry-count": retryCount + 1}
+		pubErr := c.ch.PublishWithContext(ctx, "", queue, false, false, amqp.Publishing{
+			DeliveryMode: amqp.Persistent,
+			ContentType:  d.ContentType,
+			Body:         d.Body,
+			Headers:      headers,
+		})
+		if pubErr != nil {
+			if c.log != nil {
+				c.log.Error("failed to republish for retry", "queue", queue, "error", pubErr)
+			}
+			if nackErr := d.Nack(false, true); nackErr != nil && c.log != nil {
+				c.log.Error("nack after republish failure", "queue", queue, "error", nackErr)
+			}
+			return
+		}
+		_ = d.Ack(false)
 		return
 	}
 	_ = d.Ack(false)

@@ -17,13 +17,18 @@ import (
 
 // Config holds dependencies for the router.
 type Config struct {
-	Log             *slog.Logger
-	DB              *gorm.DB
-	Redis           *redis.Client    // optional: cache, locks, magic-link
-	Queue           *queue.Publisher // optional: enqueue emails, webhooks
-	Minio           *minio.Client    // optional: file uploads (cover images, avatars, logos)
-	CORSAllowOrigin string           // optional: e.g. "http://localhost:5173" for UI dev
-	AppBaseURL      string           // optional: base URL for invite links; if empty, CORSAllowOrigin is used
+	Log               *slog.Logger
+	DB                *gorm.DB
+	Redis             *redis.Client    // optional: cache, locks, magic-link
+	Queue             *queue.Publisher // optional: enqueue emails, webhooks
+	Minio             *minio.Client    // optional: file uploads (cover images, avatars, logos)
+	CORSAllowOrigin   string           // optional: e.g. "http://localhost:5173" for UI dev
+	AppBaseURL        string           // optional: base URL for invite links; if empty, CORSAllowOrigin is used
+	FrontendPublicURL string           // optional: SPA origin for OAuth JS-origin hints; if empty, falls back to AppBaseURL chain
+	APIPublicURL      string           // optional: public API URL for OAuth callback generation
+
+	// MagicCodeSecret is the HMAC key for email login codes (see MAGIC_CODE_SECRET).
+	MagicCodeSecret string
 }
 
 // New builds and returns the Gin engine with /api/ and /auth/ routes.
@@ -69,9 +74,33 @@ func New(cfg Config) *gin.Engine {
 	apiTokenStore := store.NewApiTokenStore(cfg.DB)
 	userFavoriteStore := store.NewUserFavoriteStore(cfg.DB)
 
+	// Password reset tokens
+	passwordResetTokenStore := store.NewPasswordResetTokenStore(cfg.DB)
+	accountStore := store.NewAccountStore(cfg.DB)
+
 	// Auth
-	authSvc := auth.NewService(userStore, sessionStore)
-	authHandler := &handler.AuthHandler{Auth: authSvc, Settings: instanceSettingStore, Winv: workspaceInviteStore, Ws: workspaceStore, NotifPrefs: userNotifPrefStore, ApiTokens: apiTokenStore}
+	authSvc := auth.NewService(userStore, sessionStore, passwordResetTokenStore)
+	authSvc.SetAccountStore(accountStore)
+	appBaseURL := cfg.AppBaseURL
+	if appBaseURL == "" {
+		appBaseURL = cfg.CORSAllowOrigin
+	}
+
+	authHandler := &handler.AuthHandler{
+		Auth:              authSvc,
+		Settings:          instanceSettingStore,
+		Winv:              workspaceInviteStore,
+		Ws:                workspaceStore,
+		NotifPrefs:        userNotifPrefStore,
+		ApiTokens:         apiTokenStore,
+		Queue:             cfg.Queue,
+		Redis:             cfg.Redis,
+		MagicCodeSecret:   cfg.MagicCodeSecret,
+		AppBaseURL:        appBaseURL,
+		FrontendPublicURL: cfg.FrontendPublicURL,
+		APIPublicURL:      cfg.APIPublicURL,
+		Log:               cfg.Log,
+	}
 	// Instance setup (no auth) — first-run flow; seeds general settings (instance_id, admin_email, instance_name)
 	instanceHandler := &handler.InstanceHandler{Auth: authSvc, Users: userStore, Settings: instanceSettingStore}
 	r.GET("/api/instance/setup-status/", instanceHandler.SetupStatus)
@@ -98,12 +127,6 @@ func New(cfg Config) *gin.Engine {
 	workspaceLinkSvc := service.NewWorkspaceLinkService(workspaceUserLinkStore, workspaceStore)
 	stickySvc := service.NewStickyService(stickyStore, workspaceStore)
 	recentVisitSvc := service.NewRecentVisitService(userRecentVisitStore, workspaceStore, issueStore, projectStore, pageStore)
-
-	// Base URL for invite links (e.g. email links to frontend)
-	appBaseURL := cfg.AppBaseURL
-	if appBaseURL == "" {
-		appBaseURL = cfg.CORSAllowOrigin
-	}
 
 	// Handlers
 	workspaceHandler := &handler.WorkspaceHandler{
@@ -135,6 +158,7 @@ func New(cfg Config) *gin.Engine {
 		api.GET("/users/me/", authHandler.Me)
 		api.PATCH("/users/me/", authHandler.UpdateMe)
 		api.POST("/users/me/change-password/", authHandler.ChangePassword)
+		api.POST("/users/me/set-password/", authHandler.SetPassword)
 		api.GET("/users/me/notification-preferences/", authHandler.GetNotificationPreferences)
 		api.PUT("/users/me/notification-preferences/", authHandler.UpdateNotificationPreferences)
 		api.GET("/users/me/activity/", userHandler.GetActivity)
@@ -274,10 +298,30 @@ func New(cfg Config) *gin.Engine {
 	// Auth routes (no auth required)
 	authGroup := r.Group("/auth")
 	{
+		authGroup.GET("/config/", authHandler.InstanceAuthConfig)
+		authGroup.POST("/email-check/", authHandler.EmailCheck)
 		authGroup.POST("/sign-in/", authHandler.SignIn)
 		authGroup.POST("/sign-up/", authHandler.SignUp)
 		authGroup.POST("/sign-out/", authHandler.SignOut)
+		authGroup.POST("/forgot-password/", authHandler.ForgotPassword)
+		authGroup.POST("/reset-password/", authHandler.ResetPassword)
+		authGroup.POST("/magic-code/request/", authHandler.MagicCodeRequest)
+		authGroup.POST("/magic-code/verify/", authHandler.MagicCodeVerify)
+		authGroup.POST("/set-password/", middleware.RequireAuth(authSvc, cfg.Log), authHandler.SetPassword)
 	}
+
+	// OAuth routes (no auth required); provider resolved from instance settings at request time.
+	oauthHandler := &handler.OAuthHandler{
+		Settings:     instanceSettingStore,
+		Workspaces:   workspaceStore,
+		Invites:      workspaceInviteStore,
+		Auth:         authSvc,
+		AppBaseURL:   appBaseURL,
+		APIPublicURL: cfg.APIPublicURL,
+		Log:          cfg.Log,
+	}
+	authGroup.GET("/:provider/", oauthHandler.Initiate)
+	authGroup.GET("/:provider/callback/", oauthHandler.Callback)
 
 	// Legacy /api/v1
 	v1 := r.Group("/api/v1")

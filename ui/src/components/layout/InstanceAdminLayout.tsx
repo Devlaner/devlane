@@ -221,6 +221,12 @@ const BREADCRUMB_LABEL: Record<string, string> = {
   image: 'Image',
 };
 
+const AUTH_SUB_LABEL: Record<string, string> = {
+  google: 'Google',
+  github: 'GitHub',
+  gitlab: 'GitLab',
+};
+
 export function InstanceAdminLayout() {
   const location = useLocation();
   const pathname = location.pathname;
@@ -228,7 +234,8 @@ export function InstanceAdminLayout() {
   const segments = pathname.replace(basePath, '').replace(/^\//, '').split('/').filter(Boolean);
   const segment = segments[0] || 'general';
   const breadcrumbLabel = BREADCRUMB_LABEL[segment] ?? 'General';
-  const breadcrumbTail = segments[1] === 'create' ? 'Create' : null;
+  const breadcrumbTail =
+    segments[1] === 'create' ? 'Create' : (AUTH_SUB_LABEL[segments[1] ?? ''] ?? null);
 
   return (
     <div className="flex h-screen flex-col bg-(--bg-canvas)">
