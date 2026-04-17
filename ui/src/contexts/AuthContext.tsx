@@ -10,6 +10,7 @@ import {
 } from 'react';
 import type { User } from '../types';
 import type { UserApiResponse } from '../api/types';
+import { apiClient, clearApiBearerAuthHeader } from '../api/client';
 import { authService } from '../services/authService';
 
 function mapApiUserToUser(api: UserApiResponse): User {
@@ -42,6 +43,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // After OAuth, the API may pass the session token in the URL fragment
+    // (cross-origin dev mode). Read it, set as Bearer header, then clear.
+    const hash = window.location.hash;
+    if (hash.includes('session_token=')) {
+      const params = new URLSearchParams(hash.slice(1));
+      const token = params.get('session_token');
+      if (token) {
+        apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    }
+
     let cancelled = false;
     authService.getMe().then((api) => {
       if (!cancelled && api) setUser(mapApiUserToUser(api));
@@ -57,19 +70,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    try {
-      const api = await authService.signIn({ email, password });
-      setUser(mapApiUserToUser(api));
-      return true;
-    } catch {
-      return false;
-    }
+    const api = await authService.signIn({ email, password });
+    setUser(mapApiUserToUser(api));
+    return true;
   }, []);
 
   const logout = useCallback(async () => {
     try {
       await authService.signOut();
     } finally {
+      clearApiBearerAuthHeader();
       setUser(null);
     }
   }, []);

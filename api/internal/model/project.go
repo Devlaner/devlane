@@ -3,6 +3,7 @@ package model
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,11 +19,25 @@ func (m *JSONMap) Scan(v interface{}) error {
 		*m = nil
 		return nil
 	}
-	b, ok := v.([]byte)
-	if !ok {
+	var raw []byte
+	switch x := v.(type) {
+	case []byte:
+		raw = x
+	case string:
+		raw = []byte(x)
+	default:
+		return fmt.Errorf("JSONMap: unsupported scan type %T", v)
+	}
+	if len(raw) == 0 {
+		*m = JSONMap{}
 		return nil
 	}
-	return json.Unmarshal(b, m)
+	mm := make(map[string]interface{})
+	if err := json.Unmarshal(raw, &mm); err != nil {
+		return err
+	}
+	*m = mm
+	return nil
 }
 
 // Project matches migration table "projects".

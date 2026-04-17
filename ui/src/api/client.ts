@@ -1,19 +1,25 @@
 import axios, { type AxiosError } from 'axios';
-import { config } from '../config/env';
 
 /**
- * Shared Axios instance for all API requests.
- * - baseURL from config
- * - credentials included for cookie-based auth
- * - consistent error handling
+ * Prefer env-driven API base (VITE_API_BASE_URL).
+ * In local dev, fallback remains http://localhost:8080.
+ * In production, empty string keeps requests relative (same-origin).
  */
+export const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://localhost:8080' : '');
+
 export const apiClient = axios.create({
-  baseURL: config.apiBaseUrl,
+  baseURL: API_BASE,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+/** Clears Bearer token set from OAuth URL fragment (dev / cross-origin); cookie sessions unaffected. */
+export function clearApiBearerAuthHeader(): void {
+  delete apiClient.defaults.headers.common['Authorization'];
+}
 
 // When sending FormData (e.g. file upload), omit Content-Type so the browser sets
 // multipart/form-data with the correct boundary. Otherwise the server gets

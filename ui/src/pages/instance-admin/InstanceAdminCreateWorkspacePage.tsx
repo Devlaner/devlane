@@ -73,7 +73,11 @@ export function InstanceAdminCreateWorkspacePage() {
 
     setIsSubmitting(true);
     try {
-      await workspaceService.create({ name: trimmedName, slug: trimmedSlug });
+      await workspaceService.create({
+        name: trimmedName,
+        slug: trimmedSlug,
+        ...(organizationSize.trim() ? { organization_size: organizationSize.trim() } : {}),
+      });
       setShowSetupHint(false);
       navigate('/instance-admin/workspace', { replace: true });
     } catch (err) {

@@ -1,0 +1,280 @@
+package handler
+
+import (
+	"crypto/rand"
+	"encoding/hex"
+	"log/slog"
+	"net/http"
+	"net/url"
+	"strings"
+
+	"github.com/Devlaner/devlane/api/internal/auth"
+	"github.com/Devlaner/devlane/api/internal/middleware"
+	"github.com/Devlaner/devlane/api/internal/oauth"
+	"github.com/Devlaner/devlane/api/internal/store"
+	"github.com/gin-gonic/gin"
+)
+
+type OAuthHandler struct {
+	Settings     *store.InstanceSettingStore
+	Workspaces   *store.WorkspaceStore
+	Invites      *store.WorkspaceInviteStore
+	Auth         *auth.Service
+	AppBaseURL   string
+	APIPublicURL string
+	Log          *slog.Logger
+}
+
+func (h *OAuthHandler) log() *slog.Logger {
+	if h.Log != nil {
+		return h.Log
+	}
+	return slog.Default()
+}
+
+// requestCallbackBase derives the OAuth callback base URL from the incoming request.
+// This is used as a fallback when APIPublicURL is not configured.
+func requestCallbackBase(c *gin.Context) string {
+	scheme := "http"
+	if c.Request.TLS != nil || strings.EqualFold(c.GetHeader("X-Forwarded-Proto"), "https") {
+		scheme = "https"
+	}
+	return scheme + "://" + c.Request.Host
+}
+
+func oauthCallbackBase(c *gin.Context, configuredBase string) string {
+	if b := strings.TrimSuffix(strings.TrimSpace(configuredBase), "/"); b != "" {
+		return b
+	}
+	return requestCallbackBase(c)
+}
+
+func (h *OAuthHandler) resolveProvider(c *gin.Context, name string) (oauth.Provider, bool) {
+	ctx := c.Request.Context()
+	base := oauthCallbackBase(c, h.APIPublicURL)
+	switch name {
+	case "google":
+		return BuildOAuthGoogleProvider(ctx, h.Settings, base)
+	case "github":
+		return BuildOAuthGitHubProvider(ctx, h.Settings, base)
+	case "gitlab":
+		return BuildOAuthGitLabProvider(ctx, h.Settings, base)
+	default:
+		return nil, false
+	}
+}
+
+func (h *OAuthHandler) Initiate(c *gin.Context) {
+	providerName := c.Param("provider")
+	provider, ok := h.resolveProvider(c, providerName)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Unknown OAuth provider"})
+		return
+	}
+
+	stateBytes := make([]byte, 16)
+	if _, err := rand.Read(stateBytes); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate state"})
+		return
+	}
+	state := hex.EncodeToString(stateBytes)
+
+	nextPath := c.Query("next_path")
+	sessionVal := state
+	if nextPath != "" {
+		sessionVal = state + "|" + nextPath
+	}
+
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "oauth_state",
+		Value:    sessionVal,
+		Path:     "/",
+		MaxAge:   600,
+		HttpOnly: true,
+		Secure:   isSecureRequest(c),
+		SameSite: http.SameSiteLaxMode,
+	})
+	c.Redirect(http.StatusTemporaryRedirect, provider.AuthURL(state))
+}
+
+func (h *OAuthHandler) Callback(c *gin.Context) {
+	providerName := c.Param("provider")
+	provider, ok := h.resolveProvider(c, providerName)
+	if !ok {
+		h.redirectError(c, "Unknown OAuth provider")
+		return
+	}
+
+	code := c.Query("code")
+	state := c.Query("state")
+	if code == "" {
+		errMsg := c.Query("error_description")
+		if errMsg == "" {
+			errMsg = c.Query("error")
+		}
+		if errMsg == "" {
+			errMsg = "Authorization code missing"
+		}
+		h.redirectError(c, errMsg)
+		return
+	}
+
+	cookieVal, err := c.Cookie("oauth_state")
+	if err != nil || cookieVal == "" {
+		h.redirectError(c, "OAuth state cookie missing")
+		return
+	}
+	parts := strings.SplitN(cookieVal, "|", 2)
+	savedState := parts[0]
+	nextPath := "/"
+	if len(parts) == 2 {
+		nextPath = parts[1]
+	}
+
+	if state != savedState {
+		h.redirectError(c, "OAuth state mismatch")
+		return
+	}
+
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "oauth_state",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   isSecureRequest(c),
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	ctx := c.Request.Context()
+	tokenData, err := provider.Exchange(ctx, code)
+	if err != nil {
+		h.log().Error("oauth token exchange failed", "provider", providerName, "error", err)
+		h.redirectError(c, "Authentication failed")
+		return
+	}
+
+	userInfo, err := provider.GetUserInfo(ctx, tokenData)
+	if err != nil {
+		h.log().Error("oauth user info failed", "provider", providerName, "error", err)
+		h.redirectError(c, "Failed to get user information")
+		return
+	}
+
+	if userInfo.Email == "" {
+		h.redirectError(c, "Email not available from provider")
+		return
+	}
+
+	// Enforce allow_public_signup for new users — matches Plane's
+	// Adapter.__check_signup: if signup is disabled, only users with a
+	// pending workspace invite may register.
+	if !h.Auth.EmailExists(ctx, userInfo.Email) {
+		var allowPublicSignup = true
+		if h.Settings != nil {
+			row, _ := h.Settings.Get(ctx, "auth")
+			if row != nil {
+				allowPublicSignup = authBool(row.Value, "allow_public_signup", true)
+			}
+		}
+		if !allowPublicSignup {
+			hasInvite := false
+			if h.Invites != nil {
+				invites, _ := h.Invites.ListPendingByEmail(ctx, strings.TrimSpace(strings.ToLower(userInfo.Email)))
+				hasInvite = len(invites) > 0
+			}
+			if !hasInvite {
+				h.redirectError(c, "Sign-up is by invite only")
+				return
+			}
+		}
+	}
+
+	sessionKey, user, isNewUser, err := h.Auth.OAuthLogin(
+		ctx,
+		providerName,
+		userInfo.ProviderID,
+		userInfo.Email,
+		userInfo.FirstName,
+		userInfo.LastName,
+		userInfo.Avatar,
+		tokenData.AccessToken,
+		tokenData.RefreshToken,
+		tokenData.IDToken,
+	)
+	if err != nil {
+		h.log().Error("oauth login failed", "provider", providerName, "error", err)
+		h.redirectError(c, "Authentication failed")
+		return
+	}
+
+	if isNewUser {
+		postSignUpWorkflow(ctx, h.postSignUpDeps(), user)
+		nextPath = "/"
+	}
+
+	if !user.IsActive {
+		h.redirectError(c, "Your account has been deactivated. Please contact the administrator.")
+		return
+	}
+
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     middleware.SessionCookieName,
+		Value:    sessionKey,
+		Path:     "/",
+		MaxAge:   14 * 24 * 3600,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   isSecureRequest(c),
+	})
+
+	redirectURL := h.AppBaseURL
+	if redirectURL == "" {
+		redirectURL = "/"
+	}
+	redirectURL = strings.TrimSuffix(redirectURL, "/") + sanitizeRedirectPath(nextPath)
+
+	// When the SPA runs on a different origin (dev mode), cross-origin cookies
+	// may not be sent back on the first XHR. Pass the session key in the URL
+	// fragment so the frontend can use it as a Bearer token. Fragments are never
+	// sent to servers, so this is safe for browser history / logs.
+	callbackOrigin := oauthCallbackBase(c, h.APIPublicURL)
+	spaOrigin := strings.TrimSuffix(strings.TrimSpace(h.AppBaseURL), "/")
+	if spaOrigin != "" && !strings.EqualFold(spaOrigin, callbackOrigin) {
+		redirectURL += "#session_token=" + url.QueryEscape(sessionKey)
+	}
+
+	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+}
+
+func (h *OAuthHandler) redirectError(c *gin.Context, message string) {
+	redirectURL := h.AppBaseURL
+	if redirectURL == "" {
+		redirectURL = "/"
+	}
+	redirectURL = strings.TrimSuffix(redirectURL, "/") + "/login?error=" + url.QueryEscape(message)
+	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+}
+
+func sanitizeRedirectPath(path string) string {
+	if path == "" {
+		return "/"
+	}
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	if strings.HasPrefix(path, "//") {
+		return "/"
+	}
+	return path
+}
+
+func (h *OAuthHandler) postSignUpDeps() postSignUpDeps {
+	return postSignUpDeps{
+		Auth:       h.Auth,
+		Invites:    h.Invites,
+		Workspaces: h.Workspaces,
+		Settings:   h.Settings,
+		Logger:     h.Log,
+	}
+}

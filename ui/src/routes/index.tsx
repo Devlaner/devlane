@@ -15,6 +15,22 @@ const page = (m: { [k: string]: React.ComponentType }) => ({
 const LoginPage = lazy(() =>
   import('../pages/LoginPage').then((m) => page({ LoginPage: m.LoginPage })),
 );
+const ForgotPasswordPage = lazy(() =>
+  import('../pages/ForgotPasswordPage').then((m) =>
+    page({ ForgotPasswordPage: m.ForgotPasswordPage }),
+  ),
+);
+const ResetPasswordPage = lazy(() =>
+  import('../pages/ResetPasswordPage').then((m) =>
+    page({ ResetPasswordPage: m.ResetPasswordPage }),
+  ),
+);
+const SignUpPage = lazy(() =>
+  import('../pages/SignUpPage').then((m) => page({ SignUpPage: m.SignUpPage })),
+);
+const SetPasswordPage = lazy(() =>
+  import('../pages/SetPasswordPage').then((m) => page({ SetPasswordPage: m.SetPasswordPage })),
+);
 const WorkspaceHomePage = lazy(() =>
   import('../pages/WorkspaceHomePage').then((m) =>
     page({ WorkspaceHomePage: m.WorkspaceHomePage }),
@@ -105,6 +121,21 @@ const InstanceAdminAuthenticationPage = lazy(() =>
     }),
   ),
 );
+const InstanceAdminAuthGooglePage = lazy(() =>
+  import('../pages/instance-admin').then((m) =>
+    page({ InstanceAdminAuthGooglePage: m.InstanceAdminAuthGooglePage }),
+  ),
+);
+const InstanceAdminAuthGitHubPage = lazy(() =>
+  import('../pages/instance-admin').then((m) =>
+    page({ InstanceAdminAuthGitHubPage: m.InstanceAdminAuthGitHubPage }),
+  ),
+);
+const InstanceAdminAuthGitLabPage = lazy(() =>
+  import('../pages/instance-admin').then((m) =>
+    page({ InstanceAdminAuthGitLabPage: m.InstanceAdminAuthGitLabPage }),
+  ),
+);
 const InstanceAdminAIPage = lazy(() =>
   import('../pages/instance-admin').then((m) =>
     page({ InstanceAdminAIPage: m.InstanceAdminAIPage }),
@@ -138,6 +169,11 @@ const InstanceSetupConfigurePage = lazy(() =>
 const InstanceSetupCompletePage = lazy(() =>
   import('../pages/setup').then((m) =>
     page({ InstanceSetupCompletePage: m.InstanceSetupCompletePage }),
+  ),
+);
+const CreateWorkspacePage = lazy(() =>
+  import('../pages/CreateWorkspacePage').then((m) =>
+    page({ CreateWorkspacePage: m.CreateWorkspacePage }),
   ),
 );
 const InviteAcceptPage = lazy(() =>
@@ -268,6 +304,30 @@ const router = createBrowserRouter([
             ),
           },
           {
+            path: 'authentication/google',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <InstanceAdminAuthGooglePage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'authentication/github',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <InstanceAdminAuthGitHubPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'authentication/gitlab',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <InstanceAdminAuthGitLabPage />
+              </Suspense>
+            ),
+          },
+          {
             path: 'ai',
             element: (
               <Suspense fallback={<PageFallback />}>
@@ -294,6 +354,40 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: 'forgot-password',
+        element: (
+          <Suspense fallback={<PageFallback />}>
+            <ForgotPasswordPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'reset-password',
+        element: (
+          <Suspense fallback={<PageFallback />}>
+            <ResetPasswordPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'sign-up',
+        element: (
+          <Suspense fallback={<PageFallback />}>
+            <SignUpPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'accounts/set-password',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<PageFallback />}>
+              <SetPasswordPage />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'invite',
         element: (
           <Suspense fallback={<PageFallback />}>
@@ -307,6 +401,16 @@ const router = createBrowserRouter([
             element: <InviteSignUpPage />,
           },
         ],
+      },
+      {
+        path: 'create-workspace',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<PageFallback />}>
+              <CreateWorkspacePage />
+            </Suspense>
+          </ProtectedRoute>
+        ),
       },
       {
         element: <AppLayout />,

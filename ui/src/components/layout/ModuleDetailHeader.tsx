@@ -6,7 +6,6 @@ import { DateRangeModal } from '../workspace-views/DateRangeModal';
 import { ProjectIconDisplay } from '../ProjectIconModal';
 import { ModuleWorkItemsFiltersPanel } from '../module-work-items/ModuleWorkItemsToolbarPanels';
 import { ProjectIssuesDisplayPanel } from '../project-issues/ProjectIssuesDisplayPanel';
-import { ProjectSectionNavChevron } from './ProjectSectionNavChevron';
 import { workspaceService } from '../../services/workspaceService';
 import { stateService } from '../../services/stateService';
 import { cycleService } from '../../services/cycleService';
@@ -395,7 +394,9 @@ export function ModuleDetailHeader({
           </span>
           {projectName}
         </Link>
-        <ProjectSectionNavChevron baseUrl={baseUrl} currentSection="modules" />
+        <span className="shrink-0 text-(--txt-placeholder)" aria-hidden>
+          /
+        </span>
         <Link
           to={`${baseUrl}/modules`}
           className="flex shrink-0 items-center gap-1.5 truncate font-medium text-(--txt-secondary) no-underline hover:text-(--txt-primary) hover:underline"
@@ -405,7 +406,9 @@ export function ModuleDetailHeader({
           </span>
           Modules
         </Link>
-        <ProjectSectionNavChevron baseUrl={baseUrl} currentSection="modules" />
+        <span className="shrink-0 text-(--txt-placeholder)" aria-hidden>
+          /
+        </span>
         <div ref={dropdownRef} className="relative flex min-w-0 shrink-0 items-center">
           <button
             type="button"

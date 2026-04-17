@@ -7,6 +7,8 @@
 export interface CreateWorkspaceRequest {
   name: string;
   slug: string;
+  /** Optional team size range (e.g. from create-workspace form). */
+  organization_size?: string;
 }
 
 /** Workspace as returned by the API (list + get) */
@@ -224,6 +226,7 @@ export interface UserApiResponse {
   cover_image?: string;
   is_active: boolean;
   is_onboarded: boolean;
+  is_password_autoset?: boolean;
   date_joined: string;
   created_at: string;
   updated_at: string;
@@ -301,6 +304,55 @@ export interface SignUpRequest {
   invite_token?: string;
 }
 
+/** POST /auth/email-check/ response */
+export interface EmailCheckResponse {
+  existing: boolean;
+  status: 'CREDENTIAL';
+  allow_public_signup: boolean;
+}
+
+/** POST /auth/forgot-password/ request */
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+/** POST /auth/reset-password/ request */
+export interface ResetPasswordRequest {
+  token: string;
+  new_password: string;
+}
+
+/** GET /auth/config/ response */
+export interface AuthConfigResponse {
+  is_email_password_enabled: boolean;
+  is_magic_code_enabled: boolean;
+  enable_signup: boolean;
+  is_smtp_configured: boolean;
+  is_google_enabled: boolean;
+  is_github_enabled: boolean;
+  is_gitlab_enabled: boolean;
+  is_workspace_creation_disabled: boolean;
+  /** Present when at least one OAuth provider is enabled; use for redirect URIs in provider consoles. */
+  oauth_redirect_base?: string;
+  /** SPA origin for provider “JavaScript origin” fields (from APP_BASE_URL / CORS). */
+  oauth_js_origin?: string;
+}
+
+/** POST /auth/magic-code/request/ */
+export interface MagicCodeRequestPayload {
+  email: string;
+  invite_token?: string;
+}
+
+/** POST /auth/magic-code/verify/ */
+export interface MagicCodeVerifyPayload {
+  email: string;
+  code: string;
+  first_name?: string;
+  last_name?: string;
+  invite_token?: string;
+}
+
 /** Instance settings: section key -> value object (from GET /api/instance/settings/) */
 export type InstanceSettingsResponse = Record<string, Record<string, unknown>>;
 
@@ -334,6 +386,21 @@ export interface InstanceAuthSection {
   google?: boolean;
   github?: boolean;
   gitlab?: boolean;
+}
+
+/** OAuth app credentials (instance admin); secrets encrypted at rest */
+export interface InstanceOAuthSection {
+  google_client_id?: string;
+  google_client_secret?: string;
+  google_client_secret_set?: boolean;
+  github_client_id?: string;
+  github_client_secret?: string;
+  github_client_secret_set?: boolean;
+  gitlab_client_id?: string;
+  gitlab_client_secret?: string;
+  gitlab_client_secret_set?: boolean;
+  /** Self-managed GitLab base URL; empty defaults to https://gitlab.com */
+  gitlab_host?: string;
 }
 
 /** AI section shape (api_key is decrypted when returned from API) */

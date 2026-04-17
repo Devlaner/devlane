@@ -9,9 +9,15 @@ import (
 	"errors"
 	"io"
 	"os"
+	"strings"
 )
 
 const encryptedPrefix = "enc:"
+
+// LooksEncrypted reports whether value appears to be stored with Encrypt (AES-GCM prefix).
+func LooksEncrypted(value string) bool {
+	return strings.HasPrefix(value, encryptedPrefix)
+}
 
 func getKey() []byte {
 	s := os.Getenv("INSTANCE_ENCRYPTION_KEY")
@@ -55,7 +61,7 @@ func Decrypt(value string) (string, error) {
 	}
 	key := getKey()
 	if key == nil {
-		return "", nil
+		return "", errors.New("INSTANCE_ENCRYPTION_KEY is not set but this value is encrypted (enc:…); set the key or re-save the secret in instance settings")
 	}
 	raw, err := base64.StdEncoding.DecodeString(value[len(encryptedPrefix):])
 	if err != nil {

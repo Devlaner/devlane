@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Skeleton } from '../../components/ui';
+import { Link } from 'react-router-dom';
+import { Settings2 } from 'lucide-react';
+import { Skeleton } from '../../components/ui';
+import { InstanceAdminToggleSwitch } from '../../components/instance-admin';
 import { instanceSettingsService } from '../../services/instanceService';
 import { getApiErrorMessage } from '../../api/client';
-import type { InstanceAuthSection } from '../../api/types';
+import type { InstanceAuthSection, InstanceOAuthSection } from '../../api/types';
 
 const IconEnvelope = () => (
   <svg
@@ -64,13 +67,19 @@ const IconGitLab = () => (
   </svg>
 );
 
-const AUTH_MODES: Array<{
+type OAuthProviderKey = 'google' | 'github' | 'gitlab';
+
+interface AuthMode {
   key: keyof InstanceAuthSection;
   Icon: () => React.ReactElement;
   name: string;
   desc: string;
-  action?: string;
-}> = [
+  isOAuth?: boolean;
+  oauthKey?: OAuthProviderKey;
+  editPath?: string;
+}
+
+const AUTH_MODES: AuthMode[] = [
   {
     key: 'magic_code',
     Icon: IconEnvelope,
@@ -88,23 +97,52 @@ const AUTH_MODES: Array<{
     Icon: IconGoogle,
     name: 'Google',
     desc: 'Allow members to log in or sign up for Devlane with their Google accounts.',
-    action: 'Edit',
+    isOAuth: true,
+    oauthKey: 'google',
+    editPath: '/instance-admin/authentication/google',
   },
   {
     key: 'github',
     Icon: IconGitHub,
     name: 'GitHub',
     desc: 'Allow members to log in or sign up for Devlane with their GitHub accounts.',
-    action: 'Edit',
+    isOAuth: true,
+    oauthKey: 'github',
+    editPath: '/instance-admin/authentication/github',
   },
   {
     key: 'gitlab',
     Icon: IconGitLab,
     name: 'GitLab',
     desc: 'Allow members to log in or sign up for Devlane with their GitLab accounts.',
-    action: 'Configure',
+    isOAuth: true,
+    oauthKey: 'gitlab',
+    editPath: '/instance-admin/authentication/gitlab',
   },
 ];
+
+function isOAuthConfigured(oauthKey: OAuthProviderKey, oauth: InstanceOAuthSection): boolean {
+  switch (oauthKey) {
+    case 'google':
+      return !!(oauth.google_client_id && oauth.google_client_secret_set);
+    case 'github':
+      return !!(oauth.github_client_id && oauth.github_client_secret_set);
+    case 'gitlab':
+      return !!(oauth.gitlab_client_id && oauth.gitlab_client_secret_set);
+    default:
+      return false;
+  }
+}
+
+function countEnabledAuthMethods(auth: InstanceAuthSection): number {
+  let n = 0;
+  if (auth.magic_code) n++;
+  if (auth.password) n++;
+  if (auth.google) n++;
+  if (auth.github) n++;
+  if (auth.gitlab) n++;
+  return n;
+}
 
 export function InstanceAdminAuthenticationPage() {
   const [auth, setAuth] = useState<InstanceAuthSection>({
@@ -115,9 +153,9 @@ export function InstanceAdminAuthenticationPage() {
     github: false,
     gitlab: false,
   });
+  const [oauth, setOauth] = useState<InstanceOAuthSection>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  void saving; // reserved for future use (e.g. disable submit while saving)
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -135,8 +173,10 @@ export function InstanceAdminAuthenticationPage() {
           github: a.github ?? false,
           gitlab: a.gitlab ?? false,
         });
+        const o = (settings.oauth || {}) as InstanceOAuthSection;
+        setOauth(o);
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (!cancelled) setError(getApiErrorMessage(err));
       })
       .finally(() => {
@@ -148,6 +188,14 @@ export function InstanceAdminAuthenticationPage() {
   }, []);
 
   const handleToggle = (key: keyof InstanceAuthSection, value: boolean) => {
+    if (!value && key !== 'allow_public_signup') {
+      if (countEnabledAuthMethods(auth) <= 1) {
+        setError(
+          'At least one authentication method must remain enabled. Please enable another method before disabling this one.',
+        );
+        return;
+      }
+    }
     const prev = auth;
     const next = { ...auth, [key]: value };
     setAuth(next);
@@ -202,7 +250,7 @@ export function InstanceAdminAuthenticationPage() {
   }
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full max-w-3xl space-y-6">
       <div>
         <h1 className="text-base font-semibold text-(--txt-primary)">
           Manage authentication modes for your instance
@@ -223,15 +271,11 @@ export function InstanceAdminAuthenticationPage() {
             Toggling this off will only let users sign up when they are invited.
           </p>
         </div>
-        <label className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full bg-(--neutral-400) has-[:checked]:bg-(--brand-default)">
-          <input
-            type="checkbox"
-            className="peer sr-only"
-            checked={auth.allow_public_signup ?? true}
-            onChange={(e) => handleToggle('allow_public_signup', e.target.checked)}
-          />
-          <span className="pointer-events-none inline-block h-5 w-5 translate-x-0.5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
-        </label>
+        <InstanceAdminToggleSwitch
+          checked={auth.allow_public_signup ?? true}
+          onChange={(v) => handleToggle('allow_public_signup', v)}
+          disabled={saving}
+        />
       </section>
 
       <section>
@@ -242,6 +286,9 @@ export function InstanceAdminAuthenticationPage() {
           {AUTH_MODES.map((item) => {
             const Icon = item.Icon;
             const on = auth[item.key] ?? false;
+            const configured =
+              item.isOAuth && item.oauthKey ? isOAuthConfigured(item.oauthKey, oauth) : false;
+
             return (
               <li
                 key={item.key}
@@ -256,21 +303,51 @@ export function InstanceAdminAuthenticationPage() {
                     <p className="text-xs text-(--txt-secondary)">{item.desc}</p>
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {item.action && (
-                    <Button variant="secondary" size="sm" className="text-xs">
-                      {item.action}
-                    </Button>
+                <div className="flex shrink-0 items-center gap-3">
+                  {item.isOAuth && item.editPath && (
+                    <>
+                      <Link
+                        to={item.editPath}
+                        className={
+                          configured
+                            ? 'rounded px-2.5 py-1 text-xs font-medium text-(--txt-accent) hover:bg-(--bg-accent-subtle)'
+                            : 'inline-flex items-center gap-1.5 rounded border border-(--border-subtle) px-2.5 py-1 text-xs font-medium text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)'
+                        }
+                      >
+                        {configured ? (
+                          'Edit'
+                        ) : (
+                          <>
+                            <Settings2 className="h-3.5 w-3.5" />
+                            Configure
+                          </>
+                        )}
+                      </Link>
+                      <span
+                        className="inline-flex"
+                        title={
+                          !configured && !on
+                            ? 'Add OAuth client credentials on the configuration page before enabling this provider.'
+                            : on && !configured
+                              ? 'OAuth credentials are missing or invalid. Open Configure to fix or turn this off.'
+                              : undefined
+                        }
+                      >
+                        <InstanceAdminToggleSwitch
+                          checked={on}
+                          onChange={(v) => handleToggle(item.key, v)}
+                          disabled={saving || (!configured && !on)}
+                        />
+                      </span>
+                    </>
                   )}
-                  <label className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full bg-(--neutral-400) has-[:checked]:bg-(--brand-default)">
-                    <input
-                      type="checkbox"
-                      className="peer sr-only"
+                  {!item.isOAuth && (
+                    <InstanceAdminToggleSwitch
                       checked={on}
-                      onChange={(e) => handleToggle(item.key, e.target.checked)}
+                      onChange={(v) => handleToggle(item.key, v)}
+                      disabled={saving}
                     />
-                    <span className="pointer-events-none inline-block h-5 w-5 translate-x-0.5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
-                  </label>
+                  )}
                 </div>
               </li>
             );

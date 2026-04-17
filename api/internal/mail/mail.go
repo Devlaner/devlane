@@ -46,6 +46,11 @@ func getEmailSettings(ctx context.Context, s *store.InstanceSettingStore) (*smtp
 	username, _ := v["username"].(string)
 	passRaw, _ := v["password"].(string)
 	password := crypto.DecryptOrPlain(passRaw)
+	if crypto.LooksEncrypted(passRaw) && password == "" {
+		return nil, fmt.Errorf(
+			"SMTP password cannot be decrypted: ensure INSTANCE_ENCRYPTION_KEY matches the key used when the password was saved, or open instance email settings and save the SMTP password again",
+		)
+	}
 	host = strings.TrimSpace(host)
 	if host == "" {
 		return nil, fmt.Errorf("email host not configured")
@@ -64,6 +69,10 @@ func getEmailSettings(ctx context.Context, s *store.InstanceSettingStore) (*smtp
 // settings and sends mail. If not configured or send fails, logs and returns error.
 func NewSMTPEmailSender(instanceSettings *store.InstanceSettingStore, log *slog.Logger) func(ctx context.Context, to, subject, body string) error {
 	return func(ctx context.Context, to, subject, body string) error {
+		if instanceSettings == nil {
+			LogSkip(log, "instance settings store is nil", to, fmt.Errorf("no settings store"))
+			return fmt.Errorf("email not configured: no settings store")
+		}
 		cfg, err := getEmailSettings(ctx, instanceSettings)
 		if err != nil {
 			LogSkip(log, "instance email not configured", to, err)
