@@ -269,10 +269,12 @@ const DEFAULT_HOME_WIDGETS: HomeWidget[] = [
 function normalizeWidgets(raw: unknown): HomeWidget[] {
   if (!Array.isArray(raw)) return [...DEFAULT_HOME_WIDGETS];
 
-  // Build a quick lookup of canonical labels so we always derive the visible
-  // label from code (not from persisted data).
-  const defaultLabelById: Record<string, string> = {};
-  for (const w of DEFAULT_HOME_WIDGETS) defaultLabelById[w.id] = w.label;
+  // Build a typed lookup of canonical labels so we always derive the visible
+  // label from code (not from persisted data). Use `HomeWidgetId` keys so
+  // the map only contains known widget ids and is properly type-checked.
+  const defaultLabelById: Record<HomeWidgetId, string> = Object.fromEntries(
+    DEFAULT_HOME_WIDGETS.map((w) => [w.id, w.label]),
+  ) as Record<HomeWidgetId, string>;
 
   const byId = new Map<HomeWidgetId, HomeWidget>();
   const ordered: HomeWidget[] = [];
@@ -795,10 +797,14 @@ export function WorkspaceHomePage() {
     );
   };
 
-  const handleWidgetDrop = (targetId: HomeWidgetId) => {
-    if (!draggingWidgetId || draggingWidgetId === targetId) return;
+  // Accept an optional `draggedId` (from dataTransfer) to ensure the drop
+  // reorder uses a single source of truth. If not provided, fall back to
+  // `draggingWidgetId` state for compatibility with existing drag flows.
+  const handleWidgetDrop = (targetId: HomeWidgetId, draggedId?: HomeWidgetId) => {
+    const fromId = draggedId ?? draggingWidgetId;
+    if (!fromId || fromId === targetId) return;
     setWidgets((prev) => {
-      const fromIndex = prev.findIndex((widget) => widget.id === draggingWidgetId);
+      const fromIndex = prev.findIndex((widget) => widget.id === fromId);
       const targetIndex = prev.findIndex((widget) => widget.id === targetId);
       if (fromIndex < 0 || targetIndex < 0 || fromIndex === targetIndex) return prev;
       const reordered = [...prev];
@@ -1256,14 +1262,17 @@ export function WorkspaceHomePage() {
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
-                const draggedWidgetId = e.dataTransfer.getData('text/plain');
+                const draggedWidgetId = e.dataTransfer.getData('text/plain') as string;
                 if (
                   draggedWidgetId &&
-                  !widgets.some((candidate) => candidate.id === draggedWidgetId)
+                  !widgets.some((candidate) => candidate.id === (draggedWidgetId as HomeWidgetId))
                 ) {
                   return;
                 }
-                handleWidgetDrop(widget.id);
+                // Pass the dragged id to handleWidgetDrop so reordering is driven
+                // by the drag source (dataTransfer) rather than relying on state
+                // which can be out-of-sync due to timing.
+                handleWidgetDrop(widget.id, (draggedWidgetId as HomeWidgetId) || undefined);
               }}
               className={`flex items-center justify-between rounded-(--radius-md) border px-3 py-2 ${
                 draggingWidgetId === widget.id
@@ -1287,7 +1296,6 @@ export function WorkspaceHomePage() {
                   type="button"
                   role="switch"
                   aria-checked={widget.enabled}
-                  aria-label={`Toggle ${widget.label}`}
                   aria-labelledby={`widget-toggle-label-${widget.id}`}
                   onClick={() => handleWidgetEnabledChange(widget.id, !widget.enabled)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors ${
