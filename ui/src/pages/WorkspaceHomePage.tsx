@@ -268,31 +268,42 @@ const DEFAULT_HOME_WIDGETS: HomeWidget[] = [
 
 function normalizeWidgets(raw: unknown): HomeWidget[] {
   if (!Array.isArray(raw)) return [...DEFAULT_HOME_WIDGETS];
+
+  // Build a quick lookup of canonical labels so we always derive the visible
+  // label from code (not from persisted data).
+  const defaultLabelById: Record<string, string> = {};
+  for (const w of DEFAULT_HOME_WIDGETS) defaultLabelById[w.id] = w.label;
+
   const byId = new Map<HomeWidgetId, HomeWidget>();
   const ordered: HomeWidget[] = [];
+
   for (const item of raw) {
     if (!item || typeof item !== 'object') continue;
-    const id = (item as { id?: unknown }).id;
-    const enabled = (item as { enabled?: unknown }).enabled;
-    if (id === 'quicklinks' || id === 'recents' || id === 'stickies') {
-      if (byId.has(id)) continue;
-      // Derive the visible label from the canonical DEFAULT_HOME_WIDGETS mapping
-      // Do NOT trust or re-use any stored `label` value — persist only stable fields
-      // (id, enabled, order). This ensures label changes or localization propagate.
-      const fallbackLabel = DEFAULT_HOME_WIDGETS.find((widget) => widget.id === id)?.label ?? id;
-      const normalized: HomeWidget = {
-        id,
-        label: fallbackLabel,
-        enabled: typeof enabled === 'boolean' ? enabled : true,
-      };
-      byId.set(id, normalized);
-      ordered.push(normalized);
-    }
+    const maybeId = (item as { id?: unknown }).id;
+    const maybeEnabled = (item as { enabled?: unknown }).enabled;
+    if (maybeId !== 'quicklinks' && maybeId !== 'recents' && maybeId !== 'stickies') continue;
+    const id = maybeId as HomeWidgetId;
+    if (byId.has(id)) continue;
+
+    const enabled = typeof maybeEnabled === 'boolean' ? maybeEnabled : true;
+
+    const normalized: HomeWidget = {
+      id,
+      // ALWAYS derive label from the canonical defaults so persisted labels
+      // or older formats cannot freeze the visible text.
+      label: defaultLabelById[id] ?? id,
+      enabled,
+    };
+
+    byId.set(id, normalized);
+    ordered.push(normalized);
   }
+
   const merged: HomeWidget[] = [...ordered];
   for (const widget of DEFAULT_HOME_WIDGETS) {
     if (!byId.has(widget.id)) merged.push(widget);
   }
+
   return merged;
 }
 
@@ -1246,7 +1257,10 @@ export function WorkspaceHomePage() {
               onDrop={(e) => {
                 e.preventDefault();
                 const draggedWidgetId = e.dataTransfer.getData('text/plain');
-                if (draggedWidgetId && !widgets.some((candidate) => candidate.id === draggedWidgetId)) {
+                if (
+                  draggedWidgetId &&
+                  !widgets.some((candidate) => candidate.id === draggedWidgetId)
+                ) {
                   return;
                 }
                 handleWidgetDrop(widget.id);
