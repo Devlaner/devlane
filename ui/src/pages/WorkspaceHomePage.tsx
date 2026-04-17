@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Card, CardContent, Button, Modal, Input } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,6 +8,7 @@ import { quickLinksService } from '../services/quickLinksService';
 import { stickiesService } from '../services/stickiesService';
 import { StickyNoteCard } from '../components/stickies/StickyNoteCard';
 import { pickRandomStickyBackground } from '../components/stickies/stickyPalette';
+import { OPEN_HOME_WIDGETS } from '../lib/homeWidgetsEvents';
 import { recentsService } from '../services/recentsService';
 import type {
   WorkspaceApiResponse,
@@ -230,6 +231,83 @@ const IconChain = () => (
     <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
   </svg>
 );
+const IconGripVertical = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <circle cx="9" cy="5" r="1" />
+    <circle cx="9" cy="12" r="1" />
+    <circle cx="9" cy="19" r="1" />
+    <circle cx="15" cy="5" r="1" />
+    <circle cx="15" cy="12" r="1" />
+    <circle cx="15" cy="19" r="1" />
+  </svg>
+);
+
+type HomeWidgetId = 'quicklinks' | 'recents' | 'stickies';
+
+type HomeWidget = {
+  id: HomeWidgetId;
+  label: string;
+  enabled: boolean;
+};
+
+const DEFAULT_HOME_WIDGETS: HomeWidget[] = [
+  { id: 'quicklinks', label: 'Quicklinks', enabled: true },
+  { id: 'recents', label: 'Recents', enabled: true },
+  { id: 'stickies', label: 'Your stickies', enabled: true },
+];
+
+function normalizeWidgets(raw: unknown): HomeWidget[] {
+  if (!Array.isArray(raw)) return [...DEFAULT_HOME_WIDGETS];
+
+  // Build a typed lookup of canonical labels so we always derive the visible
+  // label from code (not from persisted data). Use `HomeWidgetId` keys so
+  // the map only contains known widget ids and is properly type-checked.
+  const defaultLabelById: Record<HomeWidgetId, string> = Object.fromEntries(
+    DEFAULT_HOME_WIDGETS.map((w) => [w.id, w.label]),
+  ) as Record<HomeWidgetId, string>;
+
+  const byId = new Map<HomeWidgetId, HomeWidget>();
+  const ordered: HomeWidget[] = [];
+
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const maybeId = (item as { id?: unknown }).id;
+    const maybeEnabled = (item as { enabled?: unknown }).enabled;
+    if (maybeId !== 'quicklinks' && maybeId !== 'recents' && maybeId !== 'stickies') continue;
+    const id = maybeId as HomeWidgetId;
+    if (byId.has(id)) continue;
+
+    const enabled = typeof maybeEnabled === 'boolean' ? maybeEnabled : true;
+
+    const normalized: HomeWidget = {
+      id,
+      // ALWAYS derive label from the canonical defaults so persisted labels
+      // or older formats cannot freeze the visible text.
+      label: defaultLabelById[id] ?? id,
+      enabled,
+    };
+
+    byId.set(id, normalized);
+    ordered.push(normalized);
+  }
+
+  const merged: HomeWidget[] = [...ordered];
+  for (const widget of DEFAULT_HOME_WIDGETS) {
+    if (!byId.has(widget.id)) merged.push(widget);
+  }
+
+  return merged;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -531,6 +609,51 @@ export function WorkspaceHomePage() {
       typeof document !== 'undefined' &&
       document.documentElement.getAttribute('data-theme') === 'dark',
   );
+  const [manageWidgetsOpen, setManageWidgetsOpen] = useState(false);
+  const [widgets, setWidgets] = useState<HomeWidget[]>(DEFAULT_HOME_WIDGETS);
+  const [draggingWidgetId, setDraggingWidgetId] = useState<HomeWidgetId | null>(null);
+  const [widgetsHydrated, setWidgetsHydrated] = useState(false);
+
+  const widgetsStorageKey = workspaceSlug ? `devlane:home-widgets:${workspaceSlug}` : '';
+
+  useEffect(() => {
+    setWidgetsHydrated(false);
+    if (!widgetsStorageKey) {
+      setWidgets(DEFAULT_HOME_WIDGETS);
+      setWidgetsHydrated(true);
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(widgetsStorageKey);
+      if (!raw) {
+        setWidgets(DEFAULT_HOME_WIDGETS);
+        setWidgetsHydrated(true);
+        return;
+      }
+      setWidgets(normalizeWidgets(JSON.parse(raw)));
+    } catch {
+      setWidgets(DEFAULT_HOME_WIDGETS);
+    }
+    setWidgetsHydrated(true);
+  }, [widgetsStorageKey]);
+
+  useEffect(() => {
+    if (!widgetsStorageKey || !widgetsHydrated) return;
+    // Persist only stable widget state (id + enabled + order). Do not persist
+    // the visible `label` so that future label updates or localization changes
+    // are applied automatically for existing users.
+    const payload = widgets.map((w) => ({ id: w.id, enabled: w.enabled }));
+    try {
+      localStorage.setItem(widgetsStorageKey, JSON.stringify(payload));
+    } catch {
+      // Ignore persistence failures (e.g. quota exceeded / private mode).
+    }
+  }, [widgetsStorageKey, widgets, widgetsHydrated]);
+  useEffect(() => {
+    const openFromHeader = () => setManageWidgetsOpen(true);
+    window.addEventListener(OPEN_HOME_WIDGETS, openFromHeader as EventListener);
+    return () => window.removeEventListener(OPEN_HOME_WIDGETS, openFromHeader as EventListener);
+  }, []);
   useEffect(() => {
     const el = document.documentElement;
     const sync = () => setStickiesDarkTheme(el.getAttribute('data-theme') === 'dark');
@@ -668,6 +791,32 @@ export function WorkspaceHomePage() {
       // already handled by interceptor
     }
   };
+  const handleWidgetEnabledChange = (id: HomeWidgetId, enabled: boolean) => {
+    setWidgets((prev) =>
+      prev.map((widget) => (widget.id === id ? { ...widget, enabled } : widget)),
+    );
+  };
+
+  // Accept an optional `draggedId` (from dataTransfer) to ensure the drop
+  // reorder uses a single source of truth. If not provided, fall back to
+  // `draggingWidgetId` state for compatibility with existing drag flows.
+  const handleWidgetDrop = (targetId: HomeWidgetId, draggedId?: HomeWidgetId) => {
+    const fromId = draggedId ?? draggingWidgetId;
+    if (!fromId || fromId === targetId) return;
+    setWidgets((prev) => {
+      const fromIndex = prev.findIndex((widget) => widget.id === fromId);
+      const targetIndex = prev.findIndex((widget) => widget.id === targetId);
+      if (fromIndex < 0 || targetIndex < 0 || fromIndex === targetIndex) return prev;
+      const reordered = [...prev];
+      const [moved] = reordered.splice(fromIndex, 1);
+      // Insert using the original target index after removal:
+      // - moving upward inserts before the target row
+      // - moving downward inserts after the target row
+      reordered.splice(targetIndex, 0, moved);
+      return reordered;
+    });
+    setDraggingWidgetId(null);
+  };
 
   useEffect(() => {
     if (!recentsFilterOpen) return;
@@ -706,22 +855,8 @@ export function WorkspaceHomePage() {
           ? recents.filter((r) => r.entity_name === 'page')
           : recents.filter((r) => r.entity_name === 'project');
 
-  return (
-    <div className="mx-auto max-w-4xl space-y-8 pb-8">
-      {/* Welcome */}
-      <section className="text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-(--txt-primary)">
-          {getGreeting()}, {user?.name ?? 'User'}
-        </h1>
-        <p className="mt-1 flex items-center justify-center gap-2 text-sm text-(--txt-tertiary)">
-          <span className="text-(--txt-icon-tertiary)">
-            <IconMoon />
-          </span>
-          {formatDateTime(new Date())}
-        </p>
-      </section>
-
-      {/* Quicklinks */}
+  const sectionByWidgetId: Record<HomeWidgetId, ReactNode> = {
+    quicklinks: (
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-base font-semibold text-(--txt-primary)">Quicklinks</h2>
@@ -850,8 +985,8 @@ export function WorkspaceHomePage() {
           </Card>
         )}
       </section>
-
-      {/* Recents */}
+    ),
+    recents: (
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-base font-semibold text-(--txt-primary)">Recents</h2>
@@ -947,8 +1082,8 @@ export function WorkspaceHomePage() {
           </CardContent>
         </Card>
       </section>
-
-      {/* Your stickies */}
+    ),
+    stickies: (
       <section>
         <div className="mb-3 flex items-center justify-between gap-2">
           <h2 className="text-base font-semibold text-(--txt-primary)">Your stickies</h2>
@@ -1089,6 +1224,115 @@ export function WorkspaceHomePage() {
           );
         })()}
       </section>
+    ),
+  };
+
+  return (
+    <div className="mx-auto max-w-4xl space-y-8 pb-8">
+      <Modal
+        open={manageWidgetsOpen}
+        onClose={() => {
+          setManageWidgetsOpen(false);
+          setDraggingWidgetId(null);
+        }}
+        title="Manage widgets"
+        footer={
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setManageWidgetsOpen(false);
+              setDraggingWidgetId(null);
+            }}
+          >
+            Close
+          </Button>
+        }
+      >
+        <div className="space-y-2">
+          {widgets.map((widget) => (
+            <div
+              key={widget.id}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', widget.id);
+                e.dataTransfer.effectAllowed = 'move';
+                setDraggingWidgetId(widget.id);
+              }}
+              onDragEnd={() => setDraggingWidgetId(null)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const draggedWidgetId = e.dataTransfer.getData('text/plain') as string;
+                if (
+                  draggedWidgetId &&
+                  !widgets.some((candidate) => candidate.id === (draggedWidgetId as HomeWidgetId))
+                ) {
+                  return;
+                }
+                // Pass the dragged id to handleWidgetDrop so reordering is driven
+                // by the drag source (dataTransfer) rather than relying on state
+                // which can be out-of-sync due to timing.
+                handleWidgetDrop(widget.id, (draggedWidgetId as HomeWidgetId) || undefined);
+              }}
+              className={`flex items-center justify-between rounded-(--radius-md) border px-3 py-2 ${
+                draggingWidgetId === widget.id
+                  ? 'border-(--border-strong) bg-(--bg-layer-1)'
+                  : 'border-(--border-subtle) bg-(--bg-surface-1)'
+              }`}
+            >
+              <div className="flex items-center gap-2 text-(--txt-secondary)">
+                <span className="cursor-grab text-(--txt-icon-tertiary)">
+                  <IconGripVertical />
+                </span>
+                <span
+                  id={`widget-toggle-label-${widget.id}`}
+                  className="text-sm font-medium text-(--txt-primary)"
+                >
+                  {widget.label}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={widget.enabled}
+                  aria-labelledby={`widget-toggle-label-${widget.id}`}
+                  onClick={() => handleWidgetEnabledChange(widget.id, !widget.enabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors ${
+                    widget.enabled
+                      ? 'border-(--brand-default) bg-(--brand-default)'
+                      : 'border-(--border-subtle) bg-(--bg-layer-2)'
+                  }`}
+                >
+                  <span
+                    className={`inline-block size-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                      widget.enabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Modal>
+      {/* Welcome */}
+      <section className="text-center">
+        <h1 className="text-2xl font-bold tracking-tight text-(--txt-primary)">
+          {getGreeting()}, {user?.name ?? 'User'}
+        </h1>
+        <p className="mt-1 flex items-center justify-center gap-2 text-sm text-(--txt-tertiary)">
+          <span className="text-(--txt-icon-tertiary)">
+            <IconMoon />
+          </span>
+          {formatDateTime(new Date())}
+        </p>
+      </section>
+
+      {widgets
+        .filter((widget) => widget.enabled)
+        .map((widget) => (
+          <div key={widget.id}>{sectionByWidgetId[widget.id]}</div>
+        ))}
     </div>
   );
 }

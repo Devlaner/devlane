@@ -40,6 +40,7 @@ import {
   PROJECT_CYCLES_FILTER_EVENT,
   PROJECT_CYCLES_REFRESH_EVENT,
 } from '../../lib/projectCyclesEvents';
+import { dispatchOpenHomeWidgets } from '../../lib/homeWidgetsEvents';
 import {
   DEFAULT_PROJECT_ISSUES_FILTERS,
   PROJECT_ISSUES_DISPLAY_EVENT,
@@ -752,6 +753,7 @@ function HomeHeader() {
           variant="ghost"
           size="sm"
           className="gap-1.5 text-[13px] font-medium text-(--txt-secondary)"
+          onClick={() => dispatchOpenHomeWidgets()}
         >
           <IconGrid />
           Manage widgets
