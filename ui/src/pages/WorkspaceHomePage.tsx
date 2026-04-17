@@ -783,8 +783,10 @@ export function WorkspaceHomePage() {
       if (fromIndex < 0 || targetIndex < 0 || fromIndex === targetIndex) return prev;
       const reordered = [...prev];
       const [moved] = reordered.splice(fromIndex, 1);
-      const insertIndex = fromIndex < targetIndex ? targetIndex - 1 : targetIndex;
-      reordered.splice(insertIndex, 0, moved);
+      // Insert using the original target index after removal:
+      // - moving upward inserts before the target row
+      // - moving downward inserts after the target row
+      reordered.splice(targetIndex, 0, moved);
       return reordered;
     });
     setDraggingWidgetId(null);
@@ -1225,7 +1227,11 @@ export function WorkspaceHomePage() {
             <div
               key={widget.id}
               draggable
-              onDragStart={() => setDraggingWidgetId(widget.id)}
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', widget.id);
+                e.dataTransfer.effectAllowed = 'move';
+                setDraggingWidgetId(widget.id);
+              }}
               onDragEnd={() => setDraggingWidgetId(null)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => handleWidgetDrop(widget.id)}
