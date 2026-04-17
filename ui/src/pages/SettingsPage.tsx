@@ -1808,7 +1808,12 @@ export function SettingsPage() {
                     className="flex items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3"
                   >
                     <div>
-                      <p id={`notif-toggle-label-${id}`} className="text-sm font-medium text-(--txt-primary)">{label}</p>
+                      <p
+                        id={`notif-toggle-label-${id}`}
+                        className="text-sm font-medium text-(--txt-primary)"
+                      >
+                        {label}
+                      </p>
                       <p className="mt-0.5 text-sm text-(--txt-secondary)">{desc}</p>
                     </div>
                     <button
@@ -2547,7 +2552,12 @@ export function SettingsPage() {
                 </div>
                 <div className="flex flex-wrap items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3">
                   <div>
-                    <p id={`guest-toggle-label-${selectedProjectId ?? 'project'}`} className="text-sm font-medium text-(--txt-primary)">Guest access</p>
+                    <p
+                      id={`guest-toggle-label-${selectedProjectId ?? 'project'}`}
+                      className="text-sm font-medium text-(--txt-primary)"
+                    >
+                      Guest access
+                    </p>
                     <p className="mt-0.5 text-sm text-(--txt-secondary)">
                       This will allow guests to have view access to all the project work items.
                     </p>
@@ -2798,7 +2808,12 @@ export function SettingsPage() {
                         {id === 'intake' && <IconInbox />}
                       </span>
                       <div>
-                        <p id={`feature-toggle-label-${id}-${selectedProjectId ?? 'project'}`} className="text-sm font-medium text-(--txt-primary)">{label}</p>
+                        <p
+                          id={`feature-toggle-label-${id}-${selectedProjectId ?? 'project'}`}
+                          className="text-sm font-medium text-(--txt-primary)"
+                        >
+                          {label}
+                        </p>
                         <p className="mt-0.5 text-sm text-(--txt-secondary)">{desc}</p>
                       </div>
                     </div>
@@ -2845,7 +2860,12 @@ export function SettingsPage() {
                     <IconClock />
                   </span>
                   <div>
-                    <p id={`feature-toggle-label-time-tracking-${selectedProjectId ?? 'project'}`} className="text-sm font-medium text-(--txt-primary)">Time Tracking</p>
+                    <p
+                      id={`feature-toggle-label-time-tracking-${selectedProjectId ?? 'project'}`}
+                      className="text-sm font-medium text-(--txt-primary)"
+                    >
+                      Time Tracking
+                    </p>
                     <p className="mt-0.5 text-sm text-(--txt-secondary)">
                       Log time spent on work items and projects.
                     </p>
@@ -3159,7 +3179,10 @@ export function SettingsPage() {
                       <IconArchive />
                     </span>
                     <div>
-                      <p id={`auto-archive-toggle-${selectedProjectId ?? 'project'}`} className="text-sm font-medium text-(--txt-primary)">
+                      <p
+                        id={`auto-archive-toggle-${selectedProjectId ?? 'project'}`}
+                        className="text-sm font-medium text-(--txt-primary)"
+                      >
                         Auto-archive closed work items
                       </p>
                       <p className="mt-0.5 text-sm text-(--txt-secondary)">
@@ -3186,7 +3209,10 @@ export function SettingsPage() {
                       <IconTrash />
                     </span>
                     <div>
-                      <p id={`auto-close-toggle-${selectedProjectId ?? 'project'}`} className="text-sm font-medium text-(--txt-primary)">
+                      <p
+                        id={`auto-close-toggle-${selectedProjectId ?? 'project'}`}
+                        className="text-sm font-medium text-(--txt-primary)"
+                      >
                         Auto-close work items
                       </p>
                       <p className="mt-0.5 text-sm text-(--txt-secondary)">

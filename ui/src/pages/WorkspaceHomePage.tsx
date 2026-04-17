@@ -1245,7 +1245,10 @@ export function WorkspaceHomePage() {
                 <span className="cursor-grab text-(--txt-icon-tertiary)">
                   <IconGripVertical />
                 </span>
-                <span id={`widget-toggle-label-${widget.id}`} className="text-sm font-medium text-(--txt-primary)">
+                <span
+                  id={`widget-toggle-label-${widget.id}`}
+                  className="text-sm font-medium text-(--txt-primary)"
+                >
                   {widget.label}
                 </span>
               </div>
