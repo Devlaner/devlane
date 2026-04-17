@@ -1808,13 +1808,14 @@ export function SettingsPage() {
                     className="flex items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3"
                   >
                     <div>
-                      <p className="text-sm font-medium text-(--txt-primary)">{label}</p>
+                      <p id={`notif-toggle-label-${id}`} className="text-sm font-medium text-(--txt-primary)">{label}</p>
                       <p className="mt-0.5 text-sm text-(--txt-secondary)">{desc}</p>
                     </div>
                     <button
                       type="button"
                       role="switch"
                       aria-checked={value}
+                      aria-labelledby={`notif-toggle-label-${id}`}
                       disabled={!notifPrefsLoaded}
                       onClick={async () => {
                         const next = !value;
@@ -2546,7 +2547,7 @@ export function SettingsPage() {
                 </div>
                 <div className="flex flex-wrap items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium text-(--txt-primary)">Guest access</p>
+                    <p id={`guest-toggle-label-${selectedProjectId ?? 'project'}`} className="text-sm font-medium text-(--txt-primary)">Guest access</p>
                     <p className="mt-0.5 text-sm text-(--txt-secondary)">
                       This will allow guests to have view access to all the project work items.
                     </p>
@@ -2555,6 +2556,7 @@ export function SettingsPage() {
                     type="button"
                     role="switch"
                     aria-checked={guestAccess}
+                    aria-labelledby={`guest-toggle-label-${selectedProjectId ?? 'project'}`}
                     onClick={async () => {
                       const next = !guestAccess;
                       setGuestAccess(next);
@@ -2796,7 +2798,7 @@ export function SettingsPage() {
                         {id === 'intake' && <IconInbox />}
                       </span>
                       <div>
-                        <p className="text-sm font-medium text-(--txt-primary)">{label}</p>
+                        <p id={`feature-toggle-label-${id}-${selectedProjectId ?? 'project'}`} className="text-sm font-medium text-(--txt-primary)">{label}</p>
                         <p className="mt-0.5 text-sm text-(--txt-secondary)">{desc}</p>
                       </div>
                     </div>
@@ -2804,6 +2806,7 @@ export function SettingsPage() {
                       type="button"
                       role="switch"
                       aria-checked={value}
+                      aria-labelledby={`feature-toggle-label-${id}-${selectedProjectId ?? 'project'}`}
                       onClick={async () => {
                         const next = !value;
                         set(next);
@@ -2842,7 +2845,7 @@ export function SettingsPage() {
                     <IconClock />
                   </span>
                   <div>
-                    <p className="text-sm font-medium text-(--txt-primary)">Time Tracking</p>
+                    <p id={`feature-toggle-label-time-tracking-${selectedProjectId ?? 'project'}`} className="text-sm font-medium text-(--txt-primary)">Time Tracking</p>
                     <p className="mt-0.5 text-sm text-(--txt-secondary)">
                       Log time spent on work items and projects.
                     </p>
@@ -2852,6 +2855,7 @@ export function SettingsPage() {
                   type="button"
                   role="switch"
                   aria-checked={featureTimeTracking}
+                  aria-labelledby={`feature-toggle-label-time-tracking-${selectedProjectId ?? 'project'}`}
                   onClick={async () => {
                     const next = !featureTimeTracking;
                     setFeatureTimeTracking(next);
@@ -3155,7 +3159,7 @@ export function SettingsPage() {
                       <IconArchive />
                     </span>
                     <div>
-                      <p className="text-sm font-medium text-(--txt-primary)">
+                      <p id={`auto-archive-toggle-${selectedProjectId ?? 'project'}`} className="text-sm font-medium text-(--txt-primary)">
                         Auto-archive closed work items
                       </p>
                       <p className="mt-0.5 text-sm text-(--txt-secondary)">
@@ -3167,6 +3171,7 @@ export function SettingsPage() {
                     type="button"
                     role="switch"
                     aria-checked={autoArchive}
+                    aria-labelledby={`auto-archive-toggle-${selectedProjectId ?? 'project'}`}
                     onClick={() => setAutoArchive(!autoArchive)}
                     className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${autoArchive ? 'bg-(--brand-default)' : 'bg-(--neutral-400)'}`}
                   >
@@ -3181,7 +3186,7 @@ export function SettingsPage() {
                       <IconTrash />
                     </span>
                     <div>
-                      <p className="text-sm font-medium text-(--txt-primary)">
+                      <p id={`auto-close-toggle-${selectedProjectId ?? 'project'}`} className="text-sm font-medium text-(--txt-primary)">
                         Auto-close work items
                       </p>
                       <p className="mt-0.5 text-sm text-(--txt-secondary)">
@@ -3194,6 +3199,7 @@ export function SettingsPage() {
                     type="button"
                     role="switch"
                     aria-checked={autoClose}
+                    aria-labelledby={`auto-close-toggle-${selectedProjectId ?? 'project'}`}
                     onClick={() => setAutoClose(!autoClose)}
                     className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${autoClose ? 'bg-(--brand-default)' : 'bg-(--neutral-400)'}`}
                   >

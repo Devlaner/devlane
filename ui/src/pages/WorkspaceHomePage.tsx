@@ -1239,13 +1239,16 @@ export function WorkspaceHomePage() {
                 <span className="cursor-grab text-(--txt-icon-tertiary)">
                   <IconGripVertical />
                 </span>
-                <span className="text-sm font-medium text-(--txt-primary)">{widget.label}</span>
+                <span id={`widget-toggle-label-${widget.id}`} className="text-sm font-medium text-(--txt-primary)">
+                  {widget.label}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   role="switch"
                   aria-checked={widget.enabled}
+                  aria-labelledby={`widget-toggle-label-${widget.id}`}
                   onClick={() => handleWidgetEnabledChange(widget.id, !widget.enabled)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors ${
                     widget.enabled
