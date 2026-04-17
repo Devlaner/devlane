@@ -630,7 +630,11 @@ export function WorkspaceHomePage() {
     // the visible `label` so that future label updates or localization changes
     // are applied automatically for existing users.
     const payload = widgets.map((w) => ({ id: w.id, enabled: w.enabled }));
-    localStorage.setItem(widgetsStorageKey, JSON.stringify(payload));
+    try {
+      localStorage.setItem(widgetsStorageKey, JSON.stringify(payload));
+    } catch {
+      // Ignore persistence failures (e.g. quota exceeded / private mode).
+    }
   }, [widgetsStorageKey, widgets, widgetsHydrated]);
   useEffect(() => {
     const openFromHeader = () => setManageWidgetsOpen(true);
@@ -1239,7 +1243,14 @@ export function WorkspaceHomePage() {
               }}
               onDragEnd={() => setDraggingWidgetId(null)}
               onDragOver={(e) => e.preventDefault()}
-              onDrop={() => handleWidgetDrop(widget.id)}
+              onDrop={(e) => {
+                e.preventDefault();
+                const draggedWidgetId = e.dataTransfer.getData('text/plain');
+                if (draggedWidgetId && !widgets.some((candidate) => candidate.id === draggedWidgetId)) {
+                  return;
+                }
+                handleWidgetDrop(widget.id);
+              }}
               className={`flex items-center justify-between rounded-(--radius-md) border px-3 py-2 ${
                 draggingWidgetId === widget.id
                   ? 'border-(--border-strong) bg-(--bg-layer-1)'
@@ -1262,6 +1273,7 @@ export function WorkspaceHomePage() {
                   type="button"
                   role="switch"
                   aria-checked={widget.enabled}
+                  aria-label={`Toggle ${widget.label}`}
                   aria-labelledby={`widget-toggle-label-${widget.id}`}
                   onClick={() => handleWidgetEnabledChange(widget.id, !widget.enabled)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors ${
