@@ -276,13 +276,13 @@ function normalizeWidgets(raw: unknown): HomeWidget[] {
     const enabled = (item as { enabled?: unknown }).enabled;
     if (id === 'quicklinks' || id === 'recents' || id === 'stickies') {
       if (byId.has(id)) continue;
+      // Derive the visible label from the canonical DEFAULT_HOME_WIDGETS mapping
+      // Do NOT trust or re-use any stored `label` value — persist only stable fields
+      // (id, enabled, order). This ensures label changes or localization propagate.
       const fallbackLabel = DEFAULT_HOME_WIDGETS.find((widget) => widget.id === id)?.label ?? id;
-      const rawLabel = (item as { label?: unknown }).label;
-      const label =
-        typeof rawLabel === 'string' && rawLabel.trim().length > 0 ? rawLabel : fallbackLabel;
       const normalized: HomeWidget = {
         id,
-        label,
+        label: fallbackLabel,
         enabled: typeof enabled === 'boolean' ? enabled : true,
       };
       byId.set(id, normalized);
@@ -626,7 +626,11 @@ export function WorkspaceHomePage() {
 
   useEffect(() => {
     if (!widgetsStorageKey || !widgetsHydrated) return;
-    localStorage.setItem(widgetsStorageKey, JSON.stringify(widgets));
+    // Persist only stable widget state (id + enabled + order). Do not persist
+    // the visible `label` so that future label updates or localization changes
+    // are applied automatically for existing users.
+    const payload = widgets.map((w) => ({ id: w.id, enabled: w.enabled }));
+    localStorage.setItem(widgetsStorageKey, JSON.stringify(payload));
   }, [widgetsStorageKey, widgets, widgetsHydrated]);
   useEffect(() => {
     const openFromHeader = () => setManageWidgetsOpen(true);
