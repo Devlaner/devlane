@@ -8,6 +8,7 @@ import { quickLinksService } from '../services/quickLinksService';
 import { stickiesService } from '../services/stickiesService';
 import { StickyNoteCard } from '../components/stickies/StickyNoteCard';
 import { pickRandomStickyBackground } from '../components/stickies/stickyPalette';
+import { OPEN_HOME_WIDGETS } from '../lib/homeWidgetsEvents';
 import { recentsService } from '../services/recentsService';
 import type {
   WorkspaceApiResponse,
@@ -629,8 +630,8 @@ export function WorkspaceHomePage() {
   }, [widgetsStorageKey, widgets, widgetsHydrated]);
   useEffect(() => {
     const openFromHeader = () => setManageWidgetsOpen(true);
-    window.addEventListener('devlane:open-home-widgets', openFromHeader);
-    return () => window.removeEventListener('devlane:open-home-widgets', openFromHeader);
+    window.addEventListener(OPEN_HOME_WIDGETS, openFromHeader as EventListener);
+    return () => window.removeEventListener(OPEN_HOME_WIDGETS, openFromHeader as EventListener);
   }, []);
   useEffect(() => {
     const el = document.documentElement;
