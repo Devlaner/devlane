@@ -8,6 +8,7 @@ import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
 import { favoriteService } from '../services/favoriteService';
 import { useFavorites } from '../contexts/FavoritesContext';
+import { useAuth } from '../contexts/AuthContext';
 import type { WorkspaceApiResponse, ProjectApiResponse } from '../api/types';
 
 const MAX_AVATARS = 3;
@@ -55,8 +56,45 @@ function getCoverGradient(projectId: string): string {
 
 export function ProjectsListPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
+  const { user: authUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = (searchParams.get('q') ?? '').toLowerCase().trim();
+  const parseCsvParam = (key: string) =>
+    (searchParams.get(key) ?? '')
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+  const accessFilters = parseCsvParam('access').filter(
+    (value): value is 'private' | 'public' => value === 'private' || value === 'public',
+  );
+  const leadFilters = parseCsvParam('lead');
+  const memberFilters = parseCsvParam('members');
+  const myProjectsOnly = searchParams.get('myProjects') === '1';
+  const sortFieldParam = searchParams.get('sortField');
+  const sortDirParam = searchParams.get('sortDir');
+  const sortParam = searchParams.get('sort');
+  const sortField =
+    sortFieldParam === 'manual' ||
+    sortFieldParam === 'name' ||
+    sortFieldParam === 'created_date' ||
+    sortFieldParam === 'member_count'
+      ? sortFieldParam
+      : sortParam === 'name_asc' || sortParam === 'name_desc'
+        ? 'name'
+        : 'created_date';
+  const sortDir =
+    sortDirParam === 'asc' || sortDirParam === 'desc'
+      ? sortDirParam
+      : sortParam === 'created_asc' || sortParam === 'name_asc'
+        ? 'asc'
+        : 'desc';
+  const createdDateFilter =
+    searchParams.get('createdDate') === 'today' ||
+    searchParams.get('createdDate') === 'last7' ||
+    searchParams.get('createdDate') === 'last30'
+      ? (searchParams.get('createdDate') as 'today' | 'last7' | 'last30')
+      : '';
+  const favoritesOnly = searchParams.get('filter') === 'favorites';
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [allProjects, setAllProjects] = useState<ProjectApiResponse[]>([]);
   const [membersByProject, setMembersByProject] = useState<Record<string, string[]>>({});
@@ -180,14 +218,83 @@ export function ProjectsListPage() {
     };
   }, [workspaceSlug, allProjects]);
 
-  const projects = searchQuery
-    ? allProjects.filter(
-        (p) =>
-          p.name.toLowerCase().includes(searchQuery) ||
-          p.identifier?.toLowerCase().includes(searchQuery) ||
-          p.description?.toLowerCase().includes(searchQuery),
-      )
-    : allProjects;
+  const projectOrderById = new Map(allProjects.map((p, index) => [p.id, index]));
+
+  const projects = allProjects
+    .filter((p) => {
+      if (!searchQuery) return true;
+      return (
+        p.name.toLowerCase().includes(searchQuery) ||
+        p.identifier?.toLowerCase().includes(searchQuery) ||
+        p.description?.toLowerCase().includes(searchQuery)
+      );
+    })
+    .filter((p) => (favoritesOnly ? favoriteProjectIds.includes(p.id) : true))
+    .filter((p) => {
+      if (accessFilters.length === 0) return true;
+      const accessValue: 'private' | 'public' = p.guest_view_all_features ? 'public' : 'private';
+      return accessFilters.includes(accessValue);
+    })
+    .filter((p) => {
+      if (leadFilters.length === 0) return true;
+      return !!p.project_lead_id && leadFilters.includes(p.project_lead_id);
+    })
+    .filter((p) => {
+      if (memberFilters.length === 0) return true;
+      const memberIds = membersByProject[p.id] ?? [];
+      return memberFilters.some(
+        (memberId) => memberIds.includes(memberId) || p.project_lead_id === memberId,
+      );
+    })
+    .filter((p) => {
+      if (!myProjectsOnly || !authUser) return true;
+      const memberIds = membersByProject[p.id] ?? [];
+      return memberIds.includes(authUser.id) || p.project_lead_id === authUser.id;
+    })
+    .filter((p) => {
+      if (!createdDateFilter) return true;
+      const createdAtMs = Date.parse(p.created_at ?? '');
+      if (!Number.isFinite(createdAtMs)) return false;
+      const now = new Date();
+      if (createdDateFilter === 'today') {
+        const startOfDay = new Date(now);
+        startOfDay.setHours(0, 0, 0, 0);
+        return createdAtMs >= startOfDay.getTime();
+      }
+      const days = createdDateFilter === 'last7' ? 7 : 30;
+      const threshold = now.getTime() - days * 24 * 60 * 60 * 1000;
+      return createdAtMs >= threshold;
+    })
+    .slice()
+    .sort((a, b) => {
+      const createdA = Date.parse(a.created_at ?? '') || 0;
+      const createdB = Date.parse(b.created_at ?? '') || 0;
+      const membersA = new Set([
+        ...(membersByProject[a.id] ?? []),
+        ...(a.project_lead_id ? [a.project_lead_id] : []),
+      ]).size;
+      const membersB = new Set([
+        ...(membersByProject[b.id] ?? []),
+        ...(b.project_lead_id ? [b.project_lead_id] : []),
+      ]).size;
+      let result = 0;
+      switch (sortField) {
+        case 'name':
+          result = a.name.localeCompare(b.name);
+          break;
+        case 'member_count':
+          result = membersA - membersB;
+          break;
+        case 'manual':
+          result = (projectOrderById.get(a.id) ?? 0) - (projectOrderById.get(b.id) ?? 0);
+          break;
+        case 'created_date':
+        default:
+          result = createdA - createdB;
+          break;
+      }
+      return sortDir === 'desc' ? -result : result;
+    });
 
   if (loading) {
     return (
@@ -327,7 +434,18 @@ export function ProjectsListPage() {
           );
         })}
       </div>
-      {projects.length === 0 && <p className="text-sm text-(--txt-tertiary)">No projects yet.</p>}
+      {projects.length === 0 && (
+        <p className="text-sm text-(--txt-tertiary)">
+          {favoritesOnly ||
+          accessFilters.length > 0 ||
+          leadFilters.length > 0 ||
+          memberFilters.length > 0 ||
+          !!createdDateFilter ||
+          myProjectsOnly
+            ? 'No projects match the selected filters.'
+            : 'No projects yet.'}
+        </p>
+      )}
     </div>
   );
 }
