@@ -847,7 +847,7 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
       ? sortDirParam
       : legacySortParam === 'created_asc' || legacySortParam === 'name_asc'
         ? 'asc'
-        : 'desc';
+        : 'asc';
   const parseCsvParam = (key: string) =>
     (searchParams.get(key) ?? '')
       .split(',')

@@ -87,7 +87,7 @@ export function ProjectsListPage() {
       ? sortDirParam
       : sortParam === 'created_asc' || sortParam === 'name_asc'
         ? 'asc'
-        : 'desc';
+        : 'asc';
   const createdDateFilter =
     searchParams.get('createdDate') === 'today' ||
     searchParams.get('createdDate') === 'last7' ||
@@ -215,7 +215,7 @@ export function ProjectsListPage() {
 
   const projectOrderById = new Map(allProjects.map((p, index) => [p.id, index]));
 
-  const projects = allProjects
+  const filteredProjects = allProjects
     .filter((p) => {
       if (!searchQuery) return true;
       return (
@@ -259,37 +259,38 @@ export function ProjectsListPage() {
       const days = createdDateFilter === 'last7' ? 7 : 30;
       const threshold = now.getTime() - days * 24 * 60 * 60 * 1000;
       return createdAtMs >= threshold;
-    })
-    .slice()
+    });
+
+  const projects = filteredProjects
+    .map((project) => ({
+      project,
+      createdAtMs: Date.parse(project.created_at ?? '') || 0,
+      membersCount: new Set([
+        ...(membersByProject[project.id] ?? []),
+        ...(project.project_lead_id ? [project.project_lead_id] : []),
+      ]).size,
+    }))
     .sort((a, b) => {
-      const createdA = Date.parse(a.created_at ?? '') || 0;
-      const createdB = Date.parse(b.created_at ?? '') || 0;
-      const membersA = new Set([
-        ...(membersByProject[a.id] ?? []),
-        ...(a.project_lead_id ? [a.project_lead_id] : []),
-      ]).size;
-      const membersB = new Set([
-        ...(membersByProject[b.id] ?? []),
-        ...(b.project_lead_id ? [b.project_lead_id] : []),
-      ]).size;
       let result = 0;
       switch (sortField) {
         case 'name':
-          result = a.name.localeCompare(b.name);
+          result = a.project.name.localeCompare(b.project.name);
           break;
         case 'member_count':
-          result = membersA - membersB;
+          result = a.membersCount - b.membersCount;
           break;
         case 'manual':
-          result = (projectOrderById.get(a.id) ?? 0) - (projectOrderById.get(b.id) ?? 0);
+          result =
+            (projectOrderById.get(a.project.id) ?? 0) - (projectOrderById.get(b.project.id) ?? 0);
           break;
         case 'created_date':
         default:
-          result = createdA - createdB;
+          result = a.createdAtMs - b.createdAtMs;
           break;
       }
       return sortDir === 'desc' ? -result : result;
-    });
+    })
+    .map(({ project }) => project);
 
   if (loading) {
     return (
@@ -432,12 +433,15 @@ export function ProjectsListPage() {
       {projects.length === 0 && (
         <p className="text-sm text-(--txt-tertiary)">
           {favoritesOnly ||
+          !!searchQuery ||
           accessFilters.length > 0 ||
           leadFilters.length > 0 ||
           memberFilters.length > 0 ||
           !!createdDateFilter ||
           myProjectsOnly
-            ? 'No projects match the selected filters.'
+            ? searchQuery
+              ? 'No results match your search'
+              : 'No projects match the selected filters.'
             : 'No projects yet.'}
         </p>
       )}
