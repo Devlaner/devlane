@@ -292,6 +292,15 @@ export function ProjectsListPage() {
     })
     .map(({ project }) => project);
 
+  const hasActiveFiltersOrSearch =
+    !!searchQuery ||
+    favoritesOnly ||
+    accessFilters.length > 0 ||
+    leadFilters.length > 0 ||
+    memberFilters.length > 0 ||
+    !!createdDateFilter ||
+    myProjectsOnly;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
@@ -432,13 +441,7 @@ export function ProjectsListPage() {
       </div>
       {projects.length === 0 && (
         <p className="text-sm text-(--txt-tertiary)">
-          {favoritesOnly ||
-          !!searchQuery ||
-          accessFilters.length > 0 ||
-          leadFilters.length > 0 ||
-          memberFilters.length > 0 ||
-          !!createdDateFilter ||
-          myProjectsOnly
+          {hasActiveFiltersOrSearch
             ? searchQuery
               ? 'No results match your search'
               : 'No projects match the selected filters.'
