@@ -922,15 +922,10 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
       | 'createdDate',
     value?: string,
   ) => {
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (!value) next.delete(key);
-        else next.set(key, value);
-        return next;
-      },
-      { replace: true },
-    );
+    const next = new URLSearchParams(searchParams);
+    if (!value) next.delete(key);
+    else next.set(key, value);
+    setSearchParams(next, { replace: true });
   };
   const updateParams = (
     updates: Partial<
@@ -949,17 +944,12 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
       >
     >,
   ) => {
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        Object.entries(updates).forEach(([key, value]) => {
-          if (!value) next.delete(key);
-          else next.set(key, value);
-        });
-        return next;
-      },
-      { replace: true },
-    );
+    const next = new URLSearchParams(searchParams);
+    Object.entries(updates).forEach(([key, value]) => {
+      if (!value) next.delete(key);
+      else next.set(key, value);
+    });
+    setSearchParams(next, { replace: true });
   };
   const setCsvParam = (key: 'access' | 'lead' | 'members', values: string[]) => {
     updateParam(key, values.length ? values.join(',') : undefined);

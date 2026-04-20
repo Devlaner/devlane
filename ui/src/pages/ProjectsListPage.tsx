@@ -106,14 +106,9 @@ export function ProjectsListPage() {
   const createProjectOpen = searchParams.get('createProject') === '1';
 
   const closeCreateModal = () => {
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete('createProject');
-        return next;
-      },
-      { replace: true },
-    );
+    const next = new URLSearchParams(searchParams);
+    next.delete('createProject');
+    setSearchParams(next, { replace: true });
   };
 
   useEffect(() => {
