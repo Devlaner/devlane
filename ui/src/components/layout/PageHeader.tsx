@@ -862,10 +862,14 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
   const createdDateFilter =
     searchParams.get('createdDate') === 'today' ||
     searchParams.get('createdDate') === 'last7' ||
-    searchParams.get('createdDate') === 'last30'
-      ? (searchParams.get('createdDate') as 'today' | 'last7' | 'last30')
+    searchParams.get('createdDate') === 'last30' ||
+    searchParams.get('createdDate') === 'custom'
+      ? (searchParams.get('createdDate') as 'today' | 'last7' | 'last30' | 'custom')
       : '';
+  const createdAfter = searchParams.get('createdAfter');
+  const createdBefore = searchParams.get('createdBefore');
   const [projectsDropdownOpen, setProjectsDropdownOpen] = useState<string | null>(null);
+  const [projectsDateRangeModalOpen, setProjectsDateRangeModalOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(!!searchQuery);
   const [projectsFiltersSearch, setProjectsFiltersSearch] = useState('');
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMemberApiResponse[]>([]);
@@ -919,7 +923,9 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
       | 'lead'
       | 'members'
       | 'myProjects'
-      | 'createdDate',
+      | 'createdDate'
+      | 'createdAfter'
+      | 'createdBefore',
     value?: string,
   ) => {
     const next = new URLSearchParams(searchParams);
@@ -939,7 +945,9 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
         | 'lead'
         | 'members'
         | 'myProjects'
-        | 'createdDate',
+        | 'createdDate'
+        | 'createdAfter'
+        | 'createdBefore',
         string | undefined
       >
     >,
@@ -1072,7 +1080,11 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                     : 'text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)'
                 }`}
                 onClick={() => {
-                  updateParams({ sortField: opt.value, sort: undefined });
+                  updateParams({
+                    sortField: opt.value,
+                    sort: undefined,
+                    ...(opt.value === 'manual' ? { sortDir: undefined } : {}),
+                  });
                 }}
               >
                 <span>{opt.label}</span>
@@ -1086,6 +1098,7 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
             { value: 'desc', label: 'Descending' },
           ].map((opt) => {
             const active = sortDir === opt.value;
+            const disabled = sortField === 'manual';
             return (
               <button
                 key={opt.value}
@@ -1094,8 +1107,10 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                   active
                     ? 'text-(--txt-primary)'
                     : 'text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)'
-                }`}
+                } ${disabled ? 'cursor-not-allowed opacity-50 hover:bg-transparent' : ''}`}
+                disabled={disabled}
                 onClick={() => {
+                  if (disabled) return;
                   updateParams({ sortDir: opt.value, sort: undefined });
                 }}
               >
@@ -1155,45 +1170,6 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
               />
               <span>My projects</span>
             </label>
-            <CollapsibleSection
-              title="Created date"
-              open={projectsFilterSectionOpen.createdDate}
-              onToggle={() =>
-                setProjectsFilterSectionOpen((prev) => ({
-                  ...prev,
-                  createdDate: !prev.createdDate,
-                }))
-              }
-            >
-              {[
-                { value: 'today', label: 'Today' },
-                { value: 'last7', label: 'Last 7 days' },
-                { value: 'last30', label: 'Last 30 days' },
-              ]
-                .filter((opt) => includeBySearch(opt.label))
-                .map((opt) => (
-                  <label
-                    key={opt.value}
-                    className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-                  >
-                    <input
-                      type="radio"
-                      name="projects-created-date"
-                      checked={createdDateFilter === opt.value}
-                      onChange={() => updateParam('createdDate', opt.value)}
-                      className="border-(--border-subtle)"
-                    />
-                    <span>{opt.label}</span>
-                  </label>
-                ))}
-              <button
-                type="button"
-                onClick={() => updateParam('createdDate')}
-                className="px-3 py-1 text-sm text-(--txt-secondary) hover:text-(--txt-primary)"
-              >
-                Clear date
-              </button>
-            </CollapsibleSection>
             <CollapsibleSection
               title="Access"
               open={projectsFilterSectionOpen.access}
@@ -1296,6 +1272,59 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                 </button>
               )}
             </CollapsibleSection>
+            <CollapsibleSection
+              title="Created date"
+              open={projectsFilterSectionOpen.createdDate}
+              onToggle={() =>
+                setProjectsFilterSectionOpen((prev) => ({
+                  ...prev,
+                  createdDate: !prev.createdDate,
+                }))
+              }
+            >
+              {[
+                { value: 'today', label: 'Today' },
+                { value: 'last7', label: 'Last 7 days' },
+                { value: 'last30', label: 'Last 30 days' },
+                { value: 'custom', label: 'Custom' },
+              ]
+                .filter((opt) => includeBySearch(opt.label))
+                .map((opt) => {
+                  const active = createdDateFilter === opt.value;
+                  return (
+                    <label
+                      key={opt.value}
+                      className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={active}
+                        onChange={() => {
+                          if (active) {
+                            updateParams({
+                              createdDate: undefined,
+                              createdAfter: undefined,
+                              createdBefore: undefined,
+                            });
+                            return;
+                          }
+                          if (opt.value === 'custom') {
+                            setProjectsDateRangeModalOpen(true);
+                            return;
+                          }
+                          updateParams({
+                            createdDate: opt.value,
+                            createdAfter: undefined,
+                            createdBefore: undefined,
+                          });
+                        }}
+                        className="rounded border-(--border-subtle)"
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  );
+                })}
+            </CollapsibleSection>
           </div>
         </Dropdown>
         <Link to={`${baseUrl}/projects?createProject=1`}>
@@ -1305,6 +1334,21 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
           </Button>
         </Link>
       </div>
+      <DateRangeModal
+        open={projectsDateRangeModalOpen}
+        onClose={() => setProjectsDateRangeModalOpen(false)}
+        title="Created date range"
+        after={createdAfter}
+        before={createdBefore}
+        onApply={(after, before) => {
+          updateParams({
+            createdDate: 'custom',
+            createdAfter: after,
+            createdBefore: before,
+          });
+          setProjectsDateRangeModalOpen(false);
+        }}
+      />
     </>
   );
 }

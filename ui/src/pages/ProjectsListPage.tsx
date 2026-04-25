@@ -91,9 +91,12 @@ export function ProjectsListPage() {
   const createdDateFilter =
     searchParams.get('createdDate') === 'today' ||
     searchParams.get('createdDate') === 'last7' ||
-    searchParams.get('createdDate') === 'last30'
-      ? (searchParams.get('createdDate') as 'today' | 'last7' | 'last30')
+    searchParams.get('createdDate') === 'last30' ||
+    searchParams.get('createdDate') === 'custom'
+      ? (searchParams.get('createdDate') as 'today' | 'last7' | 'last30' | 'custom')
       : '';
+  const createdAfter = searchParams.get('createdAfter');
+  const createdBefore = searchParams.get('createdBefore');
   const favoritesOnly = searchParams.get('filter') === 'favorites';
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [allProjects, setAllProjects] = useState<ProjectApiResponse[]>([]);
@@ -247,14 +250,20 @@ export function ProjectsListPage() {
       return memberIds.includes(authUser.id) || p.project_lead_id === authUser.id;
     })
     .filter((p) => {
-      if (!createdDateFilter) return true;
       const createdAtMs = Date.parse(p.created_at ?? '');
       if (!Number.isFinite(createdAtMs)) return false;
+      if (!createdDateFilter) return true;
       const now = new Date();
       if (createdDateFilter === 'today') {
         const startOfDay = new Date(now);
         startOfDay.setHours(0, 0, 0, 0);
         return createdAtMs >= startOfDay.getTime();
+      }
+      if (createdDateFilter === 'custom') {
+        const afterMs = createdAfter ? Date.parse(createdAfter) : NaN;
+        const beforeMs = createdBefore ? Date.parse(createdBefore) : NaN;
+        if (!Number.isFinite(afterMs) || !Number.isFinite(beforeMs)) return true;
+        return createdAtMs >= afterMs && createdAtMs <= beforeMs + (24 * 60 * 60 * 1000 - 1);
       }
       const days = createdDateFilter === 'last7' ? 7 : 30;
       const threshold = now.getTime() - days * 24 * 60 * 60 * 1000;
@@ -288,6 +297,7 @@ export function ProjectsListPage() {
           result = a.createdAtMs - b.createdAtMs;
           break;
       }
+      if (sortField === 'manual') return result;
       return sortDir === 'desc' ? -result : result;
     })
     .map(({ project }) => project);
