@@ -9,6 +9,7 @@ import { projectService } from '../services/projectService';
 import { favoriteService } from '../services/favoriteService';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useAuth } from '../contexts/AuthContext';
+import { parseISODateLocal } from '../lib/dateOnly';
 import { parseProjectsListSearchParams } from '../lib/projectsListSearchParams';
 import type { WorkspaceApiResponse, ProjectApiResponse } from '../api/types';
 
@@ -224,9 +225,9 @@ export function ProjectsListPage() {
       return memberIds.includes(authUser.id) || p.project_lead_id === authUser.id;
     })
     .filter((p) => {
+      if (!createdDateFilter) return true;
       const createdAtMs = Date.parse(p.created_at ?? '');
       if (!Number.isFinite(createdAtMs)) return false;
-      if (!createdDateFilter) return true;
       const now = new Date();
       if (createdDateFilter === 'today') {
         const startOfDay = new Date(now);
@@ -234,10 +235,21 @@ export function ProjectsListPage() {
         return createdAtMs >= startOfDay.getTime();
       }
       if (createdDateFilter === 'custom') {
-        const afterMs = createdAfter ? Date.parse(createdAfter) : NaN;
-        const beforeMs = createdBefore ? Date.parse(createdBefore) : NaN;
+        const afterMs = createdAfter ? parseISODateLocal(createdAfter).getTime() : NaN;
+        const beforeDate = createdBefore ? parseISODateLocal(createdBefore) : null;
+        const beforeMs = beforeDate
+          ? new Date(
+              beforeDate.getFullYear(),
+              beforeDate.getMonth(),
+              beforeDate.getDate(),
+              23,
+              59,
+              59,
+              999,
+            ).getTime()
+          : NaN;
         if (!Number.isFinite(afterMs) || !Number.isFinite(beforeMs)) return true;
-        return createdAtMs >= afterMs && createdAtMs <= beforeMs + (24 * 60 * 60 * 1000 - 1);
+        return createdAtMs >= afterMs && createdAtMs <= beforeMs;
       }
       const days = createdDateFilter === 'last7' ? 7 : 30;
       const threshold = now.getTime() - days * 24 * 60 * 60 * 1000;

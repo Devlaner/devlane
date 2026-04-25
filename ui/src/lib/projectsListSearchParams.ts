@@ -46,7 +46,9 @@ export function parseProjectsListSearchParams(
       ? sortDirParam
       : legacySortParam === 'created_asc' || legacySortParam === 'name_asc'
         ? 'asc'
-        : 'asc';
+        : legacySortParam === 'created_desc' || legacySortParam === 'name_desc'
+          ? 'desc'
+          : 'asc';
 
   const createdDateFilter: ProjectsCreatedDateFilter =
     createdDateParam === 'today' ||

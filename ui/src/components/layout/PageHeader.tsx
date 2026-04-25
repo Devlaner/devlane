@@ -841,6 +841,7 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
     createdDateFilter,
     createdAfter,
     createdBefore,
+    favoritesOnly,
   } = parseProjectsListSearchParams(searchParams);
   const [projectsDropdownOpen, setProjectsDropdownOpen] = useState<string | null>(null);
   const [projectsDateRangeModalOpen, setProjectsDateRangeModalOpen] = useState(false);
@@ -864,6 +865,7 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
     member_count: 'Number of members',
   };
   const activeFilterCount =
+    (favoritesOnly ? 1 : 0) +
     (myProjectsOnly ? 1 : 0) +
     (createdDateFilter ? 1 : 0) +
     selectedAccess.length +
@@ -1136,6 +1138,15 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
             </div>
           </div>
           <div className="max-h-[70vh] overflow-y-auto">
+            <label className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
+              <input
+                type="checkbox"
+                checked={favoritesOnly}
+                onChange={() => updateParam('filter', favoritesOnly ? '' : 'favorites')}
+                className="rounded border-(--border-subtle)"
+              />
+              <span>Favorites</span>
+            </label>
             <label className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
               <input
                 type="checkbox"
