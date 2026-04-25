@@ -9,6 +9,7 @@ import { projectService } from '../services/projectService';
 import { favoriteService } from '../services/favoriteService';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useAuth } from '../contexts/AuthContext';
+import { parseProjectsListSearchParams } from '../lib/projectsListSearchParams';
 import type { WorkspaceApiResponse, ProjectApiResponse } from '../api/types';
 
 const MAX_AVATARS = 3;
@@ -58,46 +59,19 @@ export function ProjectsListPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const { user: authUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const searchQuery = (searchParams.get('q') ?? '').toLowerCase().trim();
-  const parseCsvParam = (key: string) =>
-    (searchParams.get(key) ?? '')
-      .split(',')
-      .map((v) => v.trim())
-      .filter(Boolean);
-  const accessFilters = parseCsvParam('access').filter(
-    (value): value is 'private' | 'public' => value === 'private' || value === 'public',
-  );
-  const leadFilters = parseCsvParam('lead');
-  const memberFilters = parseCsvParam('members');
-  const myProjectsOnly = searchParams.get('myProjects') === '1';
-  const sortFieldParam = searchParams.get('sortField');
-  const sortDirParam = searchParams.get('sortDir');
-  const sortParam = searchParams.get('sort');
-  const sortField =
-    sortFieldParam === 'manual' ||
-    sortFieldParam === 'name' ||
-    sortFieldParam === 'created_date' ||
-    sortFieldParam === 'member_count'
-      ? sortFieldParam
-      : sortParam === 'name_asc' || sortParam === 'name_desc'
-        ? 'name'
-        : 'created_date';
-  const sortDir =
-    sortDirParam === 'asc' || sortDirParam === 'desc'
-      ? sortDirParam
-      : sortParam === 'created_asc' || sortParam === 'name_asc'
-        ? 'asc'
-        : 'asc';
-  const createdDateFilter =
-    searchParams.get('createdDate') === 'today' ||
-    searchParams.get('createdDate') === 'last7' ||
-    searchParams.get('createdDate') === 'last30' ||
-    searchParams.get('createdDate') === 'custom'
-      ? (searchParams.get('createdDate') as 'today' | 'last7' | 'last30' | 'custom')
-      : '';
-  const createdAfter = searchParams.get('createdAfter');
-  const createdBefore = searchParams.get('createdBefore');
-  const favoritesOnly = searchParams.get('filter') === 'favorites';
+  const {
+    searchQuery,
+    accessFilters,
+    leadFilters,
+    memberFilters,
+    myProjectsOnly,
+    sortField,
+    sortDir,
+    createdDateFilter,
+    createdAfter,
+    createdBefore,
+    favoritesOnly,
+  } = parseProjectsListSearchParams(searchParams);
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [allProjects, setAllProjects] = useState<ProjectApiResponse[]>([]);
   const [membersByProject, setMembersByProject] = useState<Record<string, string[]>>({});

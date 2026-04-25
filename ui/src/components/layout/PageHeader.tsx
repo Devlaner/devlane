@@ -59,6 +59,7 @@ import {
 import { PROJECT_VIEWS_FILTER_EVENT } from '../../lib/projectViewsEvents';
 import { slugify } from '../../lib/slug';
 import { MODULE_WORK_ITEMS_COUNT_EVENT } from '../../lib/moduleWorkItemsPrefs';
+import { parseProjectsListSearchParams } from '../../lib/projectsListSearchParams';
 import { ModuleDetailHeader } from './ModuleDetailHeader';
 
 export type ProjectSection = 'issues' | 'cycles' | 'modules' | 'views' | 'pages';
@@ -830,44 +831,17 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
   const { user: authUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get('q') ?? '';
-  const sortFieldParam = searchParams.get('sortField');
-  const sortDirParam = searchParams.get('sortDir');
-  const legacySortParam = searchParams.get('sort');
-  const sortField =
-    sortFieldParam === 'manual' ||
-    sortFieldParam === 'name' ||
-    sortFieldParam === 'created_date' ||
-    sortFieldParam === 'member_count'
-      ? sortFieldParam
-      : legacySortParam === 'name_asc' || legacySortParam === 'name_desc'
-        ? 'name'
-        : 'created_date';
-  const sortDir =
-    sortDirParam === 'asc' || sortDirParam === 'desc'
-      ? sortDirParam
-      : legacySortParam === 'created_asc' || legacySortParam === 'name_asc'
-        ? 'asc'
-        : 'asc';
-  const parseCsvParam = (key: string) =>
-    (searchParams.get(key) ?? '')
-      .split(',')
-      .map((v) => v.trim())
-      .filter(Boolean);
-  const selectedAccess = parseCsvParam('access').filter(
-    (value): value is 'private' | 'public' => value === 'private' || value === 'public',
-  );
-  const selectedLeadIds = parseCsvParam('lead');
-  const selectedMemberIds = parseCsvParam('members');
-  const myProjectsOnly = searchParams.get('myProjects') === '1';
-  const createdDateFilter =
-    searchParams.get('createdDate') === 'today' ||
-    searchParams.get('createdDate') === 'last7' ||
-    searchParams.get('createdDate') === 'last30' ||
-    searchParams.get('createdDate') === 'custom'
-      ? (searchParams.get('createdDate') as 'today' | 'last7' | 'last30' | 'custom')
-      : '';
-  const createdAfter = searchParams.get('createdAfter');
-  const createdBefore = searchParams.get('createdBefore');
+  const {
+    sortField,
+    sortDir,
+    accessFilters: selectedAccess,
+    leadFilters: selectedLeadIds,
+    memberFilters: selectedMemberIds,
+    myProjectsOnly,
+    createdDateFilter,
+    createdAfter,
+    createdBefore,
+  } = parseProjectsListSearchParams(searchParams);
   const [projectsDropdownOpen, setProjectsDropdownOpen] = useState<string | null>(null);
   const [projectsDateRangeModalOpen, setProjectsDateRangeModalOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(!!searchQuery);
@@ -963,7 +937,8 @@ function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
     updateParam(key, values.length ? values.join(',') : undefined);
   };
   const toggleCsvParam = (key: 'access' | 'lead' | 'members', value: string) => {
-    const current = parseCsvParam(key);
+    const current =
+      key === 'access' ? selectedAccess : key === 'lead' ? selectedLeadIds : selectedMemberIds;
     setCsvParam(
       key,
       current.includes(value) ? current.filter((v) => v !== value) : [...current, value],
