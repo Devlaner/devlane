@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, Button, Avatar, Modal } from '../components/ui';
 import { CoverImageModal } from '../components/CoverImageModal';
+import { IntegrationsSection } from '../components/integrations/IntegrationsSection';
 import { UploadImageModal } from '../components/UploadImageModal';
 import { ProjectIconModal, ProjectIconDisplay } from '../components/ProjectIconModal';
 import { getImageUrl } from '../lib/utils';
@@ -68,7 +69,7 @@ const IconUsers = () => (
     <path d="M16 3.13a4 4 0 0 1 0 7.75" />
   </svg>
 );
-const IconCreditCard = () => (
+const IconPlug = () => (
   <svg
     width="16"
     height="16"
@@ -80,8 +81,10 @@ const IconCreditCard = () => (
     strokeLinejoin="round"
     aria-hidden
   >
-    <rect width="20" height="14" x="2" y="5" rx="2" />
-    <line x1="2" y1="10" x2="22" y2="10" />
+    <path d="M9 2v6" />
+    <path d="M15 2v6" />
+    <path d="M6 8h12v4a6 6 0 1 1-12 0V8Z" />
+    <path d="M12 18v4" />
   </svg>
 );
 const IconUpload = () => (
@@ -637,7 +640,7 @@ const IconZap = () => (
     <path d="M4 14l6 6 4-10 6 2-6-6-4 10-6-2z" />
   </svg>
 );
-type WorkspaceSettingsSection = 'general' | 'members' | 'billing' | 'exports' | 'webhooks';
+type WorkspaceSettingsSection = 'general' | 'members' | 'integrations' | 'exports' | 'webhooks';
 type ProjectSettingsSection =
   | 'general'
   | 'members'
@@ -692,7 +695,7 @@ const WORKSPACE_SECTIONS: {
 }[] = [
   { id: 'general', label: 'General', icon: <IconGrid /> },
   { id: 'members', label: 'Members', icon: <IconUsers /> },
-  { id: 'billing', label: 'Billing & Plans', icon: <IconCreditCard /> },
+  { id: 'integrations', label: 'Integrations', icon: <IconPlug /> },
   { id: 'exports', label: 'Exports', icon: <IconUpload /> },
   { id: 'webhooks', label: 'Webhooks', icon: <IconWebhook /> },
 ];
@@ -3619,14 +3622,8 @@ export function SettingsPage() {
             </div>
           )}
 
-          {!isAccountTab && !isProjectsTab && section === 'billing' && (
-            <Card variant="outlined">
-              <CardContent className="py-10 text-center">
-                <p className="text-sm text-(--txt-secondary)">
-                  Billing & Plans settings will be available when the API is connected.
-                </p>
-              </CardContent>
-            </Card>
+          {!isAccountTab && !isProjectsTab && section === 'integrations' && workspaceSlug && (
+            <IntegrationsSection workspaceSlug={workspaceSlug} projects={projects} />
           )}
 
           {!isAccountTab && !isProjectsTab && section === 'exports' && (
