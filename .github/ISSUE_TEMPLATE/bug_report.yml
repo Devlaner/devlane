@@ -1,0 +1,156 @@
+name: Bug report
+description: Report a defect in Devlane so we can fix it.
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill in as much detail as you can — it helps us reproduce and fix the problem faster.
+
+        **Do not report security vulnerabilities here.** See [SECURITY.md](../SECURITY.md) for private disclosure.
+
+  - type: checkboxes
+    id: prechecks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I have searched existing issues and this is not a duplicate.
+          required: true
+        - label: I am using the latest `main` or the most recent release.
+          required: true
+        - label: This is not a security vulnerability (those go to SECURITY.md).
+          required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      options:
+        - API (Go / Gin backend)
+        - UI (React SPA)
+        - Editor (TipTap — description / comments)
+        - Auth (sessions, magic-code, OAuth providers)
+        - Workspaces / Projects / Issues
+        - Modules / Cycles / Views
+        - Activity feed / Notifications
+        - Integrations (GitHub, etc.)
+        - Database / Migrations
+        - Background jobs (RabbitMQ / queue)
+        - File uploads (MinIO)
+        - Email / SMTP
+        - Instance Admin
+        - Docker / Deployment
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How badly does this affect users?
+      options:
+        - Critical — data loss, security exposure, or full outage
+        - High — core flow broken, no workaround
+        - Medium — feature broken with a workaround
+        - Low — cosmetic, edge case, or minor UX issue
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A clear, concise description of the bug.
+      placeholder: When I drag an issue between board columns, the state badge doesn't update until I refresh.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, numbered steps. Include sample data or a workspace/project slug if possible.
+      value: |
+        1. Sign in to workspace `…`
+        2. Open project `…`
+        3. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Devlane version or commit
+      description: Release tag (e.g. v0.5.1) or git commit SHA from `git rev-parse --short HEAD`.
+      placeholder: v0.5.1 or abc1234
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, browser (UI bugs), Go version (API bugs), Node version.
+      placeholder: Windows 11, Chrome 132, Go 1.23.4, Node 22.11.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment mode
+      options:
+        - Local development (`docker compose up` + `npm run dev` + `go run ./cmd/api`)
+        - Self-hosted production
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: db
+    attributes:
+      label: Database state
+      description: Is your local DB freshly migrated, or could there be schema drift?
+      options:
+        - Fresh — migrations applied cleanly on startup
+        - Existing — could have drift from older migrations
+        - Not applicable
+    validations:
+      required: false
+
+  - type: textarea
+    id: api_logs
+    attributes:
+      label: API logs
+      description: Relevant lines from `go run ./cmd/api` output. Redact session cookies / tokens.
+      render: shell
+
+  - type: textarea
+    id: console_logs
+    attributes:
+      label: Browser console / network output
+      description: Paste console errors or failed request responses. Redact bearer tokens.
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Screenshots, screen recordings, related issues, or anything else that helps reproduce.

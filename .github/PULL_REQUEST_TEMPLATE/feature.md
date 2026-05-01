@@ -1,64 +1,75 @@
-## 🚀 Feature
+<!--
+  Feature PR template.
+  Usage: append `?template=feature.md` to the PR URL.
+  Title: `feat(<scope>): <description>` (≤ 100 chars).
+-->
 
-### Description
+## Feature summary
 
-Provide a clear and concise description of the feature introduced in this pull request.
+<!-- One or two sentences: what the user can now do that they couldn't before. -->
 
-### Motivation
+## Linked issues / discussion
 
-Why is this feature needed?
-What problem does it solve?
+Closes #
+<!-- Add design doc / planning link if there was one. -->
 
-### Changes
+## User-facing behavior
 
-List the main changes introduced:
+<!-- The new flow, end to end. Include the surface (where the user sees it) and the trigger. -->
 
-* Added ...
-* Implemented ...
-* Updated ...
+## What changed
 
-### Usage Example
+### API (`api/`)
+<!-- New endpoints, new env vars, new stores/services. Note routes with their HTTP verbs. -->
+-
 
-Show how the new feature can be used.
+### UI (`ui/`)
+<!-- New pages / components / services. Note where it's mounted in the route tree. -->
+-
 
-```bash
-# example command
-example_command --flag
-```
+### Database
+<!-- "No schema changes" or list new tables / columns / migrations. -->
+-
 
-or
+## Why this design
 
-```javascript
-// example usage
-exampleFunction()
-```
+<!-- Tradeoffs: simpler alternatives considered, why we chose this shape. Reviewers care most about this section for net-new features. -->
 
-### Screenshots / Demo (optional)
+## Test plan
 
-If applicable, include screenshots, logs, or demo output.
+- [ ] `npm run validate` green
+- [ ] Manual end-to-end walkthrough:
+  1.
+  2.
+  3.
+- [ ] Tested with both light and dark theme (if UI)
+- [ ] Tested at narrow viewport (if UI)
+- [ ] Re-running the migration on a fresh DB passes (if migration)
 
-### Breaking Changes
+## Screenshots / recording
 
-Does this change break existing functionality?
+<!-- Drag images here. Recording > screenshots for new flows. -->
 
-* [ ] No
-* [ ] Yes (describe below)
+| Before | After |
+| ------ | ----- |
+|        |       |
 
-Description of breaking change (if any):
+## Out of scope (follow-ups)
 
----
+<!-- Bullet list of work this PR explicitly does NOT include but should
+     happen later. Open issues for each before you merge. -->
+-
 
-## ✅ Checklist
+## Rollout notes
 
-* [ ] Code compiles/builds successfully
-* [ ] Code is formatted
-* [ ] Linting passes
-* [ ] Documentation updated
-* [ ] Tests added or updated (if applicable)
-* [ ] No breaking changes introduced
+<!-- Feature flag? Instance settings toggle? Required data backfill? Order
+     in which API + UI must deploy? Otherwise "None". -->
 
----
+## Checklist
 
-## 📎 Additional Notes
-
-Add any extra context, implementation details, or references here.
+- [ ] PR title follows Conventional Commits and is ≤ 100 chars
+- [ ] Trailing slashes on new routes match neighboring routes
+- [ ] New env vars documented in `internal/config/config.go`
+- [ ] New instance settings reachable from the admin UI
+- [ ] No `--no-verify` bypass
+- [ ] Acceptance criteria from the linked issue are all met

@@ -1,0 +1,57 @@
+name: Documentation
+description: Report missing, incorrect, or unclear documentation.
+title: "[DOCS] "
+labels: ["documentation", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for problems with `README`, `CLAUDE.md`, in-code comments that mislead, the `planning/` design docs, or any onboarding gap.
+
+  - type: checkboxes
+    id: prechecks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I have searched existing docs issues and this is not a duplicate.
+          required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Issue kind
+      options:
+        - Missing — something should be documented but isn't
+        - Incorrect — documented behavior doesn't match reality
+        - Unclear — accurate but hard to follow
+        - Outdated — was correct, isn't anymore
+        - Broken link / formatting
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Location
+      description: File path, doc URL, or section.
+      placeholder: README.md, planning/backend-architecture.md, code comment in api/internal/router/router.go
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's wrong or missing?
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested wording or structure
+      description: Optional — if you have a concrete suggestion, paste it here.
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
