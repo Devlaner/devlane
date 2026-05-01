@@ -1,0 +1,62 @@
+name: Chore / tech debt
+description: Track maintenance, refactor, dependency upgrade, or cleanup work.
+title: "[CHORE] "
+labels: ["chore", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for work that doesn't add user-visible features and isn't a bug report — e.g. dependency upgrades, refactors, dead-code removal, CI tuning, or planned tech debt cleanup.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Refactor (no behavior change)
+        - Dependency upgrade
+        - Build / CI / tooling
+        - Test coverage
+        - Performance improvement
+        - Dead code / cleanup
+        - Migration follow-up
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - API
+        - UI
+        - Infra / Docker
+        - Repo-wide
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this worth doing now? What does ignoring it cost us?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: How should this be tackled? Files / modules involved, rough plan.
+
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk and rollback
+      description: What could regress? How would we revert if it does?
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
