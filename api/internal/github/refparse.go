@@ -43,9 +43,10 @@ var branchRegex = regexp.MustCompile(`(?i)(?:^|[/_-])([A-Z][A-Z0-9]{0,6})-(\d{1,
 // closing keyword.
 //
 // Examples:
-//   "Fixes DEV-42"                    → [{DEV, 42, closes=true}]
-//   "Closes DEV-12, refs ABC-3"       → [{DEV,12,true}, {ABC,3,false}]
-//   "DEV-1 and DEV-2 in the body"     → [{DEV,1,false}, {DEV,2,false}]
+//
+//	"Fixes DEV-42"                    → [{DEV, 42, closes=true}]
+//	"Closes DEV-12, refs ABC-3"       → [{DEV,12,true}, {ABC,3,false}]
+//	"DEV-1 and DEV-2 in the body"     → [{DEV,1,false}, {DEV,2,false}]
 func ExtractRefs(text string) []IssueRef {
 	if text == "" {
 		return nil

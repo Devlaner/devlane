@@ -17,10 +17,10 @@ var (
 
 // IssueService handles issue business logic.
 type IssueService struct {
-	is        *store.IssueStore
-	ps        *store.ProjectStore
-	ws        *store.WorkspaceStore
-	activity  *store.IssueActivityStore // optional — may be nil
+	is       *store.IssueStore
+	ps       *store.ProjectStore
+	ws       *store.WorkspaceStore
+	activity *store.IssueActivityStore // optional — may be nil
 }
 
 func NewIssueService(is *store.IssueStore, ps *store.ProjectStore, ws *store.WorkspaceStore) *IssueService {

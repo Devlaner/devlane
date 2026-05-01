@@ -75,9 +75,9 @@ func (s *GithubEventService) HandleWebhook(ctx context.Context, event, deliveryI
 	}
 
 	envelope := struct {
-		Action       string                `json:"action,omitempty"`
-		Installation *gh.InstallationLite  `json:"installation,omitempty"`
-		Repository   *gh.RepositoryLite    `json:"repository,omitempty"`
+		Action       string               `json:"action,omitempty"`
+		Installation *gh.InstallationLite `json:"installation,omitempty"`
+		Repository   *gh.RepositoryLite   `json:"repository,omitempty"`
 	}{}
 	_ = json.Unmarshal(payload, &envelope)
 

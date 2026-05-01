@@ -4,12 +4,12 @@ import "time"
 
 // Event header values we care about.
 const (
-	EventPing                    = "ping"
-	EventPullRequest             = "pull_request"
-	EventPullRequestReview       = "pull_request_review"
-	EventIssueComment            = "issue_comment"
-	EventPush                    = "push"
-	EventInstallation            = "installation"
+	EventPing                     = "ping"
+	EventPullRequest              = "pull_request"
+	EventPullRequestReview        = "pull_request_review"
+	EventIssueComment             = "issue_comment"
+	EventPush                     = "push"
+	EventInstallation             = "installation"
 	EventInstallationRepositories = "installation_repositories"
 )
 
@@ -17,10 +17,10 @@ const (
 // installation + repository). The full payload still arrives as a JSON map for
 // per-event decoding.
 type EventEnvelope struct {
-	Action       string             `json:"action,omitempty"`
-	Installation *InstallationLite  `json:"installation,omitempty"`
-	Repository   *RepositoryLite    `json:"repository,omitempty"`
-	Sender       *AccountLite       `json:"sender,omitempty"`
+	Action       string            `json:"action,omitempty"`
+	Installation *InstallationLite `json:"installation,omitempty"`
+	Repository   *RepositoryLite   `json:"repository,omitempty"`
+	Sender       *AccountLite      `json:"sender,omitempty"`
 }
 
 // InstallationLite is the embedded {"installation": {...}} on every event.
@@ -63,22 +63,22 @@ type PullRequestEvent struct {
 
 // PullRequest is the trimmed representation we use.
 type PullRequest struct {
-	ID        int64      `json:"id"`
-	NodeID    string     `json:"node_id"`
-	Number    int        `json:"number"`
-	State     string     `json:"state"` // "open" or "closed"
-	Title     string     `json:"title"`
-	Body      string     `json:"body"`
-	HTMLURL   string     `json:"html_url"`
-	Draft     bool       `json:"draft"`
-	Merged    bool       `json:"merged"`
-	MergedAt  *time.Time `json:"merged_at"`
-	ClosedAt  *time.Time `json:"closed_at"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
+	ID        int64       `json:"id"`
+	NodeID    string      `json:"node_id"`
+	Number    int         `json:"number"`
+	State     string      `json:"state"` // "open" or "closed"
+	Title     string      `json:"title"`
+	Body      string      `json:"body"`
+	HTMLURL   string      `json:"html_url"`
+	Draft     bool        `json:"draft"`
+	Merged    bool        `json:"merged"`
+	MergedAt  *time.Time  `json:"merged_at"`
+	ClosedAt  *time.Time  `json:"closed_at"`
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
 	User      AccountLite `json:"user"`
-	Head      Branch     `json:"head"`
-	Base      Branch     `json:"base"`
+	Head      Branch      `json:"head"`
+	Base      Branch      `json:"base"`
 }
 
 // Branch is the head/base reference on a PR.
@@ -103,7 +103,7 @@ func (p PullRequest) EffectiveState() string {
 
 // PushEvent is the payload for the "push" webhook event.
 type PushEvent struct {
-	Ref          string            `json:"ref"`     // "refs/heads/feature/dev-42-foo"
+	Ref          string            `json:"ref"` // "refs/heads/feature/dev-42-foo"
 	Before       string            `json:"before"`
 	After        string            `json:"after"`
 	Created      bool              `json:"created"` // branch creation
@@ -142,13 +142,13 @@ type IssueCommentEvent struct {
 
 // IssueLite is the GitHub issue/PR stub on issue_comment events.
 type IssueLite struct {
-	ID          int64        `json:"id"`
-	Number      int          `json:"number"`
-	Title       string       `json:"title"`
-	HTMLURL     string       `json:"html_url"`
-	State       string       `json:"state"`
-	PullRequest *struct{}    `json:"pull_request,omitempty"`
-	User        AccountLite  `json:"user"`
+	ID          int64       `json:"id"`
+	Number      int         `json:"number"`
+	Title       string      `json:"title"`
+	HTMLURL     string      `json:"html_url"`
+	State       string      `json:"state"`
+	PullRequest *struct{}   `json:"pull_request,omitempty"`
+	User        AccountLite `json:"user"`
 }
 
 // IsPullRequest is true when the issue is actually a pull request.

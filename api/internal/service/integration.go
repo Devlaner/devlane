@@ -15,10 +15,10 @@ import (
 )
 
 var (
-	ErrIntegrationNotFound       = errors.New("integration not found")
+	ErrIntegrationNotFound         = errors.New("integration not found")
 	ErrIntegrationAlreadyInstalled = errors.New("integration already installed in this workspace")
-	ErrGitHubAppNotConfigured    = errors.New("github app is not configured")
-	ErrInstallationFetch         = errors.New("failed to fetch github installation")
+	ErrGitHubAppNotConfigured      = errors.New("github app is not configured")
+	ErrInstallationFetch           = errors.New("failed to fetch github installation")
 )
 
 // IntegrationService coordinates the generic Integration / WorkspaceIntegration

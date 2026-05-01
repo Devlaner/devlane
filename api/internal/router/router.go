@@ -165,13 +165,13 @@ func New(cfg Config) *gin.Engine {
 		commentStore, integrationSvc,
 	)
 	integrationHandler := &handler.IntegrationHandler{
-		Integration: integrationSvc,
-		GithubSync:  githubSyncSvc,
-		GithubEvent: githubEventSvc,
-		Settings:    instanceSettingStore,
-		AppBaseURL:  appBaseURL,
+		Integration:  integrationSvc,
+		GithubSync:   githubSyncSvc,
+		GithubEvent:  githubEventSvc,
+		Settings:     instanceSettingStore,
+		AppBaseURL:   appBaseURL,
 		APIPublicURL: cfg.APIPublicURL,
-		Log:         cfg.Log,
+		Log:          cfg.Log,
 	}
 
 	// Hot-reload integration clients when an admin saves new credentials so

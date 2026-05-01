@@ -22,13 +22,13 @@ import (
 // IntegrationHandler exposes generic integration endpoints. Provider-specific
 // flows (GitHub install, repo sync, webhook) live in github.go.
 type IntegrationHandler struct {
-	Integration *service.IntegrationService
-	GithubSync  *service.GithubSyncService
-	GithubEvent *service.GithubEventService
-	Settings    *store.InstanceSettingStore
-	AppBaseURL  string
+	Integration  *service.IntegrationService
+	GithubSync   *service.GithubSyncService
+	GithubEvent  *service.GithubEventService
+	Settings     *store.InstanceSettingStore
+	AppBaseURL   string
 	APIPublicURL string
-	Log         *slog.Logger
+	Log          *slog.Logger
 }
 
 func (h *IntegrationHandler) log() *slog.Logger {

@@ -195,19 +195,19 @@ func (h *IssueHandler) Update(c *gin.Context) {
 		return
 	}
 	var body struct {
-		Name        string      `json:"name"`
-		Description *string     `json:"description"`
+		Name        string  `json:"name"`
+		Description *string `json:"description"`
 		// description_html is an alias accepted for symmetry with the column
 		// name on the GORM model — frontend can send either.
 		DescriptionHTML *string     `json:"description_html"`
-		Priority    string      `json:"priority"`
-		StateID     *uuid.UUID  `json:"state_id"`
-		ParentID    *uuid.UUID  `json:"parent_id"`
-		StartDate   *string     `json:"start_date"`
-		TargetDate  *string     `json:"target_date"`
-		AssigneeIDs []uuid.UUID `json:"assignee_ids"`
-		LabelIDs    []uuid.UUID `json:"label_ids"`
-		IsDraft     *bool       `json:"is_draft"`
+		Priority        string      `json:"priority"`
+		StateID         *uuid.UUID  `json:"state_id"`
+		ParentID        *uuid.UUID  `json:"parent_id"`
+		StartDate       *string     `json:"start_date"`
+		TargetDate      *string     `json:"target_date"`
+		AssigneeIDs     []uuid.UUID `json:"assignee_ids"`
+		LabelIDs        []uuid.UUID `json:"label_ids"`
+		IsDraft         *bool       `json:"is_draft"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})

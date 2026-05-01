@@ -14,11 +14,11 @@ import (
 )
 
 var (
-	ErrRepoSyncNotFound       = errors.New("repository sync not found")
-	ErrRepoSyncExists         = errors.New("project already linked to a github repository")
-	ErrInvalidPRURL           = errors.New("invalid github pull request url")
-	ErrPRRepoMismatch         = errors.New("pull request belongs to a different repository than the one linked to this project")
-	ErrIssueLinkNotFound      = errors.New("pull request link not found")
+	ErrRepoSyncNotFound  = errors.New("repository sync not found")
+	ErrRepoSyncExists    = errors.New("project already linked to a github repository")
+	ErrInvalidPRURL      = errors.New("invalid github pull request url")
+	ErrPRRepoMismatch    = errors.New("pull request belongs to a different repository than the one linked to this project")
+	ErrIssueLinkNotFound = errors.New("pull request link not found")
 )
 
 // prURLRegex matches https://github.com/owner/repo/pull/123 (with optional trailing slash or path).
