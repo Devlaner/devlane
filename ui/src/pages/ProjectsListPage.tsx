@@ -229,7 +229,7 @@ export function ProjectsListPage() {
           return (
             <div
               key={project.id}
-              className="overflow-hidden rounded-xl bg-(--bg-surface-1) shadow-sm"
+              className="overflow-hidden rounded-xl border border-(--border-subtle) bg-(--bg-surface-1) shadow-sm"
             >
               <Link to={`${baseUrl}/projects/${project.id}/issues`} className="block no-underline">
                 {/* Cover image */}
