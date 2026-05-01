@@ -1,0 +1,117 @@
+name: Feature request
+description: Propose a new feature or an improvement to an existing one.
+title: "[FEAT] "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion! Please describe the problem first, then the proposed solution. Concrete examples are much easier to evaluate than abstract requests.
+
+        For very large features, consider opening a [Discussion](../../discussions) first so we can shape scope together before tracking it as an issue.
+
+  - type: checkboxes
+    id: prechecks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I have searched existing issues / discussions and this is not a duplicate.
+          required: true
+        - label: This is a feature request, not a bug report.
+          required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Which surface(s) does this affect?
+      options:
+        - UI only
+        - API only
+        - UI + API
+        - DB schema (requires migration)
+        - Infra / Docker / Deployment
+        - Documentation
+        - Cross-cutting (multiple of the above)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Primary area
+      options:
+        - Workspaces / Projects / Issues
+        - Modules / Cycles / Views
+        - Editor (description / comments)
+        - Activity feed / Notifications
+        - Integrations (GitHub, future Slack/Linear/Jira)
+        - Auth (sessions, magic-code, OAuth)
+        - Search / Filters
+        - Instance Admin
+        - Performance / Scalability
+        - Accessibility
+        - Theming / Design system
+        - Background jobs (RabbitMQ / queue)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What pain point or limitation does this address? Who hits it, and how often?
+      placeholder: When I open an issue with 50+ comments the page takes ~3s to render and the editor steals focus on every reload.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the desired behavior. Include API shape / UI mock-ups when useful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you ruled out, and why.
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How will we know this is done?
+      value: |
+        - [ ] …
+        - [ ] …
+        - [ ] …
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority (your view)
+      description: Maintainers may re-prioritize during triage.
+      options:
+        - Nice to have
+        - Should have
+        - Must have for next release
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I'm willing to open a PR for this myself.
+        - label: I can help test once a PR is opened.
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Screenshots, mock-ups, links to similar features in other tools, related issues.
