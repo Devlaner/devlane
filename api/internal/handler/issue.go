@@ -196,7 +196,10 @@ func (h *IssueHandler) Update(c *gin.Context) {
 	}
 	var body struct {
 		Name        string      `json:"name"`
-		Description string      `json:"description"`
+		Description *string     `json:"description"`
+		// description_html is an alias accepted for symmetry with the column
+		// name on the GORM model — frontend can send either.
+		DescriptionHTML *string     `json:"description_html"`
 		Priority    string      `json:"priority"`
 		StateID     *uuid.UUID  `json:"state_id"`
 		ParentID    *uuid.UUID  `json:"parent_id"`
@@ -217,9 +220,13 @@ func (h *IssueHandler) Update(c *gin.Context) {
 	if body.Priority != "" {
 		priority = &body.Priority
 	}
+	// Description: accept either `description` or `description_html` (alias).
+	// Pointer semantics — null/missing = leave alone, "" = clear.
 	var description *string
-	if body.Description != "" {
-		description = &body.Description
+	if body.DescriptionHTML != nil {
+		description = body.DescriptionHTML
+	} else if body.Description != nil {
+		description = body.Description
 	}
 	var assigneeIDs *[]uuid.UUID
 	if body.AssigneeIDs != nil {
@@ -425,4 +432,34 @@ func (h *IssueHandler) Delete(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+// ListActivities returns the chronological activity log for an issue.
+// GET /api/workspaces/:slug/projects/:projectId/issues/:pk/activities/
+func (h *IssueHandler) ListActivities(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	slug := c.Param("slug")
+	projectID, err := uuid.Parse(c.Param("projectId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+	iid, ok := issueID(c)
+	if !ok {
+		return
+	}
+	list, err := h.Issue.ListActivities(c.Request.Context(), slug, projectID, iid, user.ID)
+	if err != nil {
+		if err == service.ErrIssueNotFound || err == service.ErrProjectForbidden {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Issue not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list activities"})
+		return
+	}
+	c.JSON(http.StatusOK, list)
 }
