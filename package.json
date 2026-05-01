@@ -1,6 +1,6 @@
 {
   "name": "devlane",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "![Devlane](./ui/public/devlane-1-dark.png)",
   "main": "index.js",

@@ -153,6 +153,16 @@ const InstanceAdminCreateWorkspacePage = lazy(() =>
     }),
   ),
 );
+const InstanceAdminIntegrationsPage = lazy(() =>
+  import('../pages/instance-admin').then((m) =>
+    page({ InstanceAdminIntegrationsPage: m.InstanceAdminIntegrationsPage }),
+  ),
+);
+const InstanceAdminIntegrationGitHubPage = lazy(() =>
+  import('../pages/instance-admin').then((m) =>
+    page({ InstanceAdminIntegrationGitHubPage: m.InstanceAdminIntegrationGitHubPage }),
+  ),
+);
 // Reserved for future instance-admin login route:
 // const InstanceAdminLoginPage = lazy(() => import("../pages/instance-admin").then((m) => page({ InstanceAdminLoginPage: m.InstanceAdminLoginPage })));
 
@@ -340,6 +350,22 @@ const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageFallback />}>
                 <InstanceAdminImagePage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'integrations',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <InstanceAdminIntegrationsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'integrations/github',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <InstanceAdminIntegrationGitHubPage />
               </Suspense>
             ),
           },

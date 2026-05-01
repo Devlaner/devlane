@@ -40,6 +40,19 @@ func (s *ProjectStore) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.db.WithContext(ctx).Where("id = ?", id).Delete(&model.Project{}).Error
 }
 
+// GetByWorkspaceAndIdentifier finds a project by its identifier (case-insensitive)
+// within a workspace. Used to resolve PR refs like "DEV-42" → project DEV.
+func (s *ProjectStore) GetByWorkspaceAndIdentifier(ctx context.Context, workspaceID uuid.UUID, identifier string) (*model.Project, error) {
+	var p model.Project
+	err := s.db.WithContext(ctx).
+		Where("workspace_id = ? AND UPPER(identifier) = UPPER(?) AND deleted_at IS NULL", workspaceID, identifier).
+		First(&p).Error
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
 // IsInWorkspace checks that the project belongs to the workspace.
 func (s *ProjectStore) IsInWorkspace(ctx context.Context, projectID, workspaceID uuid.UUID) (bool, error) {
 	var count int64

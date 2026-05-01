@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -19,6 +20,7 @@ import (
 // Allowed instance setting section keys (must match migration seed).
 var allowedSettingKeys = map[string]bool{
 	"general": true, "email": true, "auth": true, "oauth": true, "ai": true, "image": true,
+	"github_app": true,
 }
 
 // InstanceHandler serves instance setup (first-run); no auth required.
@@ -31,6 +33,10 @@ type InstanceHandler struct {
 // InstanceSettingsHandler serves instance settings (GET/PATCH); requires auth.
 type InstanceSettingsHandler struct {
 	Settings *store.InstanceSettingStore
+	// OnSectionUpdated, if set, is invoked after a successful update with the
+	// section key. Used for hot-reload of integration clients (e.g. github_app)
+	// so the new credentials take effect without an API restart.
+	OnSectionUpdated func(ctx context.Context, key string)
 }
 
 // SetupStatusResponse for GET /api/instance/setup-status/
@@ -135,7 +141,7 @@ func (h *InstanceSettingsHandler) GetSettings(c *gin.Context) {
 		out[k] = decryptSectionSecrets(k, row.Value)
 	}
 	// Ensure all sections exist with defaults (migration seed may not have run if DB was created before seed)
-	for _, key := range []string{"general", "email", "auth", "oauth", "ai", "image"} {
+	for _, key := range []string{"general", "email", "auth", "oauth", "ai", "image", "github_app"} {
 		if _, ok := out[key]; !ok {
 			out[key] = defaultSettingValue(key)
 		}
@@ -158,6 +164,12 @@ func decryptSectionSecrets(sectionKey string, m model.JSONMap) model.JSONMap {
 		secretKeys = []string{"api_key"}
 	case "image":
 		secretKeys = []string{"unsplash_access_key"}
+	case "github_app":
+		// We never echo private_key / client_secret / webhook_secret back to the
+		// admin UI in plain text; only the *_set boolean flags are exposed.
+		// Returning the section unchanged is fine because the response builder
+		// strips these via stripSecretValues below.
+		return stripSecretValues(m, "private_key", "client_secret", "webhook_secret")
 	default:
 		return m
 	}
@@ -169,6 +181,25 @@ func decryptSectionSecrets(sectionKey string, m model.JSONMap) model.JSONMap {
 		if v, ok := out[sk].(string); ok {
 			out[sk] = crypto.DecryptOrPlain(v)
 		}
+	}
+	return out
+}
+
+// stripSecretValues returns a copy of m with the named keys replaced by an
+// empty string. Used for sections (like github_app) where a secret is stored
+// encrypted and exposed to the admin UI only through a *_set boolean.
+func stripSecretValues(m model.JSONMap, keys ...string) model.JSONMap {
+	out := make(model.JSONMap, len(m))
+	stripped := make(map[string]bool, len(keys))
+	for _, k := range keys {
+		stripped[k] = true
+	}
+	for k, v := range m {
+		if stripped[k] {
+			out[k] = ""
+			continue
+		}
+		out[k] = v
 	}
 	return out
 }
@@ -191,6 +222,11 @@ func defaultSettingValue(key string) model.JSONMap {
 		return model.JSONMap{"model": "gpt-4o-mini", "api_key_set": false}
 	case "image":
 		return model.JSONMap{"unsplash_access_key_set": false}
+	case "github_app":
+		return model.JSONMap{
+			"app_id": "", "app_name": "", "client_id": "",
+			"client_secret_set": false, "private_key_set": false, "webhook_secret_set": false,
+		}
 	default:
 		return model.JSONMap{}
 	}
@@ -342,9 +378,50 @@ func (h *InstanceSettingsHandler) UpdateSetting(c *gin.Context) {
 		secretField("gitlab_client_secret", "gitlab_client_secret_set")
 		value = merged
 	}
+	if key == "github_app" {
+		// Merge with existing; encrypt secrets and set *_set flags. Empty
+		// strings are ignored so the admin can edit one field without resetting
+		// the others.
+		existing, _ := h.Settings.Get(c.Request.Context(), "github_app")
+		merged := model.JSONMap{}
+		if existing != nil {
+			for k, v := range existing.Value {
+				merged[k] = v
+			}
+		} else {
+			for k, v := range defaultSettingValue("github_app") {
+				merged[k] = v
+			}
+		}
+		// Plain (non-secret) fields.
+		for _, field := range []string{"app_id", "app_name", "client_id"} {
+			if v, ok := req.Value[field]; ok {
+				merged[field] = v
+			}
+		}
+		// Secret fields: encrypt, set the *_set flag, never expose back.
+		setSecret := func(field, setKey string) {
+			if v, ok := req.Value[field]; ok {
+				if s, ok := v.(string); ok && s != "" {
+					merged[field] = crypto.EncryptOrPlain(s)
+					merged[setKey] = true
+				}
+			}
+		}
+		setSecret("client_secret", "client_secret_set")
+		setSecret("private_key", "private_key_set")
+		setSecret("webhook_secret", "webhook_secret_set")
+		value = merged
+	}
 	if err := h.Settings.Upsert(c.Request.Context(), key, value); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save settings"})
 		return
+	}
+	// Hot-reload integrations (e.g. github_app) so the new credentials take
+	// effect without an API restart. Errors here are logged-and-ignored — the
+	// settings are already saved; a stale client is preferable to a 500.
+	if h.OnSectionUpdated != nil {
+		h.OnSectionUpdated(c.Request.Context(), key)
 	}
 	// Return decrypted secrets so client sees the value they just set
 	responseValue := decryptSectionSecrets(key, value)

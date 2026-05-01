@@ -50,6 +50,19 @@ func (s *IssueStore) GetByID(ctx context.Context, id uuid.UUID) (*model.Issue, e
 	return &i, nil
 }
 
+// GetByProjectAndSequence resolves the per-project sequence number to an issue.
+// Used by the GitHub integration to map "DEV-42" → an issue.
+func (s *IssueStore) GetByProjectAndSequence(ctx context.Context, projectID uuid.UUID, sequenceID int) (*model.Issue, error) {
+	var i model.Issue
+	err := s.db.WithContext(ctx).
+		Where("project_id = ? AND sequence_id = ? AND deleted_at IS NULL", projectID, sequenceID).
+		First(&i).Error
+	if err != nil {
+		return nil, err
+	}
+	return &i, nil
+}
+
 // ListByIDs returns issues by IDs (order not preserved).
 func (s *IssueStore) ListByIDs(ctx context.Context, ids []uuid.UUID) ([]model.Issue, error) {
 	if len(ids) == 0 {

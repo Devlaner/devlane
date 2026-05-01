@@ -14,6 +14,7 @@ type IssueComment struct {
 	ProjectID   uuid.UUID      `gorm:"type:uuid;not null" json:"project_id"`
 	WorkspaceID uuid.UUID      `gorm:"type:uuid;not null" json:"workspace_id"`
 	Comment     string         `gorm:"type:text" json:"comment"`
+	Access      string         `gorm:"column:access;type:varchar(100);not null;default:'INTERNAL'" json:"access"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`

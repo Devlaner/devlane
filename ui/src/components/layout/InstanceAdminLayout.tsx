@@ -122,6 +122,24 @@ const IconImage = () => (
     <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
   </svg>
 );
+const IconPlug = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M9 2v6" />
+    <path d="M15 2v6" />
+    <path d="M6 8h12v4a6 6 0 1 1-12 0V8Z" />
+    <path d="M12 18v4" />
+  </svg>
+);
 const IconExternalLink = () => (
   <svg
     width="14"
@@ -210,6 +228,12 @@ const SECTIONS = [
     desc: 'Allow third-party image libraries.',
     Icon: IconImage,
   },
+  {
+    path: 'integrations',
+    label: 'Integrations',
+    desc: 'Configure GitHub and other integrations.',
+    Icon: IconPlug,
+  },
 ] as const;
 
 const BREADCRUMB_LABEL: Record<string, string> = {
@@ -219,12 +243,17 @@ const BREADCRUMB_LABEL: Record<string, string> = {
   authentication: 'Authentication',
   ai: 'Artificial Intelligence',
   image: 'Image',
+  integrations: 'Integrations',
 };
 
 const AUTH_SUB_LABEL: Record<string, string> = {
   google: 'Google',
   github: 'GitHub',
   gitlab: 'GitLab',
+};
+
+const INTEGRATIONS_SUB_LABEL: Record<string, string> = {
+  github: 'GitHub',
 };
 
 export function InstanceAdminLayout() {
@@ -234,8 +263,17 @@ export function InstanceAdminLayout() {
   const segments = pathname.replace(basePath, '').replace(/^\//, '').split('/').filter(Boolean);
   const segment = segments[0] || 'general';
   const breadcrumbLabel = BREADCRUMB_LABEL[segment] ?? 'General';
-  const breadcrumbTail =
-    segments[1] === 'create' ? 'Create' : (AUTH_SUB_LABEL[segments[1] ?? ''] ?? null);
+  const subKey = segments[1] ?? '';
+  let breadcrumbTail: string | null = null;
+  if (subKey === 'create') {
+    breadcrumbTail = 'Create';
+  } else if (segment === 'integrations') {
+    breadcrumbTail = INTEGRATIONS_SUB_LABEL[subKey] ?? null;
+  } else if (segment === 'authentication') {
+    breadcrumbTail = AUTH_SUB_LABEL[subKey] ?? null;
+  } else {
+    breadcrumbTail = AUTH_SUB_LABEL[subKey] ?? null;
+  }
 
   return (
     <div className="flex h-screen flex-col bg-(--bg-canvas)">

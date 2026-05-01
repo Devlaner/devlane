@@ -443,12 +443,12 @@ export function ModuleDetailHeader({
         </div>
       </div>
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
-        <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
+        <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-1) p-0.5">
           <button
             type="button"
             title="List"
             aria-pressed
-            className="flex size-7 items-center justify-center rounded-md bg-white text-(--txt-primary) shadow-sm"
+            className="flex size-7 items-center justify-center rounded-md bg-(--bg-layer-2) text-(--txt-primary) shadow-sm"
           >
             <IconList />
           </button>
