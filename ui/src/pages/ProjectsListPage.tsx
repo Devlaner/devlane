@@ -214,14 +214,16 @@ export function ProjectsListPage() {
     })
     .filter((p) => {
       if (memberFilters.length === 0) return true;
-      const memberIds = membersByProject[p.id] ?? [];
+      if (!Object.prototype.hasOwnProperty.call(membersByProject, p.id)) return true;
+      const memberIds = membersByProject[p.id];
       return memberFilters.some(
         (memberId) => memberIds.includes(memberId) || p.project_lead_id === memberId,
       );
     })
     .filter((p) => {
       if (!myProjectsOnly || !authUser) return true;
-      const memberIds = membersByProject[p.id] ?? [];
+      if (!Object.prototype.hasOwnProperty.call(membersByProject, p.id)) return true;
+      const memberIds = membersByProject[p.id];
       return memberIds.includes(authUser.id) || p.project_lead_id === authUser.id;
     })
     .filter((p) => {
@@ -235,21 +237,33 @@ export function ProjectsListPage() {
         return createdAtMs >= startOfDay.getTime();
       }
       if (createdDateFilter === 'custom') {
-        const afterMs = createdAfter ? parseISODateLocal(createdAfter).getTime() : NaN;
-        const beforeDate = createdBefore ? parseISODateLocal(createdBefore) : null;
-        const beforeMs = beforeDate
-          ? new Date(
-              beforeDate.getFullYear(),
-              beforeDate.getMonth(),
-              beforeDate.getDate(),
-              23,
-              59,
-              59,
-              999,
-            ).getTime()
-          : NaN;
-        if (!Number.isFinite(afterMs) || !Number.isFinite(beforeMs)) return true;
-        return createdAtMs >= afterMs && createdAtMs <= beforeMs;
+        const afterRaw = createdAfter?.trim() ?? '';
+        const beforeRaw = createdBefore?.trim() ?? '';
+        let afterMs: number | undefined;
+        let beforeMs: number | undefined;
+        if (afterRaw) {
+          const t = parseISODateLocal(afterRaw).getTime();
+          if (!Number.isFinite(t)) return false;
+          afterMs = t;
+        }
+        if (beforeRaw) {
+          const beforeDate = parseISODateLocal(beforeRaw);
+          const t = beforeDate.getTime();
+          if (!Number.isFinite(t)) return false;
+          beforeMs = new Date(
+            beforeDate.getFullYear(),
+            beforeDate.getMonth(),
+            beforeDate.getDate(),
+            23,
+            59,
+            59,
+            999,
+          ).getTime();
+        }
+        if (afterMs === undefined && beforeMs === undefined) return true;
+        if (afterMs !== undefined && createdAtMs < afterMs) return false;
+        if (beforeMs !== undefined && createdAtMs > beforeMs) return false;
+        return true;
       }
       const days = createdDateFilter === 'last7' ? 7 : 30;
       const threshold = now.getTime() - days * 24 * 60 * 60 * 1000;
