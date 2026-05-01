@@ -416,6 +416,146 @@ export interface InstanceImageSection {
   unsplash_access_key?: string;
 }
 
+/** GitHub App config (instance admin). Secrets are never echoed back. */
+export interface InstanceGitHubAppSection {
+  app_id?: string;
+  app_name?: string;
+  client_id?: string;
+  client_secret?: string;
+  client_secret_set?: boolean;
+  private_key?: string;
+  private_key_set?: boolean;
+  webhook_secret?: string;
+  webhook_secret_set?: boolean;
+}
+
+/** Available integration provider, returned by GET /api/integrations/. */
+export interface IntegrationApiResponse {
+  id: string;
+  title: string;
+  provider: string;
+  network: number;
+  description?: { text?: string } | Record<string, unknown>;
+  author?: string;
+  avatar_url?: string;
+  verified: boolean;
+  metadata?: Record<string, unknown>;
+}
+
+/** Workspace-scoped installation, returned by GET /api/workspaces/:slug/integrations/. */
+export interface WorkspaceIntegrationApiResponse {
+  id: string;
+  workspace_id: string;
+  actor_id: string;
+  integration_id: string;
+  /** Provider slug from the joined integrations row (e.g. "github"). */
+  provider: string;
+  installation_id?: number;
+  account_login?: string;
+  account_type?: string;
+  account_avatar_url?: string;
+  suspended_at?: string | null;
+  config?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+/** GitHub repository (subset returned by /api/workspaces/:slug/integrations/github/repositories/). */
+export interface GitHubRepositoryApiResponse {
+  id: number;
+  node_id: string;
+  name: string;
+  full_name: string;
+  private: boolean;
+  html_url: string;
+  description?: string;
+  default_branch?: string;
+  owner: {
+    login: string;
+    id: number;
+    type: string;
+    avatar_url: string;
+  };
+}
+
+export interface GitHubRepoListResponse {
+  total_count: number;
+  page: number;
+  per_page: number;
+  repositories: GitHubRepositoryApiResponse[];
+}
+
+/** One PR ↔ issue link row (github_issue_syncs). */
+export interface GitHubIssueLinkResponse {
+  id: string;
+  repo_issue_id: number;
+  github_issue_id: number;
+  issue_url: string;
+  issue_id: string;
+  repository_sync_id: string;
+  project_id: string;
+  workspace_id: string;
+  kind: 'pull_request' | 'issue';
+  state: 'open' | 'merged' | 'closed' | string;
+  title?: string;
+  draft: boolean;
+  merged_at?: string | null;
+  closed_at?: string | null;
+  author_login?: string;
+  base_branch?: string;
+  head_branch?: string;
+  detection_source?: 'title' | 'body' | 'branch' | 'manual' | 'unknown' | string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Aggregate PR counts for one issue, returned by the bulk summary endpoint. */
+export interface GitHubIssueSummaryEntry {
+  issue_id: string;
+  total: number;
+  open: number;
+  merged: number;
+  closed: number;
+  draft: number;
+  /** state of the most recently updated link */
+  latest_state: 'open' | 'merged' | 'closed' | string;
+}
+
+/** Response shape of GET .../integrations/github/issue-summary/. */
+export interface GitHubIssueSummaryResponse {
+  /** Map keyed by issue_id (UUID string). Issues with zero PRs are absent. */
+  summary: Record<string, GitHubIssueSummaryEntry>;
+}
+
+/** github_repository_syncs row + the joined github_repositories row. */
+export interface GitHubRepositorySyncResponse {
+  sync: {
+    id: string;
+    repository_id: string;
+    project_id: string;
+    workspace_id: string;
+    workspace_integration_id: string;
+    auto_link: boolean;
+    auto_close_on_merge: boolean;
+    in_progress_state_id?: string | null;
+    done_state_id?: string | null;
+    created_at: string;
+    updated_at: string;
+  };
+  repository: {
+    id: string;
+    name: string;
+    owner: string;
+    url?: string;
+    repository_id: number;
+    project_id: string;
+    workspace_id: string;
+    created_at: string;
+    updated_at: string;
+  } | null;
+}
+
 /** Cycle as returned by the API */
 export interface CycleApiResponse {
   id: string;
@@ -530,6 +670,37 @@ export interface IssueCommentApiResponse {
   created_at: string;
   updated_at: string;
   created_by_id?: string | null;
+  /** "INTERNAL" (default) or "EXTERNAL". Backend already stores this column. */
+  access?: 'INTERNAL' | 'EXTERNAL' | string;
+}
+
+/** One row in the issue_activities table — a field-change or "created" event. */
+export interface IssueActivityApiResponse {
+  id: string;
+  issue_id?: string | null;
+  project_id: string;
+  workspace_id: string;
+  /** "created" | "updated" | "deleted". */
+  verb: string;
+  /** When verb == "updated", which field — "name" / "state" / "priority" / etc. */
+  field?: string | null;
+  old_value?: string | null;
+  new_value?: string | null;
+  comment?: string | null;
+  issue_comment_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  actor_id?: string | null;
+  created_by_id?: string | null;
+}
+
+/** One emoji reaction on a comment. */
+export interface CommentReactionApiResponse {
+  id: string;
+  comment_id: string;
+  reaction: string;
+  actor_id: string;
+  created_at: string;
 }
 
 /** Quick link (workspace user link) as returned by the API */

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { Badge, Avatar, Button } from '../components/ui';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { Button } from '../components/ui';
 import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
@@ -9,6 +9,13 @@ import { stateService } from '../services/stateService';
 import { labelService } from '../services/labelService';
 import { cycleService } from '../services/cycleService';
 import { moduleService } from '../services/moduleService';
+import { integrationService } from '../services/integrationService';
+import { IssueLayoutList } from '../components/work-item/layouts/IssueLayoutList';
+import { IssueLayoutBoard } from '../components/work-item/layouts/IssueLayoutBoard';
+import { IssueLayoutSpreadsheet } from '../components/work-item/layouts/IssueLayoutSpreadsheet';
+import { IssueLayoutCalendar } from '../components/work-item/layouts/IssueLayoutCalendar';
+import { IssueLayoutGantt } from '../components/work-item/layouts/IssueLayoutGantt';
+import { parseIssueLayout } from '../components/work-item/layouts/IssueLayoutTypes';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
@@ -18,6 +25,7 @@ import type {
   WorkspaceMemberApiResponse,
   CycleApiResponse,
   ModuleApiResponse,
+  GitHubIssueSummaryEntry,
 } from '../api/types';
 import type { Priority } from '../types';
 import type { StateGroup } from '../types/workspaceViewFilters';
@@ -35,15 +43,7 @@ import {
   type ProjectIssuesDisplayPayload,
   type ProjectIssuesFiltersState,
 } from '../lib/projectIssuesEvents';
-import { findWorkspaceMemberByUserId, getImageUrl, normalizeUuidKey } from '../lib/utils';
-
-const priorityVariant: Record<Priority, 'danger' | 'warning' | 'default' | 'neutral'> = {
-  urgent: 'danger',
-  high: 'danger',
-  medium: 'warning',
-  low: 'default',
-  none: 'neutral',
-};
+import { normalizeUuidKey } from '../lib/utils';
 
 function issueMentionSearchBlob(issue: IssueApiResponse): string {
   const parts: string[] = [];
@@ -69,70 +69,6 @@ function issueMentionsUserId(issue: IssueApiResponse, userId: string): boolean {
   return blob.includes(u);
 }
 
-const IconCalendar = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-    <line x1="16" y1="2" x2="16" y2="6" />
-    <line x1="8" y1="2" x2="8" y2="6" />
-    <line x1="3" y1="10" x2="21" y2="10" />
-  </svg>
-);
-const IconUser = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
-);
-const IconTag = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
-  </svg>
-);
-const IconEye = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-const IconMoreVertical = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-    <circle cx="12" cy="5" r="1.5" />
-    <circle cx="12" cy="12" r="1.5" />
-    <circle cx="12" cy="19" r="1.5" />
-  </svg>
-);
 const IconPlus = () => (
   <svg
     width="14"
@@ -147,29 +83,6 @@ const IconPlus = () => (
     <path d="M12 5v14" />
   </svg>
 );
-
-const IconLinkOut = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-    <polyline points="15 3 21 3 21 9" />
-    <line x1="10" x2="21" y1="14" y2="3" />
-  </svg>
-);
-
-function formatShortDate(iso: string | null | undefined): string | null {
-  if (!iso?.trim()) return null;
-  const t = Date.parse(iso);
-  if (Number.isNaN(t)) return null;
-  return new Date(t).toLocaleDateString();
-}
 
 export function IssueListPage() {
   const { workspaceSlug, projectId } = useParams<{
@@ -187,6 +100,7 @@ export function IssueListPage() {
   const [cycles, setCycles] = useState<CycleApiResponse[]>([]);
   const [modules, setModules] = useState<ModuleApiResponse[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
+  const [prSummary, setPrSummary] = useState<Record<string, GitHubIssueSummaryEntry>>({});
   const [loading, setLoading] = useState(true);
   const [createError, setCreateError] = useState<string | null>(null);
   const [listFilters, setListFilters] = useState<ProjectIssuesFiltersState>(() => ({
@@ -253,6 +167,35 @@ export function IssueListPage() {
       cancelled = true;
     };
   }, [workspaceSlug, projectId]);
+
+  // Bulk-fetch GitHub PR summaries for the loaded issues. Re-runs when the
+  // set of issue IDs changes (stable join key). The service short-circuits to
+  // {} for an empty list, and a 404 (no integration / project not linked)
+  // also collapses to "no badges" silently.
+  const issueIDsKey = useMemo(
+    () =>
+      issues
+        .map((i) => i.id)
+        .sort()
+        .join(','),
+    [issues],
+  );
+  useEffect(() => {
+    if (!workspaceSlug || !projectId) return;
+    let cancelled = false;
+    const ids = issueIDsKey ? issueIDsKey.split(',') : [];
+    integrationService
+      .githubIssueSummary(workspaceSlug, projectId, ids)
+      .then((map) => {
+        if (!cancelled) setPrSummary(map);
+      })
+      .catch(() => {
+        if (!cancelled) setPrSummary({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug, projectId, issueIDsKey]);
 
   useLayoutEffect(() => {
     const handler = (e: Event) => {
@@ -465,22 +408,10 @@ export function IssueListPage() {
     ],
   );
 
-  const getStateName = (stateId: string | null | undefined) =>
-    stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : '—';
-  const getLabelNames = (labelIds: string[] = []) =>
-    labelIds
-      .map((id) => labels.find((l) => l.id === id)?.name)
-      .filter((name): name is string => Boolean(name));
-  const getUser = (userId: string | null) => {
-    if (!userId) return null;
-    const m = findWorkspaceMemberByUserId(members, userId);
-    const display = m?.member_display_name?.trim() ?? '';
-    const emailUser = m?.member_email?.trim().split('@')[0]?.trim() ?? '';
-    const name = display !== '' ? display : emailUser !== '' ? emailUser : userId.slice(0, 8);
-    const raw = m?.member_avatar?.trim();
-    const avatarUrl = raw ? raw : null;
-    return { id: userId, name, avatarUrl };
-  };
+  // Stable "now" timestamp used by overdue/relative-date cells. Sampled once
+  // at mount via useState's lazy initializer (allowed to be impure) so each
+  // row stays pure for the rest of the render-tree's lifetime.
+  const [now] = useState(() => Date.now());
 
   const createParam = searchParams.get('create') === '1';
 
@@ -568,166 +499,21 @@ export function IssueListPage() {
     return id ? (modules.find((m) => m.id === id)?.name ?? '—') : '—';
   };
 
-  const renderIssueRow = (issue: IssueApiResponse) => {
-    const primaryAssigneeId =
-      issue.assignee_ids && issue.assignee_ids.length > 0 ? issue.assignee_ids[0] : null;
-    const assignee = getUser(primaryAssigneeId);
-    const labelNames = getLabelNames(issue.label_ids ?? []);
-    const displayId = `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`;
-    const startStr = formatShortDate(issue.start_date);
-    const dueStr = formatShortDate(issue.target_date);
-    const subN = subWorkCountByParentId.get(issue.id) ?? 0;
-    const issueUrl = `${baseUrl}/issues/${issue.id}`;
-
-    return (
-      <li key={issue.id}>
-        <Link
-          to={issueUrl}
-          className="flex min-h-12 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
-        >
-          <span className="min-w-0 flex-1 truncate text-sm">
-            {hasCol('id') ? (
-              <>
-                <span className="font-medium text-(--txt-accent-primary)">{displayId}</span>
-                <span className="ml-2 text-(--txt-primary)">{issue.name}</span>
-              </>
-            ) : (
-              <span className="text-(--txt-primary)">{issue.name}</span>
-            )}
-          </span>
-          <div className="flex shrink-0 flex-wrap items-center gap-2 text-(--txt-icon-tertiary)">
-            {hasCol('state') ? (
-              <span title={getStateName(issue.state_id ?? undefined)}>
-                <Badge variant="neutral" className="text-xs font-medium">
-                  {getStateName(issue.state_id ?? undefined)}
-                </Badge>
-              </span>
-            ) : null}
-            {hasCol('priority') ? (
-              <span
-                title={issue.priority ?? ''}
-                className="flex size-6 items-center justify-center"
-              >
-                <Badge
-                  variant={priorityVariant[(issue.priority as Priority) ?? 'none']}
-                  className="!px-1.5 !py-0 text-[10px]"
-                >
-                  {issue.priority ?? '—'}
-                </Badge>
-              </span>
-            ) : null}
-            {hasCol('start_date') ? (
-              <span
-                className="max-w-[4.5rem] truncate text-[11px] text-(--txt-secondary)"
-                title={issue.start_date ?? ''}
-              >
-                {startStr ?? '—'}
-              </span>
-            ) : null}
-            {hasCol('due_date') ? (
-              <span
-                className="flex size-6 items-center justify-center"
-                title={dueStr ?? 'Due date'}
-              >
-                <IconCalendar />
-              </span>
-            ) : null}
-            {hasCol('assignee') ? (
-              <span
-                className="flex size-6 items-center justify-center"
-                title={assignee?.name ?? 'Unassigned'}
-              >
-                {assignee ? (
-                  <Avatar
-                    name={assignee.name}
-                    src={getImageUrl(assignee.avatarUrl) ?? undefined}
-                    size="sm"
-                    className="h-6 w-6 text-[10px]"
-                  />
-                ) : (
-                  <IconUser />
-                )}
-              </span>
-            ) : null}
-            {hasCol('labels') ? (
-              <span
-                className="flex size-6 items-center justify-center"
-                title={labelNames.length ? labelNames.join(', ') : 'Labels'}
-              >
-                {labelNames.length > 0 ? (
-                  <IconTag />
-                ) : (
-                  <span className="opacity-40">
-                    <IconTag />
-                  </span>
-                )}
-              </span>
-            ) : null}
-            {hasCol('sub_work_count') ? (
-              <span
-                className="min-w-6 text-center text-[11px] text-(--txt-secondary)"
-                title="Sub-work items"
-              >
-                {subN}
-              </span>
-            ) : null}
-            {hasCol('attachment_count') ? (
-              <span
-                className="min-w-6 text-center text-[11px] text-(--txt-secondary)"
-                title="Attachments"
-              >
-                —
-              </span>
-            ) : null}
-            {hasCol('estimate') ? (
-              <span className="text-[11px] text-(--txt-secondary)">—</span>
-            ) : null}
-            {hasCol('module') ? (
-              <span
-                className="max-w-[5rem] truncate text-[11px] text-(--txt-secondary)"
-                title="Module"
-              >
-                {moduleName(issue)}
-              </span>
-            ) : null}
-            {hasCol('cycle') ? (
-              <span
-                className="max-w-[5rem] truncate text-[11px] text-(--txt-secondary)"
-                title="Cycle"
-              >
-                {cycleName(issue)}
-              </span>
-            ) : null}
-            {hasCol('link') ? (
-              <a
-                href={issueUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="flex size-6 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-                title="Open in new tab"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <IconLinkOut />
-              </a>
-            ) : null}
-            <span className="flex size-6 items-center justify-center" title="Visibility">
-              <IconEye />
-            </span>
-            <button
-              type="button"
-              className="flex size-6 items-center justify-center rounded hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-              aria-label="More options"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-            >
-              <IconMoreVertical />
-            </button>
-          </div>
-        </Link>
-      </li>
-    );
+  const layout = parseIssueLayout(searchParams.get('layout'));
+  const issueHref = (id: string) => `${baseUrl}/issues/${id}`;
+  const layoutProps = {
+    workspaceSlug: workspace.slug,
+    project,
+    issues: groupedIssues.isFlat
+      ? (groupedIssues.groups.get(groupedIssues.order[0]) ?? [])
+      : filteredIssues,
+    states,
+    labels,
+    members,
+    prSummary,
+    baseUrl,
+    issueHref,
+    now,
   };
 
   return (
@@ -766,44 +552,33 @@ export function IssueListPage() {
         </div>
       ) : (
         <>
-          {groupedIssues.isFlat ? (
-            <ul className="w-full divide-y divide-(--border-subtle)">
-              {(groupedIssues.groups.get(groupedIssues.order[0]) ?? []).map((issue) =>
-                renderIssueRow(issue),
-              )}
-            </ul>
-          ) : (
-            <div className="space-y-6 px-4 py-4">
-              {groupedIssues.order.map((sectionKey) => {
-                const sectionIssues = groupedIssues.groups.get(sectionKey) ?? [];
-                if (sectionIssues.length === 0 && !listDisplay.showEmptyGroups) return null;
-                const title = groupedIssues.title(sectionKey);
-                return (
-                  <section key={sectionKey} className="space-y-2">
-                    <h3 className="flex items-center gap-2 text-sm font-semibold text-(--txt-primary)">
-                      {title}
-                      <span className="font-normal text-(--txt-tertiary)">
-                        {sectionIssues.length}
-                      </span>
-                    </h3>
-                    <ul className="w-full divide-y divide-(--border-subtle) rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
-                      {sectionIssues.map((issue) => renderIssueRow(issue))}
-                    </ul>
-                  </section>
-                );
-              })}
+          {layout === 'list' && (
+            <IssueLayoutList
+              {...layoutProps}
+              groupedIssues={groupedIssues}
+              hasCol={hasCol}
+              showEmptyGroups={listDisplay.showEmptyGroups}
+              subWorkCountByParentId={subWorkCountByParentId}
+              cycleName={cycleName}
+              moduleName={moduleName}
+            />
+          )}
+          {layout === 'board' && <IssueLayoutBoard {...layoutProps} />}
+          {layout === 'spreadsheet' && <IssueLayoutSpreadsheet {...layoutProps} />}
+          {layout === 'calendar' && <IssueLayoutCalendar {...layoutProps} />}
+          {layout === 'gantt' && <IssueLayoutGantt {...layoutProps} />}
+          {layout === 'list' && (
+            <div className="border-t border-(--border-subtle) px-4 py-2.5">
+              <button
+                type="button"
+                className="flex items-center gap-1.5 rounded-md border border-dashed border-(--border-subtle) bg-transparent px-3 py-2 text-sm font-medium text-(--txt-secondary) hover:border-(--border-strong) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
+                onClick={() => setSearchParams({ create: '1' })}
+              >
+                <IconPlus />
+                New work item
+              </button>
             </div>
           )}
-          <div className="border-t border-(--border-subtle) px-4 py-2.5">
-            <button
-              type="button"
-              className="flex items-center gap-1.5 rounded-md border border-dashed border-(--border-subtle) bg-transparent px-3 py-2 text-sm font-medium text-(--txt-secondary) hover:border-(--border-strong) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
-              onClick={() => setSearchParams({ create: '1' })}
-            >
-              <IconPlus />
-              New work item
-            </button>
-          </div>
         </>
       )}
 

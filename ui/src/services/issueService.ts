@@ -1,5 +1,5 @@
 import { apiClient } from '../api/client';
-import type { IssueApiResponse, CreateIssueRequest } from '../api/types';
+import type { IssueActivityApiResponse, IssueApiResponse, CreateIssueRequest } from '../api/types';
 
 export interface ListIssuesParams {
   limit?: number;
@@ -57,7 +57,14 @@ export const issueService = {
     workspaceSlug: string,
     projectId: string,
     issueId: string,
-    payload: Partial<CreateIssueRequest & { state_id?: string | null; is_draft?: boolean }>,
+    payload: Partial<
+      CreateIssueRequest & {
+        state_id?: string | null;
+        is_draft?: boolean;
+        /** Alias accepted by the backend so callers can use either name. */
+        description_html?: string;
+      }
+    >,
   ): Promise<IssueApiResponse> {
     const { data } = await apiClient.patch<IssueApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/`,
@@ -70,5 +77,17 @@ export const issueService = {
     await apiClient.delete(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/`,
     );
+  },
+
+  /** GET .../issues/:pk/activities/ */
+  async listActivities(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+  ): Promise<IssueActivityApiResponse[]> {
+    const { data } = await apiClient.get<IssueActivityApiResponse[]>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/activities/`,
+    );
+    return data;
   },
 };

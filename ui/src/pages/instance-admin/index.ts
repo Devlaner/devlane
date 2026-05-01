@@ -9,3 +9,5 @@ export { InstanceAdminAuthGitLabPage } from './InstanceAdminAuthGitLabPage';
 export { InstanceAdminAIPage } from './InstanceAdminAIPage';
 export { InstanceAdminImagePage } from './InstanceAdminImagePage';
 export { InstanceAdminLoginPage } from './InstanceAdminLoginPage';
+export { InstanceAdminIntegrationsPage } from './InstanceAdminIntegrationsPage';
+export { InstanceAdminIntegrationGitHubPage } from './InstanceAdminIntegrationGitHubPage';

@@ -650,7 +650,7 @@ function ProjectSectionDropdown({
                 className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm no-underline ${
                   isActive
                     ? 'bg-(--brand-200) text-(--txt-primary)'
-                    : 'text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)'
+                    : 'text-(--txt-secondary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-primary)'
                 }`}
               >
                 <span className="flex size-5 items-center justify-center text-(--txt-icon-secondary)">
@@ -926,6 +926,7 @@ function ProjectSectionHeader({
   const { user: authUser } = useAuth();
   const modulesFilter = useModulesFilter();
   const { display: viewsDisplay, setDisplay } = useWorkspaceViewsState();
+  const [searchParams, setSearchParams] = useSearchParams();
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
   const issuesUrl = `${baseUrl}/issues`;
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
@@ -1213,48 +1214,49 @@ function ProjectSectionHeader({
     if (section === 'issues') {
       return (
         <>
-          <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
-            <button
-              type="button"
-              title="List view"
-              aria-pressed
-              className="flex size-7 items-center justify-center rounded-md bg-white text-(--txt-primary) shadow-sm"
-            >
-              <IconList />
-            </button>
-            <Link
-              to={`${baseUrl}/board`}
-              title="Board"
-              aria-label="Board"
-              className="flex size-7 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-secondary)"
-            >
-              <IconColumns />
-            </Link>
-            <button
-              type="button"
-              title="Calendar (coming soon)"
-              disabled
-              className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
-            >
-              <IconCalendar />
-            </button>
-            <button
-              type="button"
-              title="Spreadsheet (coming soon)"
-              disabled
-              className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
-            >
-              <IconSpreadsheet />
-            </button>
-            <button
-              type="button"
-              title="Timeline (coming soon)"
-              disabled
-              className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
-            >
-              <IconGantt />
-            </button>
-          </div>
+          {(() => {
+            const layouts: { key: string; label: string; icon: React.ReactNode }[] = [
+              { key: 'list', label: 'List', icon: <IconList /> },
+              { key: 'board', label: 'Board', icon: <IconColumns /> },
+              { key: 'calendar', label: 'Calendar', icon: <IconCalendar /> },
+              { key: 'spreadsheet', label: 'Spreadsheet', icon: <IconSpreadsheet /> },
+              { key: 'gantt', label: 'Timeline', icon: <IconGantt /> },
+            ];
+            const activeLayout = (() => {
+              const v = searchParams.get('layout') ?? '';
+              return layouts.some((l) => l.key === v) ? v : 'list';
+            })();
+            const setLayout = (k: string) => {
+              const next = new URLSearchParams(searchParams);
+              if (k === 'list') next.delete('layout');
+              else next.set('layout', k);
+              setSearchParams(next, { replace: true });
+            };
+            return (
+              <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-1) p-0.5">
+                {layouts.map((l) => {
+                  const active = activeLayout === l.key;
+                  return (
+                    <button
+                      key={l.key}
+                      type="button"
+                      title={l.label}
+                      aria-label={l.label}
+                      aria-pressed={active}
+                      onClick={() => setLayout(l.key)}
+                      className={
+                        active
+                          ? 'flex size-7 items-center justify-center rounded-md bg-(--bg-layer-2) text-(--txt-primary) shadow-sm'
+                          : 'flex size-7 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-secondary)'
+                      }
+                    >
+                      {l.icon}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
           <div className="mx-1 w-px self-stretch bg-(--border-subtle)" />
           <div className="relative shrink-0">
             <Dropdown
@@ -1266,7 +1268,7 @@ function ProjectSectionHeader({
               displayValue="Filters"
               panelClassName="flex w-[min(400px,calc(100vw-24px))] max-h-[min(calc(100dvh-96px),36rem)] flex-col overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
               align="right"
-              triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) shadow-sm hover:bg-(--bg-layer-1-hover)"
+              triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
               triggerContent={
                 <>
                   <span className="shrink-0 text-(--txt-icon-tertiary)">
@@ -1441,7 +1443,7 @@ function ProjectSectionHeader({
               <div className="border-b border-(--border-subtle) last:border-b-0">
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
                   onClick={() => setCyclesStatusSectionOpen((o) => !o)}
                 >
                   <span>Status of the cycle</span>
@@ -1465,7 +1467,7 @@ function ProjectSectionHeader({
                       .map((s) => (
                         <label
                           key={s.key}
-                          className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                          className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
                         >
                           <input
                             type="checkbox"
@@ -1489,7 +1491,7 @@ function ProjectSectionHeader({
               <div className="border-b border-(--border-subtle) last:border-b-0">
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
                   onClick={() => setCyclesStartSectionOpen((o) => !o)}
                 >
                   <span>Start date</span>
@@ -1510,7 +1512,7 @@ function ProjectSectionHeader({
                       return (
                         <label
                           key={p.key}
-                          className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                          className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
                         >
                           <input
                             type="checkbox"
@@ -1550,7 +1552,7 @@ function ProjectSectionHeader({
               <div className="border-b border-(--border-subtle) last:border-b-0">
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
                   onClick={() => setCyclesDueSectionOpen((o) => !o)}
                 >
                   <span>Due date</span>
@@ -1571,7 +1573,7 @@ function ProjectSectionHeader({
                       return (
                         <label
                           key={p.key}
-                          className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                          className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
                         >
                           <input
                             type="checkbox"
@@ -1734,7 +1736,7 @@ function ProjectSectionHeader({
                     if (!modulesFilter.order) modulesFilter.setOrder('asc');
                     setModulesSortOpen(null);
                   }}
-                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
                 >
                   {opt.label}
                   {current === opt.value && (
@@ -1757,7 +1759,7 @@ function ProjectSectionHeader({
                     modulesFilter.setOrder(orderValue as 'asc' | 'desc');
                     setModulesSortOpen(null);
                   }}
-                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
                 >
                   {label}
                   {currentOrder === orderValue && (
@@ -1815,14 +1817,14 @@ function ProjectSectionHeader({
               />
             )}
           </div>
-          <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
+          <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-1) p-0.5">
             <Tooltip content="List layout">
               <button
                 type="button"
                 onClick={() => modulesFilter.setLayout('list')}
                 className={`flex size-7 items-center justify-center rounded-l-md text-(--txt-icon-secondary) transition-colors ${
                   listActive
-                    ? 'bg-white shadow-sm text-(--txt-primary)'
+                    ? 'bg-(--bg-layer-2) shadow-sm text-(--txt-primary)'
                     : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
                 }`}
                 aria-pressed={listActive}
@@ -1836,7 +1838,7 @@ function ProjectSectionHeader({
                 onClick={() => modulesFilter.setLayout('gallery')}
                 className={`flex size-7 items-center justify-center text-(--txt-icon-secondary) transition-colors ${
                   galleryActive
-                    ? 'bg-white shadow-sm text-(--txt-primary)'
+                    ? 'bg-(--bg-layer-2) shadow-sm text-(--txt-primary)'
                     : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
                 }`}
                 aria-pressed={galleryActive}
@@ -1850,7 +1852,7 @@ function ProjectSectionHeader({
                 onClick={() => modulesFilter.setLayout('timeline')}
                 className={`flex size-7 items-center justify-center rounded-r-md text-(--txt-icon-secondary) transition-colors ${
                   timelineActive
-                    ? 'bg-white shadow-sm text-(--txt-primary)'
+                    ? 'bg-(--bg-layer-2) shadow-sm text-(--txt-primary)'
                     : 'bg-transparent text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)'
                 }`}
                 aria-pressed={timelineActive}
@@ -1990,7 +1992,7 @@ function ProjectSectionHeader({
                   }));
                   setViewsSortOpen(null);
                 }}
-                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
               >
                 {opt.label}
                 {viewsDisplay.sortBy === opt.value && (
@@ -2009,7 +2011,7 @@ function ProjectSectionHeader({
                   setDisplay((prev) => ({ ...prev, sortOrder: orderValue }));
                   setViewsSortOpen(null);
                 }}
-                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
               >
                 {orderValue === 'desc' ? 'Descending' : 'Ascending'}
                 {viewsDisplay.sortOrder === orderValue && (
@@ -2062,7 +2064,7 @@ function ProjectSectionHeader({
                 </div>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto py-2">
-                <label className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
+                <label className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-(--txt-primary) hover:bg-(--bg-layer-2-hover)">
                   <input
                     type="checkbox"
                     checked={viewsFavOnly}
@@ -2090,7 +2092,7 @@ function ProjectSectionHeader({
                   ].map((opt) => (
                     <label
                       key={opt.id}
-                      className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                      className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
                     >
                       <input
                         type="radio"
@@ -2116,7 +2118,7 @@ function ProjectSectionHeader({
                   ))}
                   <button
                     type="button"
-                    className="w-full px-3 py-1.5 text-left text-sm text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
+                    className="w-full px-3 py-1.5 text-left text-sm text-(--txt-tertiary) hover:bg-(--bg-layer-2-hover)"
                     onClick={() => {
                       setViewsCreatedDate(null);
                       setViewsCreatedAfter(null);
@@ -2182,7 +2184,7 @@ function ProjectSectionHeader({
                     return (
                       <label
                         key={m.id}
-                        className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                        className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
                       >
                         <input
                           type="checkbox"
@@ -2284,7 +2286,7 @@ function ProjectSectionHeader({
                   key={p.id}
                   type="button"
                   onClick={() => handleSelectProject(p.id)}
-                  className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                  className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
                 >
                   <span className="truncate">{p.name}</span>
                   {p.id === projectId && (
@@ -2530,7 +2532,7 @@ function WorkspaceViewsHeader() {
                 key={view.id}
                 type="button"
                 onClick={() => handleSelectView(view.id)}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
               >
                 <span className="shrink-0 text-(--txt-icon-tertiary)">
                   <IconLayers />
@@ -2652,7 +2654,7 @@ function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                 setSelectedProjectId(null);
                 setOpenDropdown(null);
               }}
-              className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+              className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
             >
               All projects
             </button>
@@ -2664,7 +2666,7 @@ function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                   setSelectedProjectId(p.id);
                   setOpenDropdown(null);
                 }}
-                className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
               >
                 {p.name}
               </button>
@@ -2828,7 +2830,7 @@ function ProjectSavedViewDetailHeader({
                   key={p.id}
                   type="button"
                   onClick={() => handleSelectProject(p.id)}
-                  className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                  className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
                 >
                   <span className="truncate">{p.name}</span>
                   {p.id === projectId && (
@@ -2864,12 +2866,12 @@ function ProjectSavedViewDetailHeader({
         </div>
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-1">
-        <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-2) p-0.5">
+        <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-1) p-0.5">
           <button
             type="button"
             title="List view"
             aria-pressed
-            className="flex size-7 items-center justify-center rounded-md bg-white text-(--txt-primary) shadow-sm"
+            className="flex size-7 items-center justify-center rounded-md bg-(--bg-layer-2) text-(--txt-primary) shadow-sm"
           >
             <IconList />
           </button>

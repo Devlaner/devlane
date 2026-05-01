@@ -17,13 +17,48 @@ var (
 
 // IssueService handles issue business logic.
 type IssueService struct {
-	is *store.IssueStore
-	ps *store.ProjectStore
-	ws *store.WorkspaceStore
+	is       *store.IssueStore
+	ps       *store.ProjectStore
+	ws       *store.WorkspaceStore
+	activity *store.IssueActivityStore // optional — may be nil
 }
 
 func NewIssueService(is *store.IssueStore, ps *store.ProjectStore, ws *store.WorkspaceStore) *IssueService {
 	return &IssueService{is: is, ps: ps, ws: ws}
+}
+
+// SetActivityStore injects the activity store so Update can record field changes.
+// Optional — left as a setter so existing callers don't need to change.
+func (s *IssueService) SetActivityStore(a *store.IssueActivityStore) { s.activity = a }
+
+// recordActivity inserts one issue_activities row. Errors are logged-and-ignored
+// — we never fail an issue update because the activity write fails.
+func (s *IssueService) recordActivity(ctx context.Context, issue *model.Issue, userID uuid.UUID, field string, oldVal, newVal string) {
+	if s.activity == nil {
+		return
+	}
+	verb := "updated"
+	f := field
+	row := &model.IssueActivity{
+		IssueID:     &issue.ID,
+		ProjectID:   issue.ProjectID,
+		WorkspaceID: issue.WorkspaceID,
+		Verb:        verb,
+		Field:       &f,
+		OldValue:    nullableStr(oldVal),
+		NewValue:    nullableStr(newVal),
+		ActorID:     &userID,
+		CreatedByID: &userID,
+	}
+	_ = s.activity.Create(ctx, row)
+}
+
+func nullableStr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	out := s
+	return &out
 }
 
 func (s *IssueService) ensureProjectAccess(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID) error {
@@ -183,6 +218,20 @@ func (s *IssueService) Create(ctx context.Context, workspaceSlug string, project
 	if len(labelIDs) > 0 {
 		_ = s.ReplaceLabels(ctx, workspaceSlug, projectID, issue.ID, userID, labelIDs)
 	}
+	// Record the synthetic "created" activity row so the activity feed has a
+	// defined start. We don't snapshot fields here — the create call captures
+	// them; future updates emit field-change activity rows.
+	if s.activity != nil {
+		row := &model.IssueActivity{
+			IssueID:     &issue.ID,
+			ProjectID:   issue.ProjectID,
+			WorkspaceID: issue.WorkspaceID,
+			Verb:        "created",
+			ActorID:     &userID,
+			CreatedByID: &userID,
+		}
+		_ = s.activity.Create(ctx, row)
+	}
 	return issue, nil
 }
 
@@ -191,6 +240,15 @@ func (s *IssueService) Update(ctx context.Context, workspaceSlug string, project
 	if err != nil {
 		return nil, err
 	}
+
+	// Snapshot values before mutation so we can diff them for the activity log.
+	prevName := issue.Name
+	prevPriority := issue.Priority
+	prevState := uuidString(issue.StateID)
+	prevStart := dateString(issue.StartDate)
+	prevTarget := dateString(issue.TargetDate)
+	prevParent := uuidString(issue.ParentID)
+
 	if name != nil {
 		issue.Name = *name
 	}
@@ -219,13 +277,84 @@ func (s *IssueService) Update(ctx context.Context, workspaceSlug string, project
 	if err := s.is.Update(ctx, issue); err != nil {
 		return nil, err
 	}
+
+	// Activity log — record what changed. Description is intentionally not logged
+	// (it's noisy and the change history is rebuildable from issue versions).
+	if name != nil && prevName != issue.Name {
+		s.recordActivity(ctx, issue, userID, "name", prevName, issue.Name)
+	}
+	if priority != nil && prevPriority != issue.Priority {
+		s.recordActivity(ctx, issue, userID, "priority", prevPriority, issue.Priority)
+	}
+	if stateID != nil && prevState != uuidString(issue.StateID) {
+		s.recordActivity(ctx, issue, userID, "state", prevState, uuidString(issue.StateID))
+	}
+	if startDate != nil && prevStart != dateString(issue.StartDate) {
+		s.recordActivity(ctx, issue, userID, "start_date", prevStart, dateString(issue.StartDate))
+	}
+	if targetDate != nil && prevTarget != dateString(issue.TargetDate) {
+		s.recordActivity(ctx, issue, userID, "target_date", prevTarget, dateString(issue.TargetDate))
+	}
+	if parentID != nil && prevParent != uuidString(issue.ParentID) {
+		s.recordActivity(ctx, issue, userID, "parent", prevParent, uuidString(issue.ParentID))
+	}
+
 	if assigneeIDs != nil {
+		prevAssignees, _ := s.is.ListAssigneesForIssue(ctx, issue.ID)
 		_ = s.ReplaceAssignees(ctx, workspaceSlug, projectID, issue.ID, userID, *assigneeIDs)
+		// Diff added vs removed for nicer activity entries.
+		prevSet := uuidSet(prevAssignees)
+		newSet := uuidSet(*assigneeIDs)
+		for id := range newSet {
+			if !prevSet[id] {
+				s.recordActivity(ctx, issue, userID, "assignees_added", "", id.String())
+			}
+		}
+		for id := range prevSet {
+			if !newSet[id] {
+				s.recordActivity(ctx, issue, userID, "assignees_removed", id.String(), "")
+			}
+		}
 	}
 	if labelIDs != nil {
+		prevLabels, _ := s.is.ListLabelsForIssue(ctx, issue.ID)
 		_ = s.ReplaceLabels(ctx, workspaceSlug, projectID, issue.ID, userID, *labelIDs)
+		prevSet := uuidSet(prevLabels)
+		newSet := uuidSet(*labelIDs)
+		for id := range newSet {
+			if !prevSet[id] {
+				s.recordActivity(ctx, issue, userID, "labels_added", "", id.String())
+			}
+		}
+		for id := range prevSet {
+			if !newSet[id] {
+				s.recordActivity(ctx, issue, userID, "labels_removed", id.String(), "")
+			}
+		}
 	}
 	return issue, nil
+}
+
+func uuidString(id *uuid.UUID) string {
+	if id == nil || *id == uuid.Nil {
+		return ""
+	}
+	return id.String()
+}
+
+func dateString(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.Format("2006-01-02")
+}
+
+func uuidSet(ids []uuid.UUID) map[uuid.UUID]bool {
+	out := make(map[uuid.UUID]bool, len(ids))
+	for _, id := range ids {
+		out[id] = true
+	}
+	return out
 }
 
 func (s *IssueService) Delete(ctx context.Context, workspaceSlug string, projectID, issueID uuid.UUID, userID uuid.UUID) error {
@@ -308,4 +437,16 @@ func (s *IssueService) ReplaceLabels(ctx context.Context, workspaceSlug string, 
 		}
 	}
 	return nil
+}
+
+// ListActivities returns the chronological activity log for an issue.
+// Returns an empty slice when the activity store isn't wired (defensive).
+func (s *IssueService) ListActivities(ctx context.Context, workspaceSlug string, projectID, issueID uuid.UUID, userID uuid.UUID) ([]model.IssueActivity, error) {
+	if _, err := s.GetByID(ctx, workspaceSlug, projectID, issueID, userID); err != nil {
+		return nil, err
+	}
+	if s.activity == nil {
+		return []model.IssueActivity{}, nil
+	}
+	return s.activity.ListByIssueID(ctx, issueID)
 }
