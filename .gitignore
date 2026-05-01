@@ -4,6 +4,8 @@ node_modules/
 .cursor
 .vscode
 .idea
+local/
+CLAUDE.md
 .DS_Store
 .env
 .env.local
