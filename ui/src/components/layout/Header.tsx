@@ -49,7 +49,7 @@ export function Header() {
     } else {
       setProject(null);
     }
-    if (pageId && workspaceSlug) {
+    if (pageId) {
       pageService
         .get(workspaceSlug, pageId)
         .then((p) => {
