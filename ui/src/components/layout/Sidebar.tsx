@@ -21,6 +21,7 @@ import { moduleService } from '../../services/moduleService';
 import { cycleService } from '../../services/cycleService';
 import { viewService } from '../../services/viewService';
 import { slugify } from '../../lib/slug';
+import { cyclePathSegment } from '../../lib/cycle';
 import { ISSUE_VIEW_FAVORITES_CHANGED_EVENT } from '../../lib/issueViewFavoritesEvents';
 import { CYCLE_FAVORITES_CHANGED_EVENT } from '../../hooks/useCycleFavorites';
 
@@ -1189,7 +1190,7 @@ export function Sidebar() {
                       {favoriteCycles.map(({ projectId, cycle }) => (
                         <Link
                           key={`${projectId}:${cycle.id}`}
-                          to={`${baseUrl}/projects/${projectId}/cycles/${cycle.id}`}
+                          to={`${baseUrl}/projects/${projectId}/cycles/${cyclePathSegment(cycle)}`}
                           className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
                         >
                           <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">

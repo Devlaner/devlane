@@ -6,6 +6,7 @@ import { projectService } from '../services/projectService';
 import { cycleService } from '../services/cycleService';
 import { issueService } from '../services/issueService';
 import { stateService } from '../services/stateService';
+import { cycleMatchesPathSegment } from '../lib/cycle';
 import type {
   CycleApiResponse,
   IssueApiResponse,
@@ -62,7 +63,7 @@ export function CycleDetailPage() {
         if (cancelled) return;
         setWorkspace(w ?? null);
         setProject(p ?? null);
-        setCycle((cycles ?? []).find((c) => c.id === cycleId) ?? null);
+        setCycle((cycles ?? []).find((c) => cycleMatchesPathSegment(c, cycleId)) ?? null);
         setIssues(allIssues ?? []);
         setStates(st ?? []);
       })

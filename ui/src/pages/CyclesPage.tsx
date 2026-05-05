@@ -24,6 +24,7 @@ import {
 } from '../lib/projectCyclesEvents';
 import { useCycleFavorites } from '../hooks/useCycleFavorites';
 import { parseISODateForDisplay, parseISODateLocal } from '../lib/dateOnly';
+import { cyclePathSegment } from '../lib/cycle';
 import { cn, getImageUrl } from '../lib/utils';
 
 function pad2(n: number): string {
@@ -564,7 +565,9 @@ export function CyclesPage() {
     return c.status === 'completed' ? 100 : 0;
   };
   const cyclePath = (c: CycleApiResponse) =>
-    workspace && project ? `/${workspace.slug}/projects/${project.id}/cycles/${c.id}` : '';
+    workspace && project
+      ? `/${workspace.slug}/projects/${project.id}/cycles/${cyclePathSegment(c)}`
+      : '';
   const baseUrl = workspace && project ? `/${workspace.slug}/projects/${project.id}` : '';
 
   const stateGroupMap: Record<
