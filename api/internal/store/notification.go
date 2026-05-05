@@ -106,25 +106,45 @@ func (s *NotificationStore) MarkAllRead(ctx context.Context, receiverID uuid.UUI
 }
 
 // CountUnread returns (total, mentions) — both counts cover the active inbox
-// (not archived). A single SQL with FILTER avoids two round-trips.
+// (not archived, not still-snoozed).
+//
+// Postgres path uses a single query with FILTER. Other dialects (sqlite in
+// tests) fall back to two queries — FILTER is Postgres-specific.
 func (s *NotificationStore) CountUnread(ctx context.Context, receiverID uuid.UUID, workspaceID *uuid.UUID) (total, mentions int64, err error) {
-	type row struct {
-		Total    int64
-		Mentions int64
+	now := time.Now()
+	if s.db.Dialector.Name() == "postgres" {
+		type row struct {
+			Total    int64
+			Mentions int64
+		}
+		var r row
+		q := s.db.WithContext(ctx).
+			Table("notifications").
+			Select("COUNT(*) AS total, COUNT(*) FILTER (WHERE sender = ?) AS mentions", model.NotificationSenderMentioned).
+			Where("receiver_id = ? AND read_at IS NULL AND archived_at IS NULL AND (snoozed_till IS NULL OR snoozed_till <= ?)",
+				receiverID, now)
+		if workspaceID != nil {
+			q = q.Where("workspace_id = ?", *workspaceID)
+		}
+		if err = q.Scan(&r).Error; err != nil {
+			return 0, 0, err
+		}
+		return r.Total, r.Mentions, nil
 	}
-	var r row
-	q := s.db.WithContext(ctx).
-		Table("notifications").
-		Select("COUNT(*) AS total, COUNT(*) FILTER (WHERE sender = ?) AS mentions", model.NotificationSenderMentioned).
+	// Portable fallback: two COUNT(*) queries.
+	base := s.db.WithContext(ctx).Model(&model.Notification{}).
 		Where("receiver_id = ? AND read_at IS NULL AND archived_at IS NULL AND (snoozed_till IS NULL OR snoozed_till <= ?)",
-			receiverID, time.Now())
+			receiverID, now)
 	if workspaceID != nil {
-		q = q.Where("workspace_id = ?", *workspaceID)
+		base = base.Where("workspace_id = ?", *workspaceID)
 	}
-	if err = q.Scan(&r).Error; err != nil {
+	if err = base.Count(&total).Error; err != nil {
 		return 0, 0, err
 	}
-	return r.Total, r.Mentions, nil
+	if err = base.Where("sender = ?", model.NotificationSenderMentioned).Count(&mentions).Error; err != nil {
+		return 0, 0, err
+	}
+	return total, mentions, nil
 }
 
 // Snooze hides a notification from the active inbox until `until`.

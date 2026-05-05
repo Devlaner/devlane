@@ -33,10 +33,13 @@ func (h *NotificationHandler) List(c *gin.Context) {
 	case "true":
 		t := true
 		opts.Archived = &t
+		// Archived view should also surface snoozed rows so users can manage
+		// them — otherwise a row that was both archived and snoozed becomes
+		// invisible until the snooze expires.
+		opts.IncludeSnoozed = true
 	case "all":
-		// nil-but-marked-meaning-all-rows: pass a sentinel by leaving Archived nil
-		// would still hide archived. We need a separate flag instead.
 		opts.IncludeArchived = true
+		opts.IncludeSnoozed = true
 	}
 	list, err := h.Notification.List(c.Request.Context(), slug, user.ID, opts)
 	if err != nil {

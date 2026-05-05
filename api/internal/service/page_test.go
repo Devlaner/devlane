@@ -32,6 +32,10 @@ func TestPagePermissions(t *testing.T) {
 		{"owner-locked-public", lockedPublic, owner, true, true, true, true},
 		{"owner-archived", archivedPublic, owner, true, true, false, true},
 
+		// Owner who is no longer a workspace member loses all access — the
+		// auth boundary is workspace membership, not ownership.
+		{"owner-no-longer-member", publicPage, owner, false, false, false, false},
+
 		{"member-public", publicPage, other, true, true, true, false},
 		{"member-private", privatePage, other, true, false, false, false},
 		{"member-locked-public", lockedPublic, other, true, true, false, false},
@@ -52,7 +56,7 @@ func TestPagePermissions(t *testing.T) {
 			if got := canEditContent(tc.page, tc.userID, tc.isMember); got != tc.wantContent {
 				t.Errorf("canEditContent = %v; want %v", got, tc.wantContent)
 			}
-			if got := canEditMeta(tc.page, tc.userID); got != tc.wantMeta {
+			if got := canEditMeta(tc.page, tc.userID, tc.isMember); got != tc.wantMeta {
 				t.Errorf("canEditMeta = %v; want %v", got, tc.wantMeta)
 			}
 		})

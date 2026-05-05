@@ -81,6 +81,16 @@ export function PageDetailPage() {
   const titleSaveTimer = useRef<number | null>(null);
   const bodySaveTimer = useRef<number | null>(null);
   const lastSavedHtml = useRef<string>('');
+  // Sequence numbers for autosaves so a slow older request can't overwrite
+  // newer state when responses arrive out of order.
+  const titleSaveSeq = useRef(0);
+  const titleAppliedSeq = useRef(0);
+  const bodySaveSeq = useRef(0);
+  const bodyAppliedSeq = useRef(0);
+  // Latest editor HTML / title input — read in cleanup to flush unsaved edits.
+  const latestTitleRef = useRef('');
+  const latestPageIdRef = useRef<string | null>(null);
+  const latestSlugRef = useRef<string | null>(null);
 
   // ----- Initial load ------------------------------------------------------
   useEffect(() => {
@@ -105,7 +115,20 @@ export function PageDetailPage() {
         setPage(pg);
         setTitleInput(pg.name ?? '');
         lastSavedHtml.current = pg.description_html ?? '<p></p>';
+        latestTitleRef.current = pg.name ?? '';
+        latestPageIdRef.current = pg.id;
+        latestSlugRef.current = workspaceSlug;
         setIsFavorite(favIds.includes(pg.id));
+        // Reset page-scoped state so we don't show the previous page's data.
+        setVersions(null);
+        setPreviewVersion(null);
+        setChildren(null);
+        setTitleStatus({ kind: 'idle' });
+        setBodyStatus({ kind: 'idle' });
+        titleSaveSeq.current = 0;
+        titleAppliedSeq.current = 0;
+        bodySaveSeq.current = 0;
+        bodyAppliedSeq.current = 0;
       })
       .catch(() => {
         if (!cancelled) {
@@ -131,17 +154,23 @@ export function PageDetailPage() {
   const editorReadOnly = !canEditContent;
 
   // ----- Title autosave ----------------------------------------------------
+  // Race-safe: only the most recent in-flight request gets to update local state.
   const saveTitleNow = useCallback(
     async (next: string) => {
       if (!workspaceSlug || !page) return;
       const trimmed = next.trim();
       if (trimmed === page.name) return;
+      const seq = ++titleSaveSeq.current;
       setTitleStatus({ kind: 'saving' });
       try {
         const updated = await pageService.update(workspaceSlug, page.id, { name: trimmed });
+        if (seq < titleAppliedSeq.current) return;
+        titleAppliedSeq.current = seq;
         setPage(updated);
         setTitleStatus({ kind: 'saved', at: Date.now() });
       } catch (err) {
+        if (seq < titleAppliedSeq.current) return;
+        titleAppliedSeq.current = seq;
         setTitleStatus({
           kind: 'error',
           message: err instanceof Error ? err.message : 'Save failed',
@@ -153,6 +182,7 @@ export function PageDetailPage() {
 
   const onTitleChange = (v: string) => {
     setTitleInput(v);
+    latestTitleRef.current = v;
     if (!canEditMeta) return;
     if (titleSaveTimer.current) window.clearTimeout(titleSaveTimer.current);
     titleSaveTimer.current = window.setTimeout(() => {
@@ -173,13 +203,18 @@ export function PageDetailPage() {
     if (!workspaceSlug || !page) return;
     const html = editorRef.current?.getHtml() ?? '';
     if (html === lastSavedHtml.current) return;
+    const seq = ++bodySaveSeq.current;
     setBodyStatus({ kind: 'saving' });
     try {
       const updated = await pageService.updateContent(workspaceSlug, page.id, html);
+      if (seq < bodyAppliedSeq.current) return;
+      bodyAppliedSeq.current = seq;
       lastSavedHtml.current = html;
       setPage(updated);
       setBodyStatus({ kind: 'saved', at: Date.now() });
     } catch (err) {
+      if (seq < bodyAppliedSeq.current) return;
+      bodyAppliedSeq.current = seq;
       setBodyStatus({
         kind: 'error',
         message: err instanceof Error ? err.message : 'Save failed',
@@ -203,16 +238,34 @@ export function PageDetailPage() {
     return () => node.removeEventListener('input', onInput);
   }, [canEditContent, saveBodyNow]);
 
-  // Save on unmount/navigation if there are unsaved changes.
+  // Flush pending autosaves on unmount/navigation. We can't await async work
+  // in a cleanup callback, so we fire-and-forget the requests; they complete
+  // in the background using whatever credentials the cookie session still has.
   useEffect(() => {
     return () => {
-      if (bodySaveTimer.current) {
-        window.clearTimeout(bodySaveTimer.current);
-        bodySaveTimer.current = null;
-      }
+      const slug = latestSlugRef.current;
+      const pid = latestPageIdRef.current;
       if (titleSaveTimer.current) {
         window.clearTimeout(titleSaveTimer.current);
         titleSaveTimer.current = null;
+        if (slug && pid && latestTitleRef.current.trim()) {
+          void pageService.update(slug, pid, { name: latestTitleRef.current.trim() }).catch(() => {
+            // Best-effort: nothing to surface — the user is leaving anyway.
+          });
+        }
+      }
+      if (bodySaveTimer.current) {
+        window.clearTimeout(bodySaveTimer.current);
+        bodySaveTimer.current = null;
+        // editorRef is mounted once for the lifetime of this component, so
+        // reading .current in cleanup is safe even though the lint rule warns.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- editor ref lifetime matches component lifetime
+        const html = editorRef.current?.getHtml();
+        if (slug && pid && html != null && html !== lastSavedHtml.current) {
+          void pageService.updateContent(slug, pid, html).catch(() => {
+            // Best-effort.
+          });
+        }
       }
     };
   }, []);

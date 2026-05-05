@@ -50,6 +50,8 @@ func translatePageError(c *gin.Context, err error, fallback string) {
 		c.JSON(http.StatusConflict, gin.H{"error": "Page is archived"})
 	case errors.Is(err, service.ErrPageNotArchived):
 		c.JSON(http.StatusConflict, gin.H{"error": "Page must be archived before deletion"})
+	case errors.Is(err, service.ErrPageBadParent):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parent page"})
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fallback})
 	}
@@ -185,7 +187,10 @@ func (h *PageHandler) UpdateMeta(c *gin.Context) {
 		ParentID    *uuid.UUID `json:"parent_id"`
 		ClearParent bool       `json:"clear_parent"`
 	}
-	_ = c.ShouldBindJSON(&body)
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
 	page, err := h.Page.UpdateMeta(c.Request.Context(), slug, pageID, userID, body.Name, body.Access, body.ParentID, body.ClearParent)
 	if err != nil {
 		translatePageError(c, err, "Failed to update page")

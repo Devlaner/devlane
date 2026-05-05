@@ -25,9 +25,13 @@ function formatTimeAgo(iso: string): string {
 }
 
 function rowLabels(n: NotificationApiResponse) {
-  const actor = n.message?.actor.display_name ?? 'Someone';
+  // System / legacy rows may have an empty or partial message payload.
+  const actor = n.message?.actor?.display_name ?? 'Someone';
   const issue = n.message?.issue;
-  const ref = issue ? `${issue.project_identifier}-${issue.sequence_id}` : '—';
+  const ref =
+    issue?.project_identifier && issue.sequence_id != null
+      ? `${issue.project_identifier}-${issue.sequence_id}`
+      : '—';
   const issueName = issue?.name ?? '';
   return { actor, ref, issueName };
 }
@@ -46,6 +50,9 @@ export function NotificationsPage() {
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [notifications, setNotifications] = useState<NotificationApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  // IDs the user explicitly marked unread in this session; the auto-mark-read
+  // effect below skips them so the toggle actually sticks.
+  const [explicitUnreadIds, setExplicitUnreadIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!workspaceSlug) {
@@ -87,9 +94,12 @@ export function NotificationsPage() {
   );
 
   // Auto-mark-on-select. Skip when viewing the Archived tab — re-reading
-  // archived rows should not flip them to read silently.
+  // archived rows should not flip them to read silently. Also skip rows the
+  // user just explicitly marked unread; otherwise this effect re-fires and
+  // immediately re-marks them as read.
   useEffect(() => {
     if (!workspaceSlug || !selected || selected.read_at || inboxTab === 'archived') return;
+    if (explicitUnreadIds.has(selected.id)) return;
     let cancelled = false;
     notificationService
       .markRead(workspaceSlug, selected.id)
@@ -105,7 +115,7 @@ export function NotificationsPage() {
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug, selected, inboxTab]);
+  }, [workspaceSlug, selected, inboxTab, explicitUnreadIds]);
 
   const removeFromList = (id: string) =>
     setNotifications((prev) => prev.filter((n) => n.id !== id));
@@ -127,11 +137,23 @@ export function NotificationsPage() {
       setNotifications((prev) =>
         prev.map((n) => (n.id === selected.id ? { ...n, read_at: null } : n)),
       );
+      // Remember the user wanted this unread; the auto-mark effect will skip it.
+      setExplicitUnreadIds((prev) => {
+        const next = new Set(prev);
+        next.add(selected.id);
+        return next;
+      });
     } else {
       await notificationService.markRead(workspaceSlug, selected.id);
       setNotifications((prev) =>
         prev.map((n) => (n.id === selected.id ? { ...n, read_at: new Date().toISOString() } : n)),
       );
+      setExplicitUnreadIds((prev) => {
+        if (!prev.has(selected.id)) return prev;
+        const next = new Set(prev);
+        next.delete(selected.id);
+        return next;
+      });
     }
   };
 

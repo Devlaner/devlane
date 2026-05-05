@@ -12,7 +12,10 @@ interface Props {
  */
 export function NotificationContent({ notification }: Props) {
   const { message, sender, title } = notification;
-  if (!message) {
+  // Legacy / `system` rows may have no message, or a partial one without the
+  // structured actor/issue fields. In that case fall back to the server-built
+  // title — we never have to invent prose client-side.
+  if (!message || !message.actor || !message.issue) {
     return <p className="text-sm text-(--txt-primary)">{title}</p>;
   }
 
