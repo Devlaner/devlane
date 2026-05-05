@@ -38,7 +38,7 @@ export function CycleDetailPage() {
     cycleId: string;
   }>();
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(workspaceSlug && projectId && cycleId));
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [cycle, setCycle] = useState<CycleApiResponse | null>(null);
@@ -47,11 +47,12 @@ export function CycleDetailPage() {
 
   useEffect(() => {
     if (!workspaceSlug || !projectId || !cycleId) {
-      setLoading(false);
       return;
     }
     let cancelled = false;
-    setLoading(true);
+    queueMicrotask(() => {
+      if (!cancelled) setLoading(true);
+    });
     Promise.all([
       workspaceService.getBySlug(workspaceSlug),
       projectService.get(workspaceSlug, projectId),
