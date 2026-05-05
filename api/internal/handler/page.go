@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/Devlaner/devlane/api/internal/middleware"
+	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/service"
 	"github.com/Devlaner/devlane/api/internal/store"
 	"github.com/gin-gonic/gin"
@@ -52,6 +54,8 @@ func translatePageError(c *gin.Context, err error, fallback string) {
 		c.JSON(http.StatusConflict, gin.H{"error": "Page must be archived before deletion"})
 	case errors.Is(err, service.ErrPageBadParent):
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parent page"})
+	case errors.Is(err, service.ErrPageBadRequest):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fallback})
 	}
@@ -169,8 +173,12 @@ func (h *PageHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, page)
 }
 
-// UpdateMeta updates name / access / parent. Owner-only.
+// UpdateMeta updates name / access / parent / logo. Owner-only.
 // PATCH /api/workspaces/:slug/pages/:pageId/
+//
+// `logo_props` follows tri-state semantics: omitted = leave untouched;
+// `null` = clear; object = replace. Gin's bind layer flattens missing fields
+// to the zero value, so we use a `json.RawMessage` to disambiguate.
 func (h *PageHandler) UpdateMeta(c *gin.Context) {
 	userID, ok := h.requireUser(c)
 	if !ok {
@@ -182,16 +190,35 @@ func (h *PageHandler) UpdateMeta(c *gin.Context) {
 		return
 	}
 	var body struct {
-		Name        *string    `json:"name"`
-		Access      *int16     `json:"access"`
-		ParentID    *uuid.UUID `json:"parent_id"`
-		ClearParent bool       `json:"clear_parent"`
+		Name        *string         `json:"name"`
+		Access      *int16          `json:"access"`
+		ParentID    *uuid.UUID      `json:"parent_id"`
+		ClearParent bool            `json:"clear_parent"`
+		LogoProps   json.RawMessage `json:"logo_props"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
 		return
 	}
-	page, err := h.Page.UpdateMeta(c.Request.Context(), slug, pageID, userID, body.Name, body.Access, body.ParentID, body.ClearParent)
+	in := service.PageMetaUpdate{
+		Name:        body.Name,
+		Access:      body.Access,
+		ParentID:    body.ParentID,
+		ClearParent: body.ClearParent,
+	}
+	if len(body.LogoProps) > 0 {
+		in.SetLogoProps = true
+		// Treat the JSON literal `null` as an explicit clear.
+		if string(body.LogoProps) != "null" {
+			var props model.JSONMap
+			if err := json.Unmarshal(body.LogoProps, &props); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid logo_props", "detail": err.Error()})
+				return
+			}
+			in.LogoProps = props
+		}
+	}
+	page, err := h.Page.UpdateMeta(c.Request.Context(), slug, pageID, userID, in)
 	if err != nil {
 		translatePageError(c, err, "Failed to update page")
 		return
@@ -211,14 +238,17 @@ func (h *PageHandler) UpdateContent(c *gin.Context) {
 	if !ok {
 		return
 	}
+	// description_html is a *string + binding:"required" so an absent field
+	// fails validation (returns 400) but an explicit empty string is allowed —
+	// users may legitimately want to clear the body.
 	var body struct {
-		DescriptionHTML string `json:"description_html"`
+		DescriptionHTML *string `json:"description_html" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
 		return
 	}
-	page, err := h.Page.UpdateContent(c.Request.Context(), slug, pageID, userID, body.DescriptionHTML)
+	page, err := h.Page.UpdateContent(c.Request.Context(), slug, pageID, userID, *body.DescriptionHTML)
 	if err != nil {
 		translatePageError(c, err, "Failed to save")
 		return
