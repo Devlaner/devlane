@@ -4,16 +4,20 @@ import { Button } from '../ui';
 import { useAuth } from '../../contexts/AuthContext';
 import { workspaceService } from '../../services/workspaceService';
 import { projectService } from '../../services/projectService';
-import type { WorkspaceApiResponse, ProjectApiResponse } from '../../api/types';
+import { pageService } from '../../services/pageService';
+import { NotificationBell } from '../notifications/NotificationBell';
+import type { WorkspaceApiResponse, ProjectApiResponse, PageApiResponse } from '../../api/types';
 
 export function Header() {
   const { user, logout } = useAuth();
-  const { workspaceSlug, projectId } = useParams<{
+  const { workspaceSlug, projectId, pageId } = useParams<{
     workspaceSlug?: string;
     projectId?: string;
+    pageId?: string;
   }>();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
+  const [page, setPage] = useState<PageApiResponse | null>(null);
 
   useEffect(() => {
     if (!workspaceSlug) {
@@ -21,6 +25,7 @@ export function Header() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setWorkspace(null);
       setProject(null);
+      setPage(null);
       return;
     }
     let cancelled = false;
@@ -44,10 +49,22 @@ export function Header() {
     } else {
       setProject(null);
     }
+    if (pageId && workspaceSlug) {
+      pageService
+        .get(workspaceSlug, pageId)
+        .then((p) => {
+          if (!cancelled) setPage(p);
+        })
+        .catch(() => {
+          if (!cancelled) setPage(null);
+        });
+    } else {
+      setPage(null);
+    }
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug, projectId]);
+  }, [workspaceSlug, projectId, pageId]);
 
   const breadcrumbs: { label: string; href?: string }[] = [];
   if (workspace) {
@@ -57,6 +74,15 @@ export function Header() {
         label: project.name,
         href: `/${workspace.slug}/projects/${project.id}/issues`,
       });
+      if (pageId) {
+        breadcrumbs.push({
+          label: 'Pages',
+          href: `/${workspace.slug}/projects/${project.id}/pages`,
+        });
+        if (page) {
+          breadcrumbs.push({ label: page.name || 'Untitled' });
+        }
+      }
     }
   }
 
@@ -92,6 +118,7 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-3">
+        {workspace ? <NotificationBell workspaceSlug={workspace.slug} /> : null}
         <span className="text-sm text-(--txt-secondary)">{user?.name}</span>
         <Button variant="ghost" size="sm" onClick={logout}>
           Log out
