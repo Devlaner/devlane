@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-const DROPDOWN_Z_INDEX = 9999;
+// Must be above modal root (`z-10050`) so dropdowns work inside modals.
+const DROPDOWN_Z_INDEX = 10100;
 
 export interface DropdownProps {
   id: string;
