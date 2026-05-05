@@ -7,6 +7,7 @@ import (
 
 	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/store"
+	"github.com/Devlaner/devlane/api/internal/text"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -20,7 +21,9 @@ type IssueService struct {
 	is       *store.IssueStore
 	ps       *store.ProjectStore
 	ws       *store.WorkspaceStore
-	activity *store.IssueActivityStore // optional — may be nil
+	activity *store.IssueActivityStore   // optional — may be nil
+	notify   *NotificationService        // optional — may be nil
+	subs     *store.IssueSubscriberStore // optional — auto-subscribe assignees/mentions
 }
 
 func NewIssueService(is *store.IssueStore, ps *store.ProjectStore, ws *store.WorkspaceStore) *IssueService {
@@ -30,6 +33,34 @@ func NewIssueService(is *store.IssueStore, ps *store.ProjectStore, ws *store.Wor
 // SetActivityStore injects the activity store so Update can record field changes.
 // Optional — left as a setter so existing callers don't need to change.
 func (s *IssueService) SetActivityStore(a *store.IssueActivityStore) { s.activity = a }
+
+// SetNotificationService injects the notification fan-out service. Optional —
+// when nil, no notifications are emitted from issue operations.
+func (s *IssueService) SetNotificationService(n *NotificationService) { s.notify = n }
+
+// SetSubscriberStore injects the issue-subscriber store so assignees and mention
+// targets are auto-subscribed when they're added to an issue. Optional.
+func (s *IssueService) SetSubscriberStore(subs *store.IssueSubscriberStore) { s.subs = subs }
+
+// autoSubscribe is a fire-and-forget helper used by the assignee and mention
+// hooks. Errors are logged-and-ignored — the user's primary action must not
+// fail because of a subscription bookkeeping issue.
+func (s *IssueService) autoSubscribe(ctx context.Context, issue *model.Issue, userIDs []uuid.UUID) {
+	if s.subs == nil || issue == nil {
+		return
+	}
+	for _, uid := range userIDs {
+		if uid == uuid.Nil {
+			continue
+		}
+		_ = s.subs.Subscribe(ctx, &model.IssueSubscriber{
+			IssueID:      issue.ID,
+			SubscriberID: uid,
+			ProjectID:    issue.ProjectID,
+			WorkspaceID:  issue.WorkspaceID,
+		})
+	}
+}
 
 // recordActivity inserts one issue_activities row. Errors are logged-and-ignored
 // — we never fail an issue update because the activity write fails.
@@ -232,6 +263,17 @@ func (s *IssueService) Create(ctx context.Context, workspaceSlug string, project
 		}
 		_ = s.activity.Create(ctx, row)
 	}
+	// Description mention notifications (assignment notifications are emitted
+	// by ReplaceAssignees above — not here, to prevent double-fire).
+	if issue.DescriptionHTML != "" {
+		mentioned := text.ParseMentionUserIDs(issue.DescriptionHTML)
+		if len(mentioned) > 0 {
+			s.autoSubscribe(ctx, issue, mentioned)
+			if s.notify != nil {
+				s.notify.IssueMentioned(ctx, issue, userID, mentioned, "description")
+			}
+		}
+	}
 	return issue, nil
 }
 
@@ -244,10 +286,12 @@ func (s *IssueService) Update(ctx context.Context, workspaceSlug string, project
 	// Snapshot values before mutation so we can diff them for the activity log.
 	prevName := issue.Name
 	prevPriority := issue.Priority
+	prevStateID := issue.StateID
 	prevState := uuidString(issue.StateID)
 	prevStart := dateString(issue.StartDate)
 	prevTarget := dateString(issue.TargetDate)
 	prevParent := uuidString(issue.ParentID)
+	prevDescription := issue.DescriptionHTML
 
 	if name != nil {
 		issue.Name = *name
@@ -282,21 +326,58 @@ func (s *IssueService) Update(ctx context.Context, workspaceSlug string, project
 	// (it's noisy and the change history is rebuildable from issue versions).
 	if name != nil && prevName != issue.Name {
 		s.recordActivity(ctx, issue, userID, "name", prevName, issue.Name)
+		if s.notify != nil {
+			s.notify.IssueFieldChanged(ctx, issue, userID, "name", prevName, issue.Name)
+		}
 	}
 	if priority != nil && prevPriority != issue.Priority {
 		s.recordActivity(ctx, issue, userID, "priority", prevPriority, issue.Priority)
+		if s.notify != nil {
+			s.notify.IssueFieldChanged(ctx, issue, userID, "priority", prevPriority, issue.Priority)
+		}
 	}
 	if stateID != nil && prevState != uuidString(issue.StateID) {
 		s.recordActivity(ctx, issue, userID, "state", prevState, uuidString(issue.StateID))
+		if s.notify != nil {
+			s.notify.IssueStateChanged(ctx, issue, userID, prevStateID, issue.StateID)
+		}
 	}
 	if startDate != nil && prevStart != dateString(issue.StartDate) {
 		s.recordActivity(ctx, issue, userID, "start_date", prevStart, dateString(issue.StartDate))
+		if s.notify != nil {
+			s.notify.IssueFieldChanged(ctx, issue, userID, "start_date", prevStart, dateString(issue.StartDate))
+		}
 	}
 	if targetDate != nil && prevTarget != dateString(issue.TargetDate) {
 		s.recordActivity(ctx, issue, userID, "target_date", prevTarget, dateString(issue.TargetDate))
+		if s.notify != nil {
+			s.notify.IssueFieldChanged(ctx, issue, userID, "target_date", prevTarget, dateString(issue.TargetDate))
+		}
 	}
 	if parentID != nil && prevParent != uuidString(issue.ParentID) {
 		s.recordActivity(ctx, issue, userID, "parent", prevParent, uuidString(issue.ParentID))
+		if s.notify != nil {
+			s.notify.IssueFieldChanged(ctx, issue, userID, "parent", prevParent, uuidString(issue.ParentID))
+		}
+	}
+
+	// New mentions added in the description: notify only the *newly* added IDs
+	// so editing a description twice doesn't repeatedly ping the same users.
+	if description != nil && prevDescription != issue.DescriptionHTML {
+		prevSet := uuidSet(text.ParseMentionUserIDs(prevDescription))
+		newIDs := text.ParseMentionUserIDs(issue.DescriptionHTML)
+		added := make([]uuid.UUID, 0, len(newIDs))
+		for _, id := range newIDs {
+			if !prevSet[id] {
+				added = append(added, id)
+			}
+		}
+		if len(added) > 0 {
+			s.autoSubscribe(ctx, issue, added)
+			if s.notify != nil {
+				s.notify.IssueMentioned(ctx, issue, userID, added, "description")
+			}
+		}
 	}
 
 	if assigneeIDs != nil {
@@ -362,7 +443,13 @@ func (s *IssueService) Delete(ctx context.Context, workspaceSlug string, project
 	if err != nil {
 		return err
 	}
-	return s.is.Delete(ctx, issueID)
+	if err := s.is.Delete(ctx, issueID); err != nil {
+		return err
+	}
+	if s.notify != nil {
+		s.notify.IssueDeleted(ctx, issueID)
+	}
+	return nil
 }
 
 func (s *IssueService) ListAssignees(ctx context.Context, workspaceSlug string, projectID, issueID uuid.UUID, userID uuid.UUID) ([]uuid.UUID, error) {
@@ -384,7 +471,14 @@ func (s *IssueService) AddAssignee(ctx context.Context, workspaceSlug string, pr
 		ProjectID:   issue.ProjectID,
 		WorkspaceID: issue.WorkspaceID,
 	}
-	return s.is.AddAssignee(ctx, a)
+	if err := s.is.AddAssignee(ctx, a); err != nil {
+		return err
+	}
+	s.autoSubscribe(ctx, issue, []uuid.UUID{assigneeID})
+	if s.notify != nil {
+		s.notify.IssueAssigned(ctx, issue, userID, []uuid.UUID{assigneeID})
+	}
+	return nil
 }
 
 func (s *IssueService) RemoveAssignee(ctx context.Context, workspaceSlug string, projectID, issueID uuid.UUID, userID uuid.UUID, assigneeID uuid.UUID) error {
@@ -400,6 +494,7 @@ func (s *IssueService) ReplaceAssignees(ctx context.Context, workspaceSlug strin
 	if err != nil {
 		return err
 	}
+	prevAssignees, _ := s.is.ListAssigneesForIssue(ctx, issueID)
 	if err := s.is.ClearAssigneesForIssue(ctx, issueID); err != nil {
 		return err
 	}
@@ -412,6 +507,19 @@ func (s *IssueService) ReplaceAssignees(ctx context.Context, workspaceSlug strin
 		}
 		if err := s.is.AddAssignee(ctx, a); err != nil {
 			return err
+		}
+	}
+	prevSet := uuidSet(prevAssignees)
+	added := make([]uuid.UUID, 0, len(assigneeIDs))
+	for _, id := range assigneeIDs {
+		if !prevSet[id] {
+			added = append(added, id)
+		}
+	}
+	if len(added) > 0 {
+		s.autoSubscribe(ctx, issue, added)
+		if s.notify != nil {
+			s.notify.IssueAssigned(ctx, issue, userID, added)
 		}
 	}
 	return nil
@@ -437,6 +545,45 @@ func (s *IssueService) ReplaceLabels(ctx context.Context, workspaceSlug string, 
 		}
 	}
 	return nil
+}
+
+// IsSubscribed reports whether the current user is subscribed to the issue.
+func (s *IssueService) IsSubscribed(ctx context.Context, workspaceSlug string, projectID, issueID, userID uuid.UUID) (bool, error) {
+	if _, err := s.GetByID(ctx, workspaceSlug, projectID, issueID, userID); err != nil {
+		return false, err
+	}
+	if s.subs == nil {
+		return false, nil
+	}
+	return s.subs.IsSubscribed(ctx, issueID, userID)
+}
+
+// Subscribe explicitly subscribes the current user to the issue.
+func (s *IssueService) Subscribe(ctx context.Context, workspaceSlug string, projectID, issueID, userID uuid.UUID) error {
+	issue, err := s.GetByID(ctx, workspaceSlug, projectID, issueID, userID)
+	if err != nil {
+		return err
+	}
+	if s.subs == nil {
+		return nil
+	}
+	return s.subs.Subscribe(ctx, &model.IssueSubscriber{
+		IssueID:      issue.ID,
+		SubscriberID: userID,
+		ProjectID:    issue.ProjectID,
+		WorkspaceID:  issue.WorkspaceID,
+	})
+}
+
+// Unsubscribe removes the current user's subscription to the issue.
+func (s *IssueService) Unsubscribe(ctx context.Context, workspaceSlug string, projectID, issueID, userID uuid.UUID) error {
+	if _, err := s.GetByID(ctx, workspaceSlug, projectID, issueID, userID); err != nil {
+		return err
+	}
+	if s.subs == nil {
+		return nil
+	}
+	return s.subs.Unsubscribe(ctx, issueID, userID)
 }
 
 // ListActivities returns the chronological activity log for an issue.
