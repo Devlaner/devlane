@@ -434,6 +434,94 @@ func (h *IssueHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// IsSubscribed reports whether the current user is subscribed to the issue.
+// GET /api/workspaces/:slug/projects/:projectId/issues/:pk/subscribe/
+func (h *IssueHandler) IsSubscribed(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	slug := c.Param("slug")
+	projectID, err := uuid.Parse(c.Param("projectId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+	iid, ok := issueID(c)
+	if !ok {
+		return
+	}
+	subscribed, err := h.Issue.IsSubscribed(c.Request.Context(), slug, projectID, iid, user.ID)
+	if err != nil {
+		if err == service.ErrIssueNotFound || err == service.ErrProjectForbidden {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Issue not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check subscription"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"subscribed": subscribed})
+}
+
+// Subscribe subscribes the current user to issue activity.
+// POST /api/workspaces/:slug/projects/:projectId/issues/:pk/subscribe/
+func (h *IssueHandler) Subscribe(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	slug := c.Param("slug")
+	projectID, err := uuid.Parse(c.Param("projectId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+	iid, ok := issueID(c)
+	if !ok {
+		return
+	}
+	if err := h.Issue.Subscribe(c.Request.Context(), slug, projectID, iid, user.ID); err != nil {
+		if err == service.ErrIssueNotFound || err == service.ErrProjectForbidden {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Issue not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to subscribe"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// Unsubscribe removes the current user's subscription.
+// DELETE /api/workspaces/:slug/projects/:projectId/issues/:pk/subscribe/
+func (h *IssueHandler) Unsubscribe(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	slug := c.Param("slug")
+	projectID, err := uuid.Parse(c.Param("projectId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+	iid, ok := issueID(c)
+	if !ok {
+		return
+	}
+	if err := h.Issue.Unsubscribe(c.Request.Context(), slug, projectID, iid, user.ID); err != nil {
+		if err == service.ErrIssueNotFound || err == service.ErrProjectForbidden {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Issue not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unsubscribe"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 // ListActivities returns the chronological activity log for an issue.
 // GET /api/workspaces/:slug/projects/:projectId/issues/:pk/activities/
 func (h *IssueHandler) ListActivities(c *gin.Context) {
