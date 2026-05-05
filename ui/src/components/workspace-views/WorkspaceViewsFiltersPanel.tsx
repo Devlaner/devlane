@@ -29,8 +29,6 @@ import type {
   LabelApiResponse,
 } from '../../api/types';
 
-const LONG_LIST_PANEL_STYLE = { maxHeight: 'min(70vh, 28rem)' };
-
 export interface WorkspaceViewsFiltersPanelProps {
   filters: WorkspaceViewFilters;
   onFiltersChange: (updater: (prev: WorkspaceViewFilters) => WorkspaceViewFilters) => void;
@@ -130,10 +128,7 @@ export function WorkspaceViewsFiltersPanel({
     !search.trim() || label.toLowerCase().includes(search.trim().toLowerCase());
 
   const content = (
-    <div
-      className={compact ? 'min-h-0 flex-1 overflow-y-auto py-1' : 'space-y-0'}
-      style={compact ? LONG_LIST_PANEL_STYLE : undefined}
-    >
+    <div className={compact ? 'min-h-0 flex-1 overflow-y-auto py-1' : 'space-y-0'}>
       <CollapsibleSection
         title="Priority"
         open={sectionOpen.priority}

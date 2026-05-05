@@ -1,7 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-const DROPDOWN_Z_INDEX = 9999;
+// Must be above modal root (`z-10050`) so dropdowns work inside modals.
+const DROPDOWN_Z_INDEX = 10100;
+const VIEWPORT_PADDING = 8;
+const PANEL_GAP = 4;
 
 export interface DropdownProps {
   id: string;
@@ -49,6 +52,7 @@ export function Dropdown({
     top: number;
     left?: number;
     right?: number;
+    maxHeight?: number;
   } | null>(null);
   const open = openId === id;
 
@@ -63,14 +67,36 @@ export function Dropdown({
       setPosition(null);
       return;
     }
-    const rect = triggerRef.current.getBoundingClientRect();
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const panelRect = panelRef.current?.getBoundingClientRect();
+    const panelHeight = panelRect?.height ?? 0;
+    const panelWidth = panelRect?.width ?? 0;
+
+    const availableBelow = window.innerHeight - triggerRect.bottom - VIEWPORT_PADDING - PANEL_GAP;
+    const availableAbove = triggerRect.top - VIEWPORT_PADDING - PANEL_GAP;
+
+    // Prefer opening below, but flip above when below space is tighter.
+    let top = triggerRect.bottom + PANEL_GAP;
+    if (panelHeight > 0 && availableBelow < panelHeight && availableAbove > availableBelow) {
+      top = Math.max(VIEWPORT_PADDING, triggerRect.top - panelHeight - PANEL_GAP);
+    }
+
+    // Always constrain panel within viewport and allow internal scrolling.
+    const maxHeight = Math.max(120, Math.max(availableBelow, availableAbove));
+
     if (align === 'right') {
-      setPosition({
-        top: rect.bottom + 4,
-        right: window.innerWidth - rect.right,
-      });
+      const unclampedRight = window.innerWidth - triggerRect.right;
+      const maxRight = Math.max(
+        VIEWPORT_PADDING,
+        window.innerWidth - panelWidth - VIEWPORT_PADDING,
+      );
+      const right = Math.min(Math.max(unclampedRight, VIEWPORT_PADDING), maxRight);
+      setPosition({ top, right, maxHeight });
     } else {
-      setPosition({ top: rect.bottom + 4, left: rect.left });
+      const unclampedLeft = triggerRect.left;
+      const maxLeft = Math.max(VIEWPORT_PADDING, window.innerWidth - panelWidth - VIEWPORT_PADDING);
+      const left = Math.min(Math.max(unclampedLeft, VIEWPORT_PADDING), maxLeft);
+      setPosition({ top, left, maxHeight });
     }
   }, [open, align]);
 
@@ -122,6 +148,7 @@ export function Dropdown({
               top: position.top,
               ...(position.left !== undefined && { left: position.left }),
               ...(position.right !== undefined && { right: position.right }),
+              ...(position.maxHeight !== undefined && { maxHeight: position.maxHeight }),
               zIndex: DROPDOWN_Z_INDEX,
             }}
           >

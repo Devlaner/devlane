@@ -34,8 +34,11 @@ export function CreateViewModal({ open, onClose, onCreated }: CreateViewModalPro
 
   useEffect(() => {
     if (open) {
+      setOpenPanel(null);
       setLocalFilters(contextFilters);
       setLocalDisplay(contextDisplay);
+    } else {
+      setOpenPanel(null);
     }
   }, [open, contextFilters, contextDisplay]);
 
@@ -125,7 +128,7 @@ export function CreateViewModal({ open, onClose, onCreated }: CreateViewModalPro
             displayValue=""
             triggerContent={<span>Filters</span>}
             triggerClassName="inline-flex items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-            panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
+            panelClassName="flex w-[min(280px,calc(100vw-2rem))] max-h-[min(52vh,22rem)] flex-col overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
             align="left"
           >
             {workspaceSlug && (
@@ -149,7 +152,7 @@ export function CreateViewModal({ open, onClose, onCreated }: CreateViewModalPro
             displayValue=""
             triggerContent={<span>Display</span>}
             triggerClassName="inline-flex items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-            panelClassName="flex min-w-[280px] max-w-[320px] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
+            panelClassName="flex w-[min(320px,calc(100vw-2rem))] max-h-[min(52vh,22rem)] flex-col overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
             align="left"
           >
             <WorkspaceViewsDisplayPanel display={localDisplay} onDisplayChange={setLocalDisplay} />

@@ -45,7 +45,7 @@ export function WorkspaceViewsDisplayDropdown({
       label="Display"
       icon={<IconSliders />}
       displayValue="Display"
-      panelClassName="flex min-w-[280px] max-w-[320px] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
+      panelClassName="flex w-[min(320px,calc(100vw-2rem))] max-h-[min(52vh,22rem)] flex-col overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
       align="right"
     >
       <WorkspaceViewsDisplayPanel display={display} onDisplayChange={setDisplay} />

@@ -47,7 +47,9 @@ const IconMoreVertical = () => (
   </svg>
 );
 
-const DROPDOWN_Z_INDEX = 9999;
+const DROPDOWN_Z_INDEX = 10100;
+const VIEWPORT_PADDING = 8;
+const PANEL_GAP = 4;
 
 export function WorkspaceViewsEllipsisMenu() {
   const location = useLocation();
@@ -57,6 +59,7 @@ export function WorkspaceViewsEllipsisMenu() {
   const [position, setPosition] = useState<{
     top: number;
     right: number;
+    maxHeight?: number;
   } | null>(null);
 
   const fullUrl =
@@ -68,10 +71,20 @@ export function WorkspaceViewsEllipsisMenu() {
       return;
     }
     const rect = triggerRef.current.getBoundingClientRect();
+    const panelRect = panelRef.current?.getBoundingClientRect();
+    const panelHeight = panelRect?.height ?? 0;
+    const availableBelow = window.innerHeight - rect.bottom - VIEWPORT_PADDING - PANEL_GAP;
+    const availableAbove = rect.top - VIEWPORT_PADDING - PANEL_GAP;
+    let top = rect.bottom + PANEL_GAP;
+    if (panelHeight > 0 && availableBelow < panelHeight && availableAbove > availableBelow) {
+      top = Math.max(VIEWPORT_PADDING, rect.top - panelHeight - PANEL_GAP);
+    }
+    const maxHeight = Math.max(120, Math.max(availableBelow, availableAbove));
     queueMicrotask(() =>
       setPosition({
-        top: rect.bottom + 4,
+        top,
         right: window.innerWidth - rect.right,
+        maxHeight,
       }),
     );
   }, [open]);
@@ -123,6 +136,7 @@ export function WorkspaceViewsEllipsisMenu() {
               position: 'fixed',
               top: position.top,
               right: position.right,
+              ...(position.maxHeight !== undefined && { maxHeight: position.maxHeight }),
               zIndex: DROPDOWN_Z_INDEX,
             }}
           >

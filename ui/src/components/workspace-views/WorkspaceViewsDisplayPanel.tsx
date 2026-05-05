@@ -28,7 +28,7 @@ export function WorkspaceViewsDisplayPanel({
       <div className="border-b border-(--border-subtle) bg-(--bg-surface-1) p-3">
         <p className="text-xs font-medium text-(--txt-secondary)">Display Properties</p>
       </div>
-      <div className="flex flex-1 flex-wrap gap-2 p-3">
+      <div className="flex flex-1 flex-wrap content-start gap-2 overflow-y-auto p-3">
         {DISPLAY_PROPERTY_KEYS.map((key) => {
           const selected = display.properties.includes(key);
           return (

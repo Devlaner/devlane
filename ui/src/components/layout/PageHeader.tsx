@@ -2912,8 +2912,7 @@ function WorkspaceViewsHeader() {
   }>();
   const navigate = useNavigate();
   const [viewDropdownOpen, setViewDropdownOpen] = useState<string | null>(null);
-  const [filtersDropdownOpen, setFiltersDropdownOpen] = useState<string | null>(null);
-  const [displayDropdownOpen, setDisplayDropdownOpen] = useState<string | null>(null);
+  const [toolbarDropdownOpen, setToolbarDropdownOpen] = useState<string | null>(null);
   const [createViewModalOpen, setCreateViewModalOpen] = useState(false);
   const [viewSearch, setViewSearch] = useState('');
   const [customViews, setCustomViews] = useState<IssueViewApiResponse[]>([]);
@@ -3017,17 +3016,20 @@ function WorkspaceViewsHeader() {
       </div>
       <div className="flex items-center gap-1">
         <WorkspaceViewsFiltersDropdown
-          openId={filtersDropdownOpen}
-          onOpen={setFiltersDropdownOpen}
+          openId={toolbarDropdownOpen}
+          onOpen={setToolbarDropdownOpen}
         />
         <WorkspaceViewsDisplayDropdown
-          openId={displayDropdownOpen}
-          onOpen={setDisplayDropdownOpen}
+          openId={toolbarDropdownOpen}
+          onOpen={setToolbarDropdownOpen}
         />
         <Button
           size="sm"
           className="gap-1.5 text-[13px] font-medium"
-          onClick={() => setCreateViewModalOpen(true)}
+          onClick={() => {
+            setToolbarDropdownOpen(null);
+            setCreateViewModalOpen(true);
+          }}
         >
           <IconPlus /> Add view
         </Button>
