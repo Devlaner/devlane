@@ -90,4 +90,24 @@ export const issueService = {
     );
     return data;
   },
+
+  /** GET .../issues/:pk/subscribe/ — returns whether the current user follows this issue. */
+  async isSubscribed(workspaceSlug: string, projectId: string, issueId: string): Promise<boolean> {
+    const { data } = await apiClient.get<{ subscribed: boolean }>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/subscribe/`,
+    );
+    return data.subscribed;
+  },
+
+  async subscribe(workspaceSlug: string, projectId: string, issueId: string): Promise<void> {
+    await apiClient.post(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/subscribe/`,
+    );
+  },
+
+  async unsubscribe(workspaceSlug: string, projectId: string, issueId: string): Promise<void> {
+    await apiClient.delete(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/subscribe/`,
+    );
+  },
 };
