@@ -91,7 +91,7 @@ const SORT_ORDER_PARAM = 'order';
 
 /** All display properties; ID is shown in the Work items column when enabled. */
 export const DEFAULT_WORKSPACE_VIEW_DISPLAY: WorkspaceViewDisplay = {
-  properties: [...DISPLAY_PROPERTY_KEYS],
+  properties: ['priority'],
   showSubWorkItems: false,
   layout: 'spreadsheet',
   sortBy: 'created_at',
