@@ -34,15 +34,15 @@ jobs:
           const REPO_ID = process.env.TRENDING_REPO_ID; \
           const SINCE = ['daily','weekly','monthly']; \
           const OUT = 'github-trending.json'; \
+          const STATUS = 'github-trending.status.json'; \
           const now = () => new Date().toISOString(); \
           const clamp = (n,min,max)=>Math.min(Math.max(n,min),max); \
-          const readPrev = async ()=>{ try { return JSON.parse(await fs.readFile(OUT,'utf8')); } catch { return null; } }; \
+          const readStatus = async ()=>{ try { return JSON.parse(await fs.readFile(STATUS,'utf8')); } catch { return {repo:REPO_ID,lastCheckedAt:null,lastSeenAt:null,lastSeenRank:null,lastSeenSince:null,currentRank:null,currentSince:null}; } }; \
           const fetchHtml = async (since)=>{ const url='https://github.com/trending?since='+encodeURIComponent(since); const res=await fetch(url,{headers:{'user-agent':'devlane-trending-badge/1.0',accept:'text/html'}}); if(!res.ok) throw new Error('fetch '+since+' '+res.status); return await res.text(); }; \
           const parseRepos = (html)=>{ const rx=/href=\\\"\\/([A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+)\\\"/g; const seen=new Set(); const repos=[]; let m; while((m=rx.exec(html))){ const id=m[1]; if(seen.has(id)) continue; seen.add(id); repos.push(id); if(repos.length>=200) break; } return repos; }; \
-          const makeBadge=(msg,color,meta)=>({schemaVersion:1,label:'GitHub Trending',message:msg,color, ...meta}); \
+          const makeBadge=(msg,color)=>({schemaVersion:1,label:'GitHub Trending',message:msg,color}); \
           const main = async ()=>{ \
-            const prev = await readPrev(); \
-            const prevLast = prev && prev._lastSeenRank ? {rank: prev._lastSeenRank, since: prev._lastSeenSince, at: prev._lastSeenAt} : null; \
+            const status = await readStatus(); \
             let found=null; \
             for (const since of SINCE){ \
               const html=await fetchHtml(since); \
@@ -51,17 +51,23 @@ jobs:
               if(idx!==-1){ const rank=idx+1; if(!found || rank<found.rank) found={rank,since}; } \
             } \
             const checkedAt=now(); \
+            status.repo = REPO_ID; \
+            status.lastCheckedAt = checkedAt; \
+            status.currentRank = found ? found.rank : null; \
+            status.currentSince = found ? found.since : null; \
+            if(found){ status.lastSeenAt = checkedAt; status.lastSeenRank = found.rank; status.lastSeenSince = found.since; } \
             let badge; \
             if(found){ \
               const r=clamp(found.rank,1,999); \
-              badge=makeBadge('#'+r+' '+found.since,'blue',{_repo:REPO_ID,_lastCheckedAt:checkedAt,_lastSeenAt:checkedAt,_lastSeenRank:r,_lastSeenSince:found.since}); \
-            } else if(prevLast){ \
-              const r=clamp(prevLast.rank,1,999); \
-              badge=makeBadge('last #'+r+' '+prevLast.since,'lightgrey',{_repo:REPO_ID,_lastCheckedAt:checkedAt,_lastSeenAt:prevLast.at,_lastSeenRank:r,_lastSeenSince:prevLast.since}); \
+              badge=makeBadge('#'+r+' '+found.since,'blue'); \
+            } else if(status.lastSeenRank){ \
+              const r=clamp(status.lastSeenRank,1,999); \
+              badge=makeBadge('last #'+r+' '+status.lastSeenSince,'lightgrey'); \
             } else { \
-              badge=makeBadge('not trending','lightgrey',{_repo:REPO_ID,_lastCheckedAt:checkedAt}); \
+              badge=makeBadge('not trending','lightgrey'); \
             } \
             await fs.writeFile(OUT, JSON.stringify(badge,null,2)+'\\n','utf8'); \
+            await fs.writeFile(STATUS, JSON.stringify(status,null,2)+'\\n','utf8'); \
           }; \
           main().catch(e=>{ console.error(e); process.exit(1); });"
 
@@ -71,6 +77,6 @@ jobs:
             echo "No changes to commit."
             exit 0
           fi
-          git add github-trending.json
+          git add github-trending.json github-trending.status.json
           git commit -m "chore(readme): update GitHub Trending badge"
           git push

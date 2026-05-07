@@ -2,11 +2,6 @@
   "schemaVersion": 1,
   "label": "GitHub Trending",
   "message": "not trending",
-  "color": "lightgrey",
-  "_repo": "Devlaner/devlane",
-  "_lastCheckedAt": null,
-  "_lastSeenAt": null,
-  "_lastSeenRank": null,
-  "_lastSeenSince": null
+  "color": "lightgrey"
 }
 
