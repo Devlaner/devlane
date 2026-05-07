@@ -601,7 +601,6 @@ export interface IssueViewApiResponse {
   display_properties?: Record<string, unknown>;
   access?: number | 'public' | 'private';
   sort_order?: number;
-  anchor?: string | null;
   is_favorite?: boolean;
   owned_by?: string;
   owned_by_id: string;
@@ -621,34 +620,94 @@ export interface PageApiResponse {
   owned_by_id: string;
   updated_by_id?: string | null;
   workspace_id: string;
+  /** 0 public, 1 private */
   access: number;
+  color?: string;
   parent_id?: string | null;
   sort_order?: number;
+  is_locked: boolean;
   archived_at?: string | null;
   created_at: string;
   updated_at: string;
+  /** Optional JSON blobs we surface as-is. */
+  view_props?: Record<string, unknown>;
+  logo_props?: Record<string, unknown>;
 }
 
 export interface CreatePageRequest {
   name: string;
   description_html?: string;
   project_id?: string | null;
+  parent_id?: string | null;
   /** 0 public, 1 private */
   access?: number;
 }
 
 export interface UpdatePageRequest {
   name?: string;
-  description_html?: string;
   /** 0 public, 1 private */
   access?: number;
+  parent_id?: string | null;
+  clear_parent?: boolean;
+  /** Emoji or icon used as the page's logo. Pass `null` to clear. */
+  logo_props?: Record<string, unknown> | null;
+}
+
+export interface UpdatePageContentRequest {
+  description_html: string;
+}
+
+/** A snapshot recorded each time a page's body is saved. */
+export interface PageVersionApiResponse {
+  id: string;
+  page_id: string;
+  workspace_id: string;
+  owned_by_id: string;
+  last_saved_at: string;
+  description_html?: string;
+  description_stripped?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Reason a notification was created. Server-set; drives how the inbox row renders.
+ */
+export type NotificationSender =
+  | 'assigned'
+  | 'mentioned'
+  | 'commented'
+  | 'state_changed'
+  | 'subscribed';
+
+/** Structured payload the API attaches to every notification — denormalised so
+ * the inbox can render N rows without N round-trips. Field set varies by sender. */
+export interface NotificationMessage {
+  actor: { id: string; display_name: string };
+  issue: {
+    id: string;
+    name: string;
+    sequence_id: number;
+    project_identifier: string;
+  };
+  /** Field that changed for state_changed / subscribed senders. */
+  field?: string;
+  /** Human-readable previous value (e.g. state name "Backlog"). */
+  before?: string;
+  /** Human-readable new value. */
+  after?: string;
+  /** First ~140 chars of plain-text comment, present on commented/mentioned-in-comment. */
+  comment_preview?: string;
+  /** Where a mention came from when sender is 'mentioned' — "description" | "comment". */
+  context?: string;
 }
 
 /** Notification as returned by the API */
 export interface NotificationApiResponse {
   id: string;
   title: string;
-  message?: Record<string, unknown>;
+  message?: NotificationMessage;
+  sender?: NotificationSender;
   receiver_id: string;
   workspace_id: string;
   project_id?: string | null;
@@ -656,8 +715,16 @@ export interface NotificationApiResponse {
   entity_identifier?: string | null;
   entity_name?: string;
   read_at?: string | null;
+  archived_at?: string | null;
+  snoozed_till?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Unread counts surfaced by the bell badge and inbox tabs. */
+export interface UnreadCountResponse {
+  total: number;
+  mentions: number;
 }
 
 /** Issue comment as returned by the API */

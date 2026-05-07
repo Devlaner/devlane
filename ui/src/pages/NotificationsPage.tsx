@@ -1,21 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { Avatar, Button, Card, CardContent } from '../components/ui';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Archive, ArchiveRestore } from 'lucide-react';
+import { Avatar, Button } from '../components/ui';
 import { workspaceService } from '../services/workspaceService';
-import { projectService } from '../services/projectService';
-import { issueService } from '../services/issueService';
 import { notificationService } from '../services/notificationService';
-import type {
-  WorkspaceApiResponse,
-  NotificationApiResponse,
-  ProjectApiResponse,
-  IssueApiResponse,
-} from '../api/types';
+import { NotificationContent } from '../components/notifications/NotificationContent';
+import { SnoozeMenu } from '../components/notifications/SnoozeMenu';
+import type { WorkspaceApiResponse, NotificationApiResponse } from '../api/types';
+
+type InboxTab = 'all' | 'mentions' | 'archived';
 
 function formatTimeAgo(iso: string): string {
   const d = new Date(iso);
-  const now = Date.now();
-  const diffMs = now - d.getTime();
+  const diffMs = Date.now() - d.getTime();
   const sec = Math.floor(diffMs / 1000);
   const min = Math.floor(sec / 60);
   const hr = Math.floor(min / 60);
@@ -27,20 +24,39 @@ function formatTimeAgo(iso: string): string {
   return 'less than a minute ago';
 }
 
+function rowLabels(n: NotificationApiResponse) {
+  // System / legacy rows may have an empty or partial message payload.
+  const actor = n.message?.actor?.display_name ?? 'Someone';
+  const issue = n.message?.issue;
+  const ref =
+    issue?.project_identifier && issue.sequence_id != null
+      ? `${issue.project_identifier}-${issue.sequence_id}`
+      : '—';
+  const issueName = issue?.name ?? '';
+  return { actor, ref, issueName };
+}
+
+const TABS: { id: InboxTab; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'mentions', label: 'Mentions' },
+  { id: 'archived', label: 'Archived' },
+];
+
 export function NotificationsPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
-  const [inboxTab, setInboxTab] = useState<'all' | 'mentions'>('all');
+  const navigate = useNavigate();
+  const [inboxTab, setInboxTab] = useState<InboxTab>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
-  const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [notifications, setNotifications] = useState<NotificationApiResponse[]>([]);
-  const [selectedProject, setSelectedProject] = useState<ProjectApiResponse | null>(null);
-  const [selectedIssue, setSelectedIssue] = useState<IssueApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  // IDs the user explicitly marked unread in this session; the auto-mark-read
+  // effect below skips them so the toggle actually sticks.
+  const [explicitUnreadIds, setExplicitUnreadIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!workspaceSlug) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset loading when no slug (kept for future use)
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset when slug absent
       setLoading(false);
       return;
     }
@@ -48,20 +64,20 @@ export function NotificationsPage() {
     setLoading(true);
     Promise.all([
       workspaceService.getBySlug(workspaceSlug),
-      notificationService.list(workspaceSlug),
-      projectService.list(workspaceSlug),
+      notificationService.list(workspaceSlug, {
+        mentionsOnly: inboxTab === 'mentions',
+        archived: inboxTab === 'archived' ? 'archived' : 'inbox',
+      }),
     ])
-      .then(([w, list, projs]) => {
+      .then(([w, list]) => {
         if (cancelled) return;
         setWorkspace(w ?? null);
         setNotifications(list ?? []);
-        setProjects(projs ?? []);
       })
       .catch(() => {
         if (!cancelled) {
           setWorkspace(null);
           setNotifications([]);
-          setProjects([]);
         }
       })
       .finally(() => {
@@ -70,80 +86,131 @@ export function NotificationsPage() {
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug]);
+  }, [workspaceSlug, inboxTab]);
 
-  const items = useMemo(() => {
-    const list = notifications.map((n) => ({
-      id: n.id,
-      projectId: n.project_id ?? null,
-      issueId: n.entity_identifier ?? null,
-      type: n.entity_name ?? 'all',
-      actorUserId: n.triggered_by_id ?? null,
-      title: n.title,
-      message: n.message,
-      createdAt: n.created_at,
-      readAt: n.read_at ?? null,
-    }));
-    if (inboxTab === 'mentions') return list.filter((i) => i.type === 'mention');
-    return list;
-  }, [notifications, inboxTab]);
+  const selected = useMemo(
+    () => (selectedId ? (notifications.find((n) => n.id === selectedId) ?? null) : null),
+    [notifications, selectedId],
+  );
 
-  const selectedItem = selectedId ? (items.find((i) => i.id === selectedId) ?? null) : null;
-
+  // Auto-mark-on-select. Skip when viewing the Archived tab — re-reading
+  // archived rows should not flip them to read silently. Also skip rows the
+  // user just explicitly marked unread; otherwise this effect re-fires and
+  // immediately re-marks them as read.
   useEffect(() => {
-    if (!workspaceSlug || !selectedItem) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: clear selection when route changes (kept for future use)
-      setSelectedProject(null);
-      setSelectedIssue(null);
-      return;
-    }
+    if (!workspaceSlug || !selected || selected.read_at || inboxTab === 'archived') return;
+    if (explicitUnreadIds.has(selected.id)) return;
     let cancelled = false;
-
-    const markReadIfNeeded = async () => {
-      if (selectedItem.readAt) return;
-      try {
-        await notificationService.markRead(workspaceSlug, selectedItem.id);
-        if (!cancelled) {
-          setNotifications((prev) =>
-            prev.map((n) =>
-              n.id === selectedItem.id ? { ...n, read_at: new Date().toISOString() } : n,
-            ),
-          );
-        }
-      } catch {
-        // ignore
-      }
-    };
-
-    const fetchLinked = async () => {
-      setSelectedProject(null);
-      setSelectedIssue(null);
-      const projectId = selectedItem.projectId;
-      const issueId = selectedItem.issueId;
-      if (!projectId || !issueId) return;
-      try {
-        const [p, iss] = await Promise.all([
-          projectService.get(workspaceSlug, projectId),
-          issueService.get(workspaceSlug, projectId, issueId),
-        ]);
-        if (!cancelled) {
-          setSelectedProject(p ?? null);
-          setSelectedIssue(iss ?? null);
-        }
-      } catch {
-        if (!cancelled) {
-          setSelectedProject(null);
-          setSelectedIssue(null);
-        }
-      }
-    };
-
-    void markReadIfNeeded();
-    void fetchLinked();
+    notificationService
+      .markRead(workspaceSlug, selected.id)
+      .then(() => {
+        if (cancelled) return;
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === selected.id ? { ...n, read_at: new Date().toISOString() } : n)),
+        );
+      })
+      .catch(() => {
+        // Read state is best-effort; failure won't block the UI.
+      });
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug, selectedItem]);
+  }, [workspaceSlug, selected, inboxTab, explicitUnreadIds]);
+
+  const removeFromList = (id: string) =>
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+
+  const onMarkAllRead = async () => {
+    if (!workspaceSlug) return;
+    await notificationService.markAllRead(workspaceSlug);
+    const refreshed = await notificationService.list(workspaceSlug, {
+      mentionsOnly: inboxTab === 'mentions',
+      archived: inboxTab === 'archived' ? 'archived' : 'inbox',
+    });
+    setNotifications(refreshed ?? []);
+  };
+
+  const onToggleReadOnSelected = async () => {
+    if (!workspaceSlug || !selected) return;
+    if (selected.read_at) {
+      await notificationService.markUnread(workspaceSlug, selected.id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === selected.id ? { ...n, read_at: null } : n)),
+      );
+      // Remember the user wanted this unread; the auto-mark effect will skip it.
+      setExplicitUnreadIds((prev) => {
+        const next = new Set(prev);
+        next.add(selected.id);
+        return next;
+      });
+    } else {
+      await notificationService.markRead(workspaceSlug, selected.id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === selected.id ? { ...n, read_at: new Date().toISOString() } : n)),
+      );
+      setExplicitUnreadIds((prev) => {
+        if (!prev.has(selected.id)) return prev;
+        const next = new Set(prev);
+        next.delete(selected.id);
+        return next;
+      });
+    }
+  };
+
+  const onArchiveRow = async (id: string) => {
+    if (!workspaceSlug) return;
+    await notificationService.archive(workspaceSlug, id);
+    if (inboxTab === 'archived') {
+      // Already in archive view — keep it visible for the unarchive affordance.
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, archived_at: new Date().toISOString() } : n)),
+      );
+      return;
+    }
+    removeFromList(id);
+    if (selectedId === id) setSelectedId(null);
+  };
+
+  const onUnarchiveRow = async (id: string) => {
+    if (!workspaceSlug) return;
+    await notificationService.unarchive(workspaceSlug, id);
+    if (inboxTab === 'archived') {
+      removeFromList(id);
+      if (selectedId === id) setSelectedId(null);
+    } else {
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, archived_at: null } : n)));
+    }
+  };
+
+  const onSnoozeSelected = async (until: Date) => {
+    if (!workspaceSlug || !selected) return;
+    await notificationService.snooze(workspaceSlug, selected.id, until);
+    // Snoozed rows disappear from the inbox view; keep them in the Archived tab if visible.
+    if (inboxTab !== 'archived') {
+      removeFromList(selected.id);
+      setSelectedId(null);
+    } else {
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === selected.id ? { ...n, snoozed_till: until.toISOString() } : n)),
+      );
+    }
+  };
+
+  const onUnsnoozeSelected = async () => {
+    if (!workspaceSlug || !selected) return;
+    await notificationService.unsnooze(workspaceSlug, selected.id);
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === selected.id ? { ...n, snoozed_till: null } : n)),
+    );
+  };
+
+  const onOpenIssue = () => {
+    if (!workspaceSlug || !selected?.message?.issue) return;
+    const projectId = selected.project_id;
+    const issueId = selected.message.issue.id;
+    if (!projectId || !issueId) return;
+    navigate(`/${workspaceSlug}/projects/${projectId}/issues/${issueId}`);
+  };
 
   if (loading) {
     return (
@@ -158,6 +225,13 @@ export function NotificationsPage() {
 
   const listWidth = 'min(420px, 35%)';
 
+  const emptyMessage =
+    inboxTab === 'mentions'
+      ? 'No mentions yet. When someone @-mentions you in an issue or comment, it shows here.'
+      : inboxTab === 'archived'
+        ? 'No archived notifications. Archive a row from the inbox to declutter without losing it.'
+        : 'Inbox zero. Notifications about issues you’re involved with will land here.';
+
   return (
     <div className="flex h-full min-h-0 w-full">
       <div
@@ -167,84 +241,84 @@ export function NotificationsPage() {
         <div className="shrink-0 border-b border-(--border-subtle) px-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex gap-1">
-              <button
-                type="button"
-                onClick={() => setInboxTab('all')}
-                className={`border-b-2 px-4 py-2.5 text-sm font-medium ${
-                  inboxTab === 'all'
-                    ? 'border-(--brand-default) text-(--txt-primary)'
-                    : 'border-transparent text-(--txt-secondary) hover:text-(--txt-primary)'
-                }`}
-              >
-                All
-              </button>
-              <button
-                type="button"
-                onClick={() => setInboxTab('mentions')}
-                className={`border-b-2 px-4 py-2.5 text-sm font-medium ${
-                  inboxTab === 'mentions'
-                    ? 'border-(--brand-default) text-(--txt-primary)'
-                    : 'border-transparent text-(--txt-secondary) hover:text-(--txt-primary)'
-                }`}
-              >
-                Mentions
-              </button>
+              {TABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => {
+                    setInboxTab(t.id);
+                    setSelectedId(null);
+                  }}
+                  className={`border-b-2 px-4 py-2.5 text-sm font-medium ${
+                    inboxTab === t.id
+                      ? 'border-(--brand-default) text-(--txt-primary)'
+                      : 'border-transparent text-(--txt-secondary) hover:text-(--txt-primary)'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={async () => {
-                if (!workspaceSlug) return;
-                await notificationService.markAllRead(workspaceSlug);
-                const refreshed = await notificationService.list(workspaceSlug);
-                setNotifications(refreshed ?? []);
-              }}
-            >
-              Mark all read
-            </Button>
+            {inboxTab !== 'archived' ? (
+              <Button size="sm" variant="secondary" onClick={onMarkAllRead}>
+                Mark all read
+              </Button>
+            ) : null}
           </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {items.length === 0 ? (
-            <div className="p-4 text-sm text-(--txt-tertiary)">No notifications.</div>
+          {notifications.length === 0 ? (
+            <div className="p-6 text-sm text-(--txt-tertiary)">{emptyMessage}</div>
           ) : (
             <ul className="divide-y divide-(--border-subtle)">
-              {items.map((item) => {
-                const actorName = item.actorUserId ? item.actorUserId.slice(0, 8) : 'system';
-                const project = item.projectId
-                  ? (projects.find((p) => p.id === item.projectId) ?? null)
-                  : null;
-                const issueRef = item.issueId ? item.issueId.slice(-4) : '—';
-                const isSelected = selectedId === item.id;
+              {notifications.map((n) => {
+                const { actor, ref, issueName } = rowLabels(n);
+                const isSelected = selectedId === n.id;
+                const isArchived = !!n.archived_at;
                 return (
-                  <li key={item.id}>
+                  <li key={n.id} className="group relative">
                     <button
                       type="button"
-                      onClick={() => setSelectedId(item.id)}
+                      onClick={() => setSelectedId(n.id)}
                       className={`flex w-full gap-3 px-4 py-3 text-left transition-colors ${
                         isSelected ? 'bg-(--bg-layer-1)' : 'hover:bg-(--bg-layer-1-hover)'
                       }`}
                     >
-                      <Avatar name={actorName} size="md" className="shrink-0" />
+                      <Avatar name={actor} size="md" className="shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm text-(--txt-primary)">
-                          <span className="font-medium">{actorName}</span>{' '}
-                          <span className="text-(--txt-secondary)">{item.type}</span>{' '}
-                          <span className="font-semibold">{item.title}</span>
-                        </p>
+                        <p className="truncate text-sm text-(--txt-primary)">{n.title}</p>
                         <p className="mt-0.5 truncate text-sm text-(--txt-secondary)">
-                          {project ? (project.identifier ?? project.name) : '—'}-{issueRef}
+                          {ref}
+                          {issueName ? ` — ${issueName}` : ''}
                         </p>
                       </div>
                       <span className="shrink-0 text-right text-xs text-(--txt-tertiary)">
-                        <span className="block">{formatTimeAgo(item.createdAt)}</span>
-                        {!item.readAt && (
+                        <span className="block">{formatTimeAgo(n.created_at)}</span>
+                        {!n.read_at && !isArchived && (
                           <span className="mt-1 inline-block rounded bg-(--brand-200) px-2 py-0.5 text-[10px] font-medium text-(--brand-default)">
                             New
                           </span>
                         )}
                       </span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={isArchived ? 'Unarchive' : 'Archive'}
+                      title={isArchived ? 'Unarchive' : 'Archive'}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isArchived) {
+                          void onUnarchiveRow(n.id);
+                        } else {
+                          void onArchiveRow(n.id);
+                        }
+                      }}
+                      // Keep tabbable / focusable; visually fade in on hover or focus
+                      // so keyboard users can still reach the action.
+                      className="absolute top-2 right-2 rounded p-1 text-(--txt-tertiary) opacity-0 hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary) focus:opacity-100 group-hover:opacity-100"
+                    >
+                      {isArchived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
                     </button>
                   </li>
                 );
@@ -255,7 +329,7 @@ export function NotificationsPage() {
       </div>
 
       <div className="min-w-0 flex-1 bg-(--bg-canvas)">
-        {!selectedItem ? (
+        {!selected ? (
           <div className="flex h-full items-center justify-center p-8 text-sm text-(--txt-tertiary)">
             Select a notification to see details.
           </div>
@@ -264,58 +338,41 @@ export function NotificationsPage() {
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <h2 className="truncate text-lg font-semibold text-(--txt-primary)">
-                  {selectedItem.title}
+                  {selected.title}
                 </h2>
                 <p className="mt-1 text-sm text-(--txt-secondary)">
-                  {formatTimeAgo(selectedItem.createdAt)}
+                  {formatTimeAgo(selected.created_at)}
                 </p>
               </div>
-              <div className="shrink-0">
+              <div className="flex shrink-0 items-center gap-2">
+                <Button size="sm" variant="secondary" onClick={onToggleReadOnSelected}>
+                  {selected.read_at ? 'Mark unread' : 'Mark read'}
+                </Button>
+                <SnoozeMenu
+                  snoozedUntil={selected.snoozed_till ?? null}
+                  onSnooze={onSnoozeSelected}
+                  onUnsnooze={onUnsnoozeSelected}
+                />
                 <Button
                   size="sm"
                   variant="secondary"
-                  disabled={!!selectedItem.readAt}
-                  onClick={async () => {
-                    if (!workspaceSlug) return;
-                    await notificationService.markRead(workspaceSlug, selectedItem.id);
-                    const refreshed = await notificationService.list(workspaceSlug);
-                    setNotifications(refreshed ?? []);
-                  }}
+                  onClick={() =>
+                    selected.archived_at ? onUnarchiveRow(selected.id) : onArchiveRow(selected.id)
+                  }
                 >
-                  {selectedItem.readAt ? 'Read' : 'Mark read'}
+                  {selected.archived_at ? 'Unarchive' : 'Archive'}
                 </Button>
+                {selected.message?.issue?.id && selected.project_id ? (
+                  <Button size="sm" variant="primary" onClick={onOpenIssue}>
+                    Open issue
+                  </Button>
+                ) : null}
               </div>
             </div>
 
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <Card variant="outlined">
-                <CardContent className="space-y-1">
-                  <p className="text-xs font-medium uppercase tracking-wide text-(--txt-tertiary)">
-                    Project
-                  </p>
-                  <p className="text-sm text-(--txt-primary)">{selectedProject?.name ?? '—'}</p>
-                </CardContent>
-              </Card>
-              <Card variant="outlined">
-                <CardContent className="space-y-1">
-                  <p className="text-xs font-medium uppercase tracking-wide text-(--txt-tertiary)">
-                    Issue
-                  </p>
-                  <p className="text-sm text-(--txt-primary)">{selectedIssue?.name ?? '—'}</p>
-                </CardContent>
-              </Card>
+            <div className="mt-6">
+              <NotificationContent notification={selected} />
             </div>
-
-            <Card variant="outlined" className="mt-4">
-              <CardContent>
-                <p className="text-xs font-medium uppercase tracking-wide text-(--txt-tertiary)">
-                  Message
-                </p>
-                <pre className="mt-2 whitespace-pre-wrap break-words rounded border border-(--border-subtle) bg-(--bg-surface-1) p-3 text-xs text-(--txt-secondary)">
-                  {selectedItem.message ? JSON.stringify(selectedItem.message, null, 2) : '—'}
-                </pre>
-              </CardContent>
-            </Card>
           </div>
         )}
       </div>

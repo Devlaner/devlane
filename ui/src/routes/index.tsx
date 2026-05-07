@@ -101,6 +101,9 @@ const ViewDetailPage = lazy(() =>
 const PagesPage = lazy(() =>
   import('../pages/PagesPage').then((m) => page({ PagesPage: m.PagesPage })),
 );
+const PageDetailPage = lazy(() =>
+  import('../pages/PageDetailPage').then((m) => page({ PageDetailPage: m.PageDetailPage })),
+);
 
 const InstanceAdminGeneralPage = lazy(() =>
   import('../pages/instance-admin').then((m) =>
@@ -570,6 +573,14 @@ const router = createBrowserRouter([
                         element: (
                           <Suspense fallback={<PageFallback />}>
                             <PagesPage />
+                          </Suspense>
+                        ),
+                      },
+                      {
+                        path: 'pages/:pageId',
+                        element: (
+                          <Suspense fallback={<PageFallback />}>
+                            <PageDetailPage />
                           </Suspense>
                         ),
                       },

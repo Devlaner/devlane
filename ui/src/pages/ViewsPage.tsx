@@ -213,6 +213,26 @@ function getProjectViewsFavoritesKey(workspaceId: string, projectId: string) {
   return `project-view-favorites:${workspaceId}:${projectId}`;
 }
 
+/** Compact relative-time label, e.g. "2d ago", "5m ago", "just now". */
+function formatRelativeShort(iso: string | undefined): string {
+  if (!iso) return '';
+  const t = new Date(iso).getTime();
+  if (!t) return '';
+  const diff = Math.max(0, Date.now() - t);
+  const sec = Math.floor(diff / 1000);
+  if (sec < 30) return 'just now';
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 30) return `${day}d ago`;
+  const mo = Math.floor(day / 30);
+  if (mo < 12) return `${mo}mo ago`;
+  return `${Math.floor(mo / 12)}y ago`;
+}
+
 function resolveViewCreator(
   members: WorkspaceMemberApiResponse[],
   v: IssueViewApiResponse,
@@ -259,7 +279,6 @@ export function ViewsPage() {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [copyingId, setCopyingId] = useState<string | null>(null);
-  const [publishingId, setPublishingId] = useState<string | null>(null);
   const [viewMenuOpenId, setViewMenuOpenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [favoriteActionError, setFavoriteActionError] = useState<string | null>(null);
@@ -572,24 +591,6 @@ export function ViewsPage() {
     }
   };
 
-  const handleTogglePublish = async (view: IssueViewApiResponse) => {
-    if (!workspaceSlug) return;
-    setPublishingId(view.id);
-    setError(null);
-    try {
-      if (view.anchor) {
-        await viewService.unpublish(workspaceSlug, view.id);
-      } else {
-        await viewService.publish(workspaceSlug, view.id);
-      }
-      await loadPageData();
-    } catch {
-      setError('Unable to update publish status for this view.');
-    } finally {
-      setPublishingId(null);
-    }
-  };
-
   const viewsFeatureEnabled = project?.issue_views_view !== false;
   const canCreateViews = !!user && viewsFeatureEnabled;
 
@@ -644,12 +645,118 @@ export function ViewsPage() {
     );
   }
 
+  // Active filter pills shown above the list. Suppressed in the "no views at all"
+  // empty state since the user has no list to filter.
+  const filterPills: { key: string; label: string; value: string; onClear: () => void }[] = [];
+  if (filters.query.trim()) {
+    filterPills.push({
+      key: 'query',
+      label: 'Search',
+      value: filters.query,
+      onClear: () => setFilters((p) => ({ ...p, query: '' })),
+    });
+  }
+  if (filters.favoritesOnly) {
+    filterPills.push({
+      key: 'favorites',
+      label: 'Favorites',
+      value: 'only',
+      onClear: () => setFilters((p) => ({ ...p, favoritesOnly: false })),
+    });
+  }
+  if (filters.createdDatePreset) {
+    const presetLabel =
+      filters.createdDatePreset === '1_week'
+        ? 'Last 1 week'
+        : filters.createdDatePreset === '2_weeks'
+          ? 'Last 2 weeks'
+          : filters.createdDatePreset === '1_month'
+            ? 'Last 1 month'
+            : `Custom · ${filters.createdAfter ?? '…'} → ${filters.createdBefore ?? '…'}`;
+    filterPills.push({
+      key: 'createdDate',
+      label: 'Created',
+      value: presetLabel,
+      onClear: () =>
+        setFilters((p) => ({
+          ...p,
+          createdDatePreset: null,
+          createdAfter: null,
+          createdBefore: null,
+        })),
+    });
+  }
+  if (filters.createdByIds.length) {
+    const names = filters.createdByIds
+      .map((id) => {
+        const m = members.find((mm) => mm.member_id === id);
+        return m?.member_display_name?.trim() || m?.member_email?.split('@')[0] || id.slice(0, 6);
+      })
+      .join(', ');
+    filterPills.push({
+      key: 'createdBy',
+      label: 'Created by',
+      value: names,
+      onClear: () => setFilters((p) => ({ ...p, createdByIds: [] })),
+    });
+  }
+  const clearAllFilters = () =>
+    setFilters({
+      query: '',
+      favoritesOnly: false,
+      createdDatePreset: null,
+      createdAfter: null,
+      createdBefore: null,
+      createdByIds: [],
+    });
+
   return (
     <>
       <div className="-mt-(--padding-page) -mr-(--padding-page) -mb-(--padding-page) flex min-h-0 flex-1 flex-col">
         {favoriteActionError ? (
           <div className="mx-6 mt-3 rounded-md border border-(--border-danger) bg-(--bg-danger-subtle) px-3 py-2 text-sm text-(--txt-danger-primary)">
             {favoriteActionError}
+          </div>
+        ) : null}
+        {!noViewsAtAll && filterPills.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-(--border-subtle) px-6 py-2.5">
+            {filterPills.map((p) => (
+              <span
+                key={p.key}
+                className="inline-flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1 text-xs text-(--txt-primary)"
+              >
+                <span className="text-(--txt-tertiary)">{p.label}:</span>
+                <span className="max-w-[260px] truncate">{p.value}</span>
+                <button
+                  type="button"
+                  aria-label={`Clear ${p.label} filter`}
+                  onClick={p.onClear}
+                  className="-mr-0.5 inline-flex size-4 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </span>
+            ))}
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="ml-1 text-xs text-(--txt-secondary) hover:text-(--txt-primary) hover:underline"
+            >
+              Clear all
+            </button>
           </div>
         ) : null}
         {noViewsAtAll ? (
@@ -725,6 +832,12 @@ export function ViewsPage() {
                       </button>
                     </div>
                     <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
+                      <span
+                        className="pointer-events-none hidden shrink-0 select-none text-[11px] text-(--txt-tertiary) sm:inline"
+                        title={v.updated_at ? new Date(v.updated_at).toLocaleString() : undefined}
+                      >
+                        {formatRelativeShort(v.updated_at)}
+                      </span>
                       <span
                         className="pointer-events-none shrink-0 select-none rounded-full border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-0.5 text-[11px] font-medium text-(--txt-secondary) shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-opacity duration-150 max-sm:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                         title={filterLabel}
@@ -820,20 +933,6 @@ export function ViewsPage() {
                         >
                           <IconLinkChain className="shrink-0 text-(--txt-icon-tertiary)" />
                           {copyingId === v.id ? 'Copied!' : 'Copy link'}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={!canCreateViews || publishingId === v.id}
-                          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover) disabled:cursor-not-allowed disabled:opacity-50"
-                          onClick={() => {
-                            setViewMenuOpenId(null);
-                            void handleTogglePublish(v);
-                          }}
-                        >
-                          <span className="inline-flex w-3.5 shrink-0 justify-center text-xs text-(--txt-icon-tertiary)">
-                            ●
-                          </span>
-                          {publishingId === v.id ? 'Updating…' : v.anchor ? 'Unpublish' : 'Publish'}
                         </button>
                         <div className="my-0.5 h-px bg-(--border-subtle)" role="separator" />
                         <button

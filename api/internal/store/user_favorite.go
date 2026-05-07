@@ -14,6 +14,9 @@ const FavoriteEntityTypeProject = "project"
 // FavoriteEntityTypeIssueView is stored in user_favorites.entity_type for saved issue views.
 const FavoriteEntityTypeIssueView = "issue_view"
 
+// FavoriteEntityTypePage is stored in user_favorites.entity_type for project pages.
+const FavoriteEntityTypePage = "page"
+
 // UserFavoriteStore handles user_favorites persistence.
 type UserFavoriteStore struct{ db *gorm.DB }
 
@@ -93,6 +96,48 @@ func (s *UserFavoriteStore) IsIssueViewFavorited(ctx context.Context, userID, vi
 	var count int64
 	err := s.db.WithContext(ctx).Model(&model.UserFavorite{}).
 		Where("user_id = ? AND entity_type = ? AND entity_identifier = ?", userID, FavoriteEntityTypeIssueView, viewID).
+		Count(&count).Error
+	return count > 0, err
+}
+
+// ListPageIDsByUserAndWorkspace returns page IDs the user has favorited in a workspace.
+func (s *UserFavoriteStore) ListPageIDsByUserAndWorkspace(ctx context.Context, userID, workspaceID uuid.UUID) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
+	err := s.db.WithContext(ctx).Model(&model.UserFavorite{}).
+		Where("user_id = ? AND entity_type = ? AND workspace_id = ?", userID, FavoriteEntityTypePage, workspaceID).
+		Pluck("entity_identifier", &ids).Error
+	return ids, err
+}
+
+// AddPage favorites a page for the user. Idempotent on conflict.
+func (s *UserFavoriteStore) AddPage(ctx context.Context, userID, workspaceID uuid.UUID, projectID *uuid.UUID, pageID uuid.UUID) error {
+	fav := &model.UserFavorite{
+		Name:             "page",
+		Type:             "page",
+		EntityType:       FavoriteEntityTypePage,
+		EntityIdentifier: pageID,
+		WorkspaceID:      workspaceID,
+		ProjectID:        projectID,
+		UserID:           userID,
+	}
+	return s.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "entity_type"}, {Name: "entity_identifier"}},
+		DoNothing: true,
+	}).Create(fav).Error
+}
+
+// RemovePage removes a page from the user's favorites.
+func (s *UserFavoriteStore) RemovePage(ctx context.Context, userID, pageID uuid.UUID) error {
+	return s.db.WithContext(ctx).
+		Where("user_id = ? AND entity_type = ? AND entity_identifier = ?", userID, FavoriteEntityTypePage, pageID).
+		Delete(&model.UserFavorite{}).Error
+}
+
+// IsPageFavorited reports whether the user has favorited the given page.
+func (s *UserFavoriteStore) IsPageFavorited(ctx context.Context, userID, pageID uuid.UUID) (bool, error) {
+	var count int64
+	err := s.db.WithContext(ctx).Model(&model.UserFavorite{}).
+		Where("user_id = ? AND entity_type = ? AND entity_identifier = ?", userID, FavoriteEntityTypePage, pageID).
 		Count(&count).Error
 	return count > 0, err
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/store"
+	"github.com/Devlaner/devlane/api/internal/text"
 	"github.com/google/uuid"
 )
 
@@ -18,6 +19,8 @@ type CommentService struct {
 	ps        *store.ProjectStore
 	ws        *store.WorkspaceStore
 	reactions *store.CommentReactionStore // optional — set via SetReactionStore
+	notify    *NotificationService        // optional — set via SetNotificationService
+	subs      *store.IssueSubscriberStore // optional — auto-subscribe commenter & mentions
 }
 
 func NewCommentService(cs *store.CommentStore, is *store.IssueStore, ps *store.ProjectStore, ws *store.WorkspaceStore) *CommentService {
@@ -26,6 +29,31 @@ func NewCommentService(cs *store.CommentStore, is *store.IssueStore, ps *store.P
 
 // SetReactionStore wires per-comment reactions support. Optional.
 func (s *CommentService) SetReactionStore(r *store.CommentReactionStore) { s.reactions = r }
+
+// SetNotificationService injects the notification fan-out service. Optional —
+// when nil, comments do not emit notifications.
+func (s *CommentService) SetNotificationService(n *NotificationService) { s.notify = n }
+
+// SetSubscriberStore injects the issue-subscriber store so commenters and
+// mention targets are auto-subscribed when a comment is posted. Optional.
+func (s *CommentService) SetSubscriberStore(subs *store.IssueSubscriberStore) { s.subs = subs }
+
+func (s *CommentService) autoSubscribe(ctx context.Context, issue *model.Issue, userIDs []uuid.UUID) {
+	if s.subs == nil || issue == nil {
+		return
+	}
+	for _, uid := range userIDs {
+		if uid == uuid.Nil {
+			continue
+		}
+		_ = s.subs.Subscribe(ctx, &model.IssueSubscriber{
+			IssueID:      issue.ID,
+			SubscriberID: uid,
+			ProjectID:    issue.ProjectID,
+			WorkspaceID:  issue.WorkspaceID,
+		})
+	}
+}
 
 func (s *CommentService) ensureProjectAccess(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID) error {
 	wrk, err := s.ws.GetBySlug(ctx, workspaceSlug)
@@ -79,6 +107,14 @@ func (s *CommentService) Create(ctx context.Context, workspaceSlug string, proje
 	}
 	if err := s.cs.Create(ctx, c); err != nil {
 		return nil, err
+	}
+	mentioned := text.ParseMentionUserIDs(comment)
+	// Auto-subscribe the commenter and any mentioned users so they pick up
+	// future activity on the issue.
+	subscribers := append([]uuid.UUID{userID}, mentioned...)
+	s.autoSubscribe(ctx, issue, subscribers)
+	if s.notify != nil {
+		s.notify.IssueCommented(ctx, issue, userID, comment, mentioned)
 	}
 	return c, nil
 }
