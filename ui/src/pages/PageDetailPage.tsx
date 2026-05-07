@@ -175,6 +175,9 @@ export function PageDetailPage() {
     // /:workspaceSlug/projects/:projectId/pages/:pageId path, but bail safely.
     if (!workspaceSlug || !projectId || !pageId) return undefined;
     let cancelled = false;
+    // Reset stale state when navigating between pages so the new page gets a
+    // visible loading state instead of flashing the previous page's content.
+    setLoading(true);
     // setState calls live inside the async chain (not the effect body) so the
     // react-hooks/set-state-in-effect rule stays happy.
     void (async () => {

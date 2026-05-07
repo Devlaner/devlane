@@ -7,6 +7,7 @@ import { ProjectIconDisplay } from '../ProjectIconModal';
 import { ModuleWorkItemsFiltersPanel } from '../module-work-items/ModuleWorkItemsToolbarPanels';
 import { ProjectIssuesDisplayPanel } from '../project-issues/ProjectIssuesDisplayPanel';
 import { workspaceService } from '../../services/workspaceService';
+import { projectService } from '../../services/projectService';
 import { stateService } from '../../services/stateService';
 import { cycleService } from '../../services/cycleService';
 import { labelService } from '../../services/labelService';
@@ -235,6 +236,39 @@ const IconMoreVertical = () => (
   </svg>
 );
 
+const IconSearch = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+
+const IconCheck = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
 export interface ModuleDetailHeaderProps {
   workspaceSlug: string;
   projectId: string;
@@ -263,7 +297,11 @@ export function ModuleDetailHeader({
   const { user: authUser } = useAuth();
 
   const [moduleDropdownOpen, setModuleDropdownOpen] = useState(false);
+  const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
+  const [projectSearch, setProjectSearch] = useState('');
+  const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const projectDropdownRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const [toolbarOpen, setToolbarOpen] = useState<string | null>(null);
@@ -285,11 +323,30 @@ export function ModuleDetailHeader({
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setModuleDropdownOpen(false);
       }
+      if (projectDropdownRef.current && !projectDropdownRef.current.contains(e.target as Node)) {
+        setProjectDropdownOpen(false);
+      }
       if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Project list for the breadcrumb's project switcher.
+  useEffect(() => {
+    let cancelled = false;
+    projectService
+      .list(workspaceSlug)
+      .then((list) => {
+        if (!cancelled) setProjects(list ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setProjects([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug]);
 
   useEffect(() => {
     let cancelled = false;
@@ -377,25 +434,78 @@ export function ModuleDetailHeader({
     window.open(window.location.href, '_blank', 'noopener,noreferrer');
   };
 
+  const q = (s: string) => s.trim().toLowerCase();
+  const filteredProjects = projects.filter((p) => q(p.name).includes(q(projectSearch)));
+
+  const handleSelectProject = (targetProjectId: string) => {
+    setProjectDropdownOpen(false);
+    if (targetProjectId === projectId) return;
+    // No equivalent module in another project — land on its modules list.
+    navigate(`/${workspaceSlug}/projects/${targetProjectId}/modules`);
+  };
+
   return (
     <>
       <div className="flex min-w-0 flex-1 items-center gap-1 text-sm text-(--txt-primary)">
-        <Link
-          to={baseUrl}
-          className="flex shrink-0 items-center gap-1.5 truncate font-medium text-(--txt-secondary) no-underline hover:text-(--txt-primary) hover:underline"
-        >
-          <span className="flex size-5 shrink-0 items-center justify-center">
-            <ProjectIconDisplay
-              emoji={project.emoji}
-              icon_prop={project.icon_prop}
-              size={16}
-              className="leading-none"
-            />
-          </span>
-          {projectName}
-        </Link>
-        <span className="shrink-0 text-(--txt-placeholder)" aria-hidden>
-          /
+        <div ref={projectDropdownRef} className="relative flex shrink-0 items-center">
+          <Link
+            to={baseUrl}
+            className="flex max-w-[40vw] items-center gap-1.5 truncate rounded-md px-3 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
+          >
+            <span className="flex size-5 shrink-0 items-center justify-center">
+              <ProjectIconDisplay
+                emoji={project.emoji}
+                icon_prop={project.icon_prop}
+                size={16}
+                className="leading-none"
+              />
+            </span>
+            {projectName}
+          </Link>
+          <button
+            type="button"
+            onClick={() => setProjectDropdownOpen((o) => !o)}
+            className="flex size-8 shrink-0 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
+            aria-label="Select project"
+          >
+            <IconChevronDown />
+          </button>
+          {projectDropdownOpen && (
+            <div className="absolute left-0 top-full z-20 mt-1.5 w-64 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-1.5 shadow-(--shadow-raised)">
+              <div className="mb-1.5 flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
+                <span className="shrink-0 text-(--txt-icon-tertiary)">
+                  <IconSearch />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search"
+                  value={projectSearch}
+                  onChange={(e) => setProjectSearch(e.target.value)}
+                  className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
+                />
+              </div>
+              <div className="max-h-64 overflow-y-auto py-0.5">
+                {filteredProjects.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleSelectProject(p.id)}
+                    className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
+                  >
+                    <span className="truncate">{p.name}</span>
+                    {p.id === projectId && (
+                      <span className="shrink-0 text-(--txt-primary)">
+                        <IconCheck />
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <span className="shrink-0 px-0.5 text-(--txt-icon-tertiary)" aria-hidden>
+          &gt;
         </span>
         <Link
           to={`${baseUrl}/modules`}
@@ -406,8 +516,8 @@ export function ModuleDetailHeader({
           </span>
           Modules
         </Link>
-        <span className="shrink-0 text-(--txt-placeholder)" aria-hidden>
-          /
+        <span className="shrink-0 px-0.5 text-(--txt-icon-tertiary)" aria-hidden>
+          &gt;
         </span>
         <div ref={dropdownRef} className="relative flex min-w-0 shrink-0 items-center">
           <button
