@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { Avatar, Button, Tooltip } from '../ui';
 import { Dropdown } from '../work-item';
 import { useModulesFilter } from '../../contexts/ModulesFilterContext';
+import { usePageDetailHeader } from '../../contexts/PageDetailHeaderContext';
 import { useWorkspaceViewsState } from '../../contexts/WorkspaceViewsStateContext';
 import {
   WorkspaceViewsFiltersDropdown,
@@ -41,6 +42,7 @@ import {
   PROJECT_CYCLES_FILTER_EVENT,
   PROJECT_CYCLES_REFRESH_EVENT,
 } from '../../lib/projectCyclesEvents';
+import { PROJECT_PAGES_CREATE_EVENT } from '../../lib/projectPagesEvents';
 import { dispatchOpenHomeWidgets } from '../../lib/homeWidgetsEvents';
 import {
   DEFAULT_PROJECT_ISSUES_FILTERS,
@@ -56,7 +58,15 @@ import {
   toDisplayPayload,
   type ProjectIssuesDisplayState,
 } from '../../lib/projectIssuesDisplay';
-import { PROJECT_VIEWS_FILTER_EVENT } from '../../lib/projectViewsEvents';
+import {
+  PROJECT_VIEWS_FILTER_EVENT,
+  PROJECT_VIEWS_REFRESH_EVENT,
+} from '../../lib/projectViewsEvents';
+import {
+  parseWorkspaceViewFiltersFromSearchParams,
+  workspaceViewFiltersToSearchParams,
+  type WorkspaceViewFilters,
+} from '../../types/workspaceViewFilters';
 import { slugify } from '../../lib/slug';
 import { MODULE_WORK_ITEMS_COUNT_EVENT } from '../../lib/moduleWorkItemsPrefs';
 import { parseProjectsListSearchParams } from '../../lib/projectsListSearchParams';
@@ -2341,11 +2351,14 @@ function ProjectSectionHeader({
     }
     if (section === 'pages') {
       return (
-        <Link to={`${baseUrl}/pages/new`}>
-          <Button size="sm" className="gap-1.5 text-[13px] font-medium">
-            <IconPlus /> Add page
-          </Button>
-        </Link>
+        <Button
+          size="sm"
+          className="gap-1.5 text-[13px] font-medium"
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent(PROJECT_PAGES_CREATE_EVENT))}
+        >
+          <IconPlus /> Add page
+        </Button>
       );
     }
     if (section === 'views') {
@@ -3168,22 +3181,65 @@ function ProjectSavedViewDetailHeader({
 }) {
   void _issueCount;
   const navigate = useNavigate();
-  const { filters: workspaceViewFilters } = useWorkspaceViewsState();
+  const { filters: workspaceViewFilters, setFilters: setWorkspaceViewFilters } =
+    useWorkspaceViewsState();
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
   const issuesUrl = `${baseUrl}/issues`;
   const [viewTitle, setViewTitle] = useState<string>('…');
+  // Snapshot of the view's persisted filters in WorkspaceViewFilters shape.
+  // Used for dirty detection ("Save filters" button) and reset.
+  const [savedFilters, setSavedFilters] = useState<WorkspaceViewFilters | null>(null);
+  const [savingFilters, setSavingFilters] = useState(false);
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
   const [projectSearch, setProjectSearch] = useState('');
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [filtersDropdownOpen, setFiltersDropdownOpen] = useState<string | null>(null);
   const projectDropdownRef = useRef<HTMLDivElement | null>(null);
 
+  // Pulls the view from the API and seeds title + savedFilters snapshot.
+  // The view's `filters` JSON is a flat `Record<string, string>` matching the
+  // search-params shape used by parseWorkspaceViewFiltersFromSearchParams.
+  const refreshView = useRef<() => Promise<void>>(async () => {});
+  refreshView.current = async () => {
+    try {
+      const v = await viewService.get(workspaceSlug, viewId);
+      setViewTitle(v?.name?.trim() ? v.name : 'View');
+      const raw = v?.filters;
+      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        const params = new URLSearchParams();
+        for (const [k, val] of Object.entries(raw as Record<string, unknown>)) {
+          if (val == null) continue;
+          const s = String(val).trim();
+          if (s) params.set(k, s);
+        }
+        setSavedFilters(parseWorkspaceViewFiltersFromSearchParams(params));
+      } else {
+        setSavedFilters(parseWorkspaceViewFiltersFromSearchParams(new URLSearchParams()));
+      }
+    } catch {
+      setViewTitle('View');
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
         const v = await viewService.get(workspaceSlug, viewId);
-        if (!cancelled) setViewTitle(v?.name?.trim() ? v.name : 'View');
+        if (cancelled) return;
+        setViewTitle(v?.name?.trim() ? v.name : 'View');
+        const raw = v?.filters;
+        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+          const params = new URLSearchParams();
+          for (const [k, val] of Object.entries(raw as Record<string, unknown>)) {
+            if (val == null) continue;
+            const s = String(val).trim();
+            if (s) params.set(k, s);
+          }
+          setSavedFilters(parseWorkspaceViewFiltersFromSearchParams(params));
+        } else {
+          setSavedFilters(parseWorkspaceViewFiltersFromSearchParams(new URLSearchParams()));
+        }
       } catch {
         if (!cancelled) setViewTitle('View');
       }
@@ -3192,6 +3248,47 @@ function ProjectSavedViewDetailHeader({
       cancelled = true;
     };
   }, [workspaceSlug, viewId]);
+
+  // Reload the snapshot when the view is edited from elsewhere (rename/etc.
+  // dispatch this event) so the comparison against saved filters stays fresh.
+  useEffect(() => {
+    const handler = () => {
+      void refreshView.current();
+    };
+    window.addEventListener(PROJECT_VIEWS_REFRESH_EVENT, handler);
+    return () => window.removeEventListener(PROJECT_VIEWS_REFRESH_EVENT, handler);
+  }, []);
+
+  // Dirty detection: serialize both filter sets to the same canonical
+  // search-params record and string-compare. Cheap and good enough.
+  const filtersDirty = (() => {
+    if (!savedFilters) return false;
+    const a = JSON.stringify(workspaceViewFiltersToSearchParams(workspaceViewFilters));
+    const b = JSON.stringify(workspaceViewFiltersToSearchParams(savedFilters));
+    return a !== b;
+  })();
+
+  const handleSaveFilters = async () => {
+    if (!filtersDirty || savingFilters) return;
+    setSavingFilters(true);
+    try {
+      const payload = workspaceViewFiltersToSearchParams(workspaceViewFilters);
+      await viewService.update(workspaceSlug, viewId, {
+        filters: payload as Record<string, unknown>,
+      });
+      setSavedFilters(workspaceViewFilters);
+      window.dispatchEvent(new CustomEvent(PROJECT_VIEWS_REFRESH_EVENT));
+    } catch {
+      // Surface no toast — the dirty banner remains so the user can retry.
+    } finally {
+      setSavingFilters(false);
+    }
+  };
+
+  const handleResetFilters = () => {
+    if (!savedFilters) return;
+    setWorkspaceViewFilters(savedFilters);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -3391,6 +3488,27 @@ function ProjectSavedViewDetailHeader({
           )}
         </div>
         <ProjectSavedViewDisplayDropdown />
+        {filtersDirty && (
+          <>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleResetFilters}
+              disabled={savingFilters}
+              className="gap-1.5 text-[13px] font-medium"
+            >
+              Reset
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => void handleSaveFilters()}
+              disabled={savingFilters}
+              className="gap-1.5 text-[13px] font-medium"
+            >
+              {savingFilters ? 'Saving…' : 'Save filters'}
+            </Button>
+          </>
+        )}
         <Link to={`${baseUrl}/views/${viewId}?create=1`}>
           <Button size="sm" className="gap-1.5 text-[13px] font-medium">
             <IconPlus /> Add work item
@@ -3407,16 +3525,177 @@ function ProjectSavedViewDetailHeader({
 }
 
 // ---------------------------------------------------------------------------
+// PageDetailHeader (project icon + breadcrumb + page-actions slot)
+// ---------------------------------------------------------------------------
+
+/**
+ * Header rendered for `/:slug/projects/:projectId/pages/:pageId`. Mirrors
+ * Plane's page-detail header — a single top row that contains the project
+ * breadcrumb on the left and the per-page action cluster on the right
+ * (lock / link / star / more / panel-toggle). The actions slot is filled by
+ * `PageDetailPage` via `useSetPageDetailHeader` so this component stays
+ * stateless about the page itself.
+ */
+function PageDetailHeader({
+  workspaceSlug,
+  projectId,
+  project,
+}: {
+  workspaceSlug: string;
+  projectId: string;
+  project: ProjectApiResponse;
+}) {
+  const navigate = useNavigate();
+  const { breadcrumb, actions } = usePageDetailHeader();
+  const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
+  const issuesUrl = `${baseUrl}/issues`;
+
+  // Mirror ProjectSavedViewDetailHeader: project switcher dropdown on the
+  // left so users can hop between projects without leaving the page-detail
+  // surface, then the Pages section link, then the per-page breadcrumb
+  // injected by `useSetPageDetailHeader` in PageDetailPage.
+  const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
+  const [projectSearch, setProjectSearch] = useState('');
+  const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
+  const projectDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    projectService
+      .list(workspaceSlug)
+      .then((list) => {
+        if (!cancelled) setProjects(list ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setProjects([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (projectDropdownRef.current && !projectDropdownRef.current.contains(e.target as Node)) {
+        setProjectDropdownOpen(false);
+      }
+    };
+    if (projectDropdownOpen) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [projectDropdownOpen]);
+
+  const q = (s: string) => s.trim().toLowerCase();
+  const filteredProjects = projects.filter((p) => q(p.name).includes(q(projectSearch)));
+
+  const handleSelectProject = (targetProjectId: string) => {
+    setProjectDropdownOpen(false);
+    if (targetProjectId === projectId) return;
+    // Land on the target project's pages list — there's no "equivalent page"
+    // we can hop to in a different project; the list is the safe fallback.
+    navigate(`/${workspaceSlug}/projects/${targetProjectId}/pages`);
+  };
+
+  return (
+    <>
+      <div
+        className="relative flex min-w-0 flex-1 flex-wrap items-center gap-1 text-sm"
+        ref={projectDropdownRef}
+      >
+        <Link
+          to={issuesUrl}
+          className="flex max-w-[40vw] items-center gap-1.5 truncate rounded-md px-3 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
+        >
+          <span className="flex size-5 shrink-0 items-center justify-center">
+            <ProjectIconDisplay
+              emoji={project.emoji}
+              icon_prop={project.icon_prop}
+              size={16}
+              className="leading-none"
+            />
+          </span>
+          {project.name}
+        </Link>
+        <button
+          type="button"
+          onClick={() => setProjectDropdownOpen((o) => !o)}
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
+          aria-label="Select project"
+        >
+          <IconChevronDown />
+        </button>
+        {projectDropdownOpen && (
+          <div className="absolute left-0 top-full z-20 mt-1.5 w-64 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-1.5 shadow-(--shadow-raised)">
+            <div className="mb-1.5 flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
+              <span className="shrink-0 text-(--txt-icon-tertiary)">
+                <IconSearch />
+              </span>
+              <input
+                type="text"
+                placeholder="Search"
+                value={projectSearch}
+                onChange={(e) => setProjectSearch(e.target.value)}
+                className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
+              />
+            </div>
+            <div className="max-h-64 overflow-y-auto py-0.5">
+              {filteredProjects.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => handleSelectProject(p.id)}
+                  className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
+                >
+                  <span className="truncate">{p.name}</span>
+                  {p.id === projectId && (
+                    <span className="shrink-0 text-(--txt-primary)">
+                      <IconCheck />
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <span className="shrink-0 px-0.5 text-(--txt-icon-tertiary)" aria-hidden>
+          &gt;
+        </span>
+        <Link
+          to={`${baseUrl}/pages`}
+          className="flex max-w-[28vw] shrink-0 items-center gap-1.5 truncate rounded-md px-2.5 py-1.5 font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
+        >
+          <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
+            <IconFileText />
+          </span>
+          Pages
+        </Link>
+        {breadcrumb ? (
+          <>
+            <span className="shrink-0 px-0.5 text-(--txt-icon-tertiary)" aria-hidden>
+              &gt;
+            </span>
+            <div className="flex min-w-0 max-w-[36vw] items-center gap-1.5 truncate rounded-md px-2.5 py-1.5 font-medium text-(--txt-primary)">
+              {breadcrumb}
+            </div>
+          </>
+        ) : null}
+      </div>
+      <div className="flex shrink-0 items-center gap-1">{actions}</div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // PageHeader
 // ---------------------------------------------------------------------------
 
 export function PageHeader() {
   const location = useLocation();
-  const { workspaceSlug, projectId, moduleId, viewId } = useParams<{
+  const { workspaceSlug, projectId, moduleId, viewId, pageId } = useParams<{
     workspaceSlug?: string;
     projectId?: string;
     moduleId?: string;
     viewId?: string;
+    pageId?: string;
   }>();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
@@ -3544,6 +3823,8 @@ export function PageHeader() {
   const isProjectSavedViewDetailPage =
     projectBase && !!viewId && pathNoTrailingSlash === `${projectBase}/views/${viewId}`;
   const isPagesPage = projectBase && pathname === `${projectBase}/pages`;
+  const isPageDetailPage =
+    projectBase && !!pageId && pathNoTrailingSlash === `${projectBase}/pages/${pageId}`;
   const isProjectSection =
     isIssuesPage || isCyclesPage || isModulesPage || isViewsListPage || isPagesPage;
   const isProjectDetail =
@@ -3611,6 +3892,10 @@ export function PageHeader() {
         viewId={viewId}
         issueCount={projectIssueCount}
       />
+    );
+  } else if (isPageDetailPage && workspaceSlug && projectId && project) {
+    content = (
+      <PageDetailHeader workspaceSlug={workspaceSlug} projectId={projectId} project={project} />
     );
   } else if (isProjectSection && workspaceSlug && projectId && project && projectSection) {
     content = (

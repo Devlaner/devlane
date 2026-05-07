@@ -92,3 +92,177 @@
 .sticky-note-editor-content ul[data-type='taskList'] li > div > p {
   transition: color 0.2s ease;
 }
+
+/* ----- Page editor (TipTap) -------------------------------------------------
+ * Mirrors Plane's document editor: roomy heading hierarchy, soft code blocks,
+ * checkbox-styled to-do lists, full-width tables with thin borders.
+ *
+ * Scoped under `.page-editor-prose` so we don't fight Tailwind's `prose` defaults
+ * elsewhere (notification renderer, etc.).
+ * ------------------------------------------------------------------------- */
+.page-editor-prose {
+  font-size: 15px;
+  line-height: 1.6;
+}
+.page-editor-prose .ProseMirror {
+  min-height: 60vh;
+  padding: 0;
+  outline: none;
+}
+.page-editor-prose .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--txt-placeholder);
+  pointer-events: none;
+  height: 0;
+  float: left;
+}
+.page-editor-prose h1 {
+  font-size: 1.875rem;
+  font-weight: 600;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+}
+.page-editor-prose h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.25;
+}
+.page-editor-prose h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+.page-editor-prose h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+.page-editor-prose h5,
+.page-editor-prose h6 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+.page-editor-prose p {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.page-editor-prose ul,
+.page-editor-prose ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+.page-editor-prose ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0.25rem;
+}
+.page-editor-prose ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.125rem 0;
+}
+.page-editor-prose ul[data-type='taskList'] li > label {
+  margin-top: 0.35rem;
+}
+.page-editor-prose ul[data-type='taskList'] li > div {
+  flex: 1;
+  min-width: 0;
+}
+.page-editor-prose ul[data-type='taskList'] li > div > p {
+  margin: 0;
+}
+.page-editor-prose ul[data-type='taskList'] li[data-checked='true'] > div {
+  color: var(--txt-placeholder);
+  text-decoration: line-through;
+}
+.page-editor-prose blockquote {
+  border-left: 3px solid var(--border-subtle);
+  padding-left: 1rem;
+  margin: 0.75rem 0;
+  color: var(--txt-secondary);
+  font-style: normal;
+}
+.page-editor-prose code {
+  background: var(--bg-layer-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 0.075rem 0.25rem;
+  font-size: 0.85em;
+  color: var(--brand-default, #f97316);
+}
+.page-editor-prose pre {
+  background: var(--bg-layer-2);
+  color: var(--txt-primary);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0;
+  overflow-x: auto;
+}
+.page-editor-prose pre code {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  padding: 0;
+}
+.page-editor-prose img {
+  border-radius: 6px;
+  max-width: 100%;
+  height: auto;
+  margin: 0.75rem 0;
+}
+.page-editor-prose a {
+  color: var(--txt-accent-primary, #2563eb);
+  text-decoration: underline;
+}
+.page-editor-prose hr {
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  margin: 1rem 0;
+}
+
+/* Tables — use --tableCellMinWidth for resizable column behaviour. */
+.page-editor-prose table.page-table,
+.page-editor-prose table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0.75rem 0;
+  overflow: hidden;
+}
+.page-editor-prose th,
+.page-editor-prose td {
+  border: 1px solid var(--border-subtle);
+  padding: 0.5rem 0.75rem;
+  vertical-align: top;
+  position: relative;
+  min-width: 6rem;
+}
+.page-editor-prose th {
+  background: var(--bg-layer-2);
+  font-weight: 600;
+  text-align: left;
+}
+.page-editor-prose .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(99, 102, 241, 0.1);
+  pointer-events: none;
+}
+.page-editor-prose .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background: var(--brand-default, #2563eb);
+  pointer-events: none;
+}

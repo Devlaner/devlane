@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Badge, Avatar, Button } from '../components/ui';
 import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
+import { ProjectSavedViewActiveFilters } from '../components/project-saved-view/ProjectSavedViewActiveFilters';
 import { useProjectSavedViewDisplay } from '../contexts/ProjectSavedViewDisplayContext';
 import { useWorkspaceViewsState } from '../contexts/WorkspaceViewsStateContext';
 import { workspaceService } from '../services/workspaceService';
@@ -835,227 +836,252 @@ export function ViewDetailPage() {
     return id ? (modules.find((m) => m.id === id)?.name ?? '—') : '—';
   };
 
+  const totalIssueCount = groupedSections.order.reduce(
+    (n, key) => n + (groupedSections.groups.get(key)?.length ?? 0),
+    0,
+  );
+
   return (
-    <div className="min-h-0 flex-1 overflow-auto px-(--padding-page) py-4">
-      <div className="mx-auto max-w-5xl space-y-6">
-        {groupedSections.order.map((sectionKey) => {
-          const sectionIssues = groupedSections.groups.get(sectionKey) ?? [];
-          if (!sectionIssues.length) return null;
-          const title = groupedSections.title(sectionKey);
-          return (
-            <section key={sectionKey} className="space-y-2">
-              <h2 className="flex items-center gap-2 text-base font-semibold text-(--txt-primary)">
-                {title}{' '}
-                <span className="font-normal text-(--txt-tertiary)">{sectionIssues.length}</span>
-                <button
-                  type="button"
-                  className="flex size-7 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-                  aria-label="Add work item"
-                  onClick={openCreate}
-                >
-                  <IconPlus />
-                </button>
-              </h2>
-              <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
-                <ul className="divide-y divide-(--border-subtle)">
-                  {sectionIssues.map((issue) => {
-                    const primaryAssigneeId =
-                      issue.assignee_ids && issue.assignee_ids.length > 0
-                        ? issue.assignee_ids[0]
-                        : null;
-                    const assignee = getUser(primaryAssigneeId);
-                    const labelNames = getLabelNames(issue.label_ids ?? []);
-                    const displayId = `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`;
-                    const startStr = formatShortDate(issue.start_date);
-                    const dueStr = formatShortDate(issue.target_date);
-                    const subN = subWorkCountByParentId.get(issue.id) ?? 0;
-                    const issueUrl = `${baseUrl}/issues/${issue.id}`;
-                    return (
-                      <li key={issue.id}>
-                        <Link
-                          to={issueUrl}
-                          className="flex min-h-12 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
-                        >
-                          <span className="min-w-0 flex-1 truncate text-sm">
-                            {hasCol('id') ? (
-                              <>
-                                <span className="font-medium text-(--txt-accent-primary)">
-                                  {displayId}
-                                </span>
-                                <span className="ml-2 text-(--txt-primary)">{issue.name}</span>
-                              </>
-                            ) : (
-                              <span className="text-(--txt-primary)">{issue.name}</span>
-                            )}
-                          </span>
-                          <div className="flex shrink-0 flex-wrap items-center gap-2 text-(--txt-icon-tertiary)">
-                            {hasCol('state') ? (
-                              <span title={getIssueStateName(issue.state_id ?? undefined)}>
-                                <Badge variant="neutral" className="text-xs font-medium">
-                                  {getIssueStateName(issue.state_id ?? undefined)}
-                                </Badge>
-                              </span>
-                            ) : null}
-                            {hasCol('priority') ? (
-                              <span
-                                title={issue.priority ?? ''}
-                                className="flex size-6 items-center justify-center"
-                              >
-                                <Badge
-                                  variant={priorityVariant[(issue.priority as Priority) ?? 'none']}
-                                  className="!px-1.5 !py-0 text-[10px]"
-                                >
-                                  {issue.priority ?? '—'}
-                                </Badge>
-                              </span>
-                            ) : null}
-                            {hasCol('start_date') ? (
-                              <span
-                                className="max-w-[4.5rem] truncate text-[11px] text-(--txt-secondary)"
-                                title={issue.start_date ?? ''}
-                              >
-                                {startStr ?? '—'}
-                              </span>
-                            ) : null}
-                            {hasCol('due_date') ? (
-                              <span
-                                className="flex size-6 items-center justify-center"
-                                title={dueStr ?? 'Due date'}
-                              >
-                                <IconCalendar />
-                              </span>
-                            ) : null}
-                            {hasCol('assignee') ? (
-                              <span
-                                className="flex size-6 items-center justify-center"
-                                title={assignee?.name ?? 'Unassigned'}
-                              >
-                                {assignee ? (
-                                  <Avatar
-                                    name={assignee.name}
-                                    src={getImageUrl(assignee.avatarUrl) ?? undefined}
-                                    size="sm"
-                                    className="h-6 w-6 text-[10px]"
-                                  />
-                                ) : (
-                                  <IconUser />
-                                )}
-                              </span>
-                            ) : null}
-                            {hasCol('labels') ? (
-                              <span
-                                className="flex size-6 items-center justify-center"
-                                title={labelNames.length ? labelNames.join(', ') : 'Labels'}
-                              >
-                                {labelNames.length > 0 ? (
-                                  <IconTag />
-                                ) : (
-                                  <span className="opacity-40">
-                                    <IconTag />
-                                  </span>
-                                )}
-                              </span>
-                            ) : null}
-                            {hasCol('sub_work_count') ? (
-                              <span
-                                className="min-w-6 text-center text-[11px] text-(--txt-secondary)"
-                                title="Sub-work items"
-                              >
-                                {subN}
-                              </span>
-                            ) : null}
-                            {hasCol('attachment_count') ? (
-                              <span
-                                className="min-w-6 text-center text-[11px] text-(--txt-secondary)"
-                                title="Attachments"
-                              >
-                                —
-                              </span>
-                            ) : null}
-                            {hasCol('estimate') ? (
-                              <span className="text-[11px] text-(--txt-secondary)">—</span>
-                            ) : null}
-                            {hasCol('module') ? (
-                              <span
-                                className="max-w-[5rem] truncate text-[11px] text-(--txt-secondary)"
-                                title="Module"
-                              >
-                                {moduleName(issue)}
-                              </span>
-                            ) : null}
-                            {hasCol('cycle') ? (
-                              <span
-                                className="max-w-[5rem] truncate text-[11px] text-(--txt-secondary)"
-                                title="Cycle"
-                              >
-                                {cycleName(issue)}
-                              </span>
-                            ) : null}
-                            {hasCol('link') ? (
-                              <a
-                                href={issueUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex size-6 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-                                title="Open in new tab"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <IconLinkOut />
-                              </a>
-                            ) : null}
-                            <button
-                              type="button"
-                              className="flex size-6 items-center justify-center rounded hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-                              aria-label="More options"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                              }}
-                            >
-                              <IconMoreVertical />
-                            </button>
-                          </div>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <div className="border-t border-(--border-subtle) px-4 py-2.5">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-(--border-subtle) px-(--padding-page) py-3">
+        <div className="min-w-0">
+          <h1 className="truncate text-base font-semibold text-(--txt-primary)">
+            {view.name} <span className="font-normal text-(--txt-tertiary)">{totalIssueCount}</span>
+          </h1>
+          {view.description ? (
+            <p className="mt-0.5 truncate text-xs text-(--txt-secondary)">{view.description}</p>
+          ) : null}
+        </div>
+      </div>
+      <ProjectSavedViewActiveFilters
+        members={members}
+        labels={labels}
+        projects={projects}
+        scopeProjectId={project.id}
+      />
+      <div className="min-h-0 flex-1 overflow-auto px-(--padding-page) py-4">
+        <div className="mx-auto max-w-5xl space-y-6">
+          {groupedSections.order.map((sectionKey) => {
+            const sectionIssues = groupedSections.groups.get(sectionKey) ?? [];
+            if (!sectionIssues.length) return null;
+            const title = groupedSections.title(sectionKey);
+            return (
+              <section key={sectionKey} className="space-y-2">
+                <h2 className="flex items-center gap-2 text-base font-semibold text-(--txt-primary)">
+                  {title}{' '}
+                  <span className="font-normal text-(--txt-tertiary)">{sectionIssues.length}</span>
                   <button
                     type="button"
-                    className="flex items-center gap-1.5 rounded-md border border-dashed border-(--border-subtle) bg-transparent px-3 py-2 text-sm font-medium text-(--txt-secondary) hover:border-(--border-strong) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
+                    className="flex size-7 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
+                    aria-label="Add work item"
                     onClick={openCreate}
                   >
                     <IconPlus />
-                    New work item
                   </button>
+                </h2>
+                <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
+                  <ul className="divide-y divide-(--border-subtle)">
+                    {sectionIssues.map((issue) => {
+                      const primaryAssigneeId =
+                        issue.assignee_ids && issue.assignee_ids.length > 0
+                          ? issue.assignee_ids[0]
+                          : null;
+                      const assignee = getUser(primaryAssigneeId);
+                      const labelNames = getLabelNames(issue.label_ids ?? []);
+                      const displayId = `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`;
+                      const startStr = formatShortDate(issue.start_date);
+                      const dueStr = formatShortDate(issue.target_date);
+                      const subN = subWorkCountByParentId.get(issue.id) ?? 0;
+                      const issueUrl = `${baseUrl}/issues/${issue.id}`;
+                      return (
+                        <li key={issue.id}>
+                          <Link
+                            to={issueUrl}
+                            className="flex min-h-12 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
+                          >
+                            <span className="min-w-0 flex-1 truncate text-sm">
+                              {hasCol('id') ? (
+                                <>
+                                  <span className="font-medium text-(--txt-accent-primary)">
+                                    {displayId}
+                                  </span>
+                                  <span className="ml-2 text-(--txt-primary)">{issue.name}</span>
+                                </>
+                              ) : (
+                                <span className="text-(--txt-primary)">{issue.name}</span>
+                              )}
+                            </span>
+                            <div className="flex shrink-0 flex-wrap items-center gap-2 text-(--txt-icon-tertiary)">
+                              {hasCol('state') ? (
+                                <span title={getIssueStateName(issue.state_id ?? undefined)}>
+                                  <Badge variant="neutral" className="text-xs font-medium">
+                                    {getIssueStateName(issue.state_id ?? undefined)}
+                                  </Badge>
+                                </span>
+                              ) : null}
+                              {hasCol('priority') ? (
+                                <span
+                                  title={issue.priority ?? ''}
+                                  className="flex size-6 items-center justify-center"
+                                >
+                                  <Badge
+                                    variant={
+                                      priorityVariant[(issue.priority as Priority) ?? 'none']
+                                    }
+                                    className="!px-1.5 !py-0 text-[10px]"
+                                  >
+                                    {issue.priority ?? '—'}
+                                  </Badge>
+                                </span>
+                              ) : null}
+                              {hasCol('start_date') ? (
+                                <span
+                                  className="max-w-[4.5rem] truncate text-[11px] text-(--txt-secondary)"
+                                  title={issue.start_date ?? ''}
+                                >
+                                  {startStr ?? '—'}
+                                </span>
+                              ) : null}
+                              {hasCol('due_date') ? (
+                                <span
+                                  className="flex size-6 items-center justify-center"
+                                  title={dueStr ?? 'Due date'}
+                                >
+                                  <IconCalendar />
+                                </span>
+                              ) : null}
+                              {hasCol('assignee') ? (
+                                <span
+                                  className="flex size-6 items-center justify-center"
+                                  title={assignee?.name ?? 'Unassigned'}
+                                >
+                                  {assignee ? (
+                                    <Avatar
+                                      name={assignee.name}
+                                      src={getImageUrl(assignee.avatarUrl) ?? undefined}
+                                      size="sm"
+                                      className="h-6 w-6 text-[10px]"
+                                    />
+                                  ) : (
+                                    <IconUser />
+                                  )}
+                                </span>
+                              ) : null}
+                              {hasCol('labels') ? (
+                                <span
+                                  className="flex size-6 items-center justify-center"
+                                  title={labelNames.length ? labelNames.join(', ') : 'Labels'}
+                                >
+                                  {labelNames.length > 0 ? (
+                                    <IconTag />
+                                  ) : (
+                                    <span className="opacity-40">
+                                      <IconTag />
+                                    </span>
+                                  )}
+                                </span>
+                              ) : null}
+                              {hasCol('sub_work_count') ? (
+                                <span
+                                  className="min-w-6 text-center text-[11px] text-(--txt-secondary)"
+                                  title="Sub-work items"
+                                >
+                                  {subN}
+                                </span>
+                              ) : null}
+                              {hasCol('attachment_count') ? (
+                                <span
+                                  className="min-w-6 text-center text-[11px] text-(--txt-secondary)"
+                                  title="Attachments"
+                                >
+                                  —
+                                </span>
+                              ) : null}
+                              {hasCol('estimate') ? (
+                                <span className="text-[11px] text-(--txt-secondary)">—</span>
+                              ) : null}
+                              {hasCol('module') ? (
+                                <span
+                                  className="max-w-[5rem] truncate text-[11px] text-(--txt-secondary)"
+                                  title="Module"
+                                >
+                                  {moduleName(issue)}
+                                </span>
+                              ) : null}
+                              {hasCol('cycle') ? (
+                                <span
+                                  className="max-w-[5rem] truncate text-[11px] text-(--txt-secondary)"
+                                  title="Cycle"
+                                >
+                                  {cycleName(issue)}
+                                </span>
+                              ) : null}
+                              {hasCol('link') ? (
+                                <a
+                                  href={issueUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex size-6 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
+                                  title="Open in new tab"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <IconLinkOut />
+                                </a>
+                              ) : null}
+                              <button
+                                type="button"
+                                className="flex size-6 items-center justify-center rounded hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
+                                aria-label="More options"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <IconMoreVertical />
+                              </button>
+                            </div>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <div className="border-t border-(--border-subtle) px-4 py-2.5">
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 rounded-md border border-dashed border-(--border-subtle) bg-transparent px-3 py-2 text-sm font-medium text-(--txt-secondary) hover:border-(--border-strong) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
+                      onClick={openCreate}
+                    >
+                      <IconPlus />
+                      New work item
+                    </button>
+                  </div>
                 </div>
+              </section>
+            );
+          })}
+
+          {!issuesLoading && filteredIssues.length === 0 && (
+            <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
+              <div className="flex flex-col items-center justify-center gap-4 px-4 py-12">
+                <p className="text-sm text-(--txt-tertiary)">No work items match this view.</p>
+                <Button size="sm" className="gap-1.5" onClick={openCreate}>
+                  <IconPlus />
+                  New work item
+                </Button>
               </div>
-            </section>
-          );
-        })}
-
-        {!issuesLoading && filteredIssues.length === 0 && (
-          <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
-            <div className="flex flex-col items-center justify-center gap-4 px-4 py-12">
-              <p className="text-sm text-(--txt-tertiary)">No work items match this view.</p>
-              <Button size="sm" className="gap-1.5" onClick={openCreate}>
-                <IconPlus />
-                New work item
-              </Button>
             </div>
-          </div>
-        )}
+          )}
 
-        <CreateWorkItemModal
-          open={createOpen}
-          onClose={handleCloseCreate}
-          workspaceSlug={workspace.slug}
-          projects={projects}
-          defaultProjectId={project.id}
-          onSave={handleCreateSave}
-          createError={createError}
-        />
+          <CreateWorkItemModal
+            open={createOpen}
+            onClose={handleCloseCreate}
+            workspaceSlug={workspace.slug}
+            projects={projects}
+            defaultProjectId={project.id}
+            onSave={handleCreateSave}
+            createError={createError}
+          />
+        </div>
       </div>
     </div>
   );

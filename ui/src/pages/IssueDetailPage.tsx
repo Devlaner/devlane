@@ -17,6 +17,7 @@ import { recentsService } from '../services/recentsService';
 import { commentService } from '../services/commentService';
 import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
 import { IssuePRSidebar } from '../components/work-item/IssuePRSidebar';
+import { SubscribeButton } from '../components/notifications/SubscribeButton';
 import {
   PriorityIcon,
   StatePill,
@@ -696,6 +697,13 @@ export function IssueDetailPage() {
         </div>
 
         <div className="space-y-4">
+          {workspaceSlug && (
+            <SubscribeButton
+              workspaceSlug={workspaceSlug}
+              projectId={project.id}
+              issueId={issue.id}
+            />
+          )}
           {workspaceSlug && (
             <IssuePRSidebar
               workspaceSlug={workspaceSlug}
