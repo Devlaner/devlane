@@ -30,7 +30,7 @@ jobs:
           TRENDING_REPO_ID: Devlaner/devlane
           TRENDING_REPO_NAME: Devlane
         run: |
-          node --input-type=module -e "import fs from 'node:fs/promises'; import path from 'node:path'; \
+          node --input-type=module -e "import fs from 'node:fs/promises'; \
           const REPO_ID = process.env.TRENDING_REPO_ID; \
           const SINCE = ['daily','weekly','monthly']; \
           const OUT = 'github-trending.json'; \
