@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: github-trending-badge
@@ -26,6 +27,7 @@ jobs:
           node-version: "22"
 
       - name: Update GitHub Trending badge JSON
+        id: trending
         env:
           TRENDING_REPO_ID: Devlaner/devlane
           TRENDING_REPO_NAME: Devlane
@@ -50,35 +52,49 @@ jobs:
               const idx=repos.findIndex(r=>r.toLowerCase()===REPO_ID.toLowerCase()); \
               if(idx!==-1){ const rank=idx+1; if(!found || rank<found.rank) found={rank,since}; } \
             } \
+            if(!found){ process.stdout.write('found=0\\n'); return; } \
+            process.stdout.write('found=1\\n'); \
+            process.stdout.write('rank='+found.rank+'\\n'); \
+            process.stdout.write('since='+found.since+'\\n'); \
+            const prevRank=status.currentRank ?? null; \
+            const prevSince=status.currentSince ?? null; \
+            const changed = prevRank !== found.rank || prevSince !== found.since; \
+            if(!changed){ return; } \
             const checkedAt=now(); \
             status.repo = REPO_ID; \
             status.lastCheckedAt = checkedAt; \
-            status.currentRank = found ? found.rank : null; \
-            status.currentSince = found ? found.since : null; \
-            if(found){ status.lastSeenAt = checkedAt; status.lastSeenRank = found.rank; status.lastSeenSince = found.since; } \
-            let badge; \
-            if(found){ \
-              const r=clamp(found.rank,1,999); \
-              badge=makeBadge('#'+r+' '+found.since,'blue'); \
-            } else if(status.lastSeenRank){ \
-              const r=clamp(status.lastSeenRank,1,999); \
-              badge=makeBadge('last #'+r+' '+status.lastSeenSince,'lightgrey'); \
-            } else { \
-              badge=makeBadge('not trending','lightgrey'); \
-            } \
+            status.currentRank = found.rank; \
+            status.currentSince = found.since; \
+            status.lastSeenAt = checkedAt; \
+            status.lastSeenRank = found.rank; \
+            status.lastSeenSince = found.since; \
+            const r=clamp(found.rank,1,999); \
+            const badge=makeBadge('#'+r+' '+found.since,'blue'); \
             await fs.writeFile(OUT, JSON.stringify(badge,null,2)+'\\n','utf8'); \
             await fs.writeFile(STATUS, JSON.stringify(status,null,2)+'\\n','utf8'); \
           }; \
-          main().catch(e=>{ console.error(e); process.exit(1); });"
+          main().catch(e=>{ console.error(e); process.exit(1); });" > "$GITHUB_OUTPUT"
 
-      - name: Commit changes (if any)
+      - name: Create PR (if trending)
+        if: steps.trending.outputs.found == '1'
         run: |
           if git diff --quiet; then
-            echo "No changes to commit."
+            echo "Trending detected, but no rank/since change — skipping PR."
             exit 0
           fi
+
+          branch="chore/github-trending-${{ steps.trending.outputs.since }}-${{ steps.trending.outputs.rank }}-$(date +%Y%m%d%H%M%S)"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
           git add github-trending.json github-trending.status.json
           git commit -m "chore(trending): update GitHub Trending badge JSON/status"
-          git push
+          git push -u origin "$branch"
+
+          gh pr create \
+            --title "chore(trending): trending #${{ steps.trending.outputs.rank }} (${{ steps.trending.outputs.since }})" \
+            --body "Automated update: repo is currently trending (#${{ steps.trending.outputs.rank }} / ${{ steps.trending.outputs.since }}). This PR is not auto-merged; it requires approval." \
+            --base main \
+            --head "$branch"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
