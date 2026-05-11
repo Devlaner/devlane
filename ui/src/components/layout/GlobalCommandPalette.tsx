@@ -171,14 +171,6 @@ export function GlobalCommandPalette({
         run: () => runAndClose(() => navigate(`${baseUrl}/settings`)),
       },
       {
-        id: 'search-settings',
-        category: 'Workspace Settings',
-        label: 'Search settings…',
-        matchText: 'preferences configuration',
-        icon: <Search className="size-[15px] shrink-0 opacity-90" strokeWidth={2} />,
-        run: () => runAndClose(() => navigate(`${baseUrl}/settings`)),
-      },
-      {
         id: 'settings-members',
         category: 'Workspace Settings',
         label: 'Members & invites',
@@ -381,6 +373,18 @@ export function GlobalCommandPalette({
   };
 
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.nativeEvent.isComposing) return;
+
+    if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1 && query.trim() === '') {
+      const letter = e.key.toUpperCase();
+      const hit = filtered.find((c) => c.shortcut?.toUpperCase() === letter);
+      if (hit) {
+        e.preventDefault();
+        hit.run();
+        return;
+      }
+    }
+
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       moveSelection(1);
