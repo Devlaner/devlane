@@ -12,6 +12,7 @@ import type {
   IssueViewApiResponse,
 } from '../../api/types';
 import { CreateWorkItemModal } from '../CreateWorkItemModal';
+import { GlobalCommandPalette } from './GlobalCommandPalette';
 import { Avatar, Button } from '../ui';
 import { ProjectIconDisplay } from '../ProjectIconModal';
 import { useAuth } from '../../contexts/AuthContext';
@@ -460,6 +461,7 @@ export function Sidebar() {
   const [favoritesSectionExpanded, setFavoritesSectionExpanded] = useState(true);
   const [projectsSectionExpanded, setProjectsSectionExpanded] = useState(true);
   const [createWorkItemOpen, setCreateWorkItemOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState<WorkspaceApiResponse[]>([]);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const { favoriteProjectIds, setFavoriteProjectIds } = useFavorites();
@@ -767,6 +769,19 @@ export function Sidebar() {
     };
   }, [workspaceDropdownOpen]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key !== 'k' && e.key !== 'K') return;
+      if (e.repeat) return;
+      if (!baseUrl) return;
+      e.preventDefault();
+      setCommandPaletteOpen((open) => !open);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [baseUrl]);
+
   const toggleProject = (id: string) => {
     setExpandedProjectIds((prev) => {
       const next = new Set(prev);
@@ -941,8 +956,11 @@ export function Sidebar() {
             </Button>
             <button
               type="button"
-              className="flex size-9 shrink-0 items-center justify-center rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover)"
-              aria-label="Search"
+              onClick={() => baseUrl && setCommandPaletteOpen(true)}
+              disabled={!baseUrl}
+              className="flex size-9 shrink-0 items-center justify-center rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) text-(--txt-icon-tertiary) transition-[background-color,box-shadow,transform] duration-150 hover:bg-(--bg-layer-1-hover) hover:shadow-sm active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40"
+              aria-label="Open command palette"
+              aria-keyshortcuts="Control+K Meta+K"
             >
               <IconSearch />
             </button>
@@ -1324,7 +1342,7 @@ export function Sidebar() {
 
       {collapsed && (
         <div
-          className="flex shrink-0 flex-col items-center border-r border-(--border-subtle) bg-(--bg-surface-1) py-3"
+          className="flex shrink-0 flex-col items-center gap-1 border-r border-(--border-subtle) bg-(--bg-surface-1) py-3"
           style={{ width: '48px', minWidth: '48px' }}
         >
           <button
@@ -1337,8 +1355,30 @@ export function Sidebar() {
               <IconPanelLeft />
             </span>
           </button>
+          <button
+            type="button"
+            onClick={() => baseUrl && setCommandPaletteOpen(true)}
+            disabled={!baseUrl}
+            className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) transition-colors hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-secondary) disabled:pointer-events-none disabled:opacity-40"
+            aria-label="Open command palette"
+            title="Search"
+          >
+            <IconSearch />
+          </button>
         </div>
       )}
+      <GlobalCommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        workspaceSlug={workspaceSlug}
+        baseUrl={baseUrl}
+        projectId={projectId}
+        projects={projects}
+        onRequestCreateWorkItem={() => {
+          setCommandPaletteOpen(false);
+          setCreateWorkItemOpen(true);
+        }}
+      />
       <CreateWorkItemModal
         open={createWorkItemOpen}
         onClose={() => setCreateWorkItemOpen(false)}
