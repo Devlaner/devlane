@@ -159,3 +159,32 @@ func (s *IssueStore) ListModuleIDsForIssue(ctx context.Context, issueID uuid.UUI
 	err := s.db.WithContext(ctx).Model(&model.ModuleIssue{}).Where("issue_id = ?", issueID).Pluck("module_id", &ids).Error
 	return ids, err
 }
+
+// ListRelationsForIssue returns all relation rows where issue_id = issueID.
+// Because both directions are stored, a simple WHERE issue_id = ? is enough.
+func (s *IssueStore) ListRelationsForIssue(ctx context.Context, issueID uuid.UUID) ([]model.IssueRelation, error) {
+	var rows []model.IssueRelation
+	err := s.db.WithContext(ctx).Where("issue_id = ?", issueID).Find(&rows).Error
+	return rows, err
+}
+
+// CreateRelation inserts one relation row.
+func (s *IssueStore) CreateRelation(ctx context.Context, r *model.IssueRelation) error {
+	return s.db.WithContext(ctx).Create(r).Error
+}
+
+// RelationExists reports whether a row with the given (issue_id, related_issue_id, relation_type) already exists.
+func (s *IssueStore) RelationExists(ctx context.Context, issueID, relatedIssueID uuid.UUID, relationType string) (bool, error) {
+	var count int64
+	err := s.db.WithContext(ctx).Model(&model.IssueRelation{}).
+		Where("issue_id = ? AND related_issue_id = ? AND relation_type = ?", issueID, relatedIssueID, relationType).
+		Count(&count).Error
+	return count > 0, err
+}
+
+// DeleteRelation removes the relation row matching (issue_id, related_issue_id, relation_type).
+func (s *IssueStore) DeleteRelation(ctx context.Context, issueID, relatedIssueID uuid.UUID, relationType string) error {
+	return s.db.WithContext(ctx).
+		Where("issue_id = ? AND related_issue_id = ? AND relation_type = ?", issueID, relatedIssueID, relationType).
+		Delete(&model.IssueRelation{}).Error
+}
