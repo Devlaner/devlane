@@ -33,6 +33,7 @@ type Issue struct {
 	SortOrder       float64        `gorm:"column:sort_order;default:65535" json:"sort_order"`
 	ArchivedAt      *time.Time     `gorm:"type:timestamptz" json:"archived_at,omitempty"`
 	IsDraft         bool           `gorm:"column:is_draft;default:false" json:"is_draft"`
+	IsEpic          bool           `gorm:"column:is_epic;default:false" json:"is_epic"`
 }
 
 func (Issue) TableName() string { return "issues" }
@@ -105,6 +106,76 @@ func (IssueRelation) TableName() string { return "issue_relations" }
 func (r *IssueRelation) BeforeCreate(tx *gorm.DB) error {
 	if r.ID == uuid.Nil {
 		r.ID = uuid.New()
+	}
+	return nil
+}
+
+// IssueLink matches migration table "issue_links".
+type IssueLink struct {
+	ID          uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
+	Title       string     `gorm:"type:varchar(255);not null" json:"title"`
+	URL         string     `gorm:"type:text;not null" json:"url"`
+	IssueID     uuid.UUID  `gorm:"type:uuid;not null" json:"issue_id"`
+	ProjectID   uuid.UUID  `gorm:"type:uuid;not null" json:"project_id"`
+	WorkspaceID uuid.UUID  `gorm:"type:uuid;not null" json:"workspace_id"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	CreatedByID *uuid.UUID `gorm:"type:uuid" json:"created_by_id,omitempty"`
+}
+
+func (IssueLink) TableName() string { return "issue_links" }
+
+func (l *IssueLink) BeforeCreate(tx *gorm.DB) error {
+	if l.ID == uuid.Nil {
+		l.ID = uuid.New()
+	}
+	return nil
+}
+
+// FileAsset matches migration table "file_assets".
+type FileAsset struct {
+	ID          uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
+	Asset       string         `gorm:"type:varchar(800);not null" json:"asset"`
+	Attributes  JSONMap        `gorm:"type:jsonb;serializer:json" json:"attributes,omitempty"`
+	IsUploaded  bool           `gorm:"column:is_uploaded;default:false" json:"is_uploaded"`
+	IsDeleted   bool           `gorm:"column:is_deleted;default:false" json:"is_deleted"`
+	Size        float64        `gorm:"default:0" json:"size"`
+	WorkspaceID *uuid.UUID     `gorm:"type:uuid" json:"workspace_id,omitempty"`
+	ProjectID   *uuid.UUID     `gorm:"type:uuid" json:"project_id,omitempty"`
+	IssueID     *uuid.UUID     `gorm:"type:uuid" json:"issue_id,omitempty"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+	CreatedByID *uuid.UUID     `gorm:"type:uuid" json:"created_by_id,omitempty"`
+}
+
+func (FileAsset) TableName() string { return "file_assets" }
+
+func (f *FileAsset) BeforeCreate(tx *gorm.DB) error {
+	if f.ID == uuid.Nil {
+		f.ID = uuid.New()
+	}
+	return nil
+}
+
+// IssueAttachment matches migration table "issue_attachments".
+type IssueAttachment struct {
+	ID          uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
+	IssueID     uuid.UUID      `gorm:"type:uuid;not null" json:"issue_id"`
+	AssetID     uuid.UUID      `gorm:"type:uuid;not null" json:"asset_id"`
+	ProjectID   uuid.UUID      `gorm:"type:uuid;not null" json:"project_id"`
+	WorkspaceID uuid.UUID      `gorm:"type:uuid;not null" json:"workspace_id"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+	CreatedByID *uuid.UUID     `gorm:"type:uuid" json:"created_by_id,omitempty"`
+}
+
+func (IssueAttachment) TableName() string { return "issue_attachments" }
+
+func (a *IssueAttachment) BeforeCreate(tx *gorm.DB) error {
+	if a.ID == uuid.Nil {
+		a.ID = uuid.New()
 	}
 	return nil
 }
