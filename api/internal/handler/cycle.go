@@ -261,6 +261,46 @@ func (h *CycleHandler) AddIssue(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// Progress returns a TProgressSnapshot for the cycle (burndown data).
+// GET /api/workspaces/:slug/projects/:projectId/cycles/:cycleId/progress/
+// GET /api/workspaces/:slug/projects/:projectId/cycles/:cycleId/cycle-progress/
+func (h *CycleHandler) Progress(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	slug := c.Param("slug")
+	projectID, err := uuid.Parse(c.Param("projectId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+	cycleID, err := uuid.Parse(c.Param("cycleId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid cycle ID"})
+		return
+	}
+	snap, err := h.Cycle.GetProgress(c.Request.Context(), slug, projectID, cycleID, user.ID)
+	if err != nil {
+		if err == service.ErrCycleNotFound || err == service.ErrProjectForbidden || err == service.ErrProjectNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get cycle progress"})
+		return
+	}
+	c.JSON(http.StatusOK, snap)
+}
+
+// Analytics returns the distribution analytics for the cycle.
+// GET /api/workspaces/:slug/projects/:projectId/cycles/:cycleId/analytics
+func (h *CycleHandler) Analytics(c *gin.Context) {
+	// For now, analytics returns the same progress snapshot so the frontend
+	// completion_chart renders. The ?type query param is accepted but ignored.
+	h.Progress(c)
+}
+
 // RemoveIssue unlinks an issue from the cycle.
 // DELETE /api/workspaces/:slug/projects/:projectId/cycles/:cycleId/issues/:issueId/
 func (h *CycleHandler) RemoveIssue(c *gin.Context) {
