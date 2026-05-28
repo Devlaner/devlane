@@ -621,7 +621,7 @@ func (h *IssueHandler) RemoveRelation(c *gin.Context) {
 		return
 	}
 	if err := h.Issue.RemoveRelation(c.Request.Context(), slug, projectID, iid, user.ID, body.RelationType, body.RelatedIssue); err != nil {
-		if err == service.ErrProjectForbidden {
+		if err == service.ErrIssueNotFound || err == service.ErrProjectForbidden {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
 			return
 		}
