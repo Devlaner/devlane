@@ -83,3 +83,41 @@ func (l *IssueLabel) BeforeCreate(tx *gorm.DB) error {
 	}
 	return nil
 }
+
+// IssueRelation matches migration table "issue_relations".
+// Both directions of every relation are stored as separate rows so queries
+// only need WHERE issue_id = ?.
+// Reverse mapping: blocking↔blocked_by, duplicate↔duplicate, relates_to↔relates_to
+type IssueRelation struct {
+	ID             uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
+	IssueID        uuid.UUID  `gorm:"type:uuid;not null" json:"issue_id"`
+	RelatedIssueID uuid.UUID  `gorm:"type:uuid;not null;column:related_issue_id" json:"related_issue_id"`
+	RelationType   string     `gorm:"type:varchar(50);not null;default:relates_to" json:"relation_type"`
+	ProjectID      uuid.UUID  `gorm:"type:uuid;not null" json:"project_id"`
+	WorkspaceID    uuid.UUID  `gorm:"type:uuid;not null" json:"workspace_id"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	CreatedByID    *uuid.UUID `gorm:"type:uuid" json:"created_by_id,omitempty"`
+}
+
+func (IssueRelation) TableName() string { return "issue_relations" }
+
+func (r *IssueRelation) BeforeCreate(tx *gorm.DB) error {
+	if r.ID == uuid.Nil {
+		r.ID = uuid.New()
+	}
+	return nil
+}
+
+// reverseRelationType returns the relation type that the related issue holds
+// back toward the source issue.
+func ReverseRelationType(t string) string {
+	switch t {
+	case "blocking":
+		return "blocked_by"
+	case "blocked_by":
+		return "blocking"
+	default:
+		return t // duplicate↔duplicate, relates_to↔relates_to
+	}
+}
