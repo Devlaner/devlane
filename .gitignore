@@ -11,3 +11,4 @@ CLAUDE.md
 .env.local
 docs/
 main.exe
+.playwright-mcp/
