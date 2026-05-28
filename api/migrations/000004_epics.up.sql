@@ -1,0 +1,2 @@
+ALTER TABLE issues ADD COLUMN IF NOT EXISTS is_epic BOOLEAN NOT NULL DEFAULT FALSE;
+CREATE INDEX IF NOT EXISTS idx_issues_is_epic ON issues (is_epic) WHERE is_epic = TRUE;
