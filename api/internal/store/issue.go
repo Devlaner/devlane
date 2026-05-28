@@ -188,3 +188,115 @@ func (s *IssueStore) DeleteRelation(ctx context.Context, issueID, relatedIssueID
 		Where("issue_id = ? AND related_issue_id = ? AND relation_type = ?", issueID, relatedIssueID, relationType).
 		Delete(&model.IssueRelation{}).Error
 }
+
+// --- Issue Links ---
+
+func (s *IssueStore) ListLinksForIssue(ctx context.Context, issueID uuid.UUID) ([]model.IssueLink, error) {
+	var rows []model.IssueLink
+	err := s.db.WithContext(ctx).Where("issue_id = ?", issueID).Order("created_at ASC").Find(&rows).Error
+	return rows, err
+}
+
+func (s *IssueStore) CreateLink(ctx context.Context, l *model.IssueLink) error {
+	return s.db.WithContext(ctx).Create(l).Error
+}
+
+func (s *IssueStore) GetLinkByID(ctx context.Context, linkID uuid.UUID) (*model.IssueLink, error) {
+	var l model.IssueLink
+	err := s.db.WithContext(ctx).Where("id = ?", linkID).First(&l).Error
+	if err != nil {
+		return nil, err
+	}
+	return &l, nil
+}
+
+func (s *IssueStore) UpdateLink(ctx context.Context, l *model.IssueLink) error {
+	return s.db.WithContext(ctx).Save(l).Error
+}
+
+func (s *IssueStore) DeleteLink(ctx context.Context, linkID uuid.UUID) error {
+	return s.db.WithContext(ctx).Where("id = ?", linkID).Delete(&model.IssueLink{}).Error
+}
+
+// --- File Assets & Attachments ---
+
+func (s *IssueStore) CreateFileAsset(ctx context.Context, a *model.FileAsset) error {
+	return s.db.WithContext(ctx).Create(a).Error
+}
+
+func (s *IssueStore) GetFileAssetByID(ctx context.Context, assetID uuid.UUID) (*model.FileAsset, error) {
+	var a model.FileAsset
+	err := s.db.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", assetID).First(&a).Error
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+func (s *IssueStore) MarkFileAssetUploaded(ctx context.Context, assetID uuid.UUID, objectPath string) error {
+	return s.db.WithContext(ctx).Model(&model.FileAsset{}).
+		Where("id = ?", assetID).
+		Updates(map[string]interface{}{"is_uploaded": true, "asset": objectPath}).Error
+}
+
+func (s *IssueStore) SoftDeleteFileAsset(ctx context.Context, assetID uuid.UUID) error {
+	return s.db.WithContext(ctx).Where("id = ?", assetID).Delete(&model.FileAsset{}).Error
+}
+
+func (s *IssueStore) CreateAttachment(ctx context.Context, a *model.IssueAttachment) error {
+	return s.db.WithContext(ctx).Create(a).Error
+}
+
+// ListAttachmentsWithAssets returns attachments + their file asset for an issue.
+func (s *IssueStore) ListAttachmentsWithAssets(ctx context.Context, issueID uuid.UUID) ([]model.IssueAttachment, []model.FileAsset, error) {
+	var attachments []model.IssueAttachment
+	if err := s.db.WithContext(ctx).
+		Where("issue_id = ? AND deleted_at IS NULL", issueID).
+		Order("created_at ASC").Find(&attachments).Error; err != nil {
+		return nil, nil, err
+	}
+	if len(attachments) == 0 {
+		return nil, nil, nil
+	}
+	assetIDs := make([]uuid.UUID, 0, len(attachments))
+	for _, a := range attachments {
+		assetIDs = append(assetIDs, a.AssetID)
+	}
+	var assets []model.FileAsset
+	err := s.db.WithContext(ctx).Where("id IN ? AND is_uploaded = true AND deleted_at IS NULL", assetIDs).Find(&assets).Error
+	return attachments, assets, err
+}
+
+func (s *IssueStore) GetAttachmentByAssetID(ctx context.Context, assetID, issueID uuid.UUID) (*model.IssueAttachment, error) {
+	var a model.IssueAttachment
+	err := s.db.WithContext(ctx).
+		Where("asset_id = ? AND issue_id = ? AND deleted_at IS NULL", assetID, issueID).First(&a).Error
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+func (s *IssueStore) SoftDeleteAttachment(ctx context.Context, assetID, issueID uuid.UUID) error {
+	return s.db.WithContext(ctx).
+		Where("asset_id = ? AND issue_id = ?", assetID, issueID).
+		Delete(&model.IssueAttachment{}).Error
+}
+
+// --- Epics ---
+
+func (s *IssueStore) ListEpicsByProjectID(ctx context.Context, projectID uuid.UUID) ([]model.Issue, error) {
+	var list []model.Issue
+	err := s.db.WithContext(ctx).
+		Where("project_id = ? AND is_epic = true AND deleted_at IS NULL", projectID).
+		Order("sort_order ASC, created_at DESC").Find(&list).Error
+	return list, err
+}
+
+func (s *IssueStore) ListIssuesByEpicID(ctx context.Context, epicID uuid.UUID) ([]model.Issue, error) {
+	var list []model.Issue
+	err := s.db.WithContext(ctx).
+		Where("parent_id = ? AND is_epic = false AND deleted_at IS NULL", epicID).
+		Order("sort_order ASC, created_at DESC").Find(&list).Error
+	return list, err
+}
