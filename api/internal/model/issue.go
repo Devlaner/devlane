@@ -121,6 +121,7 @@ type IssueLink struct {
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
 	CreatedByID *uuid.UUID `gorm:"type:uuid" json:"created_by_id,omitempty"`
+	UpdatedByID *uuid.UUID `gorm:"type:uuid" json:"updated_by_id,omitempty"`
 }
 
 func (IssueLink) TableName() string { return "issue_links" }
@@ -134,19 +135,28 @@ func (l *IssueLink) BeforeCreate(tx *gorm.DB) error {
 
 // FileAsset matches migration table "file_assets".
 type FileAsset struct {
-	ID          uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
-	Asset       string         `gorm:"type:varchar(800);not null" json:"asset"`
-	Attributes  JSONMap        `gorm:"type:jsonb;serializer:json" json:"attributes,omitempty"`
-	IsUploaded  bool           `gorm:"column:is_uploaded;default:false" json:"is_uploaded"`
-	IsDeleted   bool           `gorm:"column:is_deleted;default:false" json:"is_deleted"`
-	Size        float64        `gorm:"default:0" json:"size"`
-	WorkspaceID *uuid.UUID     `gorm:"type:uuid" json:"workspace_id,omitempty"`
-	ProjectID   *uuid.UUID     `gorm:"type:uuid" json:"project_id,omitempty"`
-	IssueID     *uuid.UUID     `gorm:"type:uuid" json:"issue_id,omitempty"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
-	CreatedByID *uuid.UUID     `gorm:"type:uuid" json:"created_by_id,omitempty"`
+	ID               uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
+	Asset            string         `gorm:"type:varchar(800);not null" json:"asset"`
+	Attributes       JSONMap        `gorm:"type:jsonb;serializer:json;not null;default:'{}'" json:"attributes,omitempty"`
+	IsUploaded       bool           `gorm:"column:is_uploaded;default:false" json:"is_uploaded"`
+	IsDeleted        bool           `gorm:"column:is_deleted;default:false" json:"is_deleted"`
+	IsArchived       bool           `gorm:"column:is_archived;default:false" json:"is_archived"`
+	Size             float64        `gorm:"default:0" json:"size"`
+	EntityType       string         `gorm:"type:varchar(255);default:''" json:"entity_type,omitempty"`
+	EntityIdentifier string         `gorm:"type:varchar(255);default:''" json:"entity_identifier,omitempty"`
+	ExternalID       string         `gorm:"type:varchar(255);default:''" json:"external_id,omitempty"`
+	ExternalSource   string         `gorm:"type:varchar(255);default:''" json:"external_source,omitempty"`
+	StorageMetadata  JSONMap        `gorm:"type:jsonb;serializer:json" json:"storage_metadata,omitempty"`
+	WorkspaceID      *uuid.UUID     `gorm:"type:uuid" json:"workspace_id,omitempty"`
+	ProjectID        *uuid.UUID     `gorm:"type:uuid" json:"project_id,omitempty"`
+	IssueID          *uuid.UUID     `gorm:"type:uuid" json:"issue_id,omitempty"`
+	UserID           *uuid.UUID     `gorm:"type:uuid" json:"user_id,omitempty"`
+	CommentID        *uuid.UUID     `gorm:"type:uuid" json:"comment_id,omitempty"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
+	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
+	CreatedByID      *uuid.UUID     `gorm:"type:uuid" json:"created_by_id,omitempty"`
+	UpdatedByID      *uuid.UUID     `gorm:"type:uuid" json:"updated_by_id,omitempty"`
 }
 
 func (FileAsset) TableName() string { return "file_assets" }
@@ -155,20 +165,28 @@ func (f *FileAsset) BeforeCreate(tx *gorm.DB) error {
 	if f.ID == uuid.Nil {
 		f.ID = uuid.New()
 	}
+	// attributes is NOT NULL DEFAULT '{}' — ensure GORM never sends null.
+	if f.Attributes == nil {
+		f.Attributes = JSONMap{}
+	}
 	return nil
 }
 
 // IssueAttachment matches migration table "issue_attachments".
 type IssueAttachment struct {
-	ID          uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
-	IssueID     uuid.UUID      `gorm:"type:uuid;not null" json:"issue_id"`
-	AssetID     uuid.UUID      `gorm:"type:uuid;not null" json:"asset_id"`
-	ProjectID   uuid.UUID      `gorm:"type:uuid;not null" json:"project_id"`
-	WorkspaceID uuid.UUID      `gorm:"type:uuid;not null" json:"workspace_id"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
-	CreatedByID *uuid.UUID     `gorm:"type:uuid" json:"created_by_id,omitempty"`
+	ID             uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
+	IssueID        uuid.UUID      `gorm:"type:uuid;not null" json:"issue_id"`
+	AssetID        uuid.UUID      `gorm:"type:uuid;not null" json:"asset_id"`
+	Attributes     JSONMap        `gorm:"type:jsonb;serializer:json;default:'{}'" json:"attributes,omitempty"`
+	ExternalSource string         `gorm:"type:varchar(255);default:''" json:"external_source,omitempty"`
+	ExternalID     string         `gorm:"type:varchar(255);default:''" json:"external_id,omitempty"`
+	ProjectID      uuid.UUID      `gorm:"type:uuid;not null" json:"project_id"`
+	WorkspaceID    uuid.UUID      `gorm:"type:uuid;not null" json:"workspace_id"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
+	CreatedByID    *uuid.UUID     `gorm:"type:uuid" json:"created_by_id,omitempty"`
+	UpdatedByID    *uuid.UUID     `gorm:"type:uuid" json:"updated_by_id,omitempty"`
 }
 
 func (IssueAttachment) TableName() string { return "issue_attachments" }
