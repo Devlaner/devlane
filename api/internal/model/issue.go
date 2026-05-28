@@ -109,7 +109,7 @@ func (r *IssueRelation) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// reverseRelationType returns the relation type that the related issue holds
+// ReverseRelationType returns the relation type that the related issue holds
 // back toward the source issue.
 func ReverseRelationType(t string) string {
 	switch t {
