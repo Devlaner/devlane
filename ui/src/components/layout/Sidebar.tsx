@@ -440,10 +440,12 @@ const IconLogOut = () => (
 
 const projectNavItems = [
   { key: 'issues', to: 'issues', label: 'Work items', Icon: IconFileStack },
+  { key: 'epics', to: 'epics', label: 'Epics', Icon: IconModuleGrid },
   { key: 'cycles', to: 'cycles', label: 'Cycles', Icon: IconIterationCw },
   { key: 'modules', to: 'modules', label: 'Modules', Icon: IconModuleGrid },
   { key: 'views', to: 'views', label: 'Views', Icon: IconLayers },
   { key: 'pages', to: 'pages', label: 'Pages', Icon: IconFileText },
+  { key: 'intake', to: 'intake', label: 'Intake', Icon: IconFileStack },
 ];
 
 /** Pill + grid icon — matches the “Modules” category badge (not list progress rings). */

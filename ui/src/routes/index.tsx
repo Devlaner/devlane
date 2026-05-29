@@ -104,6 +104,15 @@ const PagesPage = lazy(() =>
 const PageDetailPage = lazy(() =>
   import('../pages/PageDetailPage').then((m) => page({ PageDetailPage: m.PageDetailPage })),
 );
+const EpicsPage = lazy(() =>
+  import('../pages/EpicsPage').then((m) => page({ EpicsPage: m.EpicsPage })),
+);
+const EpicDetailPage = lazy(() =>
+  import('../pages/EpicDetailPage').then((m) => page({ EpicDetailPage: m.EpicDetailPage })),
+);
+const IntakePage = lazy(() =>
+  import('../pages/IntakePage').then((m) => page({ IntakePage: m.IntakePage })),
+);
 
 const InstanceAdminGeneralPage = lazy(() =>
   import('../pages/instance-admin').then((m) =>
@@ -581,6 +590,30 @@ const router = createBrowserRouter([
                         element: (
                           <Suspense fallback={<PageFallback />}>
                             <PageDetailPage />
+                          </Suspense>
+                        ),
+                      },
+                      {
+                        path: 'epics',
+                        element: (
+                          <Suspense fallback={<PageFallback />}>
+                            <EpicsPage />
+                          </Suspense>
+                        ),
+                      },
+                      {
+                        path: 'epics/:epicId',
+                        element: (
+                          <Suspense fallback={<PageFallback />}>
+                            <EpicDetailPage />
+                          </Suspense>
+                        ),
+                      },
+                      {
+                        path: 'intake',
+                        element: (
+                          <Suspense fallback={<PageFallback />}>
+                            <IntakePage />
                           </Suspense>
                         ),
                       },
