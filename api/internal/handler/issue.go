@@ -208,6 +208,7 @@ func (h *IssueHandler) Update(c *gin.Context) {
 		AssigneeIDs     []uuid.UUID `json:"assignee_ids"`
 		LabelIDs        []uuid.UUID `json:"label_ids"`
 		IsDraft         *bool       `json:"is_draft"`
+		Type            string      `json:"type"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
@@ -257,7 +258,11 @@ func (h *IssueHandler) Update(c *gin.Context) {
 		}
 	}
 
-	issue, err := h.Issue.Update(c.Request.Context(), slug, projectID, issueID, user.ID, name, priority, description, body.StateID, assigneeIDs, labelIDs, startDate, targetDate, body.ParentID, body.IsDraft)
+	var issueType *string
+	if body.Type != "" {
+		issueType = &body.Type
+	}
+	issue, err := h.Issue.Update(c.Request.Context(), slug, projectID, issueID, user.ID, name, priority, description, body.StateID, assigneeIDs, labelIDs, startDate, targetDate, body.ParentID, body.IsDraft, issueType)
 	if err != nil {
 		if err == service.ErrIssueNotFound || err == service.ErrProjectForbidden {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Issue not found"})

@@ -34,6 +34,7 @@ type Issue struct {
 	ArchivedAt      *time.Time     `gorm:"type:timestamptz" json:"archived_at,omitempty"`
 	IsDraft         bool           `gorm:"column:is_draft;default:false" json:"is_draft"`
 	IsEpic          bool           `gorm:"column:is_epic;default:false" json:"is_epic"`
+	Type            string         `gorm:"type:varchar(50);default:task" json:"type,omitempty"`
 }
 
 func (Issue) TableName() string { return "issues" }

@@ -277,7 +277,7 @@ func (s *IssueService) Create(ctx context.Context, workspaceSlug string, project
 	return issue, nil
 }
 
-func (s *IssueService) Update(ctx context.Context, workspaceSlug string, projectID, issueID uuid.UUID, userID uuid.UUID, name, priority, description *string, stateID *uuid.UUID, assigneeIDs, labelIDs *[]uuid.UUID, startDate, targetDate *time.Time, parentID *uuid.UUID, isDraft *bool) (*model.Issue, error) {
+func (s *IssueService) Update(ctx context.Context, workspaceSlug string, projectID, issueID uuid.UUID, userID uuid.UUID, name, priority, description *string, stateID *uuid.UUID, assigneeIDs, labelIDs *[]uuid.UUID, startDate, targetDate *time.Time, parentID *uuid.UUID, isDraft *bool, issueType *string) (*model.Issue, error) {
 	issue, err := s.GetByID(ctx, workspaceSlug, projectID, issueID, userID)
 	if err != nil {
 		return nil, err
@@ -316,6 +316,9 @@ func (s *IssueService) Update(ctx context.Context, workspaceSlug string, project
 	}
 	if isDraft != nil {
 		issue.IsDraft = *isDraft
+	}
+	if issueType != nil && *issueType != "" {
+		issue.Type = *issueType
 	}
 	issue.UpdatedByID = &userID
 	if err := s.is.Update(ctx, issue); err != nil {
