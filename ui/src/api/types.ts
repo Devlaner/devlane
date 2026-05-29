@@ -184,6 +184,40 @@ export interface IssueApiResponse {
   target_date?: string | null;
   archived_at?: string | null;
   is_draft?: boolean;
+  is_epic?: boolean;
+  type?: string;
+}
+
+/** External URL linked to an issue */
+export interface IssueLinkApiResponse {
+  id: string;
+  issue_id: string;
+  title: string;
+  url: string;
+  created_by_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Issue relation (blocking / blocked_by / duplicate / relates_to) */
+export interface IssueRelationApiResponse {
+  blocking: IssueApiResponse[];
+  blocked_by: IssueApiResponse[];
+  duplicate: IssueApiResponse[];
+  relates_to: IssueApiResponse[];
+}
+
+export type IssueRelationType = 'blocking' | 'blocked_by' | 'duplicate' | 'relates_to';
+
+/** File attachment on an issue */
+export interface IssueAttachmentApiResponse {
+  id: string;
+  issue_id: string;
+  attributes: { name?: string; size?: number };
+  asset_url: string;
+  updated_at: string;
+  updated_by: string;
+  created_by: string;
 }
 
 /** Request body for POST issues */

@@ -1,10 +1,21 @@
 import { apiClient } from '../api/client';
-import type { IssueActivityApiResponse, IssueApiResponse, CreateIssueRequest } from '../api/types';
+import type {
+  IssueActivityApiResponse,
+  IssueApiResponse,
+  IssueAttachmentApiResponse,
+  IssueLinkApiResponse,
+  IssueRelationApiResponse,
+  IssueRelationType,
+  CreateIssueRequest,
+} from '../api/types';
 
 export interface ListIssuesParams {
   limit?: number;
   offset?: number;
 }
+
+const base = (slug: string, pid: string, iid: string) =>
+  `/api/workspaces/${encodeURIComponent(slug)}/projects/${encodeURIComponent(pid)}/issues/${encodeURIComponent(iid)}`;
 
 export const issueService = {
   async listWorkspaceDrafts(
@@ -61,8 +72,8 @@ export const issueService = {
       CreateIssueRequest & {
         state_id?: string | null;
         is_draft?: boolean;
-        /** Alias accepted by the backend so callers can use either name. */
         description_html?: string;
+        type?: string;
       }
     >,
   ): Promise<IssueApiResponse> {
@@ -79,35 +90,172 @@ export const issueService = {
     );
   },
 
-  /** GET .../issues/:pk/activities/ */
   async listActivities(
     workspaceSlug: string,
     projectId: string,
     issueId: string,
   ): Promise<IssueActivityApiResponse[]> {
     const { data } = await apiClient.get<IssueActivityApiResponse[]>(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/activities/`,
+      `${base(workspaceSlug, projectId, issueId)}/activities/`,
     );
     return data;
   },
 
-  /** GET .../issues/:pk/subscribe/ — returns whether the current user follows this issue. */
   async isSubscribed(workspaceSlug: string, projectId: string, issueId: string): Promise<boolean> {
     const { data } = await apiClient.get<{ subscribed: boolean }>(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/subscribe/`,
+      `${base(workspaceSlug, projectId, issueId)}/subscribe/`,
     );
     return data.subscribed;
   },
 
   async subscribe(workspaceSlug: string, projectId: string, issueId: string): Promise<void> {
-    await apiClient.post(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/subscribe/`,
-    );
+    await apiClient.post(`${base(workspaceSlug, projectId, issueId)}/subscribe/`);
   },
 
   async unsubscribe(workspaceSlug: string, projectId: string, issueId: string): Promise<void> {
+    await apiClient.delete(`${base(workspaceSlug, projectId, issueId)}/subscribe/`);
+  },
+
+  // ── Links ──────────────────────────────────────────────────────────────────
+
+  async listLinks(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+  ): Promise<IssueLinkApiResponse[]> {
+    const { data } = await apiClient.get<IssueLinkApiResponse[]>(
+      `${base(workspaceSlug, projectId, issueId)}/issue-links/`,
+    );
+    return data ?? [];
+  },
+
+  async createLink(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    payload: { url: string; title?: string },
+  ): Promise<IssueLinkApiResponse> {
+    const { data } = await apiClient.post<IssueLinkApiResponse>(
+      `${base(workspaceSlug, projectId, issueId)}/issue-links/`,
+      payload,
+    );
+    return data;
+  },
+
+  async updateLink(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    linkId: string,
+    payload: { url?: string; title?: string },
+  ): Promise<IssueLinkApiResponse> {
+    const { data } = await apiClient.patch<IssueLinkApiResponse>(
+      `${base(workspaceSlug, projectId, issueId)}/issue-links/${encodeURIComponent(linkId)}/`,
+      payload,
+    );
+    return data;
+  },
+
+  async deleteLink(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    linkId: string,
+  ): Promise<void> {
     await apiClient.delete(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/subscribe/`,
+      `${base(workspaceSlug, projectId, issueId)}/issue-links/${encodeURIComponent(linkId)}/`,
+    );
+  },
+
+  // ── Relations ──────────────────────────────────────────────────────────────
+
+  async listRelations(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+  ): Promise<IssueRelationApiResponse> {
+    const { data } = await apiClient.get<IssueRelationApiResponse>(
+      `${base(workspaceSlug, projectId, issueId)}/issue-relation/`,
+    );
+    return data;
+  },
+
+  async addRelation(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    relationType: IssueRelationType,
+    relatedIssueIds: string[],
+  ): Promise<IssueApiResponse[]> {
+    const { data } = await apiClient.post<IssueApiResponse[]>(
+      `${base(workspaceSlug, projectId, issueId)}/issue-relation/`,
+      { relation_type: relationType, issues: relatedIssueIds },
+    );
+    return data ?? [];
+  },
+
+  async removeRelation(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    relationType: IssueRelationType,
+    relatedIssueId: string,
+  ): Promise<void> {
+    await apiClient.post(`${base(workspaceSlug, projectId, issueId)}/remove-relation/`, {
+      relation_type: relationType,
+      related_issue: relatedIssueId,
+    });
+  },
+
+  // ── Attachments ────────────────────────────────────────────────────────────
+
+  async listAttachments(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+  ): Promise<IssueAttachmentApiResponse[]> {
+    const { data } = await apiClient.get<IssueAttachmentApiResponse[]>(
+      `/api/assets/v2/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/attachments/`,
+    );
+    return data ?? [];
+  },
+
+  async initiateAttachmentUpload(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    file: { name: string; size: number; type: string },
+  ): Promise<{
+    asset_id: string;
+    upload_data: { url: string; fields: Record<string, string> };
+    attachment: IssueAttachmentApiResponse;
+  }> {
+    const { data } = await apiClient.post(
+      `/api/assets/v2/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/attachments/`,
+      { name: file.name, size: file.size, type: file.type },
+    );
+    return data;
+  },
+
+  async confirmAttachmentUpload(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    assetId: string,
+  ): Promise<void> {
+    await apiClient.patch(
+      `/api/assets/v2/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/attachments/${encodeURIComponent(assetId)}/`,
+    );
+  },
+
+  async deleteAttachment(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    assetId: string,
+  ): Promise<void> {
+    await apiClient.delete(
+      `/api/assets/v2/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/attachments/${encodeURIComponent(assetId)}/`,
     );
   },
 };
