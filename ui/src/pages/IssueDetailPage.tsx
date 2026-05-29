@@ -292,6 +292,8 @@ export function IssueDetailPage() {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [updatingCommentId, setUpdatingCommentId] = useState<string | null>(null);
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+  // Workflow confirmation
+  const [pendingStateId, setPendingStateId] = useState<string | null>(null);
   // Links
   const [links, setLinks] = useState<IssueLinkApiResponse[]>([]);
   const [addLinkOpen, setAddLinkOpen] = useState(false);
@@ -1206,27 +1208,44 @@ export function IssueDetailPage() {
                     )
                   }
                 >
-                  {states.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
-                      onClick={() => {
-                        setOpenDropdown(null);
-                        updateIssue({ state_id: s.id });
-                      }}
-                    >
-                      <span
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: s.color || 'var(--neutral-500)' }}
-                        aria-hidden
-                      />
-                      <span className="truncate text-(--txt-primary)">{s.name}</span>
-                      {issue.state_id === s.id && (
-                        <span className="ml-auto text-xs text-(--txt-tertiary)">Selected</span>
-                      )}
-                    </button>
-                  ))}
+                  {states.map((s) => {
+                    const isTerminal = s.group === 'completed' || s.group === 'cancelled';
+                    const currentGroup = currentState?.group ?? 'backlog';
+                    const isCurrentTerminal =
+                      currentGroup === 'completed' || currentGroup === 'cancelled';
+                    const needsConfirm =
+                      isTerminal && !isCurrentTerminal && s.id !== issue.state_id;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
+                        onClick={() => {
+                          setOpenDropdown(null);
+                          if (needsConfirm) {
+                            setPendingStateId(s.id);
+                          } else {
+                            updateIssue({ state_id: s.id });
+                          }
+                        }}
+                      >
+                        <span
+                          className="h-2.5 w-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: s.color || 'var(--neutral-500)' }}
+                          aria-hidden
+                        />
+                        <span className="truncate text-(--txt-primary)">{s.name}</span>
+                        {needsConfirm && (
+                          <span className="ml-auto text-[10px] text-(--txt-warning-primary)">
+                            ⚠ confirm
+                          </span>
+                        )}
+                        {issue.state_id === s.id && !needsConfirm && (
+                          <span className="ml-auto text-xs text-(--txt-tertiary)">Selected</span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </Dropdown>
               </PropertyRow>
 
@@ -1652,6 +1671,50 @@ export function IssueDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Workflow confirmation dialog */}
+      {pendingStateId &&
+        (() => {
+          const targetState = states.find((s) => s.id === pendingStateId);
+          return (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+              onClick={() => setPendingStateId(null)}
+            >
+              <div
+                className="w-full max-w-sm rounded-lg border border-(--border-subtle) bg-(--bg-surface-1) p-6 shadow-(--shadow-overlay)"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 className="mb-2 text-base font-semibold text-(--txt-primary)">
+                  Confirm state change
+                </h3>
+                <p className="mb-4 text-sm text-(--txt-secondary)">
+                  Move this issue to <strong>{targetState?.name}</strong>? This marks it as{' '}
+                  {targetState?.group}.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPendingStateId(null)}
+                    className="rounded-(--radius-md) px-3 py-1.5 text-sm text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateIssue({ state_id: pendingStateId });
+                      setPendingStateId(null);
+                    }}
+                    className="rounded-(--radius-md) bg-(--bg-accent-primary) px-3 py-1.5 text-sm text-white hover:opacity-90"
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
       <CreateWorkItemModal
         open={subCreateOpen}
