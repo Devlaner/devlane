@@ -1117,11 +1117,12 @@ export function IssueDetailPage() {
                         formData.append(k, v),
                       );
                       formData.append('file', file);
-                      await fetch(resp.upload_data.url, {
+                      const uploadResp = await fetch(resp.upload_data.url, {
                         method: 'POST',
                         body: formData,
                         credentials: 'omit',
                       });
+                      if (!uploadResp.ok) throw new Error(`Upload failed: ${uploadResp.status}`);
                       await issueService.confirmAttachmentUpload(
                         workspaceSlug,
                         project.id,
@@ -1168,10 +1169,17 @@ export function IssueDetailPage() {
                       type="button"
                       onClick={async () => {
                         if (!workspaceSlug) return;
-                        await issueService
-                          .deleteAttachment(workspaceSlug, project.id, issue.id, att.id)
-                          .catch(() => {});
-                        setAttachments((prev) => prev.filter((x) => x.id !== att.id));
+                        try {
+                          await issueService.deleteAttachment(
+                            workspaceSlug,
+                            project.id,
+                            issue.id,
+                            att.asset_id,
+                          );
+                          setAttachments((prev) => prev.filter((x) => x.id !== att.id));
+                        } catch {
+                          /* ignore */
+                        }
                       }}
                       className="shrink-0 opacity-0 group-hover:opacity-100 rounded p-0.5 text-(--txt-tertiary) hover:text-(--txt-danger-primary)"
                       title="Delete"

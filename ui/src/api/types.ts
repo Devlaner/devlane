@@ -212,6 +212,7 @@ export type IssueRelationType = 'blocking' | 'blocked_by' | 'duplicate' | 'relat
 /** File attachment on an issue */
 export interface IssueAttachmentApiResponse {
   id: string;
+  asset_id: string;
   issue_id: string;
   attributes: { name?: string; size?: number };
   asset_url: string;

@@ -18,6 +18,7 @@ var ErrAttachmentNotFound = errors.New("attachment not found")
 // AttachmentResponse is what the frontend expects for TIssueAttachment.
 type AttachmentResponse struct {
 	ID         uuid.UUID              `json:"id"`
+	AssetID    uuid.UUID              `json:"asset_id"`
 	Attributes map[string]interface{} `json:"attributes"`
 	AssetURL   string                 `json:"asset_url"`
 	IssueID    uuid.UUID              `json:"issue_id"`
@@ -124,6 +125,7 @@ func (s *AttachmentService) InitiateUpload(ctx context.Context, workspaceSlug st
 		},
 		Attachment: AttachmentResponse{
 			ID:         attachment.ID,
+			AssetID:    assetID,
 			Attributes: map[string]interface{}{"name": name, "size": size},
 			AssetURL:   "/api/files/" + objectName,
 			IssueID:    issueID,
@@ -178,6 +180,7 @@ func (s *AttachmentService) ListAttachments(ctx context.Context, workspaceSlug s
 		}
 		result = append(result, AttachmentResponse{
 			ID:         att.ID,
+			AssetID:    att.AssetID,
 			Attributes: map[string]interface{}{"name": asset.Attributes["name"], "size": asset.Size},
 			AssetURL:   "/api/files/" + asset.Asset,
 			IssueID:    issueID,

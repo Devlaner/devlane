@@ -114,7 +114,10 @@ export function CycleDetailPage() {
     if (!workspaceSlug || !projectId || !cycleId) return;
     let cancelled = false;
     queueMicrotask(() => {
-      if (!cancelled) setLoading(true);
+      if (!cancelled) {
+        setProgress(null);
+        setLoading(true);
+      }
     });
     Promise.all([
       workspaceService.getBySlug(workspaceSlug),
@@ -148,6 +151,7 @@ export function CycleDetailPage() {
         setCycle(null);
         setIssues([]);
         setStates([]);
+        setProgress(null);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
