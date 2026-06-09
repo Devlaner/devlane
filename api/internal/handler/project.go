@@ -120,7 +120,10 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 		return
 	}
 	if h.State != nil {
-		_ = h.State.EnsureDefaultStates(c.Request.Context(), slug, p.ID, user.ID)
+		if err := h.State.EnsureDefaultStates(c.Request.Context(), slug, p.ID, user.ID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to seed default states"})
+			return
+		}
 	}
 
 	// If additional fields were provided, immediately apply them using the same logic as Update.

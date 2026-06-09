@@ -11,6 +11,9 @@ import (
 
 var ErrStateNotFound = errors.New("state not found")
 
+// DefaultProjectStateNames are seeded for new projects (Plane parity, without triage).
+var DefaultProjectStateNames = []string{"Backlog", "Todo", "In Progress", "Done", "Cancelled"}
+
 // StateService handles state (workflow) business logic.
 type StateService struct {
 	ss *store.StateStore
@@ -22,31 +25,35 @@ func NewStateService(ss *store.StateStore, ps *store.ProjectStore, ws *store.Wor
 	return &StateService{ss: ss, ps: ps, ws: ws}
 }
 
-func (s *StateService) ensureProjectAccess(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID) error {
+func (s *StateService) ensureProjectAccess(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID) (uuid.UUID, error) {
 	wrk, err := s.ws.GetBySlug(ctx, workspaceSlug)
 	if err != nil {
-		return ErrProjectForbidden
+		return uuid.Nil, ErrProjectForbidden
 	}
 	ok, _ := s.ws.IsMember(ctx, wrk.ID, userID)
 	if !ok {
-		return ErrProjectForbidden
+		return uuid.Nil, ErrProjectForbidden
 	}
 	inWorkspace, _ := s.ps.IsInWorkspace(ctx, projectID, wrk.ID)
 	if !inWorkspace {
-		return ErrProjectNotFound
+		return uuid.Nil, ErrProjectNotFound
 	}
-	return nil
+	return wrk.ID, nil
 }
 
 func (s *StateService) List(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID) ([]model.State, error) {
-	if err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
+	workspaceID, err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID)
+	if err != nil {
 		return nil, err
 	}
-	wrk, err := s.ws.GetBySlug(ctx, workspaceSlug)
+	list, err := s.ss.ListByProjectID(ctx, projectID)
 	if err != nil {
-		return nil, ErrProjectForbidden
+		return nil, err
 	}
-	if err := s.ensureDefaultStates(ctx, projectID, wrk.ID); err != nil {
+	if len(list) > 0 {
+		return list, nil
+	}
+	if err := s.ensureDefaultStates(ctx, projectID, workspaceID); err != nil {
 		return nil, err
 	}
 	return s.ss.ListByProjectID(ctx, projectID)
@@ -85,7 +92,7 @@ func (s *StateService) ensureDefaultStates(ctx context.Context, projectID, works
 			ProjectID:   projectID,
 			WorkspaceID: workspaceID,
 		}
-		if err := s.ss.Create(ctx, st); err != nil {
+		if err := s.ss.CreateIgnoreNameConflict(ctx, st); err != nil {
 			return err
 		}
 	}
@@ -94,21 +101,18 @@ func (s *StateService) ensureDefaultStates(ctx context.Context, projectID, works
 
 // EnsureDefaultStates seeds workflow states for a project that has none (Plane parity).
 func (s *StateService) EnsureDefaultStates(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID) error {
-	if err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
+	workspaceID, err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID)
+	if err != nil {
 		return err
 	}
-	wrk, err := s.ws.GetBySlug(ctx, workspaceSlug)
-	if err != nil {
-		return ErrProjectForbidden
-	}
-	return s.ensureDefaultStates(ctx, projectID, wrk.ID)
+	return s.ensureDefaultStates(ctx, projectID, workspaceID)
 }
 
 func (s *StateService) Create(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID, name, color, group string) (*model.State, error) {
-	if err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
+	workspaceID, err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID)
+	if err != nil {
 		return nil, err
 	}
-	wrk, _ := s.ws.GetBySlug(ctx, workspaceSlug)
 	if color == "" {
 		color = "#0d0d0d"
 	}
@@ -120,7 +124,7 @@ func (s *StateService) Create(ctx context.Context, workspaceSlug string, project
 		Color:       color,
 		Group:       group,
 		ProjectID:   projectID,
-		WorkspaceID: wrk.ID,
+		WorkspaceID: workspaceID,
 	}
 	if err := s.ss.Create(ctx, st); err != nil {
 		return nil, err
@@ -129,7 +133,7 @@ func (s *StateService) Create(ctx context.Context, workspaceSlug string, project
 }
 
 func (s *StateService) GetByID(ctx context.Context, workspaceSlug string, projectID, stateID uuid.UUID, userID uuid.UUID) (*model.State, error) {
-	if err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
+	if _, err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
 		return nil, err
 	}
 	st, err := s.ss.GetByID(ctx, stateID)

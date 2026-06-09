@@ -46,6 +46,27 @@ func TestState_CRUD(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, rr4.Code)
 }
 
+func TestState_List_SeedsDefaultStates(t *testing.T) {
+	ts := testutil.NewTestServer(t)
+	user := testutil.CreateUser(t, ts.DB)
+	ws := testutil.CreateWorkspace(t, ts.DB, user.ID)
+	session := testutil.LoginAs(t, ts.DB, user)
+	project := testutil.CreateProject(t, ts.DB, ws.ID, user.ID)
+
+	base := "/api/workspaces/" + ws.Slug + "/projects/" + project.ID.String() + "/states/"
+	rr := ts.GET(base, session)
+	require.Equal(t, http.StatusOK, rr.Code, "body=%s", rr.Body.String())
+
+	list := testutil.DecodeJSON[[]map[string]any](t, rr)
+	require.Len(t, list, 5)
+	names := make([]string, len(list))
+	for i, st := range list {
+		name, _ := st["name"].(string)
+		names[i] = name
+	}
+	assert.ElementsMatch(t, []string{"Backlog", "Todo", "In Progress", "Done", "Cancelled"}, names)
+}
+
 func TestState_NonMember404(t *testing.T) {
 	ts := testutil.NewTestServer(t)
 	w := testutil.SeedWorld(t, ts.DB)

@@ -6,6 +6,7 @@ import (
 	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // StateStore handles state persistence.
@@ -15,6 +16,14 @@ func NewStateStore(db *gorm.DB) *StateStore { return &StateStore{db: db} }
 
 func (s *StateStore) Create(ctx context.Context, st *model.State) error {
 	return s.db.WithContext(ctx).Create(st).Error
+}
+
+// CreateIgnoreNameConflict inserts a state but ignores unique (name, project_id) violations.
+func (s *StateStore) CreateIgnoreNameConflict(ctx context.Context, st *model.State) error {
+	return s.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "name"}, {Name: "project_id"}},
+		DoNothing: true,
+	}).Create(st).Error
 }
 
 func (s *StateStore) GetByID(ctx context.Context, id uuid.UUID) (*model.State, error) {

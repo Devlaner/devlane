@@ -39,6 +39,20 @@ func TestProject_Create_Success(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rr.Code, "body=%s", rr.Body.String())
 	body := testutil.MustJSONMap(t, rr)
 	assert.Equal(t, "My Project", body["name"])
+
+	projectID, _ := body["id"].(string)
+	require.NotEmpty(t, projectID)
+
+	statesRR := ts.GET("/api/workspaces/"+ws.Slug+"/projects/"+projectID+"/states/", session)
+	require.Equal(t, http.StatusOK, statesRR.Code, "body=%s", statesRR.Body.String())
+	states := testutil.DecodeJSON[[]map[string]any](t, statesRR)
+	require.Len(t, states, 5)
+	names := make([]string, len(states))
+	for i, st := range states {
+		name, _ := st["name"].(string)
+		names[i] = name
+	}
+	assert.ElementsMatch(t, []string{"Backlog", "Todo", "In Progress", "Done", "Cancelled"}, names)
 }
 
 func TestProject_Create_RequiresMembership(t *testing.T) {
