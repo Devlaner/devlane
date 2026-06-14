@@ -202,7 +202,7 @@ func New(cfg Config) *gin.Engine {
 		Queue:      cfg.Queue,
 		AppBaseURL: appBaseURL,
 	}
-	projectHandler := &handler.ProjectHandler{Project: projectSvc}
+	projectHandler := &handler.ProjectHandler{Project: projectSvc, State: stateSvc}
 	favoriteHandler := &handler.FavoriteHandler{Project: projectSvc, Favorites: userFavoriteStore}
 	stateHandler := &handler.StateHandler{State: stateSvc}
 	labelHandler := &handler.LabelHandler{Label: labelSvc}

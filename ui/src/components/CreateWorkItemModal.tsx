@@ -274,7 +274,9 @@ export function CreateWorkItemModal({
     };
   }, [workspaceSlug]);
 
-  const stateName = stateId ? states.find((s) => s.id === stateId)?.name : '';
+  const stateName = stateId ? (states.find((s) => s.id === stateId)?.name ?? '') : '';
+  const showModules = selectedProject?.module_view ?? true;
+  const showCycles = selectedProject?.cycle_view ?? true;
   const assigneeNames =
     assigneeIds
       .map((id) => members.find((m) => m.id === id)?.name ?? id.slice(0, 8))
@@ -298,6 +300,11 @@ export function CreateWorkItemModal({
   const filteredLabels = labels.filter((l) => q(l.name).includes(q(labelSearch)));
   const filteredCycles = cycles.filter((c) => q(c.name).includes(q(cycleSearch)));
   const filteredModules = modules.filter((m) => q(m.name).includes(q(moduleSearch)));
+
+  useEffect(() => {
+    if (!showCycles) setCycleId(null);
+    if (!showModules) setModuleId(null);
+  }, [showCycles, showModules]);
 
   useEffect(() => {
     if (open) {
@@ -345,7 +352,7 @@ export function CreateWorkItemModal({
           title,
           description,
           projectId,
-          stateId: draftOnly ? undefined : stateId || undefined,
+          stateId: stateId || undefined,
           priority: priority !== 'none' ? priority : undefined,
           assigneeIds: assigneeIds.length ? assigneeIds : undefined,
           assigneeId: assigneeIds[0] ?? undefined,
@@ -444,6 +451,7 @@ export function CreateWorkItemModal({
                 id="project"
                 openId={openDropdown}
                 onOpen={setOpenDropdown}
+                allowDismissInsideDialog
                 label="Select project"
                 icon={
                   selectedProject?.name.includes('Logistics') ? <IconTruck /> : <IconBuilding />
@@ -502,6 +510,7 @@ export function CreateWorkItemModal({
                 icon={<IconCog />}
                 displayValue={stateName || 'Backlog'}
                 compact
+                allowDismissInsideDialog
                 panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
               >
                 <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
@@ -514,25 +523,30 @@ export function CreateWorkItemModal({
                   />
                 </div>
                 <div className="overflow-auto py-0.5 [&_button]:px-2 [&_button]:py-1 [&_button]:text-xs">
-                  {filteredStates.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => {
-                        setStateId(s.id);
-                        setOpenDropdown(null);
-                      }}
-                      className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
-                    >
-                      {s.name}
-                    </button>
-                  ))}
+                  {filteredStates.length === 0 ? (
+                    <div className="px-2 py-1 text-xs text-(--txt-tertiary)">No states</div>
+                  ) : (
+                    filteredStates.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          setStateId(s.id);
+                          setOpenDropdown(null);
+                        }}
+                        className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                      >
+                        {s.name}
+                      </button>
+                    ))
+                  )}
                 </div>
               </Dropdown>
               <Dropdown
                 id="priority"
                 openId={openDropdown}
                 onOpen={setOpenDropdown}
+                allowDismissInsideDialog
                 label="None"
                 icon={<IconCircleSlash />}
                 displayValue={
@@ -561,6 +575,7 @@ export function CreateWorkItemModal({
                 id="assignees"
                 openId={openDropdown}
                 onOpen={setOpenDropdown}
+                allowDismissInsideDialog
                 label="Assignees"
                 icon={<IconUsers />}
                 displayValue={assigneeNames || 'Add assignees'}
@@ -607,6 +622,7 @@ export function CreateWorkItemModal({
                 id="labels"
                 openId={openDropdown}
                 onOpen={setOpenDropdown}
+                allowDismissInsideDialog
                 label="Labels"
                 icon={<IconTag />}
                 displayValue={labelNames}
@@ -672,96 +688,102 @@ export function CreateWorkItemModal({
                 onChange={setDueDate}
                 placeholder="Due date"
               />
-              <Dropdown
-                id="cycle"
-                openId={openDropdown}
-                onOpen={setOpenDropdown}
-                label="Cycle"
-                icon={<IconCycle />}
-                displayValue={cycleName || 'No cycle'}
-                compact
-                panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
-              >
-                <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    value={cycleSearch}
-                    onChange={(e) => setCycleSearch(e.target.value)}
-                    className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
-                  />
-                </div>
-                <div className="overflow-auto py-0.5 [&_button]:px-2 [&_button]:py-1 [&_button]:text-xs">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCycleId(null);
-                      setOpenDropdown(null);
-                    }}
-                    className="w-full text-left text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
-                  >
-                    No cycle
-                  </button>
-                  {filteredCycles.map((c) => (
+              {showCycles ? (
+                <Dropdown
+                  id="cycle"
+                  openId={openDropdown}
+                  onOpen={setOpenDropdown}
+                  allowDismissInsideDialog
+                  label="Cycle"
+                  icon={<IconCycle />}
+                  displayValue={cycleName || 'No cycle'}
+                  compact
+                  panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
+                >
+                  <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
+                    <input
+                      type="text"
+                      placeholder="Search..."
+                      value={cycleSearch}
+                      onChange={(e) => setCycleSearch(e.target.value)}
+                      className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
+                    />
+                  </div>
+                  <div className="overflow-auto py-0.5 [&_button]:px-2 [&_button]:py-1 [&_button]:text-xs">
                     <button
-                      key={c.id}
                       type="button"
                       onClick={() => {
-                        setCycleId(c.id);
+                        setCycleId(null);
                         setOpenDropdown(null);
                       }}
-                      className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                      className="w-full text-left text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
                     >
-                      {c.name}
+                      No cycle
                     </button>
-                  ))}
-                </div>
-              </Dropdown>
-              <Dropdown
-                id="modules"
-                openId={openDropdown}
-                onOpen={setOpenDropdown}
-                label="Modules"
-                icon={<IconGrid />}
-                displayValue={moduleName ?? ''}
-                compact
-                panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
-              >
-                <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    value={moduleSearch}
-                    onChange={(e) => setModuleSearch(e.target.value)}
-                    className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
-                  />
-                </div>
-                <div className="overflow-auto py-0.5 [&_button]:px-2 [&_button]:py-1 [&_button]:text-xs">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setModuleId(null);
-                      setOpenDropdown(null);
-                    }}
-                    className="w-full text-left text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
-                  >
-                    No module
-                  </button>
-                  {filteredModules.map((m) => (
+                    {filteredCycles.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => {
+                          setCycleId(c.id);
+                          setOpenDropdown(null);
+                        }}
+                        className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </Dropdown>
+              ) : null}
+              {showModules ? (
+                <Dropdown
+                  id="modules"
+                  openId={openDropdown}
+                  onOpen={setOpenDropdown}
+                  allowDismissInsideDialog
+                  label="Modules"
+                  icon={<IconGrid />}
+                  displayValue={moduleName ?? ''}
+                  compact
+                  panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
+                >
+                  <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
+                    <input
+                      type="text"
+                      placeholder="Search..."
+                      value={moduleSearch}
+                      onChange={(e) => setModuleSearch(e.target.value)}
+                      className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
+                    />
+                  </div>
+                  <div className="overflow-auto py-0.5 [&_button]:px-2 [&_button]:py-1 [&_button]:text-xs">
                     <button
-                      key={m.id}
                       type="button"
                       onClick={() => {
-                        setModuleId(m.id);
+                        setModuleId(null);
                         setOpenDropdown(null);
                       }}
-                      className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                      className="w-full text-left text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
                     >
-                      {m.name}
+                      No module
                     </button>
-                  ))}
-                </div>
-              </Dropdown>
+                    {filteredModules.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          setModuleId(m.id);
+                          setOpenDropdown(null);
+                        }}
+                        className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
+                      >
+                        {m.name}
+                      </button>
+                    ))}
+                  </div>
+                </Dropdown>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setParentModalOpen(true)}

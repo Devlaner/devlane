@@ -15,6 +15,7 @@ import type { StateGroup } from '../../types/workspaceViewFilters';
 import { PRIORITY_LABELS } from '../workspace-views/WorkspaceViewsFiltersData';
 import { findWorkspaceMemberByUserId, getImageUrl } from '../../lib/utils';
 import { labelService } from '../../services/labelService';
+import { buildDraftStateOptions } from './draftStateOptions';
 
 const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low', 'none'];
 const PRIORITY_TILE: Record<Priority, string> = {
@@ -439,26 +440,7 @@ export function DraftIssueRowProperties({
   const moduleCount = issue.module_ids?.length ?? 0;
   const currentCycleId = issue.cycle_ids?.[0] ?? null;
   const cycleName = currentCycleId ? cycles.find((c) => c.id === currentCycleId)?.name : '';
-  const stateOptions = useMemo(() => {
-    const byGroup = new Map<string, StateApiResponse>();
-    for (const s of states) {
-      const g = (s.group ?? '').toLowerCase();
-      if (!g) continue;
-      if (!byGroup.has(g)) byGroup.set(g, s);
-    }
-    // Plane drafts shows these groups in this order
-    const ORDER: Array<{ group: string; label: string }> = [
-      { group: 'backlog', label: 'Backlog' },
-      { group: 'unstarted', label: 'Todo' },
-      { group: 'started', label: 'In Progress' },
-      { group: 'completed', label: 'Done' },
-      { group: 'canceled', label: 'Cancelled' },
-    ];
-    return ORDER.map(({ group, label }) => {
-      const st = byGroup.get(group);
-      return { group, label, id: st?.id ?? null };
-    });
-  }, [states]);
+  const stateOptions = useMemo(() => buildDraftStateOptions(states), [states]);
 
   const filteredStateOptions = useMemo(() => {
     const q = stateSearch.trim().toLowerCase();
@@ -514,8 +496,8 @@ export function DraftIssueRowProperties({
   const panelClass =
     'max-h-64 min-w-[180px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)';
 
-  const showModules = Boolean(project?.module_view);
-  const showCycles = Boolean(project?.cycle_view);
+  const showModules = project?.module_view ?? true;
+  const showCycles = project?.cycle_view ?? true;
 
   const moduleLabel =
     moduleCount > 1
@@ -577,8 +559,15 @@ export function DraftIssueRowProperties({
                   className={cx(
                     'flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-(--txt-primary) hover:bg-(--bg-layer-1-hover)',
                     isSelected && 'bg-(--bg-layer-1)',
+                    !opt.id && 'cursor-not-allowed opacity-40',
                   )}
+                  disabled={!opt.id}
                   onClick={() => {
+                    if (!opt.id) return;
+                    if (opt.id === issue.state_id) {
+                      setOpenDropdownId(null);
+                      return;
+                    }
                     void onPatch(issue, { state_id: opt.id });
                     setOpenDropdownId(null);
                   }}

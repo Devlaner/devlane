@@ -27,6 +27,8 @@ export interface DropdownProps {
   /** Optional accessible name for trigger button. */
   triggerAriaLabel?: string;
   disabled?: boolean;
+  /** When true, clicking elsewhere inside an open dialog still closes this dropdown. */
+  allowDismissInsideDialog?: boolean;
 }
 
 export function Dropdown({
@@ -45,6 +47,7 @@ export function Dropdown({
   triggerTitle,
   triggerAriaLabel,
   disabled = false,
+  allowDismissInsideDialog = false,
 }: DropdownProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -107,14 +110,14 @@ export function Dropdown({
       const targetEl = target as HTMLElement | null;
       // If a modal is open (e.g. date-range picker), don't close the dropdown
       // when the user clicks inside the modal (modal is portaled to `body`).
-      if (targetEl?.closest?.('[role="dialog"]')) return;
+      if (!allowDismissInsideDialog && targetEl?.closest?.('[role="dialog"]')) return;
       if (!triggerRef.current?.contains(target) && !panelRef.current?.contains(target)) {
         onOpen(null);
       }
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [open, onOpen]);
+  }, [open, onOpen, allowDismissInsideDialog]);
 
   return (
     <div className="relative shrink-0">
