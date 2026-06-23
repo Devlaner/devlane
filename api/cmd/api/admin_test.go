@@ -41,7 +41,8 @@ func TestBootstrapFirstAdmin_HealsFromAdminEmail(t *testing.T) {
 	require.NoError(t, store.NewInstanceSettingStore(ts.DB).Upsert(ctx, "general", model.JSONMap{
 		"admin_email": *u.Email,
 	}))
-	n, _ := admins.CountActive(ctx)
+	n, err := admins.CountActive(ctx)
+	require.NoError(t, err)
 	require.Equal(t, int64(0), n)
 
 	bootstrapFirstAdmin(ctx, ts.DB, slog.Default())
@@ -52,7 +53,8 @@ func TestBootstrapFirstAdmin_HealsFromAdminEmail(t *testing.T) {
 
 	// Idempotent: a second run does not add another admin.
 	bootstrapFirstAdmin(ctx, ts.DB, slog.Default())
-	n, _ = admins.CountActive(ctx)
+	n, err = admins.CountActive(ctx)
+	require.NoError(t, err)
 	assert.Equal(t, int64(1), n)
 }
 
@@ -87,6 +89,7 @@ func TestBootstrapFirstAdmin_NoopWhenAdminExists(t *testing.T) {
 	n, err := admins.CountActive(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), n)
-	ok, _ := admins.IsAdmin(ctx, other.ID)
+	ok, err := admins.IsAdmin(ctx, other.ID)
+	require.NoError(t, err)
 	assert.False(t, ok, "should not have promoted the admin_email user when an admin already exists")
 }

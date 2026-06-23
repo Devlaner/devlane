@@ -29,11 +29,21 @@ func grantInstanceAdmin(ctx context.Context, db *gorm.DB, email string) error {
 		return errors.New("email is required")
 	}
 	u, err := store.NewUserStore(db).GetByEmail(ctx, email)
-	if err != nil || u == nil {
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errNoSuchUser
+		}
+		return fmt.Errorf("lookup user by email: %w", err)
+	}
+	if u == nil {
 		return errNoSuchUser
 	}
 	admins := store.NewInstanceAdminStore(db)
-	if existing, err := admins.GetByUserID(ctx, u.ID); err == nil && existing != nil {
+	existing, err := admins.GetByUserID(ctx, u.ID)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return fmt.Errorf("lookup existing instance admin: %w", err)
+	}
+	if existing != nil {
 		return errAlreadyAdmin
 	}
 	return admins.Create(ctx, &model.InstanceAdmin{UserID: u.ID, Role: model.RoleOwner, IsVerified: true})
