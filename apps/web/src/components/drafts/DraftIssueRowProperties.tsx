@@ -584,7 +584,7 @@ export function DraftIssueRowProperties({
         )}
       </Dropdown>
 
-      {/* Priority — Plane PriorityDropdown border-without-text */}
+      {/* Priority — border-without-text variant */}
       <Dropdown
         id={`${issue.id}:priority`}
         openId={openDropdownId}
@@ -735,7 +735,7 @@ export function DraftIssueRowProperties({
         ) : null}
       </Dropdown>
 
-      {/* Start date — icon-only + hidden date input (Plane DateDropdown border-without-text) */}
+      {/* Start date — icon-only + hidden date input (border-without-text variant) */}
       <div
         className={`${propBtnSquare}${busy ? ' pointer-events-none opacity-40' : ''}`}
         title={`Start date ${issue.start_date ? issue.start_date.slice(0, 10) : 'None'}`}
@@ -837,7 +837,7 @@ export function DraftIssueRowProperties({
         })}
       </Dropdown>
 
-      {/* Modules — Plane ModuleDropdown icon */}
+      {/* Modules — icon dropdown */}
       {showModules ? (
         <Dropdown
           id={`${issue.id}:module`}
@@ -886,7 +886,7 @@ export function DraftIssueRowProperties({
         </Dropdown>
       ) : null}
 
-      {/* Cycles — Plane CycleDropdown border-with-text */}
+      {/* Cycles — border-with-text variant */}
       {showCycles ? (
         <Dropdown
           id={`${issue.id}:cycle`}
@@ -935,7 +935,7 @@ export function DraftIssueRowProperties({
         </Dropdown>
       ) : null}
 
-      {/* Quick actions — ⋯ menu (Plane: Edit, Make a copy, Move to issues, Delete) */}
+      {/* Quick actions — ⋯ menu (Edit, Make a copy, Move to issues, Delete) */}
       <div className="relative shrink-0" data-draft-actions>
         <button
           type="button"

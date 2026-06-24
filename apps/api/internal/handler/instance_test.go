@@ -129,7 +129,7 @@ func TestInstance_Settings_SecretsReturnedToAdmin(t *testing.T) {
 	}, session)
 	require.Equal(t, http.StatusOK, rr.Code, "body=%s", rr.Body.String())
 
-	// Matching Plane: the admin GET returns the decrypted secret value.
+	// The admin GET returns the decrypted secret value.
 	rr2 := ts.GET("/api/instance/settings/", session)
 	require.Equal(t, http.StatusOK, rr2.Code)
 	body := testutil.MustJSONMap(t, rr2)

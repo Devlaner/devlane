@@ -11,7 +11,7 @@ import (
 
 var ErrStateNotFound = errors.New("state not found")
 
-// DefaultProjectStateNames are seeded for new projects (Plane parity, without triage).
+// DefaultProjectStateNames are seeded for new projects (without triage).
 var DefaultProjectStateNames = []string{"Backlog", "Todo", "In Progress", "Done", "Cancelled"}
 
 // StateService handles state (workflow) business logic.
@@ -59,7 +59,7 @@ func (s *StateService) List(ctx context.Context, workspaceSlug string, projectID
 	return s.ss.ListByProjectID(ctx, projectID)
 }
 
-// defaultProjectStates mirrors Plane's DEFAULT_STATES (without triage).
+// defaultProjectStates are the default workflow states (without triage).
 var defaultProjectStates = []struct {
 	name      string
 	color     string
@@ -99,7 +99,7 @@ func (s *StateService) ensureDefaultStates(ctx context.Context, projectID, works
 	return nil
 }
 
-// EnsureDefaultStates seeds workflow states for a project that has none (Plane parity).
+// EnsureDefaultStates seeds workflow states for a project that has none.
 func (s *StateService) EnsureDefaultStates(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID) error {
 	workspaceID, err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID)
 	if err != nil {

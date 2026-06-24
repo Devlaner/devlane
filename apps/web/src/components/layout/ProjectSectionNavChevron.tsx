@@ -137,7 +137,7 @@ const SECTION_ICONS: Record<ProjectSectionNav, ReactNode> = {
 const SECTION_ORDER: ProjectSectionNav[] = ['issues', 'cycles', 'modules', 'views', 'pages'];
 
 /**
- * Breadcrumb “&gt;” control (Plane-style): opens the project area switcher
+ * Breadcrumb “&gt;” control: opens the project area switcher
  * (Work items, Cycles, Modules, …) on hover or click.
  */
 export function ProjectSectionNavChevron({

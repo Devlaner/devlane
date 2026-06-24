@@ -88,8 +88,7 @@ export function PageDetailPage() {
   const [bodyStatus, setBodyStatus] = useState<SaveStatus>({ kind: 'idle' });
 
   const [isFavorite, setIsFavorite] = useState(false);
-  // Closed by default — match Plane's page-detail header where the panel
-  // toggle reveals sub-pages / history on demand.
+  // Closed by default — the panel toggle reveals sub-pages / history on demand.
   const [sidePanel, setSidePanel] = useState<SidePanel>('closed');
   const [versions, setVersions] = useState<PageVersionApiResponse[] | null>(null);
   const [previewVersion, setPreviewVersion] = useState<PageVersionApiResponse | null>(null);
@@ -326,8 +325,8 @@ export function PageDetailPage() {
 
   // ----- Versions panel ----------------------------------------------------
   // Loaded on demand from the panel-switch handler — keeping it out of an
-  // effect avoids the react-hooks/set-state-in-effect lint rule and matches
-  // Plane's user-initiated history load.
+  // effect avoids the react-hooks/set-state-in-effect lint rule and keeps the
+  // history load user-initiated.
   const loadVersions = useCallback(async () => {
     if (!workspaceSlug || !page) return;
     try {
@@ -515,7 +514,7 @@ export function PageDetailPage() {
 
   // Page actions cluster (lock / link / favorite / more) — rendered into
   // the global PageHeader via `useSetPageDetailHeader`. The side-panel
-  // toggle lives on the toolbar (Plane parity), not here.
+  // toggle lives on the toolbar, not here.
   const headerActions = page ? (
     <>
       {isArchived ? (
@@ -668,9 +667,9 @@ export function PageDetailPage() {
     <div className="flex h-full min-h-0 w-full flex-col">
       {/* The breadcrumb + actions cluster is rendered by `PageDetailHeader`
        * (mounted via `useSetPageDetailHeader` above) into the global
-       * PageHeader bar — Plane parity: there is only one top header row. */}
+       * PageHeader bar — there is only one top header row. */}
 
-      {/* Sticky toolbar — Plane's page-toolbar; panel toggle anchors right */}
+      {/* Sticky toolbar — the page-toolbar; panel toggle anchors right */}
       {!editorReadOnly ? (
         <PageEditorToolbar editor={editor} endSlot={panelToggle} />
       ) : (

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { FILTER_ICONS } from './WorkspaceViewsFiltersData';
 
-/** Plane-style filter row: small square checkbox or round radio, optional leading icon, label. */
+/** Filter row: small square checkbox or round radio, optional leading icon, label. */
 export function FiltersPanelOptionRow({
   checked,
   onToggle,

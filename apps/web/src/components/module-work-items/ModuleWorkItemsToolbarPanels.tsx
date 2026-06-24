@@ -38,9 +38,9 @@ const DUE_PRESETS: { id: ModuleDueDatePreset; label: string }[] = [
   { id: 'custom', label: 'Custom' },
 ];
 
-const PLANE_SECTION_TITLE = 'text-[13px] font-medium text-(--txt-tertiary)';
+const SECTION_TITLE_CLASS = 'text-[13px] font-medium text-(--txt-tertiary)';
 
-const API_GROUP_TO_PLANE: Record<string, StateGroup> = {
+const API_GROUP_TO_STATE_GROUP: Record<string, StateGroup> = {
   backlog: 'backlog',
   unstarted: 'unstarted',
   started: 'started',
@@ -51,7 +51,7 @@ const API_GROUP_TO_PLANE: Record<string, StateGroup> = {
 
 function stateGroupForState(s: StateApiResponse) {
   const g = s.group?.toLowerCase();
-  const sg = g ? API_GROUP_TO_PLANE[g] : undefined;
+  const sg = g ? API_GROUP_TO_STATE_GROUP[g] : undefined;
   return sg ?? 'unstarted';
 }
 
@@ -216,7 +216,7 @@ export function ModuleWorkItemsFiltersPanel({
           title="Priority"
           open={open.priority}
           onToggle={() => toggle('priority')}
-          titleClassName={PLANE_SECTION_TITLE}
+          titleClassName={SECTION_TITLE_CLASS}
         >
           {PRIORITIES.filter((p) => filterSearch(PRIORITY_LABELS[p])).map((p) => (
             <FiltersPanelOptionRow
@@ -233,7 +233,7 @@ export function ModuleWorkItemsFiltersPanel({
           title="State"
           open={open.state}
           onToggle={() => toggle('state')}
-          titleClassName={PLANE_SECTION_TITLE}
+          titleClassName={SECTION_TITLE_CLASS}
         >
           {(() => {
             const matchingGroups = groupOrder.filter((g) => filterSearch(STATE_GROUP_LABELS[g]));
@@ -264,7 +264,7 @@ export function ModuleWorkItemsFiltersPanel({
           title="Assignee"
           open={open.assignee}
           onToggle={() => toggle('assignee')}
-          titleClassName={PLANE_SECTION_TITLE}
+          titleClassName={SECTION_TITLE_CLASS}
         >
           {(() => {
             const youMatches =
@@ -333,7 +333,7 @@ export function ModuleWorkItemsFiltersPanel({
           title="Cycle"
           open={open.cycle}
           onToggle={() => toggle('cycle')}
-          titleClassName={PLANE_SECTION_TITLE}
+          titleClassName={SECTION_TITLE_CLASS}
         >
           {filteredCycles.length === 0 ? (
             emptyFilterHint
@@ -363,7 +363,7 @@ export function ModuleWorkItemsFiltersPanel({
           title="Mention"
           open={open.mention}
           onToggle={() => toggle('mention')}
-          titleClassName={PLANE_SECTION_TITLE}
+          titleClassName={SECTION_TITLE_CLASS}
         >
           {(() => {
             const youMatches =
@@ -431,7 +431,7 @@ export function ModuleWorkItemsFiltersPanel({
           title="Created by"
           open={open.created_by}
           onToggle={() => toggle('created_by')}
-          titleClassName={PLANE_SECTION_TITLE}
+          titleClassName={SECTION_TITLE_CLASS}
         >
           {filteredMembers.length === 0 ? (
             emptyFilterHint
@@ -467,7 +467,7 @@ export function ModuleWorkItemsFiltersPanel({
           title="Label"
           open={open.label}
           onToggle={() => toggle('label')}
-          titleClassName={PLANE_SECTION_TITLE}
+          titleClassName={SECTION_TITLE_CLASS}
         >
           {filteredLabels.length === 0 ? (
             emptyFilterHint
@@ -501,7 +501,7 @@ export function ModuleWorkItemsFiltersPanel({
           title="Work item Grouping"
           open={open.work_item_grouping}
           onToggle={() => toggle('work_item_grouping')}
-          titleClassName={PLANE_SECTION_TITLE}
+          titleClassName={SECTION_TITLE_CLASS}
         >
           <FiltersPanelOptionRow
             checked={filters.workItemGrouping === 'all'}
@@ -527,7 +527,7 @@ export function ModuleWorkItemsFiltersPanel({
           title="Start date"
           open={open.start}
           onToggle={() => toggle('start')}
-          titleClassName={PLANE_SECTION_TITLE}
+          titleClassName={SECTION_TITLE_CLASS}
         >
           {DATE_PRESETS.filter((d) => filterSearch(DATE_PRESET_LABELS[d])).map((d) =>
             d === 'custom' ? (
@@ -571,7 +571,7 @@ export function ModuleWorkItemsFiltersPanel({
           title="Due date"
           open={open.due}
           onToggle={() => toggle('due')}
-          titleClassName={PLANE_SECTION_TITLE}
+          titleClassName={SECTION_TITLE_CLASS}
         >
           {DUE_PRESETS.filter((pr) => filterSearch(pr.label)).map((pr) => (
             <FiltersPanelOptionRow

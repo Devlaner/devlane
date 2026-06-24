@@ -1,4 +1,4 @@
-/** Plane light — plane/packages/editor/src/styles/variables.css [data-theme*="light"] */
+/** Light theme sticky palette. */
 export const STICKY_BACKGROUND_COLORS_LIGHT = [
   '#d6d6d8',
   '#ffd5d7',
@@ -10,7 +10,7 @@ export const STICKY_BACKGROUND_COLORS_LIGHT = [
   '#e3d8fd',
 ] as const;
 
-/** Plane dark — same file [data-theme*="dark"] */
+/** Dark theme sticky palette. */
 export const STICKY_BACKGROUND_COLORS_DARK = [
   '#404144',
   '#593032',
@@ -22,7 +22,7 @@ export const STICKY_BACKGROUND_COLORS_DARK = [
   '#3d325a',
 ] as const;
 
-/** Prior muted palette → Plane light hex (canonical slot) */
+/** Prior muted palette → light theme hex (canonical slot) */
 const LEGACY_STICKY_BACKGROUND_HEX: Record<string, string> = {
   '#cfcfd2': '#d6d6d8',
   '#f0c8ca': '#ffd5d7',

@@ -990,7 +990,7 @@ func clearSessionCookie(c *gin.Context) {
 
 var autoSlugRe = regexp.MustCompile(`[^a-z0-9-]+`)
 
-// postSignUpWorkflow mirrors Plane's post_user_auth_workflow: auto-accepts all
+// postSignUpWorkflow auto-accepts all
 // pending workspace invites for the user's email, creates a default workspace
 // when the user ends up with none and workspace creation is allowed, and marks
 // is_onboarded. All failures are logged but never block the sign-up.

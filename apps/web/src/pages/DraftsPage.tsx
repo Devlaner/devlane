@@ -25,7 +25,7 @@ import type { Priority } from '../types';
 
 const PAGE_SIZE = 50;
 
-/** Plane-style key + sequence (e.g. LOGI1). Never use placeholder em-dashes for the key. */
+/** Key + sequence (e.g. LOGI1). Never use placeholder em-dashes for the key. */
 function projectIssueKey(proj: ProjectApiResponse | undefined, issue: IssueApiResponse): string {
   const raw = proj?.identifier?.trim();
   if (raw && raw.length > 0) return raw.toUpperCase();

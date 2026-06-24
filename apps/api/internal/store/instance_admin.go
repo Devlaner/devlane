@@ -14,7 +14,7 @@ import (
 var ErrLastInstanceAdmin = errors.New("cannot remove the last instance admin")
 
 // InstanceAdminStore handles instance_admins persistence — the set of users
-// authorized to manage instance settings (mirrors Plane's InstanceAdmin).
+// authorized to manage instance settings.
 type InstanceAdminStore struct{ db *gorm.DB }
 
 func NewInstanceAdminStore(db *gorm.DB) *InstanceAdminStore {

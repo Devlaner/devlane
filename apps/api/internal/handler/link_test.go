@@ -32,24 +32,24 @@ func TestIssueLink_CRUD(t *testing.T) {
 
 	// Create
 	rr2 := ts.POST(base, map[string]any{
-		"title": "Plane repo",
-		"url":   "https://github.com/makeplane/plane",
+		"title": "Example repo",
+		"url":   "https://github.com/example/example",
 	}, w.Session)
 	require.Equal(t, http.StatusCreated, rr2.Code, "body=%s", rr2.Body.String())
 	created := testutil.MustJSONMap(t, rr2)
 	linkID, _ := created["id"].(string)
 	require.NotEmpty(t, linkID)
-	assert.Equal(t, "Plane repo", created["title"])
+	assert.Equal(t, "Example repo", created["title"])
 
 	// List (one item)
 	rr3 := ts.GET(base, w.Session)
 	require.Equal(t, http.StatusOK, rr3.Code)
-	assert.Contains(t, rr3.Body.String(), "Plane repo")
+	assert.Contains(t, rr3.Body.String(), "Example repo")
 
 	// Update
-	rr4 := ts.PATCH(base+linkID+"/", map[string]any{"title": "Plane (updated)"}, w.Session)
+	rr4 := ts.PATCH(base+linkID+"/", map[string]any{"title": "Example (updated)"}, w.Session)
 	require.Equal(t, http.StatusOK, rr4.Code, "body=%s", rr4.Body.String())
-	assert.Equal(t, "Plane (updated)", testutil.MustJSONMap(t, rr4)["title"])
+	assert.Equal(t, "Example (updated)", testutil.MustJSONMap(t, rr4)["title"])
 
 	// Delete
 	rr5 := ts.DELETE(base+linkID+"/", w.Session)
@@ -58,7 +58,7 @@ func TestIssueLink_CRUD(t *testing.T) {
 	// List (empty again)
 	rr6 := ts.GET(base, w.Session)
 	require.Equal(t, http.StatusOK, rr6.Code)
-	assert.NotContains(t, rr6.Body.String(), "Plane")
+	assert.NotContains(t, rr6.Body.String(), "Example")
 }
 
 func TestIssueLink_NonMember404(t *testing.T) {

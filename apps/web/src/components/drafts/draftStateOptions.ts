@@ -16,7 +16,7 @@ function normalizeStateGroup(group: string | undefined): string {
   return g;
 }
 
-/** Plane-style grouped state options for draft work items. */
+/** Grouped state options for draft work items. */
 export function buildDraftStateOptions(states: StateApiResponse[]): DraftStateOption[] {
   const byGroup = new Map<string, StateApiResponse>();
   for (const s of states) {

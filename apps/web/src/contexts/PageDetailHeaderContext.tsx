@@ -4,8 +4,8 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 /**
  * Lets the route-rendered `PageDetailPage` push its breadcrumb + actions
  * into the global `PageHeader` slot so the page-detail view uses the same
- * top header bar as every other route (Plane parity — there is only one
- * header row, not two stacked).
+ * top header bar as every other route — there is only one header row, not two
+ * stacked.
  *
  * The state and the writer are intentionally split into two contexts:
  *   - `StateContext` carries the current slot; only the header renderer

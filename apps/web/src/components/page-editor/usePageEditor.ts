@@ -30,10 +30,10 @@ export interface UsePageEditorOptions {
 }
 
 /**
- * Page editor singleton. Built on TipTap with the same extension surface
- * as Plane's document editor — typography, color, alignment, lists,
- * to-do lists, images, and tables — minus collaboration (we use REST autosave
- * instead of Yjs so the data layer stays simple).
+ * Page editor singleton. Built on TipTap with a rich extension surface —
+ * typography, color, alignment, lists, to-do lists, images, and tables — minus
+ * collaboration (we use REST autosave instead of Yjs so the data layer stays
+ * simple).
  *
  * The hook only constructs the editor; rendering is split into separate
  * `<PageEditorToolbar editor>` and `<PageEditorContent editor>` components so

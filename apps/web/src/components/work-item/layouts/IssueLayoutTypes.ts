@@ -7,7 +7,7 @@ import type {
   WorkspaceMemberApiResponse,
 } from '../../../api/types';
 
-/** Available layout keys. Mirrors Plane's EIssueLayoutTypes. */
+/** Available layout keys. */
 export const ISSUE_LAYOUTS = ['list', 'board', 'spreadsheet', 'calendar', 'gantt'] as const;
 export type IssueLayout = (typeof ISSUE_LAYOUTS)[number];
 

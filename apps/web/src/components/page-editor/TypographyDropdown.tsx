@@ -36,8 +36,8 @@ interface Props {
 }
 
 /**
- * "Text / Heading 1 / …" typography menu, equivalent to Plane's TYPOGRAPHY_ITEMS
- * dropdown. Clicking a heading sets the block; clicking "Text" reverts to a paragraph.
+ * "Text / Heading 1 / …" typography menu. Clicking a heading sets the block;
+ * clicking "Text" reverts to a paragraph.
  */
 export function TypographyDropdown({ editor, stateTick }: Props) {
   const [open, setOpen] = useState(false);

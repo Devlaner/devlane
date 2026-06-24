@@ -107,7 +107,7 @@ func (h *InstanceHandler) InstanceSetup(c *gin.Context) {
 		return
 	}
 
-	// Register the first user as an instance admin (mirrors Plane's setup flow).
+	// Register the first user as an instance admin.
 	if h.Admins != nil {
 		_ = h.Admins.Create(c.Request.Context(), &model.InstanceAdmin{
 			UserID:     user.ID,
@@ -145,8 +145,8 @@ func generateInstanceID() string {
 }
 
 // isInstanceAdmin reports whether the authenticated user is an instance admin,
-// looked up in the instance_admins table by user id + role (mirrors Plane's
-// InstanceAdminPermission). Fails closed on any error.
+// looked up in the instance_admins table by user id + role. Fails closed on any
+// error.
 func (h *InstanceSettingsHandler) isInstanceAdmin(c *gin.Context) bool {
 	user := middleware.GetUser(c)
 	if user == nil || h.Admins == nil {
@@ -252,8 +252,8 @@ func (h *InstanceSettingsHandler) RemoveAdmin(c *gin.Context) {
 }
 
 // GetSettings returns all instance settings sections with secrets decrypted for
-// the admin UI (mirrors Plane). Admin access is required — the gate is the
-// protection, not masking.
+// the admin UI. Admin access is required — the gate is the protection, not
+// masking.
 // GET /api/instance/settings/
 func (h *InstanceSettingsHandler) GetSettings(c *gin.Context) {
 	if !h.requireInstanceAdmin(c) {
@@ -527,7 +527,7 @@ func (h *InstanceSettingsHandler) UpdateSetting(c *gin.Context) {
 	if h.OnSectionUpdated != nil {
 		h.OnSectionUpdated(c.Request.Context(), key)
 	}
-	// Return decrypted secrets so the admin UI reflects the saved value (Plane parity).
+	// Return decrypted secrets so the admin UI reflects the saved value.
 	responseValue := decryptSectionSecretsInternal(key, value)
 	c.JSON(http.StatusOK, gin.H{"key": key, "value": responseValue})
 }

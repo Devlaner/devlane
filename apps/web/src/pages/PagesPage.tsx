@@ -292,11 +292,11 @@ export function PagesPage() {
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
-      {/* Secondary header — Plane's pages-list-header.
+      {/* Secondary header — the pages-list header.
        * Sits flush under the project sub-header so the sub-header's
        * bottom border doubles as this row's top border (a single 1px line).
        * Each tab is a full-height column so its accent underline aligns with
-       * (and overrides) this row's `border-b`, matching Plane exactly. */}
+       * (and overrides) this row's `border-b`. */}
       <div className="flex shrink-0 items-stretch justify-between border-b border-(--border-subtle) bg-(--bg-canvas) px-(--padding-page)">
         <nav className="flex items-stretch" aria-label="Page visibility">
           {TABS.map((t) => {
@@ -329,7 +329,7 @@ export function PagesPage() {
           })}
         </nav>
         <div className="flex items-center gap-2 py-2">
-          {/* Search — collapses to an icon when empty (matches Plane). */}
+          {/* Search — collapses to an icon when empty. */}
           <div className="flex items-center">
             {searchOpen || search ? (
               <div className="flex h-8 w-64 items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-canvas) px-2.5">
@@ -496,8 +496,8 @@ export function PagesPage() {
       {/* Page list — edge-to-edge rows with `border-b` per row.
        * The tabs row above already paints a single bottom-border, so the
        * first row sits flush against it (no `border-t` on row 0). Each row
-       * carries its own `border-b` so the rhythm matches Plane: one 1px
-       * line separates every horizontal section. */}
+       * carries its own `border-b` so one 1px line separates every horizontal
+       * section. */}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {visible.length === 0 ? (
           <div className="grid place-items-center py-16 text-center">
