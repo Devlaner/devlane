@@ -210,14 +210,14 @@ interface Props {
   /**
    * Optional content rendered at the far right of the toolbar row (e.g. a
    * side-panel toggle). It is anchored to the right while the toolbar items
-   * stay centered. Plane's page-editor lays out the panel toggle this way.
+   * stay centered.
    */
   endSlot?: ReactNode;
 }
 
 /**
- * Plane-style page toolbar. Mounts above the page content and stays in sync
- * with the editor's selection so active marks/blocks render highlighted.
+ * Page toolbar. Mounts above the page content and stays in sync with the
+ * editor's selection so active marks/blocks render highlighted.
  */
 export function PageEditorToolbar({ editor, className, endSlot }: Props) {
   // Subscribe to selection / transaction events so each button can re-render its
@@ -242,7 +242,7 @@ export function PageEditorToolbar({ editor, className, endSlot }: Props) {
     <div
       // Full-width row so the bottom border spans the page; an inner three-
       // column layout keeps the toolbar items centered while reserving room
-      // for an optional `endSlot` (the side-panel toggle in Plane's design).
+      // for an optional `endSlot` (the side-panel toggle).
       // overflow stays visible (no overflow-x-auto) so dropdown panels aren't
       // clipped by the toolbar's stacking context.
       className={cn(

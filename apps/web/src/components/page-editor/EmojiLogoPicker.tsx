@@ -38,7 +38,7 @@ const PRESET_EMOJIS = [
 ];
 
 export interface PageLogo {
-  /** "emoji" is the only supported kind today; matches Plane's logo_props.in_use field. */
+  /** "emoji" is the only supported kind today; maps to the logo_props.in_use field. */
   in_use?: 'emoji' | null;
   emoji?: { value?: string };
   // Allow forward-compatible properties without breaking type-compat with the
@@ -60,12 +60,12 @@ interface Props {
 }
 
 /**
- * Emoji-based page logo picker, modelled after Plane's `Logo` button. Shows
- * the current emoji (or the page-icon fallback), opens a popover with a
- * curated emoji palette, and lets owners clear the logo from the same panel.
+ * Emoji-based page logo picker. Shows the current emoji (or the page-icon
+ * fallback), opens a popover with a curated emoji palette, and lets owners
+ * clear the logo from the same panel.
  *
  * We deliberately avoid bringing in a full emoji library — the curated set
- * covers >95% of the page-categorisation use case Plane optimises for.
+ * covers >95% of the page-categorisation use case.
  */
 export function EmojiLogoPicker({ value, disabled, onChange, size = 32, className }: Props) {
   const [open, setOpen] = useState(false);

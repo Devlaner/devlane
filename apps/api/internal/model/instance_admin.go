@@ -8,9 +8,9 @@ import (
 )
 
 // InstanceAdmin matches the instance_admins table — the set of users authorized
-// to manage instance-level settings (mirrors Plane's InstanceAdmin). Devlane is
-// single-instance, so the row keys on user_id only (no instance FK). Role uses
-// the shared Role* levels; the gate allows role >= RoleAdmin.
+// to manage instance-level settings. Devlane is single-instance, so the row keys
+// on user_id only (no instance FK). Role uses the shared Role* levels; the gate
+// allows role >= RoleAdmin.
 type InstanceAdmin struct {
 	ID         uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	UserID     uuid.UUID      `gorm:"type:uuid;not null" json:"user_id"`

@@ -3532,9 +3532,9 @@ function ProjectSavedViewDetailHeader({
 // ---------------------------------------------------------------------------
 
 /**
- * Header rendered for `/:slug/projects/:projectId/pages/:pageId`. Mirrors
- * Plane's page-detail header — a single top row that contains the project
- * breadcrumb on the left and the per-page action cluster on the right
+ * Header rendered for `/:slug/projects/:projectId/pages/:pageId`. A single top
+ * row that contains the project breadcrumb on the left and the per-page action
+ * cluster on the right
  * (lock / link / star / more / panel-toggle). The actions slot is filled by
  * `PageDetailPage` via `useSetPageDetailHeader` so this component stays
  * stateless about the page itself.

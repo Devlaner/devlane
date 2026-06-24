@@ -13,8 +13,8 @@ export function AppShell() {
   const isModulesRoute = pathname.includes('/modules');
   const isDraftsRoute = pathname.includes('/drafts');
   // Pages list and detail pages render their own padding/chrome so the tabs
-  // row sits flush against the PageHeader (Plane parity — header bottom-border
-  // doubles as the tabs-row top-border).
+  // row sits flush against the PageHeader — the header bottom-border doubles as
+  // the tabs-row top-border.
   const isPagesRoute = pathname.includes('/pages');
 
   return (

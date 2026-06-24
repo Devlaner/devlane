@@ -4,8 +4,8 @@ import type { Editor } from '@tiptap/react';
 import { cn } from '../../lib/utils';
 
 /**
- * Curated palette mirroring Plane's COLORS_LIST — soft enough for body text
- * and pastel-ish for highlights so dark and light themes look coherent.
+ * Curated color palette — soft enough for body text and pastel-ish for
+ * highlights so dark and light themes look coherent.
  */
 const COLORS = [
   { key: 'gray', text: '#6b7280', bg: '#f3f4f6' },
@@ -25,9 +25,8 @@ interface Props {
 }
 
 /**
- * Text color + background highlight picker. Matches Plane's color dropdown:
- * row of swatches for foreground, row of swatches for background, plus a
- * "clear" affordance for each.
+ * Text color + background highlight picker: a row of swatches for foreground,
+ * a row of swatches for background, plus a "clear" affordance for each.
  */
 export function ColorDropdown({ editor, stateTick }: Props) {
   const [open, setOpen] = useState(false);

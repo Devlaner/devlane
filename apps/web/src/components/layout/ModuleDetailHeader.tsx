@@ -67,7 +67,7 @@ const IconChevronUp = () => (
   </svg>
 );
 
-/** 2×2 grid — matches “Modules” in Plane-style breadcrumbs */
+/** 2×2 grid — the “Modules” breadcrumb icon */
 const IconLayoutGrid = () => (
   <svg
     width="16"

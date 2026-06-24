@@ -83,7 +83,7 @@
   border-right: 1px solid color-mix(in srgb, var(--border-subtle) 45%, transparent);
 }
 
-/* Sticky checklist: checked items get placeholder-colored text (matches Plane) */
+/* Sticky checklist: checked items get placeholder-colored text */
 .sticky-note-editor-content ul[data-type='taskList'] li[data-checked='true'] > div {
   color: var(--txt-placeholder);
 }
@@ -94,7 +94,7 @@
 }
 
 /* ----- Page editor (TipTap) -------------------------------------------------
- * Mirrors Plane's document editor: roomy heading hierarchy, soft code blocks,
+ * Document editor styling: roomy heading hierarchy, soft code blocks,
  * checkbox-styled to-do lists, full-width tables with thin borders.
  *
  * Scoped under `.page-editor-prose` so we don't fight Tailwind's `prose` defaults

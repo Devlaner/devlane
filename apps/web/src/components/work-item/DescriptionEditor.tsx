@@ -31,8 +31,8 @@ export interface DescriptionEditorProps {
  * Rich-text editor for the issue description. Auto-saves on debounced change
  * so users don't need to remember to hit a Save button.
  *
- * Pattern matches Plane's `DescriptionInput` (TipTap + 1.5s debounce + status
- * indicator). The toolbar is a simplified version of CommentEditor's.
+ * Built on TipTap with a 1.5s debounce and a status indicator. The toolbar is
+ * a simplified version of CommentEditor's.
  */
 export function DescriptionEditor({
   initialHtml,

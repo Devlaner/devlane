@@ -1,7 +1,7 @@
--- The instance_admins table already exists from 000001 (copied from Plane's
--- schema) with a NOT NULL instance_id FK to `instances`. Devlane is
--- single-instance and tracks instance info in instance_settings, so it never
--- populates `instances`. Adapt the existing table to key admins on user_id:
+-- The instance_admins table already exists from 000001 with a NOT NULL
+-- instance_id FK to `instances`. Devlane is single-instance and tracks instance
+-- info in instance_settings, so it never populates `instances`. Adapt the
+-- existing table to key admins on user_id:
 --   1. allow a NULL instance_id (no instances row required),
 --   2. add a soft-delete column,
 --   3. add a partial unique index so one user maps to one active admin row.

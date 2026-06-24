@@ -28,8 +28,8 @@ interface IssueActivityFeedProps {
 
 /**
  * Renders one row per IssueActivity. Each row is "icon + actor avatar + sentence + relative time".
- * Mirrors Plane's per-field activity component dispatch but kept in a single
- * function for compactness — extend the switch below to add new field types.
+ * Dispatches per-field activity rendering in a single function for compactness
+ * — extend the switch below to add new field types.
  */
 export function IssueActivityFeed({ activities, members, states, labels }: IssueActivityFeedProps) {
   const stateById = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);

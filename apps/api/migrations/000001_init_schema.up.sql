@@ -555,7 +555,7 @@ CREATE TABLE instances (
     current_version VARCHAR(255) NOT NULL,
     latest_version VARCHAR(255),
     edition VARCHAR(255) NOT NULL DEFAULT 'COMMUNITY',
-    product VARCHAR(50) NOT NULL DEFAULT 'plane-ce',
+    product VARCHAR(50) NOT NULL DEFAULT 'devlane-ce',
     domain TEXT DEFAULT '',
     last_checked_at TIMESTAMPTZ NOT NULL,
     namespace VARCHAR(255),

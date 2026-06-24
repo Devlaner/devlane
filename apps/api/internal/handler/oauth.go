@@ -166,9 +166,8 @@ func (h *OAuthHandler) Callback(c *gin.Context) {
 		return
 	}
 
-	// Enforce allow_public_signup for new users — matches Plane's
-	// Adapter.__check_signup: if signup is disabled, only users with a
-	// pending workspace invite may register.
+	// Enforce allow_public_signup for new users: if signup is disabled, only
+	// users with a pending workspace invite may register.
 	if !h.Auth.EmailExists(ctx, userInfo.Email) {
 		var allowPublicSignup = true
 		if h.Settings != nil {

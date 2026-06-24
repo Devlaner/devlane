@@ -434,7 +434,7 @@ func New(cfg Config) *gin.Engine {
 		api.PATCH("/workspaces/:slug/projects/:projectId/integrations/github/sync/", integrationHandler.GitHubUpdateSync)
 		api.DELETE("/workspaces/:slug/projects/:projectId/integrations/github/sync/", integrationHandler.GitHubDeleteSync)
 
-		// File attachments (v2 assets API — matches Plane frontend service URLs).
+		// File attachments (v2 assets API).
 		api.GET("/assets/v2/workspaces/:slug/projects/:projectId/issues/:issueId/attachments/", attachmentHandler.ListAttachments)
 		api.POST("/assets/v2/workspaces/:slug/projects/:projectId/issues/:issueId/attachments/", attachmentHandler.InitiateUpload)
 		api.PATCH("/assets/v2/workspaces/:slug/projects/:projectId/issues/:issueId/attachments/:assetId/", attachmentHandler.ConfirmUpload)

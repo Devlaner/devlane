@@ -1,8 +1,8 @@
 -- GitHub App + integrations enhancements.
 --
 -- The integration tables already exist (see 000001), but they were modeled on
--- Plane's user-OAuth-token approach. For Devlane we use a GitHub App, which
--- has installation IDs (no Plane API token to associate). This migration:
+-- a user-OAuth-token approach. Devlane uses a GitHub App instead, which has
+-- installation IDs (no per-user API token to associate). This migration:
 --   1. Relaxes the NOT NULL on workspace_integrations.api_token_id.
 --   2. Adds GitHub App columns (installation_id, account_login, ...).
 --   3. Extends github_issue_syncs to support pull-request sync (state, draft,

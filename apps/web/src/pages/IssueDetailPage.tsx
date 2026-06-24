@@ -47,8 +47,8 @@ import type { Priority } from '../types';
 /**
  * Shared trigger style for the Properties sidebar dropdowns. Borderless +
  * background-on-hover so each row reads like a "value" rather than a button —
- * matches Plane's transparent-with-text variant. Content-width so the row's
- * `justify-end` can right-align it.
+ * the transparent-with-text variant. Content-width so the row's `justify-end`
+ * can right-align it.
  */
 const GHOST_TRIGGER =
   'inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-(--radius-md) px-2 py-1.5 text-xs text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)';
