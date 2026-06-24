@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Dropdown, DatePickerTrigger, CommentEditor } from '../components/work-item';
 import { sanitizeHtml, safeUrl } from '../lib/sanitize';
 import { DescriptionEditor } from '../components/work-item/DescriptionEditor';
+import { IssueReactions } from '../components/work-item/IssueReactions';
 import { IssueActivityFeed } from '../components/work-item/IssueActivityFeed';
 import { CommentReactions } from '../components/work-item/CommentReactions';
 import { workspaceService } from '../services/workspaceService';
@@ -636,6 +637,16 @@ export function IssueDetailPage() {
                 placeholder="Add a description… (type / for commands)"
                 mentionMembers={mentionMembers}
               />
+              {workspaceSlug && projectId && issueId && (
+                <div className="mt-3">
+                  <IssueReactions
+                    workspaceSlug={workspaceSlug}
+                    projectId={projectId}
+                    issueId={issueId}
+                    currentUserId={currentUser?.id}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
 

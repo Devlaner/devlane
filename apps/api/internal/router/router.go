@@ -146,6 +146,8 @@ func New(cfg Config) *gin.Engine {
 	notificationSvc.SetPreferenceStore(userNotifPrefStore)
 	issueSvc.SetNotificationService(notificationSvc)
 	issueSvc.SetSubscriberStore(issueSubscriberStore)
+	issueReactionStore := store.NewIssueReactionStore(cfg.DB)
+	issueSvc.SetReactionStore(issueReactionStore)
 	commentReactionStore := store.NewCommentReactionStore(cfg.DB)
 	commentSvc := service.NewCommentService(commentStore, issueStore, projectStore, workspaceStore)
 	commentSvc.SetReactionStore(commentReactionStore)
@@ -321,6 +323,9 @@ func New(cfg Config) *gin.Engine {
 		api.GET("/workspaces/:slug/projects/:projectId/issues/:pk/subscribe/", issueHandler.IsSubscribed)
 		api.POST("/workspaces/:slug/projects/:projectId/issues/:pk/subscribe/", issueHandler.Subscribe)
 		api.DELETE("/workspaces/:slug/projects/:projectId/issues/:pk/subscribe/", issueHandler.Unsubscribe)
+		api.GET("/workspaces/:slug/projects/:projectId/issues/:pk/reactions/", issueHandler.ListReactions)
+		api.POST("/workspaces/:slug/projects/:projectId/issues/:pk/reactions/", issueHandler.AddReaction)
+		api.DELETE("/workspaces/:slug/projects/:projectId/issues/:pk/reactions/:reaction/", issueHandler.RemoveReaction)
 
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/", cycleHandler.List)
 		api.POST("/workspaces/:slug/projects/:projectId/cycles/", cycleHandler.Create)

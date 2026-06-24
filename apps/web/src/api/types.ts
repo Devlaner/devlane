@@ -817,6 +817,15 @@ export interface CommentReactionApiResponse {
   created_at: string;
 }
 
+/** One emoji reaction on a work item. */
+export interface IssueReactionApiResponse {
+  id: string;
+  issue_id: string;
+  reaction: string;
+  actor_id: string;
+  created_at: string;
+}
+
 /** Quick link (workspace user link) as returned by the API */
 export interface QuickLinkApiResponse {
   id: string;

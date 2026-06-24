@@ -18,12 +18,13 @@ var (
 
 // IssueService handles issue business logic.
 type IssueService struct {
-	is       *store.IssueStore
-	ps       *store.ProjectStore
-	ws       *store.WorkspaceStore
-	activity *store.IssueActivityStore   // optional — may be nil
-	notify   *NotificationService        // optional — may be nil
-	subs     *store.IssueSubscriberStore // optional — auto-subscribe assignees/mentions
+	is        *store.IssueStore
+	ps        *store.ProjectStore
+	ws        *store.WorkspaceStore
+	activity  *store.IssueActivityStore   // optional — may be nil
+	notify    *NotificationService        // optional — may be nil
+	subs      *store.IssueSubscriberStore // optional — auto-subscribe assignees/mentions
+	reactions *store.IssueReactionStore   // optional — per-issue emoji reactions
 }
 
 func NewIssueService(is *store.IssueStore, ps *store.ProjectStore, ws *store.WorkspaceStore) *IssueService {
@@ -41,6 +42,9 @@ func (s *IssueService) SetNotificationService(n *NotificationService) { s.notify
 // SetSubscriberStore injects the issue-subscriber store so assignees and mention
 // targets are auto-subscribed when they're added to an issue. Optional.
 func (s *IssueService) SetSubscriberStore(subs *store.IssueSubscriberStore) { s.subs = subs }
+
+// SetReactionStore wires per-issue emoji reactions support. Optional.
+func (s *IssueService) SetReactionStore(r *store.IssueReactionStore) { s.reactions = r }
 
 // autoSubscribe is a fire-and-forget helper used by the assignee and mention
 // hooks. Errors are logged-and-ignored — the user's primary action must not
@@ -118,6 +122,64 @@ func (s *IssueService) ensureWorkspaceAccess(ctx context.Context, workspaceSlug 
 		return nil, ErrWorkspaceForbidden
 	}
 	return wrk, nil
+}
+
+// issueForReaction auth-checks the caller and returns the issue, ensuring it
+// belongs to the project in the URL.
+func (s *IssueService) issueForReaction(ctx context.Context, workspaceSlug string, projectID, issueID, userID uuid.UUID) (*model.Issue, error) {
+	if err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
+		return nil, err
+	}
+	issue, err := s.is.GetByID(ctx, issueID)
+	if err != nil || issue.ProjectID != projectID {
+		return nil, ErrIssueNotFound
+	}
+	return issue, nil
+}
+
+// ListReactions returns all emoji reactions on an issue after auth-checking.
+func (s *IssueService) ListReactions(ctx context.Context, workspaceSlug string, projectID, issueID, userID uuid.UUID) ([]model.IssueReaction, error) {
+	if s.reactions == nil {
+		return []model.IssueReaction{}, nil
+	}
+	if _, err := s.issueForReaction(ctx, workspaceSlug, projectID, issueID, userID); err != nil {
+		return nil, err
+	}
+	return s.reactions.ListByIssueID(ctx, issueID)
+}
+
+// AddReaction adds a user's emoji reaction to an issue. Duplicates are rejected
+// by the DB unique constraint.
+func (s *IssueService) AddReaction(ctx context.Context, workspaceSlug string, projectID, issueID, userID uuid.UUID, emoji string) (*model.IssueReaction, error) {
+	if s.reactions == nil {
+		return nil, errors.New("reactions store is not configured")
+	}
+	issue, err := s.issueForReaction(ctx, workspaceSlug, projectID, issueID, userID)
+	if err != nil {
+		return nil, err
+	}
+	r := &model.IssueReaction{
+		IssueID:     issue.ID,
+		Reaction:    emoji,
+		ActorID:     userID,
+		ProjectID:   issue.ProjectID,
+		WorkspaceID: issue.WorkspaceID,
+	}
+	if err := s.reactions.Add(ctx, r); err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+// RemoveReaction deletes a user's emoji reaction from an issue.
+func (s *IssueService) RemoveReaction(ctx context.Context, workspaceSlug string, projectID, issueID, userID uuid.UUID, emoji string) error {
+	if s.reactions == nil {
+		return errors.New("reactions store is not configured")
+	}
+	if _, err := s.issueForReaction(ctx, workspaceSlug, projectID, issueID, userID); err != nil {
+		return err
+	}
+	return s.reactions.Remove(ctx, issueID, userID, emoji)
 }
 
 // ListDraftsForWorkspace returns draft issues for all projects in the workspace the user can access.

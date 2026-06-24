@@ -6,6 +6,7 @@ import type {
   IssueLinkApiResponse,
   IssueRelationApiResponse,
   IssueRelationType,
+  IssueReactionApiResponse,
   CreateIssueRequest,
 } from '../api/types';
 
@@ -256,6 +257,41 @@ export const issueService = {
   ): Promise<void> {
     await apiClient.delete(
       `/api/assets/v2/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/attachments/${encodeURIComponent(assetId)}/`,
+    );
+  },
+
+  async listReactions(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+  ): Promise<IssueReactionApiResponse[]> {
+    const { data } = await apiClient.get<IssueReactionApiResponse[]>(
+      `${base(workspaceSlug, projectId, issueId)}/reactions/`,
+    );
+    return data;
+  },
+
+  async addReaction(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    reaction: string,
+  ): Promise<IssueReactionApiResponse> {
+    const { data } = await apiClient.post<IssueReactionApiResponse>(
+      `${base(workspaceSlug, projectId, issueId)}/reactions/`,
+      { reaction },
+    );
+    return data;
+  },
+
+  async removeReaction(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    reaction: string,
+  ): Promise<void> {
+    await apiClient.delete(
+      `${base(workspaceSlug, projectId, issueId)}/reactions/${encodeURIComponent(reaction)}/`,
     );
   },
 };
