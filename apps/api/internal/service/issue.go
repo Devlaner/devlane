@@ -17,7 +17,16 @@ var (
 	// ErrReactionExists is returned when a user adds an emoji they have already
 	// reacted with (the issue_reactions unique constraint).
 	ErrReactionExists = errors.New("reaction already exists")
+	// ErrInvalidPriority / ErrInvalidState are returned by bulk update when the
+	// requested value is not an accepted priority or a state of the project.
+	ErrInvalidPriority = errors.New("invalid priority")
+	ErrInvalidState    = errors.New("invalid state for project")
 )
+
+// validPriorities is the accepted set of work-item priority values.
+var validPriorities = map[string]bool{
+	"urgent": true, "high": true, "medium": true, "low": true, "none": true,
+}
 
 // IssueService handles issue business logic.
 type IssueService struct {
@@ -28,6 +37,7 @@ type IssueService struct {
 	notify    *NotificationService        // optional — may be nil
 	subs      *store.IssueSubscriberStore // optional — auto-subscribe assignees/mentions
 	reactions *store.IssueReactionStore   // optional — per-issue emoji reactions
+	states    *store.StateStore           // optional — validates state ownership on bulk update
 }
 
 func NewIssueService(is *store.IssueStore, ps *store.ProjectStore, ws *store.WorkspaceStore) *IssueService {
@@ -48,6 +58,9 @@ func (s *IssueService) SetSubscriberStore(subs *store.IssueSubscriberStore) { s.
 
 // SetReactionStore wires per-issue emoji reactions support. Optional.
 func (s *IssueService) SetReactionStore(r *store.IssueReactionStore) { s.reactions = r }
+
+// SetStateStore wires state-ownership validation for bulk updates. Optional.
+func (s *IssueService) SetStateStore(st *store.StateStore) { s.states = st }
 
 // autoSubscribe is a fire-and-forget helper used by the assignee and mention
 // hooks. Errors are logged-and-ignored — the user's primary action must not
@@ -213,24 +226,38 @@ func (s *IssueService) ListArchived(ctx context.Context, workspaceSlug string, p
 	return s.is.ListArchivedByProjectID(ctx, projectID, limit, offset)
 }
 
-// BulkUpdate applies priority/state changes to many issues in a project at
-// once. Returns the number of rows affected.
+// BulkUpdate applies priority/state changes to many issues in a project. It
+// validates the inputs, then routes each issue through the single-issue Update
+// so activity logging and notifications fire exactly as they do individually.
+// Returns the number of issues updated.
 func (s *IssueService) BulkUpdate(ctx context.Context, workspaceSlug string, projectID, userID uuid.UUID, issueIDs []uuid.UUID, priority *string, stateID *uuid.UUID) (int, error) {
 	if err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
 		return 0, err
 	}
-	updates := map[string]any{}
-	if priority != nil {
-		updates["priority"] = *priority
+	if priority != nil && !validPriorities[*priority] {
+		return 0, ErrInvalidPriority
 	}
 	if stateID != nil {
-		updates["state_id"] = *stateID
+		if s.states == nil {
+			return 0, ErrInvalidState
+		}
+		st, err := s.states.GetByID(ctx, *stateID)
+		if err != nil || st.ProjectID != projectID {
+			return 0, ErrInvalidState
+		}
 	}
-	n, err := s.is.BulkUpdateFields(ctx, projectID, issueIDs, updates)
-	return int(n), err
+	n := 0
+	for _, id := range issueIDs {
+		if _, err := s.Update(ctx, workspaceSlug, projectID, id, userID, nil, priority, nil, stateID, nil, nil, nil, nil, nil, nil, nil); err == nil {
+			n++
+		}
+	}
+	return n, nil
 }
 
-// BulkArchive archives or restores many issues in a project at once.
+// BulkArchive archives or restores many issues in a project at once. Archiving
+// has no per-issue side effects beyond setting archived_at, so it runs as a
+// single scoped statement.
 func (s *IssueService) BulkArchive(ctx context.Context, workspaceSlug string, projectID, userID uuid.UUID, issueIDs []uuid.UUID, archived bool) (int, error) {
 	if err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
 		return 0, err
@@ -239,13 +266,19 @@ func (s *IssueService) BulkArchive(ctx context.Context, workspaceSlug string, pr
 	return int(n), err
 }
 
-// BulkDelete soft-deletes many issues in a project at once.
+// BulkDelete soft-deletes many issues, routing each through the single-issue
+// Delete so deletion notifications fire as they do individually.
 func (s *IssueService) BulkDelete(ctx context.Context, workspaceSlug string, projectID, userID uuid.UUID, issueIDs []uuid.UUID) (int, error) {
 	if err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
 		return 0, err
 	}
-	n, err := s.is.BulkSoftDelete(ctx, projectID, issueIDs)
-	return int(n), err
+	n := 0
+	for _, id := range issueIDs {
+		if err := s.Delete(ctx, workspaceSlug, projectID, id, userID); err == nil {
+			n++
+		}
+	}
+	return n, nil
 }
 
 // ListDraftsForWorkspace returns draft issues for all projects in the workspace the user can access.

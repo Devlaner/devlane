@@ -44,3 +44,16 @@ func TestIssue_BulkActions(t *testing.T) {
 	gone := ts.GET(base+i3.ID.String()+"/", w.Session)
 	require.Equal(t, http.StatusNotFound, gone.Code, "body=%s", gone.Body.String())
 }
+
+func TestIssue_BulkUpdate_RejectsInvalidPriority(t *testing.T) {
+	ts := testutil.NewTestServer(t)
+	w := testutil.SeedWorld(t, ts.DB)
+	i1 := testutil.CreateIssue(t, ts.DB, w.Project.ID, w.Workspace.ID, w.User.ID)
+	bulk := "/api/workspaces/" + w.Workspace.Slug + "/projects/" + w.Project.ID.String() + "/issues-bulk/"
+
+	rr := ts.POST(bulk+"update/", map[string]any{
+		"issue_ids": []string{i1.ID.String()},
+		"priority":  "bogus",
+	}, w.Session)
+	require.Equal(t, http.StatusBadRequest, rr.Code, "body=%s", rr.Body.String())
+}

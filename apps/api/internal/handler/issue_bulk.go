@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/Devlaner/devlane/api/internal/middleware"
+	"github.com/Devlaner/devlane/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -54,6 +56,10 @@ func (h *IssueHandler) BulkUpdate(c *gin.Context) {
 		return
 	}
 	n, err := h.Issue.BulkUpdate(c.Request.Context(), slug, projectID, userID, body.IssueIDs, body.Priority, body.StateID)
+	if errors.Is(err, service.ErrInvalidPriority) || errors.Is(err, service.ErrInvalidState) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid priority or state for this project"})
+		return
+	}
 	bulkRespond(c, n, err, "Failed to update work items")
 }
 

@@ -164,17 +164,6 @@ func (s *IssueStore) BulkSetArchived(ctx context.Context, projectID uuid.UUID, i
 	return s.BulkUpdateFields(ctx, projectID, ids, updates)
 }
 
-// BulkSoftDelete soft-deletes many issues scoped to a project.
-func (s *IssueStore) BulkSoftDelete(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) (int64, error) {
-	if len(ids) == 0 {
-		return 0, nil
-	}
-	res := s.db.WithContext(ctx).
-		Where("project_id = ? AND id IN ? AND deleted_at IS NULL", projectID, ids).
-		Delete(&model.Issue{})
-	return res.RowsAffected, res.Error
-}
-
 func (s *IssueStore) AddAssignee(ctx context.Context, a *model.IssueAssignee) error {
 	return s.db.WithContext(ctx).Create(a).Error
 }

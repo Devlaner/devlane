@@ -120,6 +120,7 @@ export function IssueListPage() {
 
   // Multi-select for bulk actions (list layout).
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkError, setBulkError] = useState<string | null>(null);
   const toggleSelect = (id: string) =>
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -127,16 +128,22 @@ export function IssueListPage() {
       else next.add(id);
       return next;
     });
-  const clearSelection = () => setSelectedIds(new Set());
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setBulkError(null);
+  };
 
   const runBulk = async (fn: (slug: string, pid: string, ids: string[]) => Promise<void>) => {
-    if (!workspaceSlug || !projectId || selectedIds.size === 0) return;
+    if (!workspaceSlug || !projectId || visibleSelectedIds.size === 0) return;
+    setBulkError(null);
     try {
-      await fn(workspaceSlug, projectId, [...selectedIds]);
+      await fn(workspaceSlug, projectId, [...visibleSelectedIds]);
+      // Only clear the selection once the action actually succeeded.
       clearSelection();
       refetchIssues();
     } catch {
-      // best-effort; a transient failure shouldn't wedge the toolbar
+      setBulkError('Bulk action failed. Nothing was changed — try again.');
+      refetchIssues();
     }
   };
 
@@ -386,6 +393,13 @@ export function IssueListPage() {
     return list;
   }, [issues, states, listFilters]);
 
+  // Effective selection = selected ids still visible under the current filters.
+  // Deriving this (instead of syncing state in an effect) keeps bulk actions
+  // scoped to currently-shown items without stale-state churn. Plain consts —
+  // the React Compiler handles memoization.
+  const visibleIssueIds = new Set(filteredIssues.map((i) => i.id));
+  const visibleSelectedIds = new Set([...selectedIds].filter((id) => visibleIssueIds.has(id)));
+
   const subWorkCountByParentId = useMemo(() => {
     const m = new Map<string, number>();
     for (const i of issues) {
@@ -574,10 +588,10 @@ export function IssueListPage() {
         </div>
       ) : (
         <>
-          {layout === 'list' && selectedIds.size > 0 && (
+          {layout === 'list' && visibleSelectedIds.size > 0 && (
             <div className="flex flex-wrap items-center gap-2 border-b border-(--border-subtle) bg-(--bg-surface-1) px-4 py-2 text-sm">
               <span className="font-medium text-(--txt-secondary)">
-                {selectedIds.size} selected
+                {visibleSelectedIds.size} selected
               </span>
               <select
                 aria-label="Set priority for selected"
@@ -630,7 +644,7 @@ export function IssueListPage() {
                 type="button"
                 className="rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-danger-primary) hover:bg-(--bg-layer-1-hover)"
                 onClick={() => {
-                  if (window.confirm(`Delete ${selectedIds.size} work item(s)?`))
+                  if (window.confirm(`Delete ${visibleSelectedIds.size} work item(s)?`))
                     void runBulk((s, p, ids) => issueService.bulkDelete(s, p, ids));
                 }}
               >
@@ -643,6 +657,9 @@ export function IssueListPage() {
               >
                 Clear
               </button>
+              {bulkError && (
+                <span className="w-full text-xs text-(--txt-danger-primary)">{bulkError}</span>
+              )}
             </div>
           )}
           {layout === 'list' && (
