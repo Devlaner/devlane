@@ -6,6 +6,8 @@ import { issueService } from '../services/issueService';
 import { projectService } from '../services/projectService';
 import type { IssueApiResponse, ProjectApiResponse } from '../api/types';
 
+const ARCHIVES_PAGE_SIZE = 50;
+
 function formatArchivedAt(iso: string | null | undefined): string {
   if (!iso) return '';
   const t = Date.parse(iso);
@@ -24,6 +26,8 @@ export function ArchivesPage() {
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
@@ -32,12 +36,14 @@ export function ArchivesPage() {
     let cancelled = false;
     setLoading(true);
     Promise.all([
-      issueService.listWorkspaceArchived(workspaceSlug, { limit: 100 }),
+      // Fetch one extra to detect whether more pages exist.
+      issueService.listWorkspaceArchived(workspaceSlug, { limit: ARCHIVES_PAGE_SIZE + 1 }),
       projectService.list(workspaceSlug).catch(() => [] as ProjectApiResponse[]),
     ])
       .then(([archived, projs]) => {
         if (cancelled) return;
-        setIssues(archived);
+        setHasMore(archived.length > ARCHIVES_PAGE_SIZE);
+        setIssues(archived.slice(0, ARCHIVES_PAGE_SIZE));
         setProjects(projs ?? []);
         setError(null);
       })
@@ -51,6 +57,23 @@ export function ArchivesPage() {
       cancelled = true;
     };
   }, [workspaceSlug]);
+
+  const loadMore = async () => {
+    if (!workspaceSlug || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const next = await issueService.listWorkspaceArchived(workspaceSlug, {
+        limit: ARCHIVES_PAGE_SIZE + 1,
+        offset: issues.length,
+      });
+      setHasMore(next.length > ARCHIVES_PAGE_SIZE);
+      setIssues((prev) => [...prev, ...next.slice(0, ARCHIVES_PAGE_SIZE)]);
+    } catch {
+      setError('Could not load more archived work items.');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
 
@@ -128,6 +151,19 @@ export function ArchivesPage() {
             </li>
           ))}
         </ul>
+      )}
+
+      {!loading && hasMore && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => void loadMore()}
+            disabled={loadingMore}
+            className="rounded-(--radius-md) border border-(--border-subtle) px-3 py-1.5 text-sm text-(--txt-secondary) transition-colors hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary) disabled:opacity-50"
+          >
+            {loadingMore ? 'Loading…' : 'Load more'}
+          </button>
+        </div>
       )}
     </div>
   );
