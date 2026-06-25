@@ -121,6 +121,20 @@ export const moduleService = {
     return data;
   },
 
+  async updateLink(
+    workspaceSlug: string,
+    projectId: string,
+    moduleId: string,
+    linkId: string,
+    payload: { url?: string; title?: string },
+  ): Promise<ModuleLinkApiResponse> {
+    const { data } = await apiClient.patch<ModuleLinkApiResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/modules/${encodeURIComponent(moduleId)}/links/${encodeURIComponent(linkId)}/`,
+      payload,
+    );
+    return data;
+  },
+
   async deleteLink(
     workspaceSlug: string,
     projectId: string,
