@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge, Card, CardContent, CardHeader } from '../components/ui';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
@@ -32,6 +32,7 @@ export function EpicDetailPage() {
     projectId: string;
     epicId: string;
   }>();
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
@@ -109,6 +110,18 @@ export function EpicDetailPage() {
       (addIssueSearch === '' || i.name.toLowerCase().includes(addIssueSearch.toLowerCase())),
   );
 
+  const handleConvertToWorkItem = async () => {
+    if (!workspaceSlug || !epicId) return;
+    if (!window.confirm('Convert this epic back to a work item?')) return;
+    try {
+      await issueService.convert(workspaceSlug, project.id, epicId, false);
+      navigate(`${projectBase}/issues/${epicId}`);
+    } catch (err) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setError(msg || 'Failed to convert to work item.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -118,11 +131,22 @@ export function EpicDetailPage() {
         >
           ← Back to epics
         </Link>
-        <h1 className="text-xl font-semibold text-(--txt-primary)">{epic.name}</h1>
-        <p className="text-sm text-(--txt-secondary)">
-          {project.identifier ?? project.id.slice(0, 6)}-{epic.sequence_id} ·{' '}
-          {stateName(epic.state_id)} · {epic.priority ?? 'no priority'}
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold text-(--txt-primary)">{epic.name}</h1>
+            <p className="text-sm text-(--txt-secondary)">
+              {project.identifier ?? project.id.slice(0, 6)}-{epic.sequence_id} ·{' '}
+              {stateName(epic.state_id)} · {epic.priority ?? 'no priority'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleConvertToWorkItem()}
+            className="inline-flex shrink-0 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-secondary) transition-colors hover:bg-(--bg-layer-1-hover)"
+          >
+            Convert to work item
+          </button>
+        </div>
         <div className="mt-2">
           <EpicProgressBar progress={epicId ? progress[epicId] : undefined} />
         </div>

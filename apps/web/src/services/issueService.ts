@@ -323,6 +323,20 @@ export const issueService = {
     await apiClient.delete(`${base(workspaceSlug, projectId, issueId)}/archive/`);
   },
 
+  /** Promote a work item to an epic (isEpic=true) or demote it back. */
+  async convert(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    isEpic: boolean,
+  ): Promise<IssueApiResponse> {
+    const { data } = await apiClient.post<IssueApiResponse>(
+      `${base(workspaceSlug, projectId, issueId)}/convert/`,
+      { is_epic: isEpic },
+    );
+    return data;
+  },
+
   async listArchived(
     workspaceSlug: string,
     projectId: string,

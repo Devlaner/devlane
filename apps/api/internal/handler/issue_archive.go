@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/Devlaner/devlane/api/internal/middleware"
+	"github.com/Devlaner/devlane/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -67,6 +68,48 @@ func (h *IssueHandler) Restore(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "restored"})
+}
+
+// Convert promotes a work item to an epic or demotes an epic to a work item.
+// POST /api/workspaces/:slug/projects/:projectId/issues/:pk/convert/
+func (h *IssueHandler) Convert(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	slug := c.Param("slug")
+	projectID, err := uuid.Parse(c.Param("projectId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+	iid, ok := issueID(c)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid issue ID"})
+		return
+	}
+	var body struct {
+		IsEpic *bool `json:"is_epic"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil || body.IsEpic == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "is_epic is required"})
+		return
+	}
+	issue, err := h.Issue.Convert(c.Request.Context(), slug, projectID, iid, user.ID, *body.IsEpic)
+	if err != nil {
+		if err == service.ErrEpicHasChildren {
+			c.JSON(http.StatusConflict, gin.H{"error": "Move or remove the epic's work items before converting it back."})
+			return
+		}
+		if issueAccessNotFound(err) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to convert work item"})
+		return
+	}
+	c.JSON(http.StatusOK, issue)
 }
 
 // ListArchived returns archived work items for a project.

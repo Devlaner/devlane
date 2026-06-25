@@ -21,6 +21,8 @@ var (
 	// requested value is not an accepted priority or a state of the project.
 	ErrInvalidPriority = errors.New("invalid priority")
 	ErrInvalidState    = errors.New("invalid state for project")
+	// ErrEpicHasChildren blocks demoting an epic that still has child work items.
+	ErrEpicHasChildren = errors.New("epic has child work items")
 )
 
 // validPriorities is the accepted set of work-item priority values.
@@ -216,6 +218,41 @@ func (s *IssueService) Restore(ctx context.Context, workspaceSlug string, projec
 		return err
 	}
 	return s.is.SetArchived(ctx, issueID, false)
+}
+
+// Convert promotes a work item to an epic (clearing its parent) or demotes an
+// epic back to a work item (rejected while it still has child work items).
+func (s *IssueService) Convert(ctx context.Context, workspaceSlug string, projectID, issueID, userID uuid.UUID, toEpic bool) (*model.Issue, error) {
+	issue, err := s.issueForAccess(ctx, workspaceSlug, projectID, issueID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if issue.IsEpic == toEpic {
+		return issue, nil
+	}
+	// The demotion guard (no child work items) and the flip happen in one atomic
+	// UPDATE so a concurrent "add child" can't orphan children under a demoted
+	// epic; 0 rows affected on a demote means children still exist.
+	affected, err := s.is.SetIsEpic(ctx, issue.ID, userID, toEpic)
+	if err != nil {
+		return nil, err
+	}
+	if affected == 0 {
+		return nil, ErrEpicHasChildren
+	}
+	updated, err := s.is.GetByID(ctx, issue.ID)
+	if err != nil {
+		return nil, err
+	}
+	s.recordActivity(ctx, updated, userID, "is_epic", boolStr(!toEpic), boolStr(toEpic))
+	return updated, nil
+}
+
+func boolStr(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
 }
 
 // ListArchived returns archived issues for a project.

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { Archive, ArchiveRestore } from 'lucide-react';
+import { Archive, ArchiveRestore, Layers } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, Avatar } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { Dropdown, DatePickerTrigger, CommentEditor } from '../components/work-item';
@@ -501,6 +501,22 @@ export function IssueDetailPage() {
       setErrorMessage('Failed to restore work item.');
     }
   };
+
+  const handleConvertToEpic = async () => {
+    if (!workspaceSlug || !projectId || !issueId) return;
+    if (
+      !window.confirm(
+        'Convert this work item to an epic? It will be detached from its parent, if any.',
+      )
+    )
+      return;
+    try {
+      await issueService.convert(workspaceSlug, projectId, issueId, true);
+      navigate(`${baseUrl}/epics/${issueId}`);
+    } catch {
+      setErrorMessage('Failed to convert to epic.');
+    }
+  };
   const descriptionHtml =
     issue.description_html && typeof issue.description_html === 'string'
       ? issue.description_html
@@ -680,25 +696,37 @@ export function IssueDetailPage() {
           <span>/</span>
           <span className="text-(--txt-secondary)">{displayId}</span>
         </div>
-        {issue.archived_at ? (
-          <button
-            type="button"
-            onClick={() => void handleRestore()}
-            className="inline-flex shrink-0 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-secondary) transition-colors hover:bg-(--bg-layer-1-hover)"
-          >
-            <ArchiveRestore className="h-3.5 w-3.5" />
-            Restore
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => void handleArchive()}
-            className="inline-flex shrink-0 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-secondary) transition-colors hover:bg-(--bg-layer-1-hover)"
-          >
-            <Archive className="h-3.5 w-3.5" />
-            Archive
-          </button>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {!issue.is_epic && !issue.archived_at ? (
+            <button
+              type="button"
+              onClick={() => void handleConvertToEpic()}
+              className="inline-flex shrink-0 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-secondary) transition-colors hover:bg-(--bg-layer-1-hover)"
+            >
+              <Layers className="h-3.5 w-3.5" />
+              Convert to epic
+            </button>
+          ) : null}
+          {issue.archived_at ? (
+            <button
+              type="button"
+              onClick={() => void handleRestore()}
+              className="inline-flex shrink-0 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-secondary) transition-colors hover:bg-(--bg-layer-1-hover)"
+            >
+              <ArchiveRestore className="h-3.5 w-3.5" />
+              Restore
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void handleArchive()}
+              className="inline-flex shrink-0 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-secondary) transition-colors hover:bg-(--bg-layer-1-hover)"
+            >
+              <Archive className="h-3.5 w-3.5" />
+              Archive
+            </button>
+          )}
+        </div>
       </div>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
@@ -1776,6 +1804,20 @@ export function IssueDetailPage() {
                       )}
                     </button>
                   ))}
+                  {!issue.is_epic && (
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 border-t border-(--border-subtle) px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
+                      onClick={() => {
+                        setOpenDropdown(null);
+                        void handleConvertToEpic();
+                      }}
+                    >
+                      <Layers className="size-3.5 text-(--txt-icon-tertiary)" />
+                      <span className="text-(--txt-primary)">Epic</span>
+                      <span className="ml-auto text-xs text-(--txt-tertiary)">Convert</span>
+                    </button>
+                  )}
                 </Dropdown>
               </PropertyRow>
 

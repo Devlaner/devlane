@@ -172,6 +172,28 @@ func (s *IssueStore) BulkUpdateFields(ctx context.Context, projectID uuid.UUID, 
 	return res.RowsAffected, res.Error
 }
 
+// SetIsEpic flips an issue's is_epic flag. Promotion also clears parent_id.
+// Demotion is guarded atomically: the UPDATE only matches when the issue has no
+// child work items, so a concurrent "add child" can't leave orphaned children
+// under a demoted epic. Returns rows affected (0 on a blocked demotion).
+func (s *IssueStore) SetIsEpic(ctx context.Context, id, userID uuid.UUID, toEpic bool) (int64, error) {
+	updates := map[string]any{"is_epic": toEpic, "updated_by_id": userID}
+	if toEpic {
+		updates["parent_id"] = nil
+		res := s.db.WithContext(ctx).Model(&model.Issue{}).
+			Where("id = ? AND deleted_at IS NULL", id).
+			Updates(updates)
+		return res.RowsAffected, res.Error
+	}
+	res := s.db.WithContext(ctx).Model(&model.Issue{}).
+		Where(
+			"id = ? AND deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM issues c WHERE c.parent_id = issues.id AND c.is_epic = false AND c.deleted_at IS NULL)",
+			id,
+		).
+		Updates(updates)
+	return res.RowsAffected, res.Error
+}
+
 // ReorderIssues renumbers sort_order for the given issues to match the order of
 // `ids` (evenly spaced), in a single transaction. This makes manual drag-order
 // deterministic even when issues currently share the default sort_order.
