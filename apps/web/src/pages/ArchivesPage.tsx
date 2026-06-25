@@ -28,6 +28,10 @@ export function ArchivesPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  // Server-side fetch position; tracked separately from issues.length so that
+  // restoring an item (which removes it from the list) doesn't skew the next
+  // page's offset.
+  const [fetchedCount, setFetchedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
@@ -42,8 +46,10 @@ export function ArchivesPage() {
     ])
       .then(([archived, projs]) => {
         if (cancelled) return;
+        const page = archived.slice(0, ARCHIVES_PAGE_SIZE);
         setHasMore(archived.length > ARCHIVES_PAGE_SIZE);
-        setIssues(archived.slice(0, ARCHIVES_PAGE_SIZE));
+        setIssues(page);
+        setFetchedCount(page.length);
         setProjects(projs ?? []);
         setError(null);
       })
@@ -64,10 +70,16 @@ export function ArchivesPage() {
     try {
       const next = await issueService.listWorkspaceArchived(workspaceSlug, {
         limit: ARCHIVES_PAGE_SIZE + 1,
-        offset: issues.length,
+        offset: fetchedCount,
       });
+      const page = next.slice(0, ARCHIVES_PAGE_SIZE);
       setHasMore(next.length > ARCHIVES_PAGE_SIZE);
-      setIssues((prev) => [...prev, ...next.slice(0, ARCHIVES_PAGE_SIZE)]);
+      setFetchedCount((c) => c + page.length);
+      // De-dup by id in case a restore shifted the server-side window.
+      setIssues((prev) => {
+        const seen = new Set(prev.map((i) => i.id));
+        return [...prev, ...page.filter((i) => !seen.has(i.id))];
+      });
     } catch {
       setError('Could not load more archived work items.');
     } finally {
