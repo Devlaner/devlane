@@ -651,11 +651,11 @@ export function ModuleDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {workspaceSlug && projectId && moduleId && (
+      {workspaceSlug && projectId && resolvedModuleId && (
         <ModuleLinksSection
           workspaceSlug={workspaceSlug}
           projectId={projectId}
-          moduleId={moduleId}
+          moduleId={resolvedModuleId}
         />
       )}
       {issues.length === 0 && (
