@@ -3,8 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import { Button, Card, CardContent } from '../components/ui';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
-import { epicService } from '../services/epicService';
+import { epicService, type EpicProgress } from '../services/epicService';
 import { stateService } from '../services/stateService';
+import { EpicProgressBar } from '../components/work-item/EpicProgressBar';
 import type {
   IssueApiResponse,
   ProjectApiResponse,
@@ -19,6 +20,7 @@ export function EpicsPage() {
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [epics, setEpics] = useState<IssueApiResponse[]>([]);
   const [states, setStates] = useState<StateApiResponse[]>([]);
+  const [progress, setProgress] = useState<Record<string, EpicProgress>>({});
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -35,13 +37,15 @@ export function EpicsPage() {
       projectService.get(workspaceSlug, projectId),
       epicService.list(workspaceSlug, projectId),
       stateService.list(workspaceSlug, projectId),
+      epicService.listProgress(workspaceSlug, projectId).catch(() => ({})),
     ])
-      .then(([w, p, eps, st]) => {
+      .then(([w, p, eps, st, prog]) => {
         if (cancelled) return;
         setWorkspace(w ?? null);
         setProject(p ?? null);
         setEpics(eps ?? []);
         setStates(st ?? []);
+        setProgress(prog ?? {});
       })
       .catch(() => {
         if (!cancelled) {
@@ -151,6 +155,7 @@ export function EpicsPage() {
                     {stateName(epic.state_id)} · {epic.priority ?? 'no priority'}
                   </p>
                 </div>
+                <EpicProgressBar progress={progress[epic.id]} />
                 <Link
                   to={`${baseUrl}/epics/${epic.id}`}
                   className="shrink-0 rounded-(--radius-md) px-2 py-1 text-xs text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)"

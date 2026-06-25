@@ -164,6 +164,42 @@ func (s *IssueStore) BulkSetArchived(ctx context.Context, projectID uuid.UUID, i
 	return s.BulkUpdateFields(ctx, projectID, ids, updates)
 }
 
+// EpicStateDistributionBulk returns, for every epic in the project, the count of
+// its (non-deleted, non-epic) child issues grouped by state group. The result is
+// keyed by epic id; epics with no children are absent (callers default to zero).
+func (s *IssueStore) EpicStateDistributionBulk(ctx context.Context, projectID uuid.UUID) (map[uuid.UUID]map[string]int, error) {
+	var rows []struct {
+		Epic  uuid.UUID `gorm:"column:epic"`
+		Group string    `gorm:"column:grp"`
+		Count int       `gorm:"column:count"`
+	}
+	err := s.db.WithContext(ctx).Raw(`
+		SELECT i.parent_id AS epic, COALESCE(st.group, 'backlog') AS grp, COUNT(i.id) AS count
+		FROM issues i
+		JOIN issues p ON p.id = i.parent_id AND p.is_epic = TRUE AND p.deleted_at IS NULL
+		LEFT JOIN states st ON st.id = i.state_id
+		WHERE i.project_id = ? AND i.deleted_at IS NULL AND i.is_epic = FALSE
+		GROUP BY i.parent_id, COALESCE(st.group, 'backlog')
+	`, projectID).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[uuid.UUID]map[string]int)
+	for _, r := range rows {
+		m := out[r.Epic]
+		if m == nil {
+			m = map[string]int{"backlog": 0, "unstarted": 0, "started": 0, "completed": 0, "cancelled": 0}
+			out[r.Epic] = m
+		}
+		if _, ok := m[r.Group]; ok {
+			m[r.Group] += r.Count
+		} else {
+			m["backlog"] += r.Count
+		}
+	}
+	return out, nil
+}
+
 func (s *IssueStore) AddAssignee(ctx context.Context, a *model.IssueAssignee) error {
 	return s.db.WithContext(ctx).Create(a).Error
 }

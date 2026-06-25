@@ -4,10 +4,31 @@ import type { IssueApiResponse, IssueLinkApiResponse } from '../api/types';
 const base = (slug: string, pid: string) =>
   `/api/workspaces/${encodeURIComponent(slug)}/projects/${encodeURIComponent(pid)}/epics`;
 
+/** Child-issue counts for an epic, grouped by state group (plus a total). */
+export interface EpicProgress {
+  backlog: number;
+  unstarted: number;
+  started: number;
+  completed: number;
+  cancelled: number;
+  total: number;
+}
+
 export const epicService = {
   async list(workspaceSlug: string, projectId: string): Promise<IssueApiResponse[]> {
     const { data } = await apiClient.get<IssueApiResponse[]>(`${base(workspaceSlug, projectId)}/`);
     return data ?? [];
+  },
+
+  /** Per-epic progress for the whole project, keyed by epic id. */
+  async listProgress(
+    workspaceSlug: string,
+    projectId: string,
+  ): Promise<Record<string, EpicProgress>> {
+    const { data } = await apiClient.get<Record<string, EpicProgress>>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/epics-progress/`,
+    );
+    return data ?? {};
   },
 
   async get(workspaceSlug: string, projectId: string, epicId: string): Promise<IssueApiResponse> {

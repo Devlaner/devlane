@@ -357,6 +357,7 @@ func New(cfg Config) *gin.Engine {
 
 		// Epics (is_epic=true issues with dedicated routes)
 		api.GET("/workspaces/:slug/projects/:projectId/epics/", epicHandler.ListEpics)
+		api.GET("/workspaces/:slug/projects/:projectId/epics-progress/", epicHandler.EpicsProgress)
 		api.POST("/workspaces/:slug/projects/:projectId/epics/", epicHandler.CreateEpic)
 		api.GET("/workspaces/:slug/projects/:projectId/epics/:epicId/", epicHandler.GetEpic)
 		api.PATCH("/workspaces/:slug/projects/:projectId/epics/:epicId/", epicHandler.UpdateEpic)

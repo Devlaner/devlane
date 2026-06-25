@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { Badge, Card, CardContent, CardHeader } from '../components/ui';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
-import { epicService } from '../services/epicService';
+import { epicService, type EpicProgress } from '../services/epicService';
+import { EpicProgressBar } from '../components/work-item/EpicProgressBar';
 import { issueService } from '../services/issueService';
 import { stateService } from '../services/stateService';
 import { safeUrl } from '../lib/sanitize';
@@ -39,6 +40,7 @@ export function EpicDetailPage() {
   const [allIssues, setAllIssues] = useState<IssueApiResponse[]>([]);
   const [states, setStates] = useState<StateApiResponse[]>([]);
   const [links, setLinks] = useState<IssueLinkApiResponse[]>([]);
+  const [progress, setProgress] = useState<Record<string, EpicProgress>>({});
   const [addIssueSearch, setAddIssueSearch] = useState('');
   const [addIssueOpen, setAddIssueOpen] = useState(false);
   const [addLinkOpen, setAddLinkOpen] = useState(false);
@@ -60,8 +62,9 @@ export function EpicDetailPage() {
       issueService.list(workspaceSlug, projectId, { limit: 250 }),
       stateService.list(workspaceSlug, projectId),
       epicService.listLinks(workspaceSlug, projectId, epicId).catch(() => []),
+      epicService.listProgress(workspaceSlug, projectId).catch(() => ({})),
     ])
-      .then(([w, p, ep, eis, all, st, lnks]) => {
+      .then(([w, p, ep, eis, all, st, lnks, prog]) => {
         if (cancelled) return;
         setWorkspace(w ?? null);
         setProject(p ?? null);
@@ -70,6 +73,7 @@ export function EpicDetailPage() {
         setAllIssues(all ?? []);
         setStates(st ?? []);
         setLinks((lnks as IssueLinkApiResponse[]) ?? []);
+        setProgress((prog as Record<string, EpicProgress>) ?? {});
       })
       .catch(() => {
         if (!cancelled) {
@@ -116,6 +120,9 @@ export function EpicDetailPage() {
           {project.identifier ?? project.id.slice(0, 6)}-{epic.sequence_id} ·{' '}
           {stateName(epic.state_id)} · {epic.priority ?? 'no priority'}
         </p>
+        <div className="mt-2">
+          <EpicProgressBar progress={epicId ? progress[epicId] : undefined} />
+        </div>
       </div>
 
       {error && (

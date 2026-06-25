@@ -1007,6 +1007,26 @@ func (s *IssueService) ListEpics(ctx context.Context, workspaceSlug string, proj
 	return list, nil
 }
 
+// EpicProgressBulk returns child-issue state-group counts (plus a total) for
+// every epic in the project, keyed by epic id. Used to render epic progress.
+func (s *IssueService) EpicProgressBulk(ctx context.Context, workspaceSlug string, projectID, userID uuid.UUID) (map[uuid.UUID]map[string]int, error) {
+	if err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
+		return nil, err
+	}
+	dist, err := s.is.EpicStateDistributionBulk(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range dist {
+		total := 0
+		for _, c := range m {
+			total += c
+		}
+		m["total"] = total
+	}
+	return dist, nil
+}
+
 // CreateEpic creates a new epic in the project.
 func (s *IssueService) CreateEpic(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID, name, description, priority string, stateID *uuid.UUID, assigneeIDs, labelIDs []uuid.UUID) (*model.Issue, error) {
 	epic, err := s.Create(ctx, workspaceSlug, projectID, userID, name, description, priority, stateID, assigneeIDs, labelIDs, nil, nil, nil, false)
