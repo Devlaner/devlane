@@ -587,6 +587,19 @@ export function IssueListPage() {
 
   const reorderEnabled = listDisplay.orderBy === 'manual';
 
+  // Board drag-to-column: optimistically move the card's state, then persist.
+  const handleCardMove = (issueId: string, targetStateId: string) => {
+    if (!workspaceSlug || !projectId) return;
+    const current = issues.find((i) => i.id === issueId);
+    if (!current || current.state_id === targetStateId) return;
+    setIssues((prev) =>
+      prev.map((i) => (i.id === issueId ? { ...i, state_id: targetStateId } : i)),
+    );
+    issueService
+      .update(workspaceSlug, projectId, issueId, { state_id: targetStateId })
+      .catch(() => refetchIssues());
+  };
+
   return (
     <div className="w-full">
       <div className="flex items-center justify-between gap-4 border-b border-(--border-subtle) px-4 py-3">
@@ -710,7 +723,7 @@ export function IssueListPage() {
               onReorder={reorderEnabled ? handleReorder : undefined}
             />
           )}
-          {layout === 'board' && <IssueLayoutBoard {...layoutProps} />}
+          {layout === 'board' && <IssueLayoutBoard {...layoutProps} onCardMove={handleCardMove} />}
           {layout === 'spreadsheet' && <IssueLayoutSpreadsheet {...layoutProps} />}
           {layout === 'calendar' && <IssueLayoutCalendar {...layoutProps} />}
           {layout === 'gantt' && <IssueLayoutGantt {...layoutProps} />}

@@ -54,6 +54,13 @@ export interface IssueLayoutProps {
    * workspace-wide views where states differ per project but share groups.
    */
   groupByStateGroup?: boolean;
+  /**
+   * Board layout only: called when a card is dragged into another column to move
+   * the work item to that column's state. `targetStateId` is already resolved to
+   * a concrete state (in the card's own project when grouping by state group).
+   * When omitted, the board is not draggable.
+   */
+  onCardMove?: (issueId: string, targetStateId: string) => void;
 }
 
 /** Canonical state groups, in board column order. */

@@ -501,6 +501,28 @@ export function WorkspaceViewsPage() {
     [workspaceSlug],
   );
 
+  // Kanban drag-to-column: the board resolves the target to a concrete state in
+  // the card's own project; persist via that project and optimistically update.
+  const handleCardMove = useCallback(
+    (issueId: string, targetStateId: string) => {
+      if (!workspaceSlug) return;
+      const issue = issues.find((i) => i.id === issueId);
+      if (!issue || issue.state_id === targetStateId) return;
+      const prevStateId = issue.state_id;
+      setIssues((prev) =>
+        prev.map((i) => (i.id === issueId ? { ...i, state_id: targetStateId } : i)),
+      );
+      issueService
+        .update(workspaceSlug, issue.project_id, issueId, { state_id: targetStateId })
+        .catch(() =>
+          setIssues((prev) =>
+            prev.map((i) => (i.id === issueId ? { ...i, state_id: prevStateId } : i)),
+          ),
+        );
+    },
+    [workspaceSlug, issues],
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
@@ -741,7 +763,9 @@ export function WorkspaceViewsPage() {
     return (
       <div className="-mt-(--padding-page) -mr-(--padding-page) -mb-(--padding-page) flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-auto">
-          {display.layout === 'kanban' && <IssueLayoutBoard {...layoutProps} groupByStateGroup />}
+          {display.layout === 'kanban' && (
+            <IssueLayoutBoard {...layoutProps} groupByStateGroup onCardMove={handleCardMove} />
+          )}
           {display.layout === 'calendar' && <IssueLayoutCalendar {...layoutProps} />}
           {display.layout === 'gantt_chart' && <IssueLayoutGantt {...layoutProps} />}
         </div>
