@@ -42,3 +42,29 @@ func TestIssue_ArchiveRestore(t *testing.T) {
 	rr6 := ts.GET(issuesBase, w.Session)
 	require.Contains(t, rr6.Body.String(), id)
 }
+
+func TestIssue_WorkspaceArchivedList(t *testing.T) {
+	ts := testutil.NewTestServer(t)
+	w := testutil.SeedWorld(t, ts.DB)
+	issue := testutil.CreateIssue(t, ts.DB, w.Project.ID, w.Workspace.ID, w.User.ID)
+	id := issue.ID.String()
+	issuesBase := "/api/workspaces/" + w.Workspace.Slug + "/projects/" + w.Project.ID.String() + "/issues/"
+	wsArchived := "/api/workspaces/" + w.Workspace.Slug + "/archived-issues/"
+
+	// Empty before archiving.
+	r0 := ts.GET(wsArchived, w.Session)
+	require.Equal(t, http.StatusOK, r0.Code, "body=%s", r0.Body.String())
+	require.NotContains(t, r0.Body.String(), id)
+
+	// Archive, then it appears in the workspace-wide archived list.
+	require.Equal(t, http.StatusOK, ts.POST(issuesBase+id+"/archive/", map[string]any{}, w.Session).Code)
+	require.Contains(t, ts.GET(wsArchived, w.Session).Body.String(), id)
+
+	// Restore removes it again.
+	require.Equal(t, http.StatusOK, ts.DELETE(issuesBase+id+"/archive/", w.Session).Code)
+	require.NotContains(t, ts.GET(wsArchived, w.Session).Body.String(), id)
+
+	// Non-members can't read it.
+	outsider := testutil.CreateUser(t, ts.DB)
+	require.Equal(t, http.StatusNotFound, ts.GET(wsArchived, testutil.LoginAs(t, ts.DB, outsider)).Code)
+}

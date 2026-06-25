@@ -55,6 +55,32 @@ func (h *IssueHandler) ListWorkspaceDrafts(c *gin.Context) {
 	c.JSON(http.StatusOK, list)
 }
 
+// ListWorkspaceArchived returns archived issues across the workspace.
+// GET /api/workspaces/:slug/archived-issues/
+func (h *IssueHandler) ListWorkspaceArchived(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	slug := c.Param("slug")
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	list, err := h.Issue.ListArchivedForWorkspace(c.Request.Context(), slug, user.ID, limit, offset)
+	if err != nil {
+		if err == service.ErrWorkspaceForbidden {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list archived issues"})
+		return
+	}
+	c.JSON(http.StatusOK, list)
+}
+
 // List returns issues for the project.
 // GET /api/workspaces/:slug/projects/:projectId/issues/
 func (h *IssueHandler) List(c *gin.Context) {

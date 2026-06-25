@@ -35,6 +35,19 @@ export const issueService = {
     return data;
   },
 
+  async listWorkspaceArchived(
+    workspaceSlug: string,
+    params?: ListIssuesParams,
+  ): Promise<IssueApiResponse[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.limit != null) searchParams.set('limit', String(params.limit));
+    if (params?.offset != null) searchParams.set('offset', String(params.offset));
+    const qs = searchParams.toString();
+    const url = `/api/workspaces/${encodeURIComponent(workspaceSlug)}/archived-issues/${qs ? `?${qs}` : ''}`;
+    const { data } = await apiClient.get<IssueApiResponse[]>(url);
+    return Array.isArray(data) ? data : [];
+  },
+
   async list(
     workspaceSlug: string,
     projectId: string,

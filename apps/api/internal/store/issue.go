@@ -105,6 +105,23 @@ func (s *IssueStore) ListArchivedByProjectID(ctx context.Context, projectID uuid
 	return list, err
 }
 
+// ListArchivedByWorkspaceID lists archived (non-deleted) issues across all
+// projects in a workspace, most-recently-archived first.
+func (s *IssueStore) ListArchivedByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, limit, offset int) ([]model.Issue, error) {
+	var list []model.Issue
+	q := s.db.WithContext(ctx).
+		Where("workspace_id = ? AND deleted_at IS NULL AND archived_at IS NOT NULL", workspaceID).
+		Order("archived_at DESC")
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+	if offset > 0 {
+		q = q.Offset(offset)
+	}
+	err := q.Find(&list).Error
+	return list, err
+}
+
 // SetArchived archives (sets archived_at) or restores (clears archived_at) an
 // issue. archived_at is the source of truth for archived state.
 func (s *IssueStore) SetArchived(ctx context.Context, id uuid.UUID, archived bool) error {

@@ -226,6 +226,16 @@ func (s *IssueService) ListArchived(ctx context.Context, workspaceSlug string, p
 	return s.is.ListArchivedByProjectID(ctx, projectID, limit, offset)
 }
 
+// ListArchivedForWorkspace lists archived issues across all projects in a
+// workspace (for the workspace Archives page).
+func (s *IssueService) ListArchivedForWorkspace(ctx context.Context, workspaceSlug string, userID uuid.UUID, limit, offset int) ([]model.Issue, error) {
+	wrk, err := s.ensureWorkspaceAccess(ctx, workspaceSlug, userID)
+	if err != nil {
+		return nil, err
+	}
+	return s.is.ListArchivedByWorkspaceID(ctx, wrk.ID, limit, offset)
+}
+
 // BulkUpdate applies priority/state changes to many issues in a project. It
 // validates the inputs, then routes each issue through the single-issue Update
 // so activity logging and notifications fire exactly as they do individually.
