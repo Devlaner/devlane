@@ -11,6 +11,9 @@ import { stateService } from '../services/stateService';
 import { labelService } from '../services/labelService';
 import { viewService } from '../services/viewService';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { IssueLayoutBoard } from '../components/work-item/layouts/IssueLayoutBoard';
+import { IssueLayoutCalendar } from '../components/work-item/layouts/IssueLayoutCalendar';
+import { IssueLayoutGantt } from '../components/work-item/layouts/IssueLayoutGantt';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
@@ -162,6 +165,8 @@ export function WorkspaceViewsPage() {
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
   const [states, setStates] = useState<StateApiResponse[]>([]);
   const [labels, setLabels] = useState<LabelApiResponse[]>([]);
+  // Stable per-mount timestamp passed to the work-item layouts for date cells.
+  const [now] = useState(() => Date.now());
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const { user: currentUser } = useAuth();
@@ -699,14 +704,46 @@ export function WorkspaceViewsPage() {
     display.layout === 'calendar' ||
     display.layout === 'gantt_chart'
   ) {
+    // Workspace views span multiple projects, so reuse the project work-item
+    // layout components with a projectsById map (for per-issue identifiers) and
+    // a project-aware issue href. A representative project satisfies the
+    // single-project prop; the map drives the actual per-card display.
+    const layoutProject = projects[0];
+    if (!layoutProject) {
+      return (
+        <div className="-mt-(--padding-page) -mr-(--padding-page) -mb-(--padding-page) flex min-h-0 flex-1 flex-col">
+          <div className="px-4 py-16 text-center text-sm text-(--txt-tertiary)">
+            No work items yet. Create one from a project&apos;s Work items section or add a view to
+            get started.
+          </div>
+        </div>
+      );
+    }
+    const projectsById = Object.fromEntries(projects.map((p) => [p.id, p]));
+    const issueProjectById = new Map(sortedIssues.map((i) => [i.id, i.project_id]));
+    const layoutProps = {
+      workspaceSlug: workspace.slug,
+      project: layoutProject,
+      projectsById,
+      issues: sortedIssues,
+      states,
+      labels,
+      members,
+      prSummary: {},
+      baseUrl,
+      issueHref: (id: string) => {
+        const pid = issueProjectById.get(id);
+        const proj = pid ? getProject(pid) : undefined;
+        return proj ? `${baseUrl}/projects/${proj.id}/issues/${id}` : baseUrl;
+      },
+      now,
+    };
     return (
       <div className="-mt-(--padding-page) -mr-(--padding-page) -mb-(--padding-page) flex min-h-0 flex-1 flex-col">
-        <div className="flex flex-1 items-center justify-center p-8">
-          <p className="text-sm text-(--txt-tertiary)">
-            {display.layout === 'kanban' && 'Kanban view is coming soon.'}
-            {display.layout === 'calendar' && 'Calendar view is coming soon.'}
-            {display.layout === 'gantt_chart' && 'Gantt chart view is coming soon.'}
-          </p>
+        <div className="min-h-0 flex-1 overflow-auto">
+          {display.layout === 'kanban' && <IssueLayoutBoard {...layoutProps} />}
+          {display.layout === 'calendar' && <IssueLayoutCalendar {...layoutProps} />}
+          {display.layout === 'gantt_chart' && <IssueLayoutGantt {...layoutProps} />}
         </div>
       </div>
     );

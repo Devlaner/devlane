@@ -11,7 +11,7 @@ import {
 import { membersFromAssigneeIds } from '../../../lib/issueRowHelpers';
 import type { IssueApiResponse, LabelApiResponse } from '../../../api/types';
 import type { Priority } from '../../../types';
-import type { IssueLayoutProps } from './IssueLayoutTypes';
+import { issueDisplayId, type IssueLayoutProps } from './IssueLayoutTypes';
 
 /**
  * Kanban board grouped by state. One column per state, ordered by `sequence`,
@@ -29,6 +29,7 @@ export function IssueLayoutBoard({
   prSummary,
   issueHref,
   now,
+  projectsById,
 }: IssueLayoutProps) {
   const labelById = useMemo(() => new Map(labels.map((l) => [l.id, l])), [labels]);
   const orderedStates = useMemo(
@@ -69,6 +70,7 @@ export function IssueLayoutBoard({
                 key={issue.id}
                 issue={issue}
                 project={project}
+                projectsById={projectsById}
                 state={state}
                 labels={(issue.label_ids ?? [])
                   .map((id) => labelById.get(id))
@@ -93,6 +95,7 @@ export function IssueLayoutBoard({
               key={issue.id}
               issue={issue}
               project={project}
+              projectsById={projectsById}
               state={null}
               labels={(issue.label_ids ?? [])
                 .map((id) => labelById.get(id))
@@ -142,6 +145,7 @@ function BoardColumn({
 interface BoardCardProps {
   issue: IssueApiResponse;
   project: IssueLayoutProps['project'];
+  projectsById?: IssueLayoutProps['projectsById'];
   state: IssueLayoutProps['states'][number] | null;
   labels: LabelApiResponse[];
   assignees: ReturnType<typeof membersFromAssigneeIds>;
@@ -153,6 +157,7 @@ interface BoardCardProps {
 function BoardCard({
   issue,
   project,
+  projectsById,
   state,
   labels,
   assignees,
@@ -160,7 +165,7 @@ function BoardCard({
   href,
   now,
 }: BoardCardProps) {
-  const displayId = `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`;
+  const displayId = issueDisplayId(issue, project, projectsById);
   return (
     <Link
       to={href}

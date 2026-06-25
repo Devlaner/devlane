@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { PriorityIcon } from '../IssueRowCells';
 import type { IssueApiResponse } from '../../../api/types';
 import type { Priority } from '../../../types';
-import type { IssueLayoutProps } from './IssueLayoutTypes';
+import { issueDisplayId, type IssueLayoutProps } from './IssueLayoutTypes';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 const MAX_PER_CELL = 3;
@@ -18,7 +18,14 @@ const MAX_PER_CELL = 3;
  * Navigation: prev/next month. "Today" jumps to current month. The "viewMonth"
  * is local UI state so switching layout doesn't lose the user's place.
  */
-export function IssueLayoutCalendar({ project, states, issues, issueHref, now }: IssueLayoutProps) {
+export function IssueLayoutCalendar({
+  project,
+  states,
+  issues,
+  issueHref,
+  now,
+  projectsById,
+}: IssueLayoutProps) {
   const [viewMonth, setViewMonth] = useState(() => startOfMonth(new Date(now)));
 
   const stateById = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
@@ -148,8 +155,7 @@ export function IssueLayoutCalendar({ project, states, issues, issueHref, now }:
                   <PriorityIcon priority={issue.priority as Priority | null | undefined} />
                   <span className="truncate">{issue.name}</span>
                   <span className="ml-auto text-[11px] text-(--txt-tertiary)">
-                    {project.identifier ?? project.id.slice(0, 8)}-
-                    {issue.sequence_id ?? issue.id.slice(-4)}
+                    {issueDisplayId(issue, project, projectsById)}
                   </span>
                 </Link>
               </li>

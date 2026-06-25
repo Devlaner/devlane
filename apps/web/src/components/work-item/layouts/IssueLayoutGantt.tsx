@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { PriorityIcon } from '../IssueRowCells';
 import type { Priority } from '../../../types';
-import type { IssueLayoutProps } from './IssueLayoutTypes';
+import { issueDisplayId, type IssueLayoutProps } from './IssueLayoutTypes';
 
 const DAY_MS = 24 * 3600 * 1000;
 const DAY_PX = 28; // width per day on the timeline; pannable, not zoomable yet
@@ -22,7 +22,14 @@ const DAY_PX = 28; // width per day on the timeline; pannable, not zoomable yet
  *   - Sidebar (left) shows id + name; the chart (right) is horizontally
  *     scrollable for projects whose range exceeds the viewport.
  */
-export function IssueLayoutGantt({ project, states, issues, issueHref, now }: IssueLayoutProps) {
+export function IssueLayoutGantt({
+  project,
+  states,
+  issues,
+  issueHref,
+  now,
+  projectsById,
+}: IssueLayoutProps) {
   const stateById = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
 
   const dated = useMemo(
@@ -125,8 +132,7 @@ export function IssueLayoutGantt({ project, states, issues, issueHref, now }: Is
                       className="flex min-w-0 items-center gap-1.5 text-xs text-(--txt-primary) no-underline hover:text-(--txt-accent-primary)"
                     >
                       <span className="font-medium text-(--txt-accent-primary)">
-                        {project.identifier ?? project.id.slice(0, 8)}-
-                        {issue.sequence_id ?? issue.id.slice(-4)}
+                        {issueDisplayId(issue, project, projectsById)}
                       </span>
                       <span className="truncate">{issue.name}</span>
                     </Link>

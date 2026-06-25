@@ -8,6 +8,7 @@ import { useWorkspaceViewsState } from '../../contexts/WorkspaceViewsStateContex
 import {
   WorkspaceViewsFiltersDropdown,
   WorkspaceViewsDisplayDropdown,
+  WorkspaceViewsLayoutSelector,
   WorkspaceViewsEllipsisMenu,
   CreateViewModal,
   ModuleFiltersPanel,
@@ -3031,6 +3032,7 @@ function WorkspaceViewsHeader() {
         </Dropdown>
       </div>
       <div className="flex items-center gap-1">
+        <WorkspaceViewsLayoutSelector />
         <WorkspaceViewsFiltersDropdown
           openId={toolbarDropdownOpen}
           onOpen={setToolbarDropdownOpen}
