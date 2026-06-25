@@ -247,10 +247,20 @@ func (s *IssueService) BulkUpdate(ctx context.Context, workspaceSlug string, pro
 		}
 	}
 	n := 0
+	var firstErr error
 	for _, id := range issueIDs {
-		if _, err := s.Update(ctx, workspaceSlug, projectID, id, userID, nil, priority, nil, stateID, nil, nil, nil, nil, nil, nil, nil); err == nil {
-			n++
+		if _, err := s.Update(ctx, workspaceSlug, projectID, id, userID, nil, priority, nil, stateID, nil, nil, nil, nil, nil, nil, nil); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
 		}
+		n++
+	}
+	// If nothing changed despite being asked to, surface the failure so the
+	// caller doesn't report a no-op as success.
+	if n == 0 && len(issueIDs) > 0 {
+		return 0, firstErr
 	}
 	return n, nil
 }
@@ -273,10 +283,18 @@ func (s *IssueService) BulkDelete(ctx context.Context, workspaceSlug string, pro
 		return 0, err
 	}
 	n := 0
+	var firstErr error
 	for _, id := range issueIDs {
-		if err := s.Delete(ctx, workspaceSlug, projectID, id, userID); err == nil {
-			n++
+		if err := s.Delete(ctx, workspaceSlug, projectID, id, userID); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
 		}
+		n++
+	}
+	if n == 0 && len(issueIDs) > 0 {
+		return 0, firstErr
 	}
 	return n, nil
 }
