@@ -159,6 +159,27 @@ export interface LabelApiResponse {
   updated_at?: string;
 }
 
+export interface EstimatePointApiResponse {
+  id: string;
+  estimate_id: string;
+  key: number;
+  value: string;
+  description?: string;
+}
+
+export interface EstimateApiResponse {
+  id: string;
+  project_id: string;
+  workspace_id: string;
+  name: string;
+  description?: string;
+  type: string;
+  last_used: boolean;
+  points: EstimatePointApiResponse[];
+  created_at?: string;
+  updated_at?: string;
+}
+
 /** Issue as returned by the API (backend uses `name` not `title`) */
 export interface IssueApiResponse {
   id: string;

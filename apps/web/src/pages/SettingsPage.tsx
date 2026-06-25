@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { Card, CardContent, Button, Avatar, Modal } from '../components/ui';
 import { CoverImageModal } from '../components/CoverImageModal';
 import { IntegrationsSection } from '../components/integrations/IntegrationsSection';
+import { ProjectEstimatesSettings } from '../components/settings/ProjectEstimatesSettings';
 import { UploadImageModal } from '../components/UploadImageModal';
 import { ProjectIconModal, ProjectIconDisplay } from '../components/ProjectIconModal';
 import { getImageUrl } from '../lib/utils';
@@ -3255,73 +3256,16 @@ export function SettingsPage() {
             </div>
           )}
 
-          {isProjectsTab && selectedProject && projectSection === 'estimates' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-base font-semibold text-(--txt-primary)">Estimates</h2>
-                <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                  Set up estimation systems to track and communicate the effort required for each
-                  work item.
-                </p>
-                <p className="mt-2 text-sm text-(--txt-tertiary)">
-                  Estimate systems will be available when the API is connected.
-                </p>
-              </div>
-              <div className="flex justify-end">
-                <Button size="sm" className="gap-1.5">
-                  <IconPlus /> Add Estimate
-                </Button>
-              </div>
-              <Card variant="outlined" className="p-4">
-                <p className="text-sm font-medium text-(--txt-primary) mb-3">New Estimate</p>
-                <div className="space-y-3">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                      T-Shirt sizes
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue="T-Shirt sizes"
-                      className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                      Description
-                    </label>
-                    <textarea
-                      rows={2}
-                      placeholder="Description..."
-                      className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {['1 XS', '2 S', '3 M', '4 L', '5 XL', '6 XXL'].map((v) => (
-                      <input
-                        key={v}
-                        type="text"
-                        defaultValue={v}
-                        className="rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
-                      />
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-                    <label className="flex items-center gap-2 text-sm text-(--txt-secondary)">
-                      <input type="checkbox" className="rounded border-(--border-subtle)" />
-                      Create more
-                    </label>
-                    <div className="flex gap-2">
-                      <Button variant="secondary">Cancel</Button>
-                      <Button>Create Work Item</Button>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-              <Button variant="secondary" className="w-full sm:w-auto" onClick={() => {}}>
-                Add estimate system
-              </Button>
-            </div>
-          )}
+          {isProjectsTab &&
+            selectedProject &&
+            workspaceSlug &&
+            selectedProjectId &&
+            projectSection === 'estimates' && (
+              <ProjectEstimatesSettings
+                workspaceSlug={workspaceSlug}
+                projectId={selectedProjectId}
+              />
+            )}
 
           {isProjectsTab && selectedProject && projectSection === 'automations' && (
             <div className="space-y-6">

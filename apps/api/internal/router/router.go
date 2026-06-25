@@ -66,6 +66,7 @@ func New(cfg Config) *gin.Engine {
 	moduleStore := store.NewModuleStore(cfg.DB)
 	issueViewStore := store.NewIssueViewStore(cfg.DB)
 	searchStore := store.NewSearchStore(cfg.DB)
+	estimateStore := store.NewEstimateStore(cfg.DB)
 	pageStore := store.NewPageStore(cfg.DB)
 	notificationStore := store.NewNotificationStore(cfg.DB)
 	issueSubscriberStore := store.NewIssueSubscriberStore(cfg.DB)
@@ -140,6 +141,7 @@ func New(cfg Config) *gin.Engine {
 	moduleSvc.SetIssueStore(issueStore)
 	issueViewSvc := service.NewIssueViewService(issueViewStore, projectStore, workspaceStore, userFavoriteStore)
 	searchSvc := service.NewSearchService(searchStore, workspaceStore)
+	estimateSvc := service.NewEstimateService(estimateStore, projectStore, workspaceStore)
 	pageSvc := service.NewPageService(pageStore, projectStore, workspaceStore)
 	pageSvc.SetFavoriteStore(userFavoriteStore)
 	notificationSvc := service.NewNotificationService(notificationStore, workspaceStore, issueStore, projectStore, userStore, stateStore)
@@ -215,6 +217,7 @@ func New(cfg Config) *gin.Engine {
 	stateHandler := &handler.StateHandler{State: stateSvc}
 	labelHandler := &handler.LabelHandler{Label: labelSvc}
 	searchHandler := &handler.SearchHandler{Svc: searchSvc}
+	estimateHandler := &handler.EstimateHandler{Estimate: estimateSvc}
 	issueHandler := &handler.IssueHandler{Issue: issueSvc}
 	issueLinkHandler := &handler.IssueLinkHandler{Issue: issueSvc}
 	attachmentHandler := &handler.AttachmentHandler{Attachment: attachmentSvc}
@@ -307,6 +310,12 @@ func New(cfg Config) *gin.Engine {
 		api.POST("/workspaces/:slug/projects/:projectId/issue-labels/", labelHandler.Create)
 		api.PATCH("/workspaces/:slug/projects/:projectId/issue-labels/:pk/", labelHandler.Update)
 		api.DELETE("/workspaces/:slug/projects/:projectId/issue-labels/:pk/", labelHandler.Delete)
+
+		api.GET("/workspaces/:slug/projects/:projectId/estimates/", estimateHandler.List)
+		api.POST("/workspaces/:slug/projects/:projectId/estimates/", estimateHandler.Create)
+		api.GET("/workspaces/:slug/projects/:projectId/estimates/:pk/", estimateHandler.Get)
+		api.PATCH("/workspaces/:slug/projects/:projectId/estimates/:pk/", estimateHandler.Update)
+		api.DELETE("/workspaces/:slug/projects/:projectId/estimates/:pk/", estimateHandler.Delete)
 
 		api.GET("/workspaces/:slug/projects/:projectId/issues/", issueHandler.List)
 		api.POST("/workspaces/:slug/projects/:projectId/issues/", issueHandler.Create)
