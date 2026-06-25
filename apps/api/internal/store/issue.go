@@ -174,12 +174,12 @@ func (s *IssueStore) EpicStateDistributionBulk(ctx context.Context, projectID uu
 		Count int       `gorm:"column:count"`
 	}
 	err := s.db.WithContext(ctx).Raw(`
-		SELECT i.parent_id AS epic, COALESCE(st.group, 'backlog') AS grp, COUNT(i.id) AS count
+		SELECT i.parent_id AS epic, COALESCE(st."group", 'backlog') AS grp, COUNT(i.id) AS count
 		FROM issues i
 		JOIN issues p ON p.id = i.parent_id AND p.is_epic = TRUE AND p.deleted_at IS NULL
 		LEFT JOIN states st ON st.id = i.state_id
 		WHERE i.project_id = ? AND i.deleted_at IS NULL AND i.is_epic = FALSE
-		GROUP BY i.parent_id, COALESCE(st.group, 'backlog')
+		GROUP BY i.parent_id, COALESCE(st."group", 'backlog')
 	`, projectID).Scan(&rows).Error
 	if err != nil {
 		return nil, err
