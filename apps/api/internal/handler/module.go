@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"time"
 
@@ -190,7 +192,11 @@ func (h *ModuleHandler) Update(c *gin.Context) {
 		LeadID      *string   `json:"lead_id"`
 		MemberIDs   *[]string `json:"member_ids"`
 	}
-	_ = c.ShouldBindJSON(&body)
+	// An empty PATCH body is allowed (a no-op patch); other parse errors are not.
+	if err := c.ShouldBindJSON(&body); err != nil && !errors.Is(err, io.EOF) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
 	leadIDPtr, ok := parseOptionalUUID(c, body.LeadID, "lead_id")
 	if !ok {
 		return

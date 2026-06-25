@@ -17,6 +17,14 @@ func (s *ModuleStore) Create(ctx context.Context, m *model.Module) error {
 	return s.db.WithContext(ctx).Create(m).Error
 }
 
+// Tx runs fn inside a database transaction, passing a transaction-scoped store.
+// Used to keep a module write and its member replacement atomic.
+func (s *ModuleStore) Tx(ctx context.Context, fn func(tx *ModuleStore) error) error {
+	return s.db.WithContext(ctx).Transaction(func(txdb *gorm.DB) error {
+		return fn(&ModuleStore{db: txdb})
+	})
+}
+
 func (s *ModuleStore) GetByID(ctx context.Context, id uuid.UUID) (*model.Module, error) {
 	var mod model.Module
 	err := s.db.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&mod).Error
