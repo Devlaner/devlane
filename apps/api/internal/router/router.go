@@ -354,6 +354,10 @@ func New(cfg Config) *gin.Engine {
 		api.GET("/workspaces/:slug/projects/:projectId/modules/:moduleId/issues/", moduleHandler.ListIssues)
 		api.POST("/workspaces/:slug/projects/:projectId/modules/:moduleId/issues/", moduleHandler.AddIssue)
 		api.DELETE("/workspaces/:slug/projects/:projectId/modules/:moduleId/issues/:issueId/", moduleHandler.RemoveIssue)
+		api.GET("/workspaces/:slug/projects/:projectId/modules/:moduleId/links/", moduleHandler.ListLinks)
+		api.POST("/workspaces/:slug/projects/:projectId/modules/:moduleId/links/", moduleHandler.CreateLink)
+		api.PATCH("/workspaces/:slug/projects/:projectId/modules/:moduleId/links/:linkId/", moduleHandler.UpdateLink)
+		api.DELETE("/workspaces/:slug/projects/:projectId/modules/:moduleId/links/:linkId/", moduleHandler.DeleteLink)
 
 		// Epics (is_epic=true issues with dedicated routes)
 		api.GET("/workspaces/:slug/projects/:projectId/epics/", epicHandler.ListEpics)

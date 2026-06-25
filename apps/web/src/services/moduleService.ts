@@ -1,6 +1,14 @@
 import { apiClient } from '../api/client';
 import type { ModuleApiResponse } from '../api/types';
 
+export interface ModuleLinkApiResponse {
+  id: string;
+  title: string;
+  url: string;
+  module_id: string;
+  created_at: string;
+}
+
 export interface CreateModulePayload {
   name: string;
   description?: string;
@@ -86,6 +94,41 @@ export const moduleService = {
   ): Promise<void> {
     await apiClient.delete(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/modules/${encodeURIComponent(moduleId)}/issues/${encodeURIComponent(issueId)}/`,
+    );
+  },
+
+  async listLinks(
+    workspaceSlug: string,
+    projectId: string,
+    moduleId: string,
+  ): Promise<ModuleLinkApiResponse[]> {
+    const { data } = await apiClient.get<ModuleLinkApiResponse[]>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/modules/${encodeURIComponent(moduleId)}/links/`,
+    );
+    return Array.isArray(data) ? data : [];
+  },
+
+  async createLink(
+    workspaceSlug: string,
+    projectId: string,
+    moduleId: string,
+    payload: { url: string; title?: string },
+  ): Promise<ModuleLinkApiResponse> {
+    const { data } = await apiClient.post<ModuleLinkApiResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/modules/${encodeURIComponent(moduleId)}/links/`,
+      payload,
+    );
+    return data;
+  },
+
+  async deleteLink(
+    workspaceSlug: string,
+    projectId: string,
+    moduleId: string,
+    linkId: string,
+  ): Promise<void> {
+    await apiClient.delete(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/modules/${encodeURIComponent(moduleId)}/links/${encodeURIComponent(linkId)}/`,
     );
   },
 };

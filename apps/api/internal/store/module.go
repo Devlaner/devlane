@@ -72,6 +72,35 @@ func (s *ModuleStore) ListModuleIssueIDs(ctx context.Context, moduleID uuid.UUID
 	return ids, nil
 }
 
+// ListLinksForModule returns a module's links, newest first.
+func (s *ModuleStore) ListLinksForModule(ctx context.Context, moduleID uuid.UUID) ([]model.ModuleLink, error) {
+	var list []model.ModuleLink
+	err := s.db.WithContext(ctx).Where("module_id = ?", moduleID).
+		Order("created_at DESC").Find(&list).Error
+	return list, err
+}
+
+func (s *ModuleStore) CreateLink(ctx context.Context, l *model.ModuleLink) error {
+	return s.db.WithContext(ctx).Create(l).Error
+}
+
+func (s *ModuleStore) GetLinkByID(ctx context.Context, linkID uuid.UUID) (*model.ModuleLink, error) {
+	var l model.ModuleLink
+	err := s.db.WithContext(ctx).Where("id = ?", linkID).First(&l).Error
+	if err != nil {
+		return nil, err
+	}
+	return &l, nil
+}
+
+func (s *ModuleStore) UpdateLink(ctx context.Context, l *model.ModuleLink) error {
+	return s.db.WithContext(ctx).Save(l).Error
+}
+
+func (s *ModuleStore) DeleteLink(ctx context.Context, linkID uuid.UUID) error {
+	return s.db.WithContext(ctx).Where("id = ?", linkID).Delete(&model.ModuleLink{}).Error
+}
+
 // SetMembers replaces a module's member set with memberIDs (in a transaction).
 func (s *ModuleStore) SetMembers(ctx context.Context, moduleID uuid.UUID, memberIDs []uuid.UUID, actorID uuid.UUID) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {

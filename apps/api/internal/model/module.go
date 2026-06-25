@@ -57,6 +57,29 @@ func (m *ModuleMember) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
+// ModuleLink matches module_links (external URLs attached to a module).
+type ModuleLink struct {
+	ID          uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	Title       string     `gorm:"type:varchar(255);not null" json:"title"`
+	URL         string     `gorm:"type:text;not null" json:"url"`
+	ModuleID    uuid.UUID  `gorm:"type:uuid;not null" json:"module_id"`
+	ProjectID   uuid.UUID  `gorm:"type:uuid;not null" json:"project_id"`
+	WorkspaceID uuid.UUID  `gorm:"type:uuid;not null" json:"workspace_id"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	CreatedByID *uuid.UUID `gorm:"type:uuid" json:"created_by_id,omitempty"`
+	UpdatedByID *uuid.UUID `gorm:"type:uuid" json:"updated_by_id,omitempty"`
+}
+
+func (ModuleLink) TableName() string { return "module_links" }
+
+func (m *ModuleLink) BeforeCreate(tx *gorm.DB) error {
+	if m.ID == uuid.Nil {
+		m.ID = uuid.New()
+	}
+	return nil
+}
+
 // ModuleIssue matches module_issues (M2M).
 type ModuleIssue struct {
 	ID          uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`

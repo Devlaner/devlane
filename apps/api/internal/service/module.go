@@ -202,6 +202,75 @@ func (s *ModuleService) Delete(ctx context.Context, workspaceSlug string, projec
 	return s.ms.Delete(ctx, moduleID)
 }
 
+// ListLinks returns the module's external links after auth-checking.
+func (s *ModuleService) ListLinks(ctx context.Context, workspaceSlug string, projectID, moduleID, userID uuid.UUID) ([]model.ModuleLink, error) {
+	mod, err := s.Get(ctx, workspaceSlug, projectID, moduleID, userID)
+	if err != nil {
+		return nil, err
+	}
+	return s.ms.ListLinksForModule(ctx, mod.ID)
+}
+
+// CreateLink attaches an external link to the module.
+func (s *ModuleService) CreateLink(ctx context.Context, workspaceSlug string, projectID, moduleID, userID uuid.UUID, title, url string) (*model.ModuleLink, error) {
+	mod, err := s.Get(ctx, workspaceSlug, projectID, moduleID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if title == "" {
+		title = url
+	}
+	l := &model.ModuleLink{
+		Title:       title,
+		URL:         url,
+		ModuleID:    mod.ID,
+		ProjectID:   mod.ProjectID,
+		WorkspaceID: mod.WorkspaceID,
+		CreatedByID: &userID,
+		UpdatedByID: &userID,
+	}
+	if err := s.ms.CreateLink(ctx, l); err != nil {
+		return nil, err
+	}
+	return l, nil
+}
+
+// UpdateLink edits a module link's title/URL.
+func (s *ModuleService) UpdateLink(ctx context.Context, workspaceSlug string, projectID, moduleID, linkID, userID uuid.UUID, title, url string) (*model.ModuleLink, error) {
+	mod, err := s.Get(ctx, workspaceSlug, projectID, moduleID, userID)
+	if err != nil {
+		return nil, err
+	}
+	l, err := s.ms.GetLinkByID(ctx, linkID)
+	if err != nil || l.ModuleID != mod.ID {
+		return nil, ErrModuleNotFound
+	}
+	if title != "" {
+		l.Title = title
+	}
+	if url != "" {
+		l.URL = url
+	}
+	l.UpdatedByID = &userID
+	if err := s.ms.UpdateLink(ctx, l); err != nil {
+		return nil, err
+	}
+	return l, nil
+}
+
+// DeleteLink removes a module link.
+func (s *ModuleService) DeleteLink(ctx context.Context, workspaceSlug string, projectID, moduleID, linkID, userID uuid.UUID) error {
+	mod, err := s.Get(ctx, workspaceSlug, projectID, moduleID, userID)
+	if err != nil {
+		return err
+	}
+	l, err := s.ms.GetLinkByID(ctx, linkID)
+	if err != nil || l.ModuleID != mod.ID {
+		return ErrModuleNotFound
+	}
+	return s.ms.DeleteLink(ctx, linkID)
+}
+
 func (s *ModuleService) ListModuleIssueIDs(ctx context.Context, workspaceSlug string, projectID, moduleID uuid.UUID, userID uuid.UUID) ([]uuid.UUID, error) {
 	_, err := s.Get(ctx, workspaceSlug, projectID, moduleID, userID)
 	if err != nil {
