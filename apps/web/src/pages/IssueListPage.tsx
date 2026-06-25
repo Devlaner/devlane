@@ -112,6 +112,17 @@ export function IssueListPage() {
   );
   // Chains reorder saves so rapid drags commit in order (see handleReorder).
   const reorderChain = useRef<Promise<unknown>>(Promise.resolve());
+  // Per-issue serialization for board drag-to-column: chain PATCHes so rapid
+  // drags of the same card commit in order, and a sequence token so only the
+  // latest move's failure triggers a refetch.
+  const cardMoveChains = useRef<Map<string, Promise<void>>>(new Map());
+  const cardMoveSeq = useRef<Map<string, number>>(new Map());
+  // Latest route key, so a late drag-failure refetch can be discarded if the
+  // user has since navigated to a different project.
+  const routeKeyRef = useRef('');
+  useEffect(() => {
+    routeKeyRef.current = `${workspaceSlug ?? ''}/${projectId ?? ''}`;
+  }, [workspaceSlug, projectId]);
   useDocumentTitle('Work items');
 
   const refetchIssues = () => {
@@ -587,6 +598,36 @@ export function IssueListPage() {
 
   const reorderEnabled = listDisplay.orderBy === 'manual';
 
+  // Board drag-to-column: optimistically move the card's state, then persist.
+  // PATCHes for the same card are chained (commit in order); only the latest
+  // move's failure refetches, so a stale older request can't clobber a newer one.
+  const handleCardMove = (issueId: string, targetStateId: string) => {
+    if (!workspaceSlug || !projectId) return;
+    const current = issues.find((i) => i.id === issueId);
+    if (!current || current.state_id === targetStateId) return;
+    const routeKey = `${workspaceSlug}/${projectId}`;
+    const seq = (cardMoveSeq.current.get(issueId) ?? 0) + 1;
+    cardMoveSeq.current.set(issueId, seq);
+    setIssues((prev) =>
+      prev.map((i) => (i.id === issueId ? { ...i, state_id: targetStateId } : i)),
+    );
+    const prevChain = cardMoveChains.current.get(issueId) ?? Promise.resolve();
+    const next = prevChain
+      .catch(() => {})
+      .then(() =>
+        issueService.update(workspaceSlug, projectId, issueId, { state_id: targetStateId }),
+      )
+      .then(() => undefined)
+      .catch(() => {
+        // Skip if superseded by a newer move, or if the user navigated to a
+        // different project (the refetch would replace the new route's list).
+        if (cardMoveSeq.current.get(issueId) === seq && routeKeyRef.current === routeKey) {
+          refetchIssues();
+        }
+      });
+    cardMoveChains.current.set(issueId, next);
+  };
+
   return (
     <div className="w-full">
       <div className="flex items-center justify-between gap-4 border-b border-(--border-subtle) px-4 py-3">
@@ -710,7 +751,7 @@ export function IssueListPage() {
               onReorder={reorderEnabled ? handleReorder : undefined}
             />
           )}
-          {layout === 'board' && <IssueLayoutBoard {...layoutProps} />}
+          {layout === 'board' && <IssueLayoutBoard {...layoutProps} onCardMove={handleCardMove} />}
           {layout === 'spreadsheet' && <IssueLayoutSpreadsheet {...layoutProps} />}
           {layout === 'calendar' && <IssueLayoutCalendar {...layoutProps} />}
           {layout === 'gantt' && <IssueLayoutGantt {...layoutProps} />}

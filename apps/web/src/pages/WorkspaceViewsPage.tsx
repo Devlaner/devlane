@@ -161,6 +161,9 @@ export function WorkspaceViewsPage() {
   const [viewLoading, setViewLoading] = useState(false);
   const viewAppliedRef = useRef(false);
   const prevViewIdRef = useRef<string | undefined>(undefined);
+  // Per-issue serialization for kanban drag-to-column (see handleCardMove).
+  const cardMoveChains = useRef<Map<string, Promise<void>>>(new Map());
+  const cardMoveSeq = useRef<Map<string, number>>(new Map());
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
   const [states, setStates] = useState<StateApiResponse[]>([]);
@@ -501,6 +504,42 @@ export function WorkspaceViewsPage() {
     [workspaceSlug],
   );
 
+  // Kanban drag-to-column: the board resolves the target to a concrete state in
+  // the card's own project; persist via that project and optimistically update.
+  // PATCHes for the same card are chained (commit in order); only the latest
+  // move's failure rolls back, so a stale older request can't revert a newer one.
+  const handleCardMove = useCallback(
+    (issueId: string, targetStateId: string) => {
+      if (!workspaceSlug) return;
+      const issue = issues.find((i) => i.id === issueId);
+      if (!issue || issue.state_id === targetStateId) return;
+      const prevStateId = issue.state_id;
+      const seq = (cardMoveSeq.current.get(issueId) ?? 0) + 1;
+      cardMoveSeq.current.set(issueId, seq);
+      setIssues((prev) =>
+        prev.map((i) => (i.id === issueId ? { ...i, state_id: targetStateId } : i)),
+      );
+      const prevChain = cardMoveChains.current.get(issueId) ?? Promise.resolve();
+      const next = prevChain
+        .catch(() => {})
+        .then(() =>
+          issueService.update(workspaceSlug, issue.project_id, issueId, {
+            state_id: targetStateId,
+          }),
+        )
+        .then(() => undefined)
+        .catch(() => {
+          if (cardMoveSeq.current.get(issueId) === seq) {
+            setIssues((prev) =>
+              prev.map((i) => (i.id === issueId ? { ...i, state_id: prevStateId } : i)),
+            );
+          }
+        });
+      cardMoveChains.current.set(issueId, next);
+    },
+    [workspaceSlug, issues],
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
@@ -741,7 +780,9 @@ export function WorkspaceViewsPage() {
     return (
       <div className="-mt-(--padding-page) -mr-(--padding-page) -mb-(--padding-page) flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-auto">
-          {display.layout === 'kanban' && <IssueLayoutBoard {...layoutProps} groupByStateGroup />}
+          {display.layout === 'kanban' && (
+            <IssueLayoutBoard {...layoutProps} groupByStateGroup onCardMove={handleCardMove} />
+          )}
           {display.layout === 'calendar' && <IssueLayoutCalendar {...layoutProps} />}
           {display.layout === 'gantt_chart' && <IssueLayoutGantt {...layoutProps} />}
         </div>
