@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { Archive, ArchiveRestore, Layers } from 'lucide-react';
-import { Button, Card, CardContent, CardHeader, Avatar } from '../components/ui';
+import { Archive, ArchiveRestore, Layers, FolderInput } from 'lucide-react';
+import { Button, Card, CardContent, CardHeader, Avatar, Modal } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { Dropdown, DatePickerTrigger, CommentEditor } from '../components/work-item';
 import { sanitizeHtml, safeUrl } from '../lib/sanitize';
@@ -339,6 +339,12 @@ export function IssueDetailPage() {
   // Attachments
   const [attachments, setAttachments] = useState<IssueAttachmentApiResponse[]>([]);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  // Move to another project
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [moveProjects, setMoveProjects] = useState<ProjectApiResponse[]>([]);
+  const [moveLoading, setMoveLoading] = useState(false);
+  const [moveSubmitting, setMoveSubmitting] = useState(false);
+  const [moveError, setMoveError] = useState<string | null>(null);
 
   useDocumentTitle(loading ? 'Work item' : (issue?.name ?? 'Work item'));
 
@@ -515,6 +521,40 @@ export function IssueDetailPage() {
       navigate(`${baseUrl}/epics/${issueId}`);
     } catch {
       setErrorMessage('Failed to convert to epic.');
+    }
+  };
+
+  const openMove = async () => {
+    if (!workspaceSlug) return;
+    setMoveOpen(true);
+    setMoveError(null);
+    setMoveLoading(true);
+    try {
+      const list = await projectService.list(workspaceSlug);
+      setMoveProjects(list.filter((p) => p.id !== project.id));
+    } catch {
+      setMoveError('Failed to load projects.');
+    } finally {
+      setMoveLoading(false);
+    }
+  };
+
+  const handleMove = async (targetProjectId: string) => {
+    if (!workspaceSlug || !projectId || !issueId) return;
+    setMoveSubmitting(true);
+    setMoveError(null);
+    try {
+      await issueService.move(workspaceSlug, projectId, issueId, targetProjectId);
+      setMoveOpen(false);
+      navigate(`/${workspace.slug}/projects/${targetProjectId}/issues/${issueId}`);
+    } catch (err) {
+      const apiError =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
+          : null;
+      setMoveError(apiError ?? 'Failed to move work item.');
+    } finally {
+      setMoveSubmitting(false);
     }
   };
   const descriptionHtml =
@@ -705,6 +745,16 @@ export function IssueDetailPage() {
             >
               <Layers className="h-3.5 w-3.5" />
               Convert to epic
+            </button>
+          ) : null}
+          {!issue.is_epic && !issue.archived_at ? (
+            <button
+              type="button"
+              onClick={() => void openMove()}
+              className="inline-flex shrink-0 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-secondary) transition-colors hover:bg-(--bg-layer-1-hover)"
+            >
+              <FolderInput className="h-3.5 w-3.5" />
+              Move
             </button>
           ) : null}
           {issue.archived_at ? (
@@ -1919,6 +1969,45 @@ export function IssueDetailPage() {
             </div>
           );
         })()}
+
+      <Modal open={moveOpen} onClose={() => setMoveOpen(false)} title="Move work item to project">
+        <div className="space-y-3">
+          <p className="text-sm text-(--txt-tertiary)">
+            Choose a destination project. The work item gets a new ID there, and its state, parent,
+            labels, and cycle/module links are cleared.
+          </p>
+          {moveError ? (
+            <p className="rounded-(--radius-md) bg-(--bg-danger-subtle) px-3 py-2 text-sm text-(--txt-danger)">
+              {moveError}
+            </p>
+          ) : null}
+          {moveLoading ? (
+            <p className="py-6 text-center text-sm text-(--txt-tertiary)">Loading projects…</p>
+          ) : moveProjects.length === 0 ? (
+            <p className="py-6 text-center text-sm text-(--txt-tertiary)">
+              No other projects available.
+            </p>
+          ) : (
+            <ul className="max-h-72 space-y-1 overflow-y-auto">
+              {moveProjects.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    disabled={moveSubmitting}
+                    onClick={() => void handleMove(p.id)}
+                    className="flex w-full items-center gap-2 rounded-(--radius-md) px-3 py-2 text-left text-sm text-(--txt-primary) transition-colors hover:bg-(--bg-layer-1-hover) disabled:opacity-50"
+                  >
+                    <span className="shrink-0 rounded-(--radius-sm) bg-(--bg-layer-2) px-1.5 py-0.5 text-xs font-medium text-(--txt-secondary)">
+                      {p.identifier ?? p.id.slice(0, 8)}
+                    </span>
+                    <span className="truncate">{p.name}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </Modal>
 
       <CreateWorkItemModal
         open={subCreateOpen}

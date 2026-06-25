@@ -337,6 +337,19 @@ export const issueService = {
     return data;
   },
 
+  async move(
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    targetProjectId: string,
+  ): Promise<IssueApiResponse> {
+    const { data } = await apiClient.post<IssueApiResponse>(
+      `${base(workspaceSlug, projectId, issueId)}/move/`,
+      { target_project_id: targetProjectId },
+    );
+    return data;
+  },
+
   async listArchived(
     workspaceSlug: string,
     projectId: string,

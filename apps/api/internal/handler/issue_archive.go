@@ -112,6 +112,53 @@ func (h *IssueHandler) Convert(c *gin.Context) {
 	c.JSON(http.StatusOK, issue)
 }
 
+// Move rehomes a work item into another project in the same workspace.
+// POST /api/workspaces/:slug/projects/:projectId/issues/:pk/move/
+func (h *IssueHandler) Move(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	slug := c.Param("slug")
+	projectID, err := uuid.Parse(c.Param("projectId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+	iid, ok := issueID(c)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid issue ID"})
+		return
+	}
+	var body struct {
+		TargetProjectID string `json:"target_project_id"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil || body.TargetProjectID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "target_project_id is required"})
+		return
+	}
+	targetID, err := uuid.Parse(body.TargetProjectID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid target project ID"})
+		return
+	}
+	issue, err := h.Issue.Move(c.Request.Context(), slug, projectID, iid, user.ID, targetID)
+	if err != nil {
+		if err == service.ErrMoveSameProject {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Work item is already in that project."})
+			return
+		}
+		if issueAccessNotFound(err) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to move work item"})
+		return
+	}
+	c.JSON(http.StatusOK, issue)
+}
+
 // ListArchived returns archived work items for a project.
 // GET /api/workspaces/:slug/projects/:projectId/archived-issues/
 func (h *IssueHandler) ListArchived(c *gin.Context) {

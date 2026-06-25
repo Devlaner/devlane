@@ -172,6 +172,57 @@ func (s *IssueStore) BulkUpdateFields(ctx context.Context, projectID uuid.UUID, 
 	return res.RowsAffected, res.Error
 }
 
+// MoveToProject rehomes an issue into another project atomically: it allocates a
+// fresh per-project sequence, repoints project_id, resets project-scoped fields
+// (state, parent, estimate) and drops project-scoped associations (labels,
+// cycle/module memberships, relations), and repoints links/attachments. Returns
+// the new sequence id.
+func (s *IssueStore) MoveToProject(ctx context.Context, issueID, targetProjectID, userID uuid.UUID) (int, error) {
+	var newSeq int
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		n, err := s.NextSequenceID(ctx, tx, targetProjectID)
+		if err != nil {
+			return err
+		}
+		newSeq = n
+		if err := tx.Model(&model.Issue{}).Where("id = ?", issueID).Updates(map[string]any{
+			"project_id":        targetProjectID,
+			"sequence_id":       newSeq,
+			"state_id":          nil,
+			"parent_id":         nil,
+			"estimate_point_id": nil,
+			"updated_by_id":     userID,
+		}).Error; err != nil {
+			return err
+		}
+		// Drop associations that belong to the source project.
+		if err := tx.Where("issue_id = ?", issueID).Delete(&model.IssueLabel{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("issue_id = ?", issueID).Delete(&model.CycleIssue{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("issue_id = ?", issueID).Delete(&model.ModuleIssue{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("issue_id = ? OR related_issue_id = ?", issueID, issueID).
+			Delete(&model.IssueRelation{}).Error; err != nil {
+			return err
+		}
+		// Links and attachments travel with the issue; repoint their project_id.
+		if err := tx.Model(&model.IssueLink{}).Where("issue_id = ?", issueID).
+			Update("project_id", targetProjectID).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&model.IssueAttachment{}).Where("issue_id = ?", issueID).
+			Update("project_id", targetProjectID).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	return newSeq, err
+}
+
 // SetIsEpic flips an issue's is_epic flag. Promotion also clears parent_id.
 // Demotion is guarded atomically: the UPDATE only matches when the issue has no
 // child work items, so a concurrent "add child" can't leave orphaned children

@@ -23,6 +23,8 @@ var (
 	ErrInvalidState    = errors.New("invalid state for project")
 	// ErrEpicHasChildren blocks demoting an epic that still has child work items.
 	ErrEpicHasChildren = errors.New("epic has child work items")
+	// ErrMoveSameProject is returned when a move targets the issue's current project.
+	ErrMoveSameProject = errors.New("issue already in target project")
 )
 
 // validPriorities is the accepted set of work-item priority values.
@@ -253,6 +255,35 @@ func boolStr(b bool) string {
 		return "true"
 	}
 	return "false"
+}
+
+// Move rehomes an issue into another project in the same workspace. The target
+// must differ from the current project and be reachable by the caller.
+// Project-scoped fields (state, parent, estimate) and associations (labels,
+// cycle/module membership, relations) are reset because they don't carry across
+// projects; the issue gets a fresh per-project sequence id.
+func (s *IssueService) Move(ctx context.Context, workspaceSlug string, projectID, issueID, userID, targetProjectID uuid.UUID) (*model.Issue, error) {
+	issue, err := s.issueForAccess(ctx, workspaceSlug, projectID, issueID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if targetProjectID == projectID {
+		return nil, ErrMoveSameProject
+	}
+	// The target must be a project the caller can access in the same workspace;
+	// ensureProjectAccess returns ErrProjectNotFound for projects outside it.
+	if err := s.ensureProjectAccess(ctx, workspaceSlug, targetProjectID, userID); err != nil {
+		return nil, err
+	}
+	if _, err := s.is.MoveToProject(ctx, issue.ID, targetProjectID, userID); err != nil {
+		return nil, err
+	}
+	updated, err := s.is.GetByID(ctx, issue.ID)
+	if err != nil {
+		return nil, err
+	}
+	s.recordActivity(ctx, updated, userID, "project_id", projectID.String(), targetProjectID.String())
+	return updated, nil
 }
 
 // ListArchived returns archived issues for a project.
