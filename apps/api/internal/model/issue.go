@@ -35,6 +35,7 @@ type Issue struct {
 	IsDraft         bool           `gorm:"column:is_draft;default:false" json:"is_draft"`
 	IsEpic          bool           `gorm:"column:is_epic;default:false" json:"is_epic"`
 	Type            string         `gorm:"type:varchar(50);default:task" json:"type,omitempty"`
+	EstimatePointID *uuid.UUID     `gorm:"column:estimate_point_id;type:uuid" json:"estimate_point_id,omitempty"`
 }
 
 func (Issue) TableName() string { return "issues" }

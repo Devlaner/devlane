@@ -209,6 +209,8 @@ func (h *IssueHandler) Update(c *gin.Context) {
 		LabelIDs        []uuid.UUID `json:"label_ids"`
 		IsDraft         *bool       `json:"is_draft"`
 		Type            string      `json:"type"`
+		// estimate_point_id: omitted = leave alone, "" = clear, uuid = set.
+		EstimatePointID *string `json:"estimate_point_id"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
@@ -262,7 +264,20 @@ func (h *IssueHandler) Update(c *gin.Context) {
 	if body.Type != "" {
 		issueType = &body.Type
 	}
-	issue, err := h.Issue.Update(c.Request.Context(), slug, projectID, issueID, user.ID, name, priority, description, body.StateID, assigneeIDs, labelIDs, startDate, targetDate, body.ParentID, body.IsDraft, issueType)
+	var estimatePointIDSet bool
+	var estimatePointID *uuid.UUID
+	if body.EstimatePointID != nil {
+		estimatePointIDSet = true
+		if *body.EstimatePointID != "" {
+			pid, err := uuid.Parse(*body.EstimatePointID)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid estimate_point_id"})
+				return
+			}
+			estimatePointID = &pid
+		}
+	}
+	issue, err := h.Issue.Update(c.Request.Context(), slug, projectID, issueID, user.ID, name, priority, description, body.StateID, assigneeIDs, labelIDs, startDate, targetDate, body.ParentID, body.IsDraft, issueType, estimatePointIDSet, estimatePointID)
 	if err != nil {
 		if err == service.ErrIssueNotFound || err == service.ErrProjectForbidden {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Issue not found"})

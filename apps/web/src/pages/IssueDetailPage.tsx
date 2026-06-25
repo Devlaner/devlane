@@ -16,6 +16,7 @@ import { stateService } from '../services/stateService';
 import { labelService } from '../services/labelService';
 import { cycleService } from '../services/cycleService';
 import { moduleService } from '../services/moduleService';
+import { estimateService } from '../services/estimateService';
 import { recentsService } from '../services/recentsService';
 import { commentService } from '../services/commentService';
 import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
@@ -40,6 +41,7 @@ import type {
   IssueActivityApiResponse,
   CycleApiResponse,
   ModuleApiResponse,
+  EstimateApiResponse,
   IssueLinkApiResponse,
   IssueRelationApiResponse,
   IssueAttachmentApiResponse,
@@ -233,6 +235,23 @@ const IconType = () => (
   </svg>
 );
 
+const IconEstimate = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden
+  >
+    <path d="M12 14a6 6 0 1 0-6-6" />
+    <path d="M6 8H2" />
+    <path d="m12 14 3-3" />
+    <circle cx="12" cy="14" r="1.5" fill="currentColor" stroke="none" />
+  </svg>
+);
+
 const WORK_ITEM_TYPES = [
   { value: 'task', label: 'Task' },
   { value: 'bug', label: 'Bug' },
@@ -285,6 +304,7 @@ export function IssueDetailPage() {
   const [cycles, setCycles] = useState<CycleApiResponse[]>([]);
   const [modules, setModules] = useState<ModuleApiResponse[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
+  const [estimates, setEstimates] = useState<EstimateApiResponse[]>([]);
   const [allIssues, setAllIssues] = useState<IssueApiResponse[]>([]);
   const [comments, setComments] = useState<IssueCommentApiResponse[]>([]);
   const [activities, setActivities] = useState<IssueActivityApiResponse[]>([]);
@@ -321,6 +341,22 @@ export function IssueDetailPage() {
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
 
   useDocumentTitle(loading ? 'Work item' : (issue?.name ?? 'Work item'));
+
+  useEffect(() => {
+    if (!workspaceSlug || !projectId) return;
+    let cancelled = false;
+    estimateService
+      .list(workspaceSlug, projectId)
+      .then((list) => {
+        if (!cancelled) setEstimates(list);
+      })
+      .catch(() => {
+        if (!cancelled) setEstimates([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug, projectId]);
 
   useEffect(() => {
     if (!workspaceSlug || !projectId || !issueId) {
@@ -616,6 +652,14 @@ export function IssueDetailPage() {
       setDeletingCommentId(null);
     }
   };
+
+  // Estimate picker: offer the project's active estimate's points; resolve the
+  // currently-selected point across all estimates so it renders even if it
+  // belongs to a since-deactivated system.
+  const activeEstimate = estimates.find((e) => e.last_used) ?? estimates[0] ?? null;
+  const estimatePoints = activeEstimate?.points ?? [];
+  const currentEstimatePoint =
+    estimates.flatMap((e) => e.points).find((p) => p.id === issue.estimate_point_id) ?? null;
 
   return (
     <div className="space-y-6">
@@ -1734,6 +1778,57 @@ export function IssueDetailPage() {
                   ))}
                 </Dropdown>
               </PropertyRow>
+
+              {/* Estimate */}
+              {estimatePoints.length > 0 && (
+                <PropertyRow icon={<IconEstimate />} label="Estimate">
+                  <Dropdown
+                    id="estimate"
+                    openId={openDropdown}
+                    onOpen={setOpenDropdown}
+                    label="Estimate"
+                    icon={<IconEstimate />}
+                    displayValue=""
+                    align="right"
+                    triggerClassName={GHOST_TRIGGER}
+                    triggerContent={
+                      <span className="text-(--txt-secondary)">
+                        {currentEstimatePoint?.value ?? 'No estimate'}
+                      </span>
+                    }
+                  >
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
+                      onClick={() => {
+                        setOpenDropdown(null);
+                        updateIssue({ estimate_point_id: '' });
+                      }}
+                    >
+                      <span className="text-(--txt-primary)">No estimate</span>
+                      {!issue.estimate_point_id && (
+                        <span className="ml-auto text-xs text-(--txt-tertiary)">Selected</span>
+                      )}
+                    </button>
+                    {estimatePoints.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
+                        onClick={() => {
+                          setOpenDropdown(null);
+                          updateIssue({ estimate_point_id: p.id });
+                        }}
+                      >
+                        <span className="text-(--txt-primary)">{p.value}</span>
+                        {issue.estimate_point_id === p.id && (
+                          <span className="ml-auto text-xs text-(--txt-tertiary)">Selected</span>
+                        )}
+                      </button>
+                    ))}
+                  </Dropdown>
+                </PropertyRow>
+              )}
             </CardContent>
           </Card>
         </div>

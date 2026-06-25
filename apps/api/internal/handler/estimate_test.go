@@ -63,6 +63,40 @@ func TestEstimates_CRUD(t *testing.T) {
 	require.NotContains(t, ts.GET(base, w.Session).Body.String(), "Sizes")
 }
 
+func TestEstimates_AssignToWorkItem(t *testing.T) {
+	ts := testutil.NewTestServer(t)
+	w := testutil.SeedWorld(t, ts.DB)
+	estBase := "/api/workspaces/" + w.Workspace.Slug + "/projects/" + w.Project.ID.String() + "/estimates/"
+
+	// An estimate with one point.
+	rc := ts.POST(estBase, map[string]any{
+		"name":   "Sizes",
+		"points": []map[string]any{{"key": 0, "value": "M"}},
+	}, w.Session)
+	require.Equal(t, http.StatusCreated, rc.Code, "body=%s", rc.Body.String())
+	pts, _ := testutil.MustJSONMap(t, rc)["points"].([]any)
+	require.Len(t, pts, 1)
+	pointID, _ := pts[0].(map[string]any)["id"].(string)
+	require.NotEmpty(t, pointID)
+
+	// A work item, then assign the estimate point to it.
+	issue := testutil.CreateIssue(t, ts.DB, w.Project.ID, w.Workspace.ID, w.User.ID)
+	issueBase := "/api/workspaces/" + w.Workspace.Slug + "/projects/" + w.Project.ID.String() + "/issues/" + issue.ID.String() + "/"
+
+	ru := ts.PATCH(issueBase, map[string]any{"estimate_point_id": pointID}, w.Session)
+	require.Equal(t, http.StatusOK, ru.Code, "body=%s", ru.Body.String())
+	require.Equal(t, pointID, testutil.MustJSONMap(t, ru)["estimate_point_id"])
+
+	// Persisted on GET.
+	require.Equal(t, pointID, testutil.MustJSONMap(t, ts.GET(issueBase, w.Session))["estimate_point_id"])
+
+	// Clearing it with "" removes the estimate.
+	rclear := ts.PATCH(issueBase, map[string]any{"estimate_point_id": ""}, w.Session)
+	require.Equal(t, http.StatusOK, rclear.Code, "body=%s", rclear.Body.String())
+	_, present := testutil.MustJSONMap(t, ts.GET(issueBase, w.Session))["estimate_point_id"]
+	require.False(t, present, "estimate_point_id should be omitted once cleared")
+}
+
 func TestEstimates_NonMemberForbidden(t *testing.T) {
 	ts := testutil.NewTestServer(t)
 	w := testutil.SeedWorld(t, ts.DB)

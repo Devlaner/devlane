@@ -249,7 +249,7 @@ func (s *IssueService) BulkUpdate(ctx context.Context, workspaceSlug string, pro
 	n := 0
 	var firstErr error
 	for _, id := range issueIDs {
-		if _, err := s.Update(ctx, workspaceSlug, projectID, id, userID, nil, priority, nil, stateID, nil, nil, nil, nil, nil, nil, nil); err != nil {
+		if _, err := s.Update(ctx, workspaceSlug, projectID, id, userID, nil, priority, nil, stateID, nil, nil, nil, nil, nil, nil, nil, false, nil); err != nil {
 			if firstErr == nil {
 				firstErr = err
 			}
@@ -456,7 +456,7 @@ func (s *IssueService) Create(ctx context.Context, workspaceSlug string, project
 	return issue, nil
 }
 
-func (s *IssueService) Update(ctx context.Context, workspaceSlug string, projectID, issueID uuid.UUID, userID uuid.UUID, name, priority, description *string, stateID *uuid.UUID, assigneeIDs, labelIDs *[]uuid.UUID, startDate, targetDate *time.Time, parentID *uuid.UUID, isDraft *bool, issueType *string) (*model.Issue, error) {
+func (s *IssueService) Update(ctx context.Context, workspaceSlug string, projectID, issueID uuid.UUID, userID uuid.UUID, name, priority, description *string, stateID *uuid.UUID, assigneeIDs, labelIDs *[]uuid.UUID, startDate, targetDate *time.Time, parentID *uuid.UUID, isDraft *bool, issueType *string, estimatePointIDSet bool, estimatePointID *uuid.UUID) (*model.Issue, error) {
 	issue, err := s.GetByID(ctx, workspaceSlug, projectID, issueID, userID)
 	if err != nil {
 		return nil, err
@@ -498,6 +498,9 @@ func (s *IssueService) Update(ctx context.Context, workspaceSlug string, project
 	}
 	if issueType != nil && *issueType != "" {
 		issue.Type = *issueType
+	}
+	if estimatePointIDSet {
+		issue.EstimatePointID = estimatePointID
 	}
 	issue.UpdatedByID = &userID
 	if err := s.is.Update(ctx, issue); err != nil {

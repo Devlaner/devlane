@@ -78,6 +78,8 @@ export const issueService = {
         is_draft?: boolean;
         description_html?: string;
         type?: string;
+        /** uuid to set, "" to clear, omit to leave unchanged */
+        estimate_point_id?: string | null;
       }
     >,
   ): Promise<IssueApiResponse> {

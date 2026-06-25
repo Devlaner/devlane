@@ -207,6 +207,7 @@ export interface IssueApiResponse {
   is_draft?: boolean;
   is_epic?: boolean;
   type?: string;
+  estimate_point_id?: string | null;
 }
 
 /** External URL linked to an issue */
