@@ -172,6 +172,25 @@ func (s *IssueStore) BulkUpdateFields(ctx context.Context, projectID uuid.UUID, 
 	return res.RowsAffected, res.Error
 }
 
+// ReorderIssues renumbers sort_order for the given issues to match the order of
+// `ids` (evenly spaced), in a single transaction. This makes manual drag-order
+// deterministic even when issues currently share the default sort_order.
+func (s *IssueStore) ReorderIssues(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for i, id := range ids {
+			if err := tx.Model(&model.Issue{}).
+				Where("id = ? AND project_id = ? AND deleted_at IS NULL", id, projectID).
+				Update("sort_order", float64((i+1)*1024)).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // BulkSetArchived archives or restores many issues scoped to a project.
 func (s *IssueStore) BulkSetArchived(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID, archived bool) (int64, error) {
 	updates := map[string]any{"archived_at": nil}

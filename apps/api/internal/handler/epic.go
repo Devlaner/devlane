@@ -205,7 +205,7 @@ func (h *EpicHandler) UpdateEpic(c *gin.Context) {
 		tmp := body.LabelIDs
 		labelIDs = &tmp
 	}
-	epic, err := h.Issue.Update(c.Request.Context(), slug, projectID, eID, user.ID, name, priority, body.Description, body.StateID, assigneeIDs, labelIDs, nil, nil, nil, nil, nil, false, nil)
+	epic, err := h.Issue.Update(c.Request.Context(), slug, projectID, eID, user.ID, name, priority, body.Description, body.StateID, assigneeIDs, labelIDs, nil, nil, nil, nil, nil, false, nil, nil)
 	if err != nil {
 		if err == service.ErrIssueNotFound || err == service.ErrProjectForbidden {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})

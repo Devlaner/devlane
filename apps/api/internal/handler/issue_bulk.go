@@ -103,3 +103,28 @@ func (h *IssueHandler) BulkDelete(c *gin.Context) {
 	n, err := h.Issue.BulkDelete(c.Request.Context(), slug, projectID, userID, body.IssueIDs)
 	bulkRespond(c, n, err, "Failed to delete work items")
 }
+
+// BulkReorder renumbers work items to match the given id order (drag-to-reorder).
+// POST /api/workspaces/:slug/projects/:projectId/issues-bulk/reorder/
+func (h *IssueHandler) BulkReorder(c *gin.Context) {
+	slug, projectID, userID, ok := bulkContext(c)
+	if !ok {
+		return
+	}
+	var body struct {
+		IssueIDs []uuid.UUID `json:"issue_ids"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil || len(body.IssueIDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "issue_ids is required"})
+		return
+	}
+	if err := h.Issue.Reorder(c.Request.Context(), slug, projectID, userID, body.IssueIDs); err != nil {
+		if issueAccessNotFound(err) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reorder work items"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}

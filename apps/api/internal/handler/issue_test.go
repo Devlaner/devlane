@@ -2,6 +2,7 @@ package handler_test
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/Devlaner/devlane/api/internal/testutil"
@@ -127,4 +128,27 @@ func TestIssue_DraftCreation(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rr.Code, "body=%s", rr.Body.String())
 	body := testutil.MustJSONMap(t, rr)
 	assert.Equal(t, true, body["is_draft"])
+}
+
+func TestIssue_SortOrderReorder(t *testing.T) {
+	ts := testutil.NewTestServer(t)
+	w := testutil.SeedWorld(t, ts.DB)
+	base := issueBase(w.Workspace.Slug, w.Project.ID.String())
+
+	a := testutil.CreateIssue(t, ts.DB, w.Project.ID, w.Workspace.ID, w.User.ID)
+	b := testutil.CreateIssue(t, ts.DB, w.Project.ID, w.Workspace.ID, w.User.ID)
+	idA, idB := a.ID.String(), b.ID.String()
+
+	// Order A before B.
+	require.Equal(t, http.StatusOK, ts.PATCH(base+idA+"/", map[string]any{"sort_order": 100}, w.Session).Code)
+	require.Equal(t, http.StatusOK, ts.PATCH(base+idB+"/", map[string]any{"sort_order": 200}, w.Session).Code)
+	body1 := ts.GET(base, w.Session).Body.String()
+	require.Less(t, strings.Index(body1, idA), strings.Index(body1, idB), "A should sort before B")
+
+	// Move A to the bottom — B should now come first.
+	rr := ts.PATCH(base+idA+"/", map[string]any{"sort_order": 300}, w.Session)
+	require.Equal(t, http.StatusOK, rr.Code, "body=%s", rr.Body.String())
+	require.InDelta(t, 300.0, testutil.MustJSONMap(t, rr)["sort_order"], 0.001)
+	body2 := ts.GET(base, w.Session).Body.String()
+	require.Less(t, strings.Index(body2, idB), strings.Index(body2, idA), "B should sort before A after reorder")
 }

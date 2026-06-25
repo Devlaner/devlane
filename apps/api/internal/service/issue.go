@@ -236,6 +236,15 @@ func (s *IssueService) ListArchivedForWorkspace(ctx context.Context, workspaceSl
 	return s.is.ListArchivedByWorkspaceID(ctx, wrk.ID, limit, offset)
 }
 
+// Reorder renumbers the given issues' sort_order to match the order of ids
+// (manual drag-to-reorder).
+func (s *IssueService) Reorder(ctx context.Context, workspaceSlug string, projectID, userID uuid.UUID, ids []uuid.UUID) error {
+	if err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
+		return err
+	}
+	return s.is.ReorderIssues(ctx, projectID, ids)
+}
+
 // BulkUpdate applies priority/state changes to many issues in a project. It
 // validates the inputs, then routes each issue through the single-issue Update
 // so activity logging and notifications fire exactly as they do individually.
@@ -259,7 +268,7 @@ func (s *IssueService) BulkUpdate(ctx context.Context, workspaceSlug string, pro
 	n := 0
 	var firstErr error
 	for _, id := range issueIDs {
-		if _, err := s.Update(ctx, workspaceSlug, projectID, id, userID, nil, priority, nil, stateID, nil, nil, nil, nil, nil, nil, nil, false, nil); err != nil {
+		if _, err := s.Update(ctx, workspaceSlug, projectID, id, userID, nil, priority, nil, stateID, nil, nil, nil, nil, nil, nil, nil, false, nil, nil); err != nil {
 			if firstErr == nil {
 				firstErr = err
 			}
@@ -466,7 +475,7 @@ func (s *IssueService) Create(ctx context.Context, workspaceSlug string, project
 	return issue, nil
 }
 
-func (s *IssueService) Update(ctx context.Context, workspaceSlug string, projectID, issueID uuid.UUID, userID uuid.UUID, name, priority, description *string, stateID *uuid.UUID, assigneeIDs, labelIDs *[]uuid.UUID, startDate, targetDate *time.Time, parentID *uuid.UUID, isDraft *bool, issueType *string, estimatePointIDSet bool, estimatePointID *uuid.UUID) (*model.Issue, error) {
+func (s *IssueService) Update(ctx context.Context, workspaceSlug string, projectID, issueID uuid.UUID, userID uuid.UUID, name, priority, description *string, stateID *uuid.UUID, assigneeIDs, labelIDs *[]uuid.UUID, startDate, targetDate *time.Time, parentID *uuid.UUID, isDraft *bool, issueType *string, estimatePointIDSet bool, estimatePointID *uuid.UUID, sortOrder *float64) (*model.Issue, error) {
 	issue, err := s.GetByID(ctx, workspaceSlug, projectID, issueID, userID)
 	if err != nil {
 		return nil, err
@@ -511,6 +520,9 @@ func (s *IssueService) Update(ctx context.Context, workspaceSlug string, project
 	}
 	if estimatePointIDSet {
 		issue.EstimatePointID = estimatePointID
+	}
+	if sortOrder != nil {
+		issue.SortOrder = *sortOrder
 	}
 	issue.UpdatedByID = &userID
 	if err := s.is.Update(ctx, issue); err != nil {

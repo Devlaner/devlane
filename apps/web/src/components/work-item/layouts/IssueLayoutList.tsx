@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { GripVertical } from 'lucide-react';
 import { IssuePRBadge } from '../IssuePRBadge';
 import {
   DueDateCell,
@@ -9,6 +10,7 @@ import {
   WorkItemAvatarGroup,
 } from '../IssueRowCells';
 import { membersFromAssigneeIds } from '../../../lib/issueRowHelpers';
+import { cn } from '../../../lib/utils';
 import type { IssueApiResponse, LabelApiResponse } from '../../../api/types';
 import type { Priority } from '../../../types';
 import type { GroupedIssuesResult } from '../../../lib/issueListGroupAndSort';
@@ -37,6 +39,12 @@ interface IssueLayoutListProps extends IssueLayoutProps {
     selectedIds: Set<string>;
     onToggle: (id: string) => void;
   };
+  /**
+   * Optional manual reorder (drag-and-drop). Only active for the flat
+   * (ungrouped) list; the parent persists the new order. `after` indicates the
+   * dragged item should land below the drop target rather than above.
+   */
+  onReorder?: (activeId: string, overId: string, after: boolean) => void;
 }
 
 export function IssueLayoutList({
@@ -54,11 +62,46 @@ export function IssueLayoutList({
   cycleName,
   moduleName,
   selection,
+  onReorder,
 }: IssueLayoutListProps) {
   const stateById = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
   const labelById = useMemo(() => new Map(labels.map((l) => [l.id, l])), [labels]);
 
-  const renderRow = (issue: IssueApiResponse) => {
+  // Drag-to-reorder is only offered on the flat list (the parent decides whether
+  // manual ordering is active by passing onReorder).
+  const reorderable = Boolean(onReorder && groupedIssues.isFlat);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ id: string; after: boolean } | null>(null);
+  const clearDrag = () => {
+    setDraggingId(null);
+    setDropTarget(null);
+  };
+
+  // Keyboard reorder: keep focus on the moved row's handle across the re-render
+  // so repeated Arrow presses keep working.
+  const handleRefs = useRef(new Map<string, HTMLButtonElement>());
+  const pendingFocusId = useRef<string | null>(null);
+  useEffect(() => {
+    const id = pendingFocusId.current;
+    if (!id) return;
+    pendingFocusId.current = null;
+    handleRefs.current.get(id)?.focus();
+  });
+  const keyboardMove =
+    (issue: IssueApiResponse, idx: number, list: IssueApiResponse[]) =>
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'ArrowUp' && idx > 0) {
+        e.preventDefault();
+        pendingFocusId.current = issue.id;
+        onReorder!(issue.id, list[idx - 1]!.id, false);
+      } else if (e.key === 'ArrowDown' && idx < list.length - 1) {
+        e.preventDefault();
+        pendingFocusId.current = issue.id;
+        onReorder!(issue.id, list[idx + 1]!.id, true);
+      }
+    };
+
+  const renderRow = (issue: IssueApiResponse, idx?: number, list?: IssueApiResponse[]) => {
     const displayId = `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`;
     const subN = subWorkCountByParentId.get(issue.id) ?? 0;
     const issueState = issue.state_id ? (stateById.get(issue.state_id) ?? null) : null;
@@ -69,8 +112,63 @@ export function IssueLayoutList({
     const prInfo = prSummary[issue.id];
     const startStr = formatShort(issue.start_date);
 
+    const isDropTarget = reorderable && dropTarget?.id === issue.id && draggingId !== issue.id;
+
     return (
-      <li key={issue.id} className="flex items-center">
+      <li
+        key={issue.id}
+        className={cn(
+          'group/row flex items-center',
+          draggingId === issue.id && 'opacity-50',
+          isDropTarget &&
+            (dropTarget!.after
+              ? 'shadow-[inset_0_-2px_0_0_var(--border-focus)]'
+              : 'shadow-[inset_0_2px_0_0_var(--border-focus)]'),
+        )}
+        onDragOver={
+          reorderable
+            ? (e) => {
+                if (!draggingId) return;
+                e.preventDefault();
+                const r = e.currentTarget.getBoundingClientRect();
+                setDropTarget({ id: issue.id, after: e.clientY > r.top + r.height / 2 });
+              }
+            : undefined
+        }
+        onDrop={
+          reorderable
+            ? (e) => {
+                e.preventDefault();
+                const after = dropTarget?.after ?? false;
+                if (draggingId && draggingId !== issue.id) onReorder!(draggingId, issue.id, after);
+                clearDrag();
+              }
+            : undefined
+        }
+      >
+        {reorderable ? (
+          <button
+            type="button"
+            draggable
+            ref={(el) => {
+              if (el) handleRefs.current.set(issue.id, el);
+              else handleRefs.current.delete(issue.id);
+            }}
+            onDragStart={(e) => {
+              setDraggingId(issue.id);
+              e.dataTransfer.effectAllowed = 'move';
+            }}
+            onDragEnd={clearDrag}
+            onKeyDown={
+              list !== undefined && idx !== undefined ? keyboardMove(issue, idx, list) : undefined
+            }
+            className="flex shrink-0 cursor-grab items-center rounded-sm pl-2 text-(--txt-icon-tertiary) opacity-0 transition-opacity hover:text-(--txt-icon-secondary) focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--border-focus) active:cursor-grabbing group-hover/row:opacity-100"
+            aria-label={`Reorder ${displayId}. Use Arrow Up or Arrow Down to move.`}
+            title="Drag, or focus and use arrow keys, to reorder"
+          >
+            <GripVertical className="size-4" />
+          </button>
+        ) : null}
         {selection ? (
           <span className="shrink-0 pl-4">
             <input
@@ -83,6 +181,7 @@ export function IssueLayoutList({
           </span>
         ) : null}
         <Link
+          draggable={false}
           to={issueHref(issue.id)}
           className="flex min-h-12 flex-1 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
         >
@@ -142,9 +241,10 @@ export function IssueLayoutList({
   };
 
   if (groupedIssues.isFlat) {
+    const flatList = groupedIssues.groups.get(groupedIssues.order[0]) ?? [];
     return (
       <ul className="w-full divide-y divide-(--border-subtle)">
-        {(groupedIssues.groups.get(groupedIssues.order[0]) ?? []).map((issue) => renderRow(issue))}
+        {flatList.map((issue, idx) => renderRow(issue, idx, flatList))}
       </ul>
     );
   }

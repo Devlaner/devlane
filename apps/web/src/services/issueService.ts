@@ -93,6 +93,8 @@ export const issueService = {
         type?: string;
         /** uuid to set, "" to clear, omit to leave unchanged */
         estimate_point_id?: string | null;
+        /** manual ordering position (drag-to-reorder) */
+        sort_order?: number;
       }
     >,
   ): Promise<IssueApiResponse> {
@@ -361,5 +363,10 @@ export const issueService = {
 
   async bulkDelete(workspaceSlug: string, projectId: string, issueIds: string[]): Promise<void> {
     await apiClient.post(`${bulkBase(workspaceSlug, projectId)}/delete/`, { issue_ids: issueIds });
+  },
+
+  /** Renumber work items to match the given id order (manual drag-to-reorder). */
+  async reorder(workspaceSlug: string, projectId: string, issueIds: string[]): Promise<void> {
+    await apiClient.post(`${bulkBase(workspaceSlug, projectId)}/reorder/`, { issue_ids: issueIds });
   },
 };

@@ -347,6 +347,7 @@ func New(cfg Config) *gin.Engine {
 		api.POST("/workspaces/:slug/projects/:projectId/issues-bulk/update/", issueHandler.BulkUpdate)
 		api.POST("/workspaces/:slug/projects/:projectId/issues-bulk/archive/", issueHandler.BulkArchive)
 		api.POST("/workspaces/:slug/projects/:projectId/issues-bulk/delete/", issueHandler.BulkDelete)
+		api.POST("/workspaces/:slug/projects/:projectId/issues-bulk/reorder/", issueHandler.BulkReorder)
 
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/", cycleHandler.List)
 		api.POST("/workspaces/:slug/projects/:projectId/cycles/", cycleHandler.Create)
