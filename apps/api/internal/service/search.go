@@ -27,9 +27,14 @@ func NewSearchService(ss *store.SearchStore, ws *store.WorkspaceStore) *SearchSe
 func (s *SearchService) Search(ctx context.Context, workspaceSlug, query string, projectID *uuid.UUID, userID uuid.UUID) (store.SearchResults, error) {
 	wrk, err := s.ws.GetBySlug(ctx, workspaceSlug)
 	if err != nil {
+		// Treat an unknown workspace as forbidden so we don't leak existence.
 		return store.EmptyResults(), ErrProjectForbidden
 	}
-	ok, _ := s.ws.IsMember(ctx, wrk.ID, userID)
+	ok, err := s.ws.IsMember(ctx, wrk.ID, userID)
+	if err != nil {
+		// Surface infrastructure errors as 500s instead of masking them as 403.
+		return store.EmptyResults(), err
+	}
 	if !ok {
 		return store.EmptyResults(), ErrProjectForbidden
 	}

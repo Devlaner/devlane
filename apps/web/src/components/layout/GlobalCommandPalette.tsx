@@ -104,7 +104,12 @@ export function GlobalCommandPalette({
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [entered, setEntered] = useState(false);
-  const [searchResults, setSearchResults] = useState<SearchResults | null>(null);
+  // Results are stored together with the query they belong to, so stale results
+  // from a previous query are ignored during render (see entityEntries) without
+  // needing a synchronous reset inside the search effect.
+  const [searchState, setSearchState] = useState<{ q: string; results: SearchResults } | null>(
+    null,
+  );
   const [searching, setSearching] = useState(false);
 
   const persistWorkspaceLevel = useCallback((next: boolean) => {
@@ -285,23 +290,28 @@ export function GlobalCommandPalette({
   }, [baseUrl, navigate, onRequestCreateWorkItem, projectId, projects, runAndClose, workspaceSlug]);
 
   const entityEntries = useMemo((): CommandEntry[] => {
-    if (!query.trim() || !searchResults || !baseUrl) return [];
-    const projectBase = (pid?: string) => `${baseUrl}/projects/${pid ?? ''}`;
+    const q = query.trim();
+    // Ignore results that belong to a previous query (cleared on query change).
+    if (!q || !baseUrl || !searchState || searchState.q !== q) return [];
+    const results = searchState.results;
     const out: CommandEntry[] = [];
     const push = (
       hits: SearchHit[],
+      key: string,
       category: string,
       icon: ReactNode,
       to: (h: SearchHit) => string,
-      withSeq = false,
+      opts?: { withSeq?: boolean; needsProject?: boolean },
     ) => {
       for (const h of hits) {
+        // Skip project-owned hits without a project so we never build /projects//…
+        if (opts?.needsProject && !h.project_id) continue;
         const prefix =
-          withSeq && h.project_identifier && h.sequence_id != null
+          opts?.withSeq && h.project_identifier && h.sequence_id != null
             ? `${h.project_identifier}-${h.sequence_id} `
             : '';
         out.push({
-          id: `search-${category}-${h.id}`,
+          id: `search-${key}-${h.id}`,
           category,
           label: `${prefix}${h.name || 'Untitled'}`,
           icon,
@@ -312,52 +322,64 @@ export function GlobalCommandPalette({
     const ic = (Icon: typeof CircleDot) => (
       <Icon className="size-[15px] shrink-0" strokeWidth={2} />
     );
+    const projectBase = (pid?: string) => `${baseUrl}/projects/${pid}`;
     push(
-      searchResults.issue,
+      results.issue,
+      'issue',
       'Work items',
       ic(CircleDot),
       (h) => `${projectBase(h.project_id)}/issues/${h.id}`,
-      true,
+      { withSeq: true, needsProject: true },
     );
     push(
-      searchResults.epic,
+      results.epic,
+      'epic',
       'Epics',
       ic(Boxes),
       (h) => `${projectBase(h.project_id)}/epics/${h.id}`,
-      true,
+      { withSeq: true, needsProject: true },
     );
     push(
-      searchResults.cycle,
+      results.cycle,
+      'cycle',
       'Cycles',
       ic(IterationCw),
       (h) => `${projectBase(h.project_id)}/cycles/${h.id}`,
+      { needsProject: true },
     );
     push(
-      searchResults.module,
+      results.module,
+      'module',
       'Modules',
       ic(Box),
       (h) => `${projectBase(h.project_id)}/modules/${h.id}`,
+      { needsProject: true },
     );
     push(
-      searchResults.view,
+      results.view,
+      'view',
       'Views',
       ic(Layers),
       (h) => `${projectBase(h.project_id)}/views/${h.id}`,
+      { needsProject: true },
     );
     push(
-      searchResults.page,
+      results.page,
+      'page',
       'Pages',
       ic(FileText),
       (h) => `${projectBase(h.project_id)}/pages/${h.id}`,
+      { needsProject: true },
     );
     push(
-      searchResults.project,
+      results.project,
+      'project',
       'Projects',
       ic(FolderKanban),
       (h) => `${baseUrl}/projects/${h.id}/issues`,
     );
     return out;
-  }, [query, searchResults, baseUrl, navigate, runAndClose]);
+  }, [query, searchState, baseUrl, navigate, runAndClose]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -389,7 +411,7 @@ export function GlobalCommandPalette({
         setEntered(false);
         setQuery('');
         setSelectedId(null);
-        setSearchResults(null);
+        setSearchState(null);
         setSearching(false);
       });
       return;
@@ -460,10 +482,10 @@ export function GlobalCommandPalette({
           signal: controller.signal,
         })
         .then((res) => {
-          if (!controller.signal.aborted) setSearchResults(res);
+          if (!controller.signal.aborted) setSearchState({ q, results: res });
         })
         .catch(() => {
-          if (!controller.signal.aborted) setSearchResults(null);
+          if (!controller.signal.aborted) setSearchState(null);
         })
         .finally(() => {
           if (!controller.signal.aborted) setSearching(false);
@@ -515,6 +537,11 @@ export function GlobalCommandPalette({
   if (!open || typeof document === 'undefined') return null;
 
   const modKey = isMac ? '⌘' : 'Ctrl';
+  // True while a search is in flight OR results for the current query haven't
+  // arrived yet (covers the debounce gap after the query changes).
+  const trimmedQuery = query.trim();
+  const pendingSearch =
+    trimmedQuery.length > 0 && (searching || !searchState || searchState.q !== trimmedQuery);
 
   return createPortal(
     <div
@@ -581,7 +608,7 @@ export function GlobalCommandPalette({
         >
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-1 px-4 py-10 text-center">
-              {searching ? (
+              {pendingSearch ? (
                 <p className="text-sm font-medium text-(--txt-secondary)">Searching…</p>
               ) : (
                 <>
