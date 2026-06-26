@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GripVertical } from 'lucide-react';
+import { Calendar, GripVertical } from 'lucide-react';
 import { IssuePRBadge } from '../IssuePRBadge';
 import {
   DueDateCell,
@@ -9,6 +9,13 @@ import {
   StatePill,
   WorkItemAvatarGroup,
 } from '../IssueRowCells';
+import {
+  EditableStateCell,
+  EditablePriorityCell,
+  EditableAssigneeCell,
+  EditableLabelCell,
+} from '../EditableCells';
+import { DatePickerTrigger } from '../DatePickerTrigger';
 import { membersFromAssigneeIds } from '../../../lib/issueRowHelpers';
 import { cn } from '../../../lib/utils';
 import type { IssueApiResponse, LabelApiResponse } from '../../../api/types';
@@ -63,9 +70,11 @@ export function IssueLayoutList({
   moduleName,
   selection,
   onReorder,
+  onUpdateIssue,
 }: IssueLayoutListProps) {
   const stateById = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
   const labelById = useMemo(() => new Map(labels.map((l) => [l.id, l])), [labels]);
+  const [openCell, setOpenCell] = useState<string | null>(null);
 
   // Drag-to-reorder is only offered on the flat list (the parent decides whether
   // manual ordering is active by passing onReorder).
@@ -118,7 +127,7 @@ export function IssueLayoutList({
       <li
         key={issue.id}
         className={cn(
-          'group/row flex items-center',
+          'group/row flex items-center transition-colors hover:bg-(--bg-layer-1-hover)',
           draggingId === issue.id && 'opacity-50',
           isDropTarget &&
             (dropTarget!.after
@@ -180,62 +189,134 @@ export function IssueLayoutList({
             />
           </span>
         ) : null}
+        {hasCol('priority') ? (
+          <span className="shrink-0 pl-4">
+            {onUpdateIssue ? (
+              <EditablePriorityCell
+                issueId={issue.id}
+                priority={issue.priority}
+                openId={openCell}
+                onOpen={setOpenCell}
+                onChange={(priority) => onUpdateIssue(issue.id, { priority })}
+              />
+            ) : (
+              <PriorityIcon priority={issue.priority as Priority | null | undefined} />
+            )}
+          </span>
+        ) : null}
         <Link
           draggable={false}
           to={issueHref(issue.id)}
-          className="flex min-h-12 flex-1 items-center gap-3 px-4 py-2.5 no-underline transition-colors hover:bg-(--bg-layer-1-hover)"
+          className="flex min-h-12 min-w-0 flex-1 items-center gap-1.5 truncate px-3 py-2.5 text-sm no-underline"
         >
-          <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-sm">
-            {hasCol('priority') ? (
-              <span className="shrink-0">
-                <PriorityIcon priority={issue.priority as Priority | null | undefined} />
-              </span>
-            ) : null}
-            {hasCol('id') ? (
-              <span className="shrink-0 font-medium text-(--txt-accent-primary)">{displayId}</span>
-            ) : null}
-            <span className="ml-1 truncate text-(--txt-primary)">{issue.name}</span>
-            <IssuePRBadge summary={prInfo} />
-          </span>
-          <div className="flex shrink-0 flex-wrap items-center gap-2 text-(--txt-icon-tertiary)">
-            {hasCol('state') ? <StatePill state={issueState} /> : null}
-            {hasCol('start_date') ? (
+          {hasCol('id') ? (
+            <span className="shrink-0 font-medium text-(--txt-accent-primary)">{displayId}</span>
+          ) : null}
+          <span className="ml-1 truncate text-(--txt-primary)">{issue.name}</span>
+          <IssuePRBadge summary={prInfo} />
+        </Link>
+        <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 text-(--txt-icon-tertiary)">
+          {hasCol('state') ? (
+            onUpdateIssue ? (
+              <EditableStateCell
+                issueId={issue.id}
+                state={issueState}
+                states={states}
+                openId={openCell}
+                onOpen={setOpenCell}
+                align="right"
+                onChange={(state_id) => onUpdateIssue(issue.id, { state_id })}
+              />
+            ) : (
+              <StatePill state={issueState} />
+            )
+          ) : null}
+          {hasCol('start_date') ? (
+            onUpdateIssue ? (
+              <DatePickerTrigger
+                label="Start date"
+                icon={<Calendar />}
+                value={issue.start_date ?? ''}
+                placeholder="Start"
+                onChange={(v) => onUpdateIssue(issue.id, { start_date: v || null })}
+              />
+            ) : (
               <span
                 className="max-w-[5rem] truncate text-[11px] text-(--txt-secondary)"
                 title={issue.start_date ?? ''}
               >
                 {startStr ?? '—'}
               </span>
-            ) : null}
-            {hasCol('due_date') ? <DueDateCell issue={issue} state={issueState} now={now} /> : null}
-            {hasCol('assignee') ? <WorkItemAvatarGroup members={issueAssignees} /> : null}
-            {hasCol('labels') ? <LabelChips labels={issueLabels} /> : null}
-            {hasCol('sub_work_count') && subN > 0 ? (
-              <span
-                className="inline-flex h-5 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-1.5 text-[11px] text-(--txt-secondary)"
-                title="Sub-work items"
-              >
-                {subN}
-              </span>
-            ) : null}
-            {hasCol('cycle') && cycleName(issue) !== '—' ? (
-              <span
-                className="max-w-[6rem] truncate text-[11px] text-(--txt-secondary)"
-                title={`Cycle: ${cycleName(issue)}`}
-              >
-                {cycleName(issue)}
-              </span>
-            ) : null}
-            {hasCol('module') && moduleName(issue) !== '—' ? (
-              <span
-                className="max-w-[6rem] truncate text-[11px] text-(--txt-secondary)"
-                title={`Module: ${moduleName(issue)}`}
-              >
-                {moduleName(issue)}
-              </span>
-            ) : null}
-          </div>
-        </Link>
+            )
+          ) : null}
+          {hasCol('due_date') ? (
+            onUpdateIssue ? (
+              <DatePickerTrigger
+                label="Due date"
+                icon={<Calendar />}
+                value={issue.target_date ?? ''}
+                placeholder="Due"
+                onChange={(v) => onUpdateIssue(issue.id, { target_date: v || null })}
+              />
+            ) : (
+              <DueDateCell issue={issue} state={issueState} now={now} />
+            )
+          ) : null}
+          {hasCol('assignee') ? (
+            onUpdateIssue ? (
+              <EditableAssigneeCell
+                issueId={issue.id}
+                assigneeIds={issue.assignee_ids ?? []}
+                members={members}
+                openId={openCell}
+                onOpen={setOpenCell}
+                align="right"
+                onChange={(assignee_ids) => onUpdateIssue(issue.id, { assignee_ids })}
+              />
+            ) : (
+              <WorkItemAvatarGroup members={issueAssignees} />
+            )
+          ) : null}
+          {hasCol('labels') ? (
+            onUpdateIssue ? (
+              <EditableLabelCell
+                issueId={issue.id}
+                labelIds={issue.label_ids ?? []}
+                labels={labels}
+                openId={openCell}
+                onOpen={setOpenCell}
+                align="right"
+                onChange={(label_ids) => onUpdateIssue(issue.id, { label_ids })}
+              />
+            ) : (
+              <LabelChips labels={issueLabels} />
+            )
+          ) : null}
+          {hasCol('sub_work_count') && subN > 0 ? (
+            <span
+              className="inline-flex h-5 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-1.5 text-[11px] text-(--txt-secondary)"
+              title="Sub-work items"
+            >
+              {subN}
+            </span>
+          ) : null}
+          {hasCol('cycle') && cycleName(issue) !== '—' ? (
+            <span
+              className="max-w-[6rem] truncate text-[11px] text-(--txt-secondary)"
+              title={`Cycle: ${cycleName(issue)}`}
+            >
+              {cycleName(issue)}
+            </span>
+          ) : null}
+          {hasCol('module') && moduleName(issue) !== '—' ? (
+            <span
+              className="max-w-[6rem] truncate text-[11px] text-(--txt-secondary)"
+              title={`Module: ${moduleName(issue)}`}
+            >
+              {moduleName(issue)}
+            </span>
+          ) : null}
+        </div>
       </li>
     );
   };

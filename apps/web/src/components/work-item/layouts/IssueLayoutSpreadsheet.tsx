@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Calendar } from 'lucide-react';
 import { IssuePRBadge } from '../IssuePRBadge';
 import {
   DueDateCell,
@@ -8,6 +9,13 @@ import {
   StatePill,
   WorkItemAvatarGroup,
 } from '../IssueRowCells';
+import {
+  EditableStateCell,
+  EditablePriorityCell,
+  EditableAssigneeCell,
+  EditableLabelCell,
+} from '../EditableCells';
+import { DatePickerTrigger } from '../DatePickerTrigger';
 import { membersFromAssigneeIds } from '../../../lib/issueRowHelpers';
 import type { LabelApiResponse } from '../../../api/types';
 import type { Priority } from '../../../types';
@@ -18,7 +26,7 @@ import type { IssueLayoutProps } from './IssueLayoutTypes';
  * the same cells the list/board use, so visuals stay consistent.
  *
  * Columns (in order): ID • Title • State • Priority • Assignees • Labels • Due • Start.
- * No grouping, no inline editing yet — those would each merit their own pass.
+ * Property cells are editable in place when `onUpdateIssue` is provided.
  */
 export function IssueLayoutSpreadsheet({
   project,
@@ -29,9 +37,11 @@ export function IssueLayoutSpreadsheet({
   prSummary,
   issueHref,
   now,
+  onUpdateIssue,
 }: IssueLayoutProps) {
   const stateById = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
   const labelById = useMemo(() => new Map(labels.map((l) => [l.id, l])), [labels]);
+  const [openCell, setOpenCell] = useState<string | null>(null);
 
   return (
     <div className="overflow-auto">
@@ -77,20 +87,87 @@ export function IssueLayoutSpreadsheet({
                     <IssuePRBadge summary={prSummary[issue.id]} />
                   </Link>
                 </Td>
-                <Td>{issueState ? <StatePill state={issueState} /> : null}</Td>
+                <Td>
+                  {onUpdateIssue ? (
+                    <EditableStateCell
+                      issueId={issue.id}
+                      state={issueState}
+                      states={states}
+                      openId={openCell}
+                      onOpen={setOpenCell}
+                      onChange={(state_id) => onUpdateIssue(issue.id, { state_id })}
+                    />
+                  ) : issueState ? (
+                    <StatePill state={issueState} />
+                  ) : null}
+                </Td>
                 <Td className="text-center">
-                  <PriorityIcon priority={issue.priority as Priority | null | undefined} />
+                  {onUpdateIssue ? (
+                    <EditablePriorityCell
+                      issueId={issue.id}
+                      priority={issue.priority}
+                      openId={openCell}
+                      onOpen={setOpenCell}
+                      onChange={(priority) => onUpdateIssue(issue.id, { priority })}
+                    />
+                  ) : (
+                    <PriorityIcon priority={issue.priority as Priority | null | undefined} />
+                  )}
                 </Td>
                 <Td>
-                  <WorkItemAvatarGroup members={issueAssignees} />
+                  {onUpdateIssue ? (
+                    <EditableAssigneeCell
+                      issueId={issue.id}
+                      assigneeIds={issue.assignee_ids ?? []}
+                      members={members}
+                      openId={openCell}
+                      onOpen={setOpenCell}
+                      onChange={(assignee_ids) => onUpdateIssue(issue.id, { assignee_ids })}
+                    />
+                  ) : (
+                    <WorkItemAvatarGroup members={issueAssignees} />
+                  )}
                 </Td>
                 <Td>
-                  <LabelChips labels={issueLabels} max={3} />
+                  {onUpdateIssue ? (
+                    <EditableLabelCell
+                      issueId={issue.id}
+                      labelIds={issue.label_ids ?? []}
+                      labels={labels}
+                      openId={openCell}
+                      onOpen={setOpenCell}
+                      onChange={(label_ids) => onUpdateIssue(issue.id, { label_ids })}
+                    />
+                  ) : (
+                    <LabelChips labels={issueLabels} max={3} />
+                  )}
                 </Td>
                 <Td>
-                  <DueDateCell issue={issue} state={issueState} now={now} />
+                  {onUpdateIssue ? (
+                    <DatePickerTrigger
+                      label="Due date"
+                      icon={<Calendar />}
+                      value={issue.target_date ?? ''}
+                      placeholder="—"
+                      onChange={(v) => onUpdateIssue(issue.id, { target_date: v || null })}
+                    />
+                  ) : (
+                    <DueDateCell issue={issue} state={issueState} now={now} />
+                  )}
                 </Td>
-                <Td className="text-[11px] text-(--txt-secondary)">{startStr ?? '—'}</Td>
+                <Td className="text-[11px] text-(--txt-secondary)">
+                  {onUpdateIssue ? (
+                    <DatePickerTrigger
+                      label="Start date"
+                      icon={<Calendar />}
+                      value={issue.start_date ?? ''}
+                      placeholder="—"
+                      onChange={(v) => onUpdateIssue(issue.id, { start_date: v || null })}
+                    />
+                  ) : (
+                    (startStr ?? '—')
+                  )}
+                </Td>
               </tr>
             );
           })}

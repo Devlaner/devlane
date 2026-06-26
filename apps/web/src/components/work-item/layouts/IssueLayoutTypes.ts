@@ -6,6 +6,7 @@ import type {
   StateApiResponse,
   WorkspaceMemberApiResponse,
 } from '../../../api/types';
+import type { Priority } from '../../../types';
 
 /** Available layout keys. */
 export const ISSUE_LAYOUTS = ['list', 'board', 'spreadsheet', 'calendar', 'gantt'] as const;
@@ -61,6 +62,22 @@ export interface IssueLayoutProps {
    * When omitted, the board is not draggable.
    */
   onCardMove?: (issueId: string, targetStateId: string) => void;
+  /**
+   * Optional inline-edit callback. When provided, property cells (state,
+   * priority, assignees, labels, dates) become editable in place and persist
+   * via this handler; when omitted the cells stay read-only.
+   */
+  onUpdateIssue?: (issueId: string, patch: IssueInlinePatch) => void;
+}
+
+/** Fields editable inline from a layout cell. */
+export interface IssueInlinePatch {
+  state_id?: string | null;
+  priority?: Priority;
+  assignee_ids?: string[];
+  label_ids?: string[];
+  start_date?: string | null;
+  target_date?: string | null;
 }
 
 /** Canonical state groups, in board column order. */
