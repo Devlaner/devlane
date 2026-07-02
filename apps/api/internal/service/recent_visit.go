@@ -112,7 +112,10 @@ func (s *RecentVisitService) RecordVisit(ctx context.Context, workspaceSlug stri
 		return err
 	}
 	if projectID != nil {
-		ok, _ := s.projectStore.IsInWorkspace(ctx, *projectID, workspaceID)
+		ok, err := s.projectStore.IsInWorkspace(ctx, *projectID, workspaceID)
+		if err != nil {
+			return err
+		}
 		if !ok {
 			return ErrProjectNotFound
 		}
@@ -125,7 +128,10 @@ func (s *RecentVisitService) RecordVisit(ctx context.Context, workspaceSlug stri
 				return ErrIssueNotFound
 			}
 		case "project":
-			ok, _ := s.projectStore.IsInWorkspace(ctx, *entityIdentifier, workspaceID)
+			ok, err := s.projectStore.IsInWorkspace(ctx, *entityIdentifier, workspaceID)
+			if err != nil {
+				return err
+			}
 			if !ok {
 				return ErrProjectNotFound
 			}
