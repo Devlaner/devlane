@@ -464,6 +464,41 @@ export function IssueListPage() {
     ],
   );
 
+  const subGroupedIssues = useMemo(() => {
+    if (listDisplay.subGroupBy === 'none' || listDisplay.subGroupBy === listDisplay.groupBy) {
+      return null;
+    }
+    const nested = new Map<string, typeof groupedIssues>();
+    for (const sectionKey of groupedIssues.order) {
+      nested.set(
+        sectionKey,
+        buildGroupedIssues({
+          baseForGrouping: groupedIssues.groups.get(sectionKey) ?? [],
+          groupBy: listDisplay.subGroupBy,
+          orderBy: listDisplay.orderBy,
+          showEmptyGroups: listDisplay.showEmptyGroups,
+          states,
+          cycles,
+          modules,
+          labels,
+          members,
+        }),
+      );
+    }
+    return nested;
+  }, [
+    groupedIssues,
+    listDisplay.groupBy,
+    listDisplay.orderBy,
+    listDisplay.showEmptyGroups,
+    listDisplay.subGroupBy,
+    states,
+    cycles,
+    modules,
+    labels,
+    members,
+  ]);
+
   // Stable "now" timestamp used by overdue/relative-date cells. Sampled once
   // at mount via useState's lazy initializer (allowed to be impure) so each
   // row stays pure for the rest of the render-tree's lifetime.
@@ -557,15 +592,18 @@ export function IssueListPage() {
 
   const layout = parseIssueLayout(searchParams.get('layout'));
   const issueHref = (id: string) => `${baseUrl}/issues/${id}`;
+  const orderedVisibleIssues = groupedIssues.order.flatMap(
+    (sectionKey) => groupedIssues.groups.get(sectionKey) ?? [],
+  );
   const layoutProps = {
     workspaceSlug: workspace.slug,
     project,
-    issues: groupedIssues.isFlat
-      ? (groupedIssues.groups.get(groupedIssues.order[0]) ?? [])
-      : filteredIssues,
+    issues: orderedVisibleIssues,
     states,
     labels,
     members,
+    cycles,
+    modules,
     prSummary,
     baseUrl,
     issueHref,
@@ -768,6 +806,7 @@ export function IssueListPage() {
             <IssueLayoutList
               {...layoutProps}
               groupedIssues={groupedIssues}
+              subGroupedIssues={subGroupedIssues}
               hasCol={hasCol}
               showEmptyGroups={listDisplay.showEmptyGroups}
               subWorkCountByParentId={subWorkCountByParentId}
@@ -781,6 +820,9 @@ export function IssueListPage() {
           {layout === 'board' && (
             <IssueLayoutBoard
               {...layoutProps}
+              subGroupBy={listDisplay.subGroupBy}
+              orderBy={listDisplay.orderBy}
+              showEmptyGroups={listDisplay.showEmptyGroups}
               onCardMove={handleCardMove}
               onUpdateIssue={handleInlineUpdate}
             />
@@ -789,7 +831,9 @@ export function IssueListPage() {
             <IssueLayoutSpreadsheet {...layoutProps} onUpdateIssue={handleInlineUpdate} />
           )}
           {layout === 'calendar' && <IssueLayoutCalendar {...layoutProps} />}
-          {layout === 'gantt' && <IssueLayoutGantt {...layoutProps} />}
+          {layout === 'gantt' && (
+            <IssueLayoutGantt {...layoutProps} onUpdateIssue={handleInlineUpdate} />
+          )}
           {layout === 'list' && (
             <div className="border-t border-(--border-subtle) px-4 py-2.5">
               <button

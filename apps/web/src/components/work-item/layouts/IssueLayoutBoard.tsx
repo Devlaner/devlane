@@ -17,6 +17,7 @@ import {
 } from '../EditableCells';
 import { DatePickerTrigger } from '../DatePickerTrigger';
 import { isOverdue, membersFromAssigneeIds } from '../../../lib/issueRowHelpers';
+import { buildGroupedIssues } from '../../../lib/issueListGroupAndSort';
 import type {
   IssueApiResponse,
   LabelApiResponse,
@@ -24,12 +25,19 @@ import type {
   WorkspaceMemberApiResponse,
 } from '../../../api/types';
 import type { Priority } from '../../../types';
+import type { SavedViewGroupBy, SavedViewOrderBy } from '../../../lib/projectSavedViewDisplay';
 import {
   issueDisplayId,
   STATE_GROUP_LABELS,
   STATE_GROUP_ORDER,
   type IssueLayoutProps,
 } from './IssueLayoutTypes';
+
+interface IssueLayoutBoardProps extends IssueLayoutProps {
+  subGroupBy?: SavedViewGroupBy;
+  orderBy?: SavedViewOrderBy;
+  showEmptyGroups?: boolean;
+}
 
 /**
  * Kanban board grouped by state. One column per state, ordered by `sequence`,
@@ -48,10 +56,15 @@ export function IssueLayoutBoard({
   issueHref,
   now,
   projectsById,
+  cycles = [],
+  modules = [],
+  subGroupBy = 'none',
+  orderBy = 'manual',
+  showEmptyGroups = false,
   groupByStateGroup,
   onCardMove,
   onUpdateIssue,
-}: IssueLayoutProps) {
+}: IssueLayoutBoardProps) {
   const labelById = useMemo(() => new Map(labels.map((l) => [l.id, l])), [labels]);
   const stateById = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
   const issueById = useMemo(() => new Map(issues.map((i) => [i.id, i])), [issues]);
@@ -166,6 +179,62 @@ export function IssueLayoutBoard({
     />
   );
 
+  const buildColumnSwimlanes = (items: IssueApiResponse[]) => {
+    if (items.length === 0 || subGroupBy === 'none' || subGroupBy === 'states') return null;
+    const grouped = buildGroupedIssues({
+      baseForGrouping: items,
+      groupBy: subGroupBy,
+      orderBy,
+      showEmptyGroups,
+      states,
+      cycles,
+      modules,
+      labels,
+      members,
+    });
+    return grouped.isFlat ? null : grouped;
+  };
+
+  const renderColumnItems = (items: IssueApiResponse[]) => {
+    const swimlanes = buildColumnSwimlanes(items);
+    if (!swimlanes) {
+      return (
+        <>
+          {items.map(renderCard)}
+          {items.length === 0 && (
+            <p className="px-2 py-6 text-center text-xs text-(--txt-tertiary)">No work items</p>
+          )}
+        </>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {swimlanes.order.map((laneKey) => {
+          const laneItems = swimlanes.groups.get(laneKey) ?? [];
+          if (laneItems.length === 0 && !showEmptyGroups) return null;
+          return (
+            <section key={laneKey} className="space-y-1.5">
+              <h4 className="flex items-center gap-1.5 px-1 text-[11px] font-semibold text-(--txt-secondary)">
+                <span className="truncate">{swimlanes.title(laneKey)}</span>
+                <span className="font-normal text-(--txt-tertiary)">{laneItems.length}</span>
+              </h4>
+              <div className="space-y-2">
+                {laneItems.length > 0 ? (
+                  laneItems.map(renderCard)
+                ) : (
+                  <p className="rounded-md border border-dashed border-(--border-subtle) px-2 py-4 text-center text-xs text-(--txt-tertiary)">
+                    No work items
+                  </p>
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    );
+  };
+
   // Whether a column accepts the in-flight card (skip its current column).
   const canDropOn = (columnKey: string): boolean => {
     if (!dndEnabled || !draggingId) return false;
@@ -204,10 +273,7 @@ export function IssueLayoutBoard({
               : undefined
           }
         >
-          {col.items.map(renderCard)}
-          {col.items.length === 0 && (
-            <p className="px-2 py-6 text-center text-xs text-(--txt-tertiary)">No work items</p>
-          )}
+          {renderColumnItems(col.items)}
         </BoardColumn>
       ))}
 

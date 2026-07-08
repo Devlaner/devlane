@@ -48,7 +48,7 @@ const IconCheck = () => (
   </svg>
 );
 
-type SectionId = 'properties' | 'group' | 'order';
+type SectionId = 'properties' | 'group' | 'subGroup' | 'order';
 
 /** Order matches the work-items Display reference. */
 const GROUP_OPTIONS: { value: SavedViewGroupBy; label: string }[] = [
@@ -136,6 +136,7 @@ export function ProjectIssuesDisplayPanel({ display, setDisplay }: ProjectIssues
   const [sections, setSections] = useState<Record<SectionId, boolean>>({
     properties: true,
     group: true,
+    subGroup: true,
     order: true,
   });
 
@@ -195,7 +196,34 @@ export function ProjectIssuesDisplayPanel({ display, setDisplay }: ProjectIssues
                 value={opt.value}
                 label={opt.label}
                 selected={display.groupBy === opt.value}
-                onSelect={(v) => setDisplay((p) => ({ ...p, groupBy: v }))}
+                onSelect={(v) =>
+                  setDisplay((p) => ({
+                    ...p,
+                    groupBy: v,
+                    subGroupBy: p.subGroupBy === v ? 'none' : p.subGroupBy,
+                  }))
+                }
+              />
+            ))}
+          </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          id="subGroup"
+          title="Sub-group by"
+          expanded={sections.subGroup}
+          onToggle={toggleSection}
+        >
+          <div className="flex flex-col gap-0.5">
+            {GROUP_OPTIONS.filter(
+              (opt) => opt.value === 'none' || opt.value !== display.groupBy,
+            ).map((opt) => (
+              <RadioRow
+                key={opt.value}
+                value={opt.value}
+                label={opt.label}
+                selected={display.subGroupBy === opt.value}
+                onSelect={(v) => setDisplay((p) => ({ ...p, subGroupBy: v }))}
               />
             ))}
           </div>

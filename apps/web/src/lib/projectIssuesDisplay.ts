@@ -37,6 +37,7 @@ const ORDER_BY_OPTIONS: SavedViewOrderBy[] = [
 export interface ProjectIssuesDisplayState {
   displayProperties: Set<SavedViewDisplayPropertyId>;
   groupBy: SavedViewGroupBy;
+  subGroupBy: SavedViewGroupBy;
   orderBy: SavedViewOrderBy;
   showSubWorkItems: boolean;
   showEmptyGroups: boolean;
@@ -45,6 +46,7 @@ export interface ProjectIssuesDisplayState {
 export const DEFAULT_PROJECT_ISSUES_DISPLAY: ProjectIssuesDisplayState = {
   displayProperties: new Set(ALL_SAVED_VIEW_DISPLAY_PROPERTIES),
   groupBy: 'none',
+  subGroupBy: 'none',
   orderBy: 'last_created',
   showSubWorkItems: true,
   showEmptyGroups: true,
@@ -54,6 +56,7 @@ export function cloneDefaultProjectIssuesDisplay(): ProjectIssuesDisplayState {
   return {
     displayProperties: new Set(DEFAULT_PROJECT_ISSUES_DISPLAY.displayProperties),
     groupBy: DEFAULT_PROJECT_ISSUES_DISPLAY.groupBy,
+    subGroupBy: DEFAULT_PROJECT_ISSUES_DISPLAY.subGroupBy,
     orderBy: DEFAULT_PROJECT_ISSUES_DISPLAY.orderBy,
     showSubWorkItems: DEFAULT_PROJECT_ISSUES_DISPLAY.showSubWorkItems,
     showEmptyGroups: DEFAULT_PROJECT_ISSUES_DISPLAY.showEmptyGroups,
@@ -67,6 +70,7 @@ function isValidPropertyId(x: string): x is SavedViewDisplayPropertyId {
 export interface PersistedProjectIssuesDisplay {
   displayProperties: string[];
   groupBy: string;
+  subGroupBy?: string;
   orderBy: string;
   showSubWorkItems: boolean;
   showEmptyGroups?: boolean;
@@ -85,12 +89,17 @@ export function parseProjectIssuesDisplay(raw: string | null): ProjectIssuesDisp
     const groupBy = GROUP_BY_OPTIONS.includes(p.groupBy as SavedViewGroupBy)
       ? (p.groupBy as SavedViewGroupBy)
       : DEFAULT_PROJECT_ISSUES_DISPLAY.groupBy;
+    const parsedSubGroupBy = GROUP_BY_OPTIONS.includes(p.subGroupBy as SavedViewGroupBy)
+      ? (p.subGroupBy as SavedViewGroupBy)
+      : DEFAULT_PROJECT_ISSUES_DISPLAY.subGroupBy;
+    const subGroupBy = parsedSubGroupBy === groupBy ? 'none' : parsedSubGroupBy;
     const orderBy = ORDER_BY_OPTIONS.includes(p.orderBy as SavedViewOrderBy)
       ? (p.orderBy as SavedViewOrderBy)
       : DEFAULT_PROJECT_ISSUES_DISPLAY.orderBy;
     return {
       displayProperties: props.size > 0 ? props : new Set(ALL_SAVED_VIEW_DISPLAY_PROPERTIES),
       groupBy,
+      subGroupBy,
       orderBy,
       showSubWorkItems: p.showSubWorkItems !== undefined ? Boolean(p.showSubWorkItems) : true,
       showEmptyGroups: p.showEmptyGroups !== undefined ? Boolean(p.showEmptyGroups) : true,
@@ -104,6 +113,7 @@ export function serializeProjectIssuesDisplay(s: ProjectIssuesDisplayState): str
   return JSON.stringify({
     displayProperties: [...s.displayProperties],
     groupBy: s.groupBy,
+    subGroupBy: s.subGroupBy === s.groupBy ? 'none' : s.subGroupBy,
     orderBy: s.orderBy,
     showSubWorkItems: s.showSubWorkItems,
     showEmptyGroups: s.showEmptyGroups,
@@ -118,6 +128,7 @@ export function toDisplayPayload(s: ProjectIssuesDisplayState): ProjectIssuesDis
   return {
     displayProperties: [...s.displayProperties],
     groupBy: s.groupBy,
+    subGroupBy: s.subGroupBy === s.groupBy ? 'none' : s.subGroupBy,
     orderBy: s.orderBy,
     showSubWorkItems: s.showSubWorkItems,
     showEmptyGroups: s.showEmptyGroups,
@@ -134,6 +145,10 @@ export function fromDisplayPayload(p: ProjectIssuesDisplayPayload): ProjectIssue
     groupBy: GROUP_BY_OPTIONS.includes(p.groupBy)
       ? p.groupBy
       : DEFAULT_PROJECT_ISSUES_DISPLAY.groupBy,
+    subGroupBy:
+      GROUP_BY_OPTIONS.includes(p.subGroupBy) && p.subGroupBy !== p.groupBy
+        ? p.subGroupBy
+        : DEFAULT_PROJECT_ISSUES_DISPLAY.subGroupBy,
     orderBy: ORDER_BY_OPTIONS.includes(p.orderBy)
       ? p.orderBy
       : DEFAULT_PROJECT_ISSUES_DISPLAY.orderBy,

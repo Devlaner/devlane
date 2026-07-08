@@ -1,7 +1,9 @@
 import type {
   GitHubIssueSummaryEntry,
+  CycleApiResponse,
   IssueApiResponse,
   LabelApiResponse,
+  ModuleApiResponse,
   ProjectApiResponse,
   StateApiResponse,
   WorkspaceMemberApiResponse,
@@ -35,6 +37,10 @@ export interface IssueLayoutProps {
   labels: LabelApiResponse[];
   /** Workspace members (for assignee avatars). */
   members: WorkspaceMemberApiResponse[];
+  /** Project cycles, when the layout needs to label cycle-based groupings. */
+  cycles?: CycleApiResponse[];
+  /** Project modules, when the layout needs to label module-based groupings. */
+  modules?: ModuleApiResponse[];
   /** github_issue_syncs aggregate per issue id. */
   prSummary: Record<string, GitHubIssueSummaryEntry>;
   /** `${workspace}/projects/${project}` — used to build issue links. */

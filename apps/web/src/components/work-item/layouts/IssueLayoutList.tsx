@@ -26,6 +26,8 @@ import type { IssueLayoutProps } from './IssueLayoutTypes';
 interface IssueLayoutListProps extends IssueLayoutProps {
   /** Pre-built grouping result from the parent (state/priority/cycle/etc. groupings). */
   groupedIssues: GroupedIssuesResult;
+  /** Optional second-level grouping result per primary group. */
+  subGroupedIssues?: Map<string, GroupedIssuesResult> | null;
   /**
    * Filter columns (display properties) — true means render. Accepts the same
    * narrow `SavedViewDisplayPropertyId` keys the parent's `hasCol` checks; we
@@ -63,6 +65,7 @@ export function IssueLayoutList({
   issueHref,
   now,
   groupedIssues,
+  subGroupedIssues,
   hasCol,
   showEmptyGroups,
   subWorkCountByParentId,
@@ -78,7 +81,7 @@ export function IssueLayoutList({
 
   // Drag-to-reorder is only offered on the flat list (the parent decides whether
   // manual ordering is active by passing onReorder).
-  const reorderable = Boolean(onReorder && groupedIssues.isFlat);
+  const reorderable = Boolean(onReorder && groupedIssues.isFlat && !subGroupedIssues);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ id: string; after: boolean } | null>(null);
   const clearDrag = () => {
@@ -326,13 +329,60 @@ export function IssueLayoutList({
     );
   };
 
-  if (groupedIssues.isFlat) {
-    const flatList = groupedIssues.groups.get(groupedIssues.order[0]) ?? [];
+  const renderList = (list: IssueApiResponse[], bordered: boolean, allowReorder: boolean) => (
+    <ul
+      className={cn(
+        'w-full divide-y divide-(--border-subtle)',
+        bordered && 'rounded-md border border-(--border-subtle) bg-(--bg-surface-1)',
+      )}
+    >
+      {list.map((issue, idx) =>
+        renderRow(issue, allowReorder ? idx : undefined, allowReorder ? list : undefined),
+      )}
+    </ul>
+  );
+
+  const renderSubGroups = (
+    sectionKey: string,
+    sectionIssues: IssueApiResponse[],
+    allowFlatReorder: boolean,
+  ) => {
+    const subGroups = subGroupedIssues?.get(sectionKey);
+    if (!subGroups || subGroups.isFlat) {
+      return renderList(sectionIssues, !groupedIssues.isFlat, allowFlatReorder);
+    }
     return (
-      <ul className="w-full divide-y divide-(--border-subtle)">
-        {flatList.map((issue, idx) => renderRow(issue, idx, flatList))}
-      </ul>
+      <div className="space-y-3">
+        {subGroups.order.map((subKey) => {
+          const subIssues = subGroups.groups.get(subKey) ?? [];
+          if (subIssues.length === 0 && !showEmptyGroups) return null;
+          return (
+            <section key={subKey} className="space-y-1.5">
+              <h4 className="flex items-center gap-2 pl-1 text-xs font-semibold text-(--txt-secondary)">
+                {subGroups.title(subKey)}
+                <span className="font-normal text-(--txt-tertiary)">{subIssues.length}</span>
+              </h4>
+              {subIssues.length > 0 ? (
+                renderList(subIssues, true, false)
+              ) : (
+                <p className="rounded-md border border-dashed border-(--border-subtle) px-3 py-4 text-center text-xs text-(--txt-tertiary)">
+                  No work items
+                </p>
+              )}
+            </section>
+          );
+        })}
+      </div>
     );
+  };
+
+  if (groupedIssues.isFlat) {
+    const flatKey = groupedIssues.order[0];
+    const flatList = groupedIssues.groups.get(flatKey) ?? [];
+    if (subGroupedIssues) {
+      return <div className="space-y-6 px-4 py-4">{renderSubGroups(flatKey, flatList, false)}</div>;
+    }
+    return renderList(flatList, false, reorderable);
   }
 
   return (
@@ -347,9 +397,7 @@ export function IssueLayoutList({
               {title}
               <span className="font-normal text-(--txt-tertiary)">{sectionIssues.length}</span>
             </h3>
-            <ul className="w-full divide-y divide-(--border-subtle) rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
-              {sectionIssues.map((issue) => renderRow(issue))}
-            </ul>
+            {renderSubGroups(sectionKey, sectionIssues, false)}
           </section>
         );
       })}
