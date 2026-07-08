@@ -13,6 +13,17 @@ Devlane already has the building blocks for agent-assisted product work:
 
 This document proposes the product and technical shape for making agents first-class actors that can receive work, run bounded tasks, and report results back into Devlane with a durable audit trail.
 
+## Implementation checkpoint
+
+The initial backend slice adds the core persistence and REST surface for Phase 1:
+
+- workspace/project agent roster records with explicit tool permissions
+- manual work item agent assignments that do not replace human assignees
+- queued agent run records with durable input/output/error fields
+- issue activity events for agent assignment and queued runs
+
+This intentionally stops before autonomous execution. Later phases can attach the queue consumer, model execution, approval UI, and GitHub branch/PR tooling to these records.
+
 ## Goals
 
 - Let workspace admins create reusable agents such as Bug Triage, Spec Breaker, PR Reviewer, Test Fixer, Docs Writer, Release Notes, and Coding Agent.
