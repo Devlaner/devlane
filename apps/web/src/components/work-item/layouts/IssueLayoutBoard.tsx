@@ -17,10 +17,7 @@ import {
 } from '../EditableCells';
 import { DatePickerTrigger } from '../DatePickerTrigger';
 import { isOverdue, membersFromAssigneeIds } from '../../../lib/issueRowHelpers';
-import {
-  buildGroupedIssues,
-  type GroupedIssuesResult,
-} from '../../../lib/issueListGroupAndSort';
+import { buildGroupedIssues, type GroupedIssuesResult } from '../../../lib/issueListGroupAndSort';
 import type {
   IssueApiResponse,
   LabelApiResponse,
