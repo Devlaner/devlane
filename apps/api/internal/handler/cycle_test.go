@@ -52,6 +52,29 @@ func TestCycle_CRUD(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, rr5.Code)
 }
 
+func TestCycle_ProgressBulk(t *testing.T) {
+	ts := testutil.NewTestServer(t)
+	w := testutil.SeedWorld(t, ts.DB)
+	cycle := testutil.CreateCycle(t, ts.DB, w.Project.ID, w.Workspace.ID, w.User.ID)
+	issuesBase := cycleBase(w.Workspace.Slug, w.Project.ID.String()) + cycle.ID.String() + "/issues/"
+	for range []int{0, 1} {
+		issue := testutil.CreateIssue(t, ts.DB, w.Project.ID, w.Workspace.ID, w.User.ID)
+		add := ts.POST(issuesBase, map[string]any{"issue_id": issue.ID.String()}, w.Session)
+		require.Less(t, add.Code, 300, "body=%s", add.Body.String())
+	}
+
+	rr := ts.GET(
+		"/api/workspaces/"+w.Workspace.Slug+"/projects/"+w.Project.ID.String()+"/cycles-progress/",
+		w.Session,
+	)
+	require.Equal(t, http.StatusOK, rr.Code, "body=%s", rr.Body.String())
+	m := testutil.MustJSONMap(t, rr)
+	entry, ok := m[cycle.ID.String()].(map[string]any)
+	require.True(t, ok, "expected progress for the cycle, body=%s", rr.Body.String())
+	assert.Equal(t, float64(2), entry["total"])
+	assert.Equal(t, float64(0), entry["completed"])
+}
+
 func TestCycle_RejectsInvalidDates(t *testing.T) {
 	ts := testutil.NewTestServer(t)
 	w := testutil.SeedWorld(t, ts.DB)

@@ -61,12 +61,16 @@ export const projectService = {
       /** When present, use empty string to clear; omit to leave unchanged. */
       default_assignee_id?: string;
       guest_view_all_features?: boolean;
+      /** 2 = public (any workspace member), 0 = secret (members only). */
+      network?: number;
       module_view?: boolean;
       cycle_view?: boolean;
       issue_views_view?: boolean;
       page_view?: boolean;
       intake_view?: boolean;
       is_time_tracking_enabled?: boolean;
+      /** Auto-archive: months of inactivity after which settled items archive (0 = off). */
+      archive_in?: number;
     },
   ): Promise<ProjectApiResponse> {
     const { data } = await apiClient.patch<ProjectApiResponse>(

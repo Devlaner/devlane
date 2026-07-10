@@ -136,6 +136,7 @@ func New(cfg Config) *gin.Engine {
 
 	// Services
 	workspaceSvc := service.NewWorkspaceService(workspaceStore, workspaceInviteStore, userStore)
+	workspaceSvc.SetApiTokenStore(apiTokenStore)
 	projectSvc := service.NewProjectService(projectStore, projectInviteStore, workspaceStore, userStore)
 	stateSvc := service.NewStateService(stateStore, projectStore, workspaceStore)
 	labelSvc := service.NewLabelService(labelStore, projectStore, workspaceStore)
@@ -145,6 +146,8 @@ func New(cfg Config) *gin.Engine {
 	attachmentSvc := service.NewAttachmentService(issueStore, projectStore, workspaceStore, cfg.Minio)
 	attachmentSvc.SetActivityStore(issueActivityStore)
 	cycleSvc := service.NewCycleService(cycleStore, projectStore, workspaceStore)
+	exporterStore := store.NewExporterStore(cfg.DB)
+	exportSvc := service.NewExportService(exporterStore, issueStore, stateStore, projectStore, workspaceStore)
 	cycleSvc.SetIssueStore(issueStore)
 	moduleSvc := service.NewModuleService(moduleStore, projectStore, workspaceStore)
 	moduleSvc.SetIssueStore(issueStore)
@@ -241,6 +244,7 @@ func New(cfg Config) *gin.Engine {
 	attachmentHandler := &handler.AttachmentHandler{Attachment: attachmentSvc}
 	epicHandler := &handler.EpicHandler{Issue: issueSvc}
 	cycleHandler := &handler.CycleHandler{Cycle: cycleSvc}
+	exportHandler := &handler.ExportHandler{Export: exportSvc}
 	moduleHandler := &handler.ModuleHandler{Module: moduleSvc}
 	issueViewHandler := &handler.IssueViewHandler{IssueView: issueViewSvc}
 	pageHandler := &handler.PageHandler{Page: pageSvc}
@@ -285,6 +289,11 @@ func New(cfg Config) *gin.Engine {
 		api.GET("/workspaces/:slug/", workspaceHandler.GetBySlug)
 		api.PATCH("/workspaces/:slug/", workspaceHandler.Update)
 		api.DELETE("/workspaces/:slug/", workspaceHandler.Delete)
+		api.POST("/workspaces/:slug/exports/", exportHandler.CreateExport)
+		api.GET("/workspaces/:slug/exports/", exportHandler.ListExports)
+		api.GET("/workspaces/:slug/tokens/", workspaceHandler.ListTokens)
+		api.POST("/workspaces/:slug/tokens/", workspaceHandler.CreateToken)
+		api.DELETE("/workspaces/:slug/tokens/:id/", workspaceHandler.RevokeToken)
 		api.GET("/workspaces/:slug/members/", workspaceHandler.ListMembers)
 		api.POST("/workspaces/:slug/members/leave/", workspaceHandler.Leave)
 		api.GET("/workspaces/:slug/members/:pk/", workspaceHandler.GetMember)
@@ -373,6 +382,7 @@ func New(cfg Config) *gin.Engine {
 		api.POST("/workspaces/:slug/projects/:projectId/issues-bulk/reorder/", issueHandler.BulkReorder)
 
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/", cycleHandler.List)
+		api.GET("/workspaces/:slug/projects/:projectId/cycles-progress/", cycleHandler.CyclesProgress)
 		api.POST("/workspaces/:slug/projects/:projectId/cycles/", cycleHandler.Create)
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/:cycleId/", cycleHandler.Get)
 		api.PATCH("/workspaces/:slug/projects/:projectId/cycles/:cycleId/", cycleHandler.Update)
@@ -380,11 +390,13 @@ func New(cfg Config) *gin.Engine {
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/:cycleId/issues/", cycleHandler.ListIssues)
 		api.POST("/workspaces/:slug/projects/:projectId/cycles/:cycleId/issues/", cycleHandler.AddIssue)
 		api.DELETE("/workspaces/:slug/projects/:projectId/cycles/:cycleId/issues/:issueId/", cycleHandler.RemoveIssue)
+		api.POST("/workspaces/:slug/projects/:projectId/cycles/:cycleId/transfer-issues/", cycleHandler.CompleteCycle)
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/:cycleId/progress/", cycleHandler.Progress)
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/:cycleId/cycle-progress/", cycleHandler.Progress)
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/:cycleId/analytics", cycleHandler.Analytics)
 
 		api.GET("/workspaces/:slug/projects/:projectId/modules/", moduleHandler.List)
+		api.GET("/workspaces/:slug/projects/:projectId/modules-progress/", moduleHandler.ModulesProgress)
 		api.POST("/workspaces/:slug/projects/:projectId/modules/", moduleHandler.Create)
 		api.GET("/workspaces/:slug/projects/:projectId/modules/:moduleId/", moduleHandler.Get)
 		api.PATCH("/workspaces/:slug/projects/:projectId/modules/:moduleId/", moduleHandler.Update)

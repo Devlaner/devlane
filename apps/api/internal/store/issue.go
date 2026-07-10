@@ -137,6 +137,23 @@ func (s *IssueStore) SetArchived(ctx context.Context, id uuid.UUID, archived boo
 		Updates(updates).Error
 }
 
+// ArchiveSettledBefore archives (sets archived_at) the project's non-archived,
+// non-draft work items that sit in a completed/cancelled state and were last
+// touched before cutoff. Returns how many were archived. Used by auto-archive.
+func (s *IssueStore) ArchiveSettledBefore(ctx context.Context, projectID uuid.UUID, cutoff time.Time) (int64, error) {
+	res := s.db.WithContext(ctx).
+		Model(&model.Issue{}).
+		Where(`project_id = ? AND deleted_at IS NULL AND archived_at IS NULL AND is_draft IS NOT TRUE
+			AND updated_at < ?
+			AND state_id IN (SELECT id FROM states WHERE project_id = ? AND "group" IN ('completed','cancelled'))`,
+			projectID, cutoff, projectID).
+		Update("archived_at", time.Now())
+	if res.Error != nil {
+		return 0, res.Error
+	}
+	return res.RowsAffected, nil
+}
+
 func (s *IssueStore) ListDraftsByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, limit, offset int) ([]model.Issue, error) {
 	var list []model.Issue
 	q := s.db.WithContext(ctx).Where(

@@ -10,6 +10,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// Project network (visibility) values.
+const (
+	// NetworkSecret projects are visible only to their members (and workspace admins).
+	NetworkSecret int16 = 0
+	// NetworkPublic projects are visible to every member of the workspace.
+	NetworkPublic int16 = 2
+)
+
 // JSONMap for JSONB columns.
 type JSONMap map[string]interface{}
 
@@ -68,6 +76,9 @@ type Project struct {
 	GuestViewAllFeatures  bool           `gorm:"column:guest_view_all_features;default:false" json:"guest_view_all_features"`
 	CoverImage            string         `gorm:"column:cover_image;type:text" json:"cover_image,omitempty"`
 	Timezone              string         `gorm:"default:UTC" json:"timezone"`
+	// ArchiveIn is the number of months after which settled (completed/cancelled)
+	// work items are auto-archived. 0 disables the automation.
+	ArchiveIn int `gorm:"column:archive_in;default:0" json:"archive_in"`
 }
 
 func (Project) TableName() string { return "projects" }

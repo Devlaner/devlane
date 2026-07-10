@@ -58,6 +58,7 @@ import {
   type AccountSettingsSection,
 } from '../components/settings/sections-config';
 import { SettingsNav } from '../components/settings/SettingsNav';
+import { WorkspaceApiTokensPanel } from '../components/settings/WorkspaceApiTokensPanel';
 import { ExportModal } from '../components/settings/modals/ExportModal';
 import { InviteModal } from '../components/settings/modals/InviteModal';
 import { ProjectStateModal } from '../components/settings/modals/ProjectStateModal';
@@ -221,8 +222,8 @@ export function SettingsPage() {
       setProjectName(selectedProject.name);
       setProjectDescription(selectedProject.description ?? '');
       if (selectedProject.timezone != null) setProjectTimezone(selectedProject.timezone);
-      // Derive Network dropdown value from guest_view_all_features so it reflects persisted visibility
-      setProjectNetwork(selectedProject.guest_view_all_features ? 'public' : 'private');
+      // Reflect the project's persisted network visibility (2 = public, 0 = secret).
+      setProjectNetwork(selectedProject.network === 0 ? 'private' : 'public');
       setProjectLeadId(selectedProject.project_lead_id ?? null);
       setDefaultAssigneeId(selectedProject.default_assignee_id ?? null);
       setGuestAccess(selectedProject.guest_view_all_features ?? false);
@@ -232,6 +233,9 @@ export function SettingsPage() {
       setFeaturePages(selectedProject.page_view ?? true);
       setFeatureIntake(selectedProject.intake_view ?? false);
       setFeatureTimeTracking(selectedProject.is_time_tracking_enabled ?? false);
+      const months = selectedProject.archive_in ?? 0;
+      setAutoArchive(months > 0);
+      if (months > 0) setAutoArchiveMonths(months);
     }
   }, [
     selectedProject,
@@ -242,13 +246,37 @@ export function SettingsPage() {
     selectedProject?.project_lead_id,
     selectedProject?.default_assignee_id,
     selectedProject?.guest_view_all_features,
+    selectedProject?.network,
     selectedProject?.cycle_view,
     selectedProject?.module_view,
     selectedProject?.issue_views_view,
     selectedProject?.page_view,
     selectedProject?.intake_view,
     selectedProject?.is_time_tracking_enabled,
+    selectedProject?.archive_in,
   ]);
+
+  // Persist the auto-archive automation: archive_in is the number of months (0
+  // disables it). Optimistically flips the toggle, then saves.
+  const persistAutoArchive = async (enabled: boolean, months: number) => {
+    if (!workspaceSlug || !selectedProjectId) return;
+    setAutoArchive(enabled);
+    setAutoArchiveMonths(months);
+    setAutoArchiveSaving(true);
+    try {
+      const updated = await projectService.update(workspaceSlug, selectedProjectId, {
+        archive_in: enabled ? months : 0,
+      });
+      setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    } catch {
+      // Revert the toggle to the persisted value on failure.
+      const persisted = selectedProject?.archive_in ?? 0;
+      setAutoArchive(persisted > 0);
+      if (persisted > 0) setAutoArchiveMonths(persisted);
+    } finally {
+      setAutoArchiveSaving(false);
+    }
+  };
 
   const [workspaceName, setWorkspaceName] = useState('');
   const [companySize, setCompanySize] = useState('51-200');
@@ -357,7 +385,9 @@ export function SettingsPage() {
   const [featurePages, setFeaturePages] = useState(true);
   const [featureIntake, setFeatureIntake] = useState(false);
   const [featureTimeTracking, setFeatureTimeTracking] = useState(false);
-  const [autoArchive, setAutoArchive] = useState(true);
+  const [autoArchive, setAutoArchive] = useState(false);
+  const [autoArchiveMonths, setAutoArchiveMonths] = useState(3);
+  const [autoArchiveSaving, setAutoArchiveSaving] = useState(false);
   const [autoClose, setAutoClose] = useState(true);
   const [pendingInvitesExpanded, setPendingInvitesExpanded] = useState(true);
   const [pendingInviteMenuId, setPendingInviteMenuId] = useState<string | null>(null);
@@ -1713,22 +1743,22 @@ export function SettingsPage() {
                 <ProjectNetworkSelect
                   value={projectNetwork}
                   onChange={async (v) => {
-                    // Map network dropdown to the same guest_view_all_features flag used elsewhere
-                    const nextGuestAccess = v === 'public';
-                    setProjectNetwork(v);
-                    setGuestAccess(nextGuestAccess);
                     if (!workspaceSlug || !selectedProjectId) return;
+                    const prev = projectNetwork;
+                    setProjectNetwork(v);
                     try {
                       const updated = await projectService.update(
                         workspaceSlug,
                         selectedProjectId,
-                        { guest_view_all_features: nextGuestAccess },
+                        {
+                          network: v === 'public' ? 2 : 0,
+                        },
                       );
-                      setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                      setProjects((prevProjects) =>
+                        prevProjects.map((p) => (p.id === updated.id ? updated : p)),
+                      );
                     } catch {
-                      // revert local state on failure
-                      setProjectNetwork(nextGuestAccess ? 'private' : 'public');
-                      setGuestAccess(!nextGuestAccess);
+                      setProjectNetwork(prev); // revert on failure
                     }
                   }}
                 />
@@ -2577,6 +2607,23 @@ export function SettingsPage() {
                       <p className="mt-0.5 text-sm text-(--txt-secondary)">
                         Devlane will auto archive work items that have been completed or canceled.
                       </p>
+                      {autoArchive && (
+                        <label className="mt-2 flex items-center gap-2 text-sm text-(--txt-secondary)">
+                          Archive after
+                          <select
+                            value={autoArchiveMonths}
+                            disabled={autoArchiveSaving}
+                            onChange={(e) => persistAutoArchive(true, Number(e.target.value))}
+                            className="rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
+                          >
+                            <option value={1}>1 month</option>
+                            <option value={3}>3 months</option>
+                            <option value={6}>6 months</option>
+                            <option value={12}>12 months</option>
+                          </select>
+                          of inactivity
+                        </label>
+                      )}
                     </div>
                   </div>
                   <button
@@ -2584,7 +2631,8 @@ export function SettingsPage() {
                     role="switch"
                     aria-checked={autoArchive}
                     aria-labelledby={`auto-archive-toggle-${selectedProjectId ?? 'project'}`}
-                    onClick={() => setAutoArchive(!autoArchive)}
+                    disabled={autoArchiveSaving}
+                    onClick={() => persistAutoArchive(!autoArchive, autoArchiveMonths)}
                     className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${autoArchive ? 'bg-(--brand-default)' : 'bg-(--neutral-400)'}`}
                   >
                     <span
@@ -3006,6 +3054,10 @@ export function SettingsPage() {
                 )}
               </div>
             </div>
+          )}
+
+          {!isAccountTab && !isProjectsTab && section === 'api-tokens' && workspaceSlug && (
+            <WorkspaceApiTokensPanel workspaceSlug={workspaceSlug} />
           )}
 
           {!isAccountTab && !isProjectsTab && section === 'integrations' && workspaceSlug && (

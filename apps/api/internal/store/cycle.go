@@ -66,6 +66,62 @@ func (s *CycleStore) ListCycleIssueIDs(ctx context.Context, cycleID uuid.UUID) (
 	return ids, nil
 }
 
+// TransferIncompleteIssues moves every incomplete work item (state group
+// backlog/unstarted/started, or no state) from the source cycle to the target
+// cycle in a single transaction, and returns how many were moved. Items already
+// in the target keep a single active link; the source link is soft-deleted.
+func (s *CycleStore) TransferIncompleteIssues(ctx context.Context, sourceCycleID uuid.UUID, target *model.Cycle, userID uuid.UUID) (int, error) {
+	var rows []struct {
+		IssueID uuid.UUID `gorm:"column:issue_id"`
+	}
+	err := s.db.WithContext(ctx).Raw(`
+		SELECT ci.issue_id
+		FROM cycle_issues ci
+		JOIN issues i ON i.id = ci.issue_id AND i.deleted_at IS NULL
+		LEFT JOIN states st ON st.id = i.state_id
+		WHERE ci.cycle_id = ? AND ci.deleted_at IS NULL
+		  AND COALESCE(st.group, 'backlog') IN ('backlog', 'unstarted', 'started')
+	`, sourceCycleID).Scan(&rows).Error
+	if err != nil {
+		return 0, err
+	}
+
+	moved := 0
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, r := range rows {
+			if err := tx.Where("cycle_id = ? AND issue_id = ?", sourceCycleID, r.IssueID).
+				Delete(&model.CycleIssue{}).Error; err != nil {
+				return err
+			}
+			var existing int64
+			if err := tx.Model(&model.CycleIssue{}).
+				Where("cycle_id = ? AND issue_id = ? AND deleted_at IS NULL", target.ID, r.IssueID).
+				Count(&existing).Error; err != nil {
+				return err
+			}
+			if existing == 0 {
+				cb := userID
+				ci := &model.CycleIssue{
+					CycleID:     target.ID,
+					IssueID:     r.IssueID,
+					ProjectID:   target.ProjectID,
+					WorkspaceID: target.WorkspaceID,
+					CreatedByID: &cb,
+				}
+				if err := tx.Create(ci).Error; err != nil {
+					return err
+				}
+			}
+			moved++
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return moved, nil
+}
+
 func (s *CycleStore) CountIssuesByCycleIDs(ctx context.Context, cycleIDs []uuid.UUID) (map[uuid.UUID]int, error) {
 	out := make(map[uuid.UUID]int)
 	if len(cycleIDs) == 0 {
@@ -116,6 +172,42 @@ func (s *CycleStore) CycleStateDistribution(ctx context.Context, cycleID uuid.UU
 	}
 	for _, r := range rows {
 		out[r.Group] = r.Count
+	}
+	return out, nil
+}
+
+// StateDistributionByProject returns, per cycle in the project, issue counts
+// grouped by state group. Used to compute real completion progress on the
+// cycles list without a query per cycle.
+func (s *CycleStore) StateDistributionByProject(ctx context.Context, projectID uuid.UUID) (map[uuid.UUID]map[string]int, error) {
+	var rows []struct {
+		Owner uuid.UUID `gorm:"column:owner"`
+		Group string    `gorm:"column:grp"`
+		Count int       `gorm:"column:count"`
+	}
+	err := s.db.WithContext(ctx).Raw(`
+		SELECT ci.cycle_id AS owner, COALESCE(st."group", 'backlog') AS grp, COUNT(i.id) AS count
+		FROM cycle_issues ci
+		JOIN issues i ON i.id = ci.issue_id AND i.deleted_at IS NULL
+		LEFT JOIN states st ON st.id = i.state_id
+		WHERE ci.project_id = ? AND ci.deleted_at IS NULL
+		GROUP BY ci.cycle_id, COALESCE(st."group", 'backlog')
+	`, projectID).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[uuid.UUID]map[string]int)
+	for _, r := range rows {
+		m := out[r.Owner]
+		if m == nil {
+			m = map[string]int{"backlog": 0, "unstarted": 0, "started": 0, "completed": 0, "cancelled": 0}
+			out[r.Owner] = m
+		}
+		if _, ok := m[r.Group]; ok {
+			m[r.Group] += r.Count
+		} else {
+			m["backlog"] += r.Count
+		}
 	}
 	return out, nil
 }

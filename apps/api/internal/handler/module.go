@@ -87,6 +87,37 @@ func (h *ModuleHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, list)
 }
 
+// ModulesProgress returns, per module in the project, issue counts grouped by
+// state group (plus a total), keyed by module id.
+// GET /api/workspaces/:slug/projects/:projectId/modules-progress/
+func (h *ModuleHandler) ModulesProgress(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	slug := c.Param("slug")
+	projectID, err := uuid.Parse(c.Param("projectId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+	prog, err := h.Module.ProgressBulk(c.Request.Context(), slug, projectID, user.ID)
+	if err != nil {
+		if err == service.ErrProjectForbidden || err == service.ErrProjectNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load module progress"})
+		return
+	}
+	if prog == nil {
+		c.JSON(http.StatusOK, gin.H{})
+		return
+	}
+	c.JSON(http.StatusOK, prog)
+}
+
 // Create creates a module.
 // POST /api/workspaces/:slug/projects/:projectId/modules/
 func (h *ModuleHandler) Create(c *gin.Context) {

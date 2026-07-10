@@ -211,6 +211,27 @@ func (s *ModuleService) Update(ctx context.Context, workspaceSlug string, projec
 	return mod, nil
 }
 
+// ProgressBulk returns, per module in the project, issue counts grouped by
+// state group plus a "total", so the modules list can render real completion
+// progress.
+func (s *ModuleService) ProgressBulk(ctx context.Context, workspaceSlug string, projectID, userID uuid.UUID) (map[uuid.UUID]map[string]int, error) {
+	if err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
+		return nil, err
+	}
+	dist, err := s.ms.StateDistributionByProject(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range dist {
+		total := 0
+		for _, c := range m {
+			total += c
+		}
+		m["total"] = total
+	}
+	return dist, nil
+}
+
 func (s *ModuleService) Delete(ctx context.Context, workspaceSlug string, projectID, moduleID uuid.UUID, userID uuid.UUID) error {
 	if err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
 		return err

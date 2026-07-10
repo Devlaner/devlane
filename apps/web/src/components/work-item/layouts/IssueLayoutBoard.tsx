@@ -17,7 +17,10 @@ import {
 } from '../EditableCells';
 import { DatePickerTrigger } from '../DatePickerTrigger';
 import { isOverdue, membersFromAssigneeIds } from '../../../lib/issueRowHelpers';
-import { buildGroupedIssues } from '../../../lib/issueListGroupAndSort';
+import {
+  buildGroupedIssues,
+  type GroupedIssuesResult,
+} from '../../../lib/issueListGroupAndSort';
 import type {
   IssueApiResponse,
   LabelApiResponse,
@@ -34,18 +37,13 @@ import {
 } from './IssueLayoutTypes';
 
 interface IssueLayoutBoardProps extends IssueLayoutProps {
+  groupedIssues?: GroupedIssuesResult;
+  groupBy?: SavedViewGroupBy;
   subGroupBy?: SavedViewGroupBy;
   orderBy?: SavedViewOrderBy;
   showEmptyGroups?: boolean;
 }
 
-/**
- * Kanban board grouped by state. One column per state, ordered by `sequence`,
- * cards reuse the same cells the list rows use.
- *
- * Issues with no state_id (or whose state was deleted) bucket into a synthetic
- * "No state" column at the end.
- */
 export function IssueLayoutBoard({
   project,
   states,
@@ -62,6 +60,8 @@ export function IssueLayoutBoard({
   orderBy = 'manual',
   showEmptyGroups = false,
   groupByStateGroup,
+  groupedIssues,
+  groupBy,
   onCardMove,
   onUpdateIssue,
 }: IssueLayoutBoardProps) {
@@ -69,7 +69,6 @@ export function IssueLayoutBoard({
   const stateById = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
   const issueById = useMemo(() => new Map(issues.map((i) => [i.id, i])), [issues]);
 
-  const dndEnabled = Boolean(onCardMove);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropKey, setDropKey] = useState<string | null>(null);
   const [openCell, setOpenCell] = useState<string | null>(null);
@@ -78,7 +77,7 @@ export function IssueLayoutBoard({
   // columns the key is already a state id; for grouped columns we pick a state
   // in the issue's own project that belongs to that group (default first).
   const resolveTargetStateId = (columnKey: string, issue: IssueApiResponse): string | null => {
-    if (!groupByStateGroup) return columnKey;
+    if (!groupByStateGroup) return stateById.has(columnKey) ? columnKey : null;
     const candidates = states.filter(
       (s) => s.group === columnKey && s.project_id === issue.project_id,
     );
@@ -102,6 +101,18 @@ export function IssueLayoutBoard({
   // board doesn't repeat "Todo/In Progress/Done" once per project); otherwise
   // one column per individual state.
   const { columns, orphans } = useMemo(() => {
+    if (groupedIssues) {
+      const columns = groupedIssues.order
+        .map((key) => ({
+          key,
+          title: groupedIssues.isFlat ? 'All work items' : groupedIssues.title(key),
+          color: stateById.get(key)?.color ?? labelById.get(key)?.color ?? undefined,
+          items: groupedIssues.groups.get(key) ?? [],
+        }))
+        .filter((col) => groupedIssues.isFlat || showEmptyGroups || col.items.length > 0);
+      return { columns, orphans: [] as IssueApiResponse[] };
+    }
+
     const orphans: IssueApiResponse[] = [];
 
     if (groupByStateGroup) {
@@ -147,7 +158,10 @@ export function IssueLayoutBoard({
       items: buckets.get(s.id) ?? [],
     }));
     return { columns, orphans };
-  }, [groupByStateGroup, states, issues, stateById]);
+  }, [groupedIssues, groupByStateGroup, states, issues, stateById, labelById, showEmptyGroups]);
+
+  const dndEnabled =
+    Boolean(onCardMove) && (groupByStateGroup || !groupedIssues || groupBy === 'states');
 
   const renderCard = (issue: IssueApiResponse) => (
     <BoardCard

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -45,6 +46,51 @@ func TestView_CRUD(t *testing.T) {
 	// Delete
 	rr5 := ts.DELETE(base+id+"/", w.Session)
 	require.Equal(t, http.StatusNoContent, rr5.Code)
+}
+
+// A saved view round-trips its filters + display settings through the backend so
+// they are shared across users/devices, and only the owner may update them. This
+// is the contract the ViewDetailPage "Save changes" action relies on. Covers #173.
+func TestView_PersistsFiltersAndDisplaySettings(t *testing.T) {
+	ts := testutil.NewTestServer(t)
+	w := testutil.SeedWorld(t, ts.DB)
+	base := "/api/workspaces/" + w.Workspace.Slug + "/views/"
+
+	rr := ts.POST(base, map[string]any{"name": "Board"}, w.Session)
+	require.Equal(t, http.StatusCreated, rr.Code, "body=%s", rr.Body.String())
+	id, _ := testutil.MustJSONMap(t, rr)["id"].(string)
+	require.NotEmpty(t, id)
+
+	// The owner saves filters + display settings (the shape the UI sends).
+	patch := map[string]any{
+		"filters":         map[string]any{"priority": "high,urgent"},
+		"display_filters": map[string]any{"groupBy": "priority", "orderBy": "due_date"},
+		"display_properties": map[string]any{
+			"displayProperties": []string{"id", "state", "assignee"},
+		},
+	}
+	rr2 := ts.PATCH(base+id+"/", patch, w.Session)
+	require.Equal(t, http.StatusOK, rr2.Code, "body=%s", rr2.Body.String())
+
+	// GET echoes them back unchanged so another device can reconstruct the view.
+	rr3 := ts.GET(base+id+"/", w.Session)
+	require.Equal(t, http.StatusOK, rr3.Code)
+	got := testutil.MustJSONMap(t, rr3)
+	filters, _ := got["filters"].(map[string]any)
+	require.Equal(t, "high,urgent", filters["priority"])
+	df, _ := got["display_filters"].(map[string]any)
+	require.Equal(t, "priority", df["groupBy"])
+	require.Equal(t, "due_date", df["orderBy"])
+	dp, _ := got["display_properties"].(map[string]any)
+	props, _ := dp["displayProperties"].([]any)
+	require.Len(t, props, 3)
+
+	// A workspace member who does not own the view cannot update it.
+	other := testutil.CreateUser(t, ts.DB)
+	testutil.AddWorkspaceMember(t, ts.DB, w.Workspace.ID, other.ID, model.RoleMember)
+	otherSession := testutil.LoginAs(t, ts.DB, other)
+	rr4 := ts.PATCH(base+id+"/", map[string]any{"name": "Hijack"}, otherSession)
+	require.Equal(t, http.StatusNotFound, rr4.Code, "non-owner must not update a view")
 }
 
 func TestView_Favorites_DualVariantRoutes(t *testing.T) {

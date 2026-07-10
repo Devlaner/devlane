@@ -28,6 +28,10 @@ type Cycle struct {
 	ArchivedAt  *time.Time     `gorm:"type:timestamptz" json:"archived_at,omitempty"`
 	Timezone    string         `gorm:"default:UTC" json:"timezone"`
 	Version     int            `gorm:"default:1" json:"version"`
+	// ProgressSnapshot captures the cycle's state-group distribution at the moment
+	// it was completed, so a completed cycle's numbers stay fixed even after its
+	// incomplete work is transferred out. Empty until the cycle is completed.
+	ProgressSnapshot JSONMap `gorm:"column:progress_snapshot;type:jsonb" json:"progress_snapshot,omitempty"`
 }
 
 func (Cycle) TableName() string { return "cycles" }

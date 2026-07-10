@@ -170,6 +170,42 @@ func (s *ModuleStore) ListMemberIDsByModuleIDs(ctx context.Context, moduleIDs []
 	return out, nil
 }
 
+// StateDistributionByProject returns, per module in the project, issue counts
+// grouped by state group, so the modules list can show real completion
+// progress without a query per module.
+func (s *ModuleStore) StateDistributionByProject(ctx context.Context, projectID uuid.UUID) (map[uuid.UUID]map[string]int, error) {
+	var rows []struct {
+		Owner uuid.UUID `gorm:"column:owner"`
+		Group string    `gorm:"column:grp"`
+		Count int       `gorm:"column:count"`
+	}
+	err := s.db.WithContext(ctx).Raw(`
+		SELECT mi.module_id AS owner, COALESCE(st."group", 'backlog') AS grp, COUNT(i.id) AS count
+		FROM module_issues mi
+		JOIN issues i ON i.id = mi.issue_id AND i.deleted_at IS NULL
+		LEFT JOIN states st ON st.id = i.state_id
+		WHERE mi.project_id = ?
+		GROUP BY mi.module_id, COALESCE(st."group", 'backlog')
+	`, projectID).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[uuid.UUID]map[string]int)
+	for _, r := range rows {
+		m := out[r.Owner]
+		if m == nil {
+			m = map[string]int{"backlog": 0, "unstarted": 0, "started": 0, "completed": 0, "cancelled": 0}
+			out[r.Owner] = m
+		}
+		if _, ok := m[r.Group]; ok {
+			m[r.Group] += r.Count
+		} else {
+			m["backlog"] += r.Count
+		}
+	}
+	return out, nil
+}
+
 func (s *ModuleStore) CountIssuesByModuleIDs(ctx context.Context, moduleIDs []uuid.UUID) (map[uuid.UUID]int, error) {
 	out := make(map[uuid.UUID]int)
 	if len(moduleIDs) == 0 {

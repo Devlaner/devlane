@@ -4,7 +4,11 @@ import { Avatar, Badge, Button, Modal } from '../components/ui';
 import { UpdateCycleModal } from '../components/UpdateCycleModal';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
-import { cycleService, type CycleProgressResponse } from '../services/cycleService';
+import {
+  cycleService,
+  type CycleProgressResponse,
+  type CycleProgress,
+} from '../services/cycleService';
 import { CycleBurndownChart } from '../components/cycles/CycleBurndownChart';
 import { issueService } from '../services/issueService';
 import { stateService } from '../services/stateService';
@@ -319,6 +323,7 @@ export function CyclesPage() {
     cycleId: string;
     progress: CycleProgressResponse;
   } | null>(null);
+  const [cycleProgress, setCycleProgress] = useState<Record<string, CycleProgress>>({});
   const [loading, setLoading] = useState(true);
   const [activeCycleExpanded, setActiveCycleExpanded] = useState(true);
   const [activeCycleTab, setActiveCycleTab] = useState<'priority' | 'assignees' | 'labels'>(
@@ -390,6 +395,23 @@ export function CyclesPage() {
     };
   }, [workspaceSlug, projectId]);
 
+  // Real per-cycle completion progress (completed / total by state group).
+  useEffect(() => {
+    if (!workspaceSlug || !projectId) return;
+    let cancelled = false;
+    cycleService
+      .listProgress(workspaceSlug, projectId)
+      .then((p) => {
+        if (!cancelled) setCycleProgress(p);
+      })
+      .catch(() => {
+        if (!cancelled) setCycleProgress({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug, projectId]);
+
   useEffect(() => {
     if (!workspaceSlug || !projectId) return;
 
@@ -444,6 +466,10 @@ export function CyclesPage() {
           setIssues(iss ?? []);
         })
         .catch(() => {});
+      cycleService
+        .listProgress(workspaceSlug, projectId)
+        .then(setCycleProgress)
+        .catch(() => setCycleProgress({}));
     };
     window.addEventListener(PROJECT_CYCLES_REFRESH_EVENT, handler as EventListener);
     return () => window.removeEventListener(PROJECT_CYCLES_REFRESH_EVENT, handler as EventListener);
@@ -594,9 +620,10 @@ export function CyclesPage() {
 
   const getIssueCount = (cycleId: string) => cycles.find((c) => c.id === cycleId)?.issue_count ?? 0;
   const getProgress = (c: CycleApiResponse) => {
-    const total = getIssueCount(c.id);
+    const p = cycleProgress[c.id];
+    const total = p?.total ?? getIssueCount(c.id);
     if (!total) return 0;
-    return c.status === 'completed' ? 100 : 0;
+    return Math.round(((p?.completed ?? 0) / total) * 100);
   };
   const cyclePath = (c: CycleApiResponse) =>
     workspace && project

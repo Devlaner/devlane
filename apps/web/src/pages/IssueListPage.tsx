@@ -820,6 +820,8 @@ export function IssueListPage() {
           {layout === 'board' && (
             <IssueLayoutBoard
               {...layoutProps}
+              groupedIssues={groupedIssues}
+              groupBy={listDisplay.groupBy}
               subGroupBy={listDisplay.subGroupBy}
               orderBy={listDisplay.orderBy}
               showEmptyGroups={listDisplay.showEmptyGroups}

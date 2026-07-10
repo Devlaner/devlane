@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Devlaner/devlane/api/internal/middleware"
 	"github.com/Devlaner/devlane/api/internal/queue"
@@ -532,4 +533,121 @@ func (h *WorkspaceHandler) ListUserInvitations(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, list)
+}
+
+// ListTokens returns the workspace's service API tokens (secrets omitted).
+// GET /api/workspaces/:slug/tokens/
+func (h *WorkspaceHandler) ListTokens(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	slug := c.Param("slug")
+	list, err := h.Workspace.ListTokens(c.Request.Context(), slug, user.ID)
+	if err != nil {
+		if err == service.ErrWorkspaceNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Workspace not found"})
+			return
+		}
+		if err == service.ErrWorkspaceForbidden {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list tokens"})
+		return
+	}
+	out := make([]gin.H, 0, len(list))
+	for _, t := range list {
+		out = append(out, gin.H{
+			"id":          t.ID.String(),
+			"label":       t.Label,
+			"description": t.Description,
+			"is_active":   t.IsActive,
+			"last_used":   t.LastUsed,
+			"expired_at":  t.ExpiredAt,
+			"created_at":  t.CreatedAt,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"tokens": out})
+}
+
+// CreateToken mints a workspace service token and returns the secret once.
+// POST /api/workspaces/:slug/tokens/
+func (h *WorkspaceHandler) CreateToken(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	slug := c.Param("slug")
+	var req CreateTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
+	var expiredAt *time.Time
+	if req.ExpiredAt != nil && *req.ExpiredAt != "" {
+		t, err := time.Parse(time.RFC3339, *req.ExpiredAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expired_at value", "detail": err.Error()})
+			return
+		}
+		expiredAt = &t
+	} else if req.ExpiresIn != nil && *req.ExpiresIn != "" {
+		expiredAt = parseExpiresIn(*req.ExpiresIn)
+		if expiredAt == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expires_in value; use 7d, 30d, 90d, 365d, or 1 week, 1 month, 3 months, 1 year"})
+			return
+		}
+	}
+	plain, err := h.Workspace.CreateToken(c.Request.Context(), slug, user.ID, req.Label, req.Description, expiredAt)
+	if err != nil {
+		if err == service.ErrWorkspaceNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Workspace not found"})
+			return
+		}
+		if err == service.ErrWorkspaceForbidden {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create token"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{
+		"token":       plain,
+		"label":       req.Label,
+		"description": req.Description,
+		"expired_at":  expiredAt,
+		"message":     "Copy this token now; it will not be shown again.",
+	})
+}
+
+// RevokeToken revokes a workspace service token.
+// DELETE /api/workspaces/:slug/tokens/:id/
+func (h *WorkspaceHandler) RevokeToken(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	slug := c.Param("slug")
+	tokenID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid token ID"})
+		return
+	}
+	if err := h.Workspace.RevokeToken(c.Request.Context(), slug, tokenID, user.ID); err != nil {
+		if err == service.ErrWorkspaceNotFound || err == service.ErrTokenNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Token not found"})
+			return
+		}
+		if err == service.ErrWorkspaceForbidden {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to revoke token"})
+		return
+	}
+	c.Status(http.StatusNoContent)
 }
