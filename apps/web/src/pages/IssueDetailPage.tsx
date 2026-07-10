@@ -27,6 +27,7 @@ import { IssueRelationsPanel } from '../components/work-item/IssueRelationsPanel
 import { IssueAttachmentsPanel } from '../components/work-item/IssueAttachmentsPanel';
 import { MoveWorkItemModal } from '../components/work-item/MoveWorkItemModal';
 import { SubscribeButton } from '../components/notifications/SubscribeButton';
+import { IssueAgentPanel } from '../components/agents/IssueAgentPanel';
 import {
   PriorityIcon,
   StatePill,
@@ -746,6 +747,14 @@ export function IssueDetailPage() {
               issueId={issue.id}
             />
           )}
+          {workspaceSlug && (
+            <IssueAgentPanel
+              workspaceSlug={workspaceSlug}
+              projectId={project.id}
+              issueId={issue.id}
+            />
+          )}
+
           {workspaceSlug && (
             <IssuePRSidebar
               workspaceSlug={workspaceSlug}

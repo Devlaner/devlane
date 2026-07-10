@@ -186,7 +186,7 @@ export function SettingsNav({
             <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-(--txt-tertiary)">
               Administration
             </p>
-            {WORKSPACE_SECTIONS.slice(0, 4).map(({ id, label, icon }) => (
+            {WORKSPACE_SECTIONS.filter(({ id }) => id !== 'webhooks').map(({ id, label, icon }) => (
               <SectionNavButton
                 key={id}
                 label={label}
@@ -198,7 +198,7 @@ export function SettingsNav({
             <p className="mb-2 mt-4 px-2 text-xs font-medium uppercase tracking-wider text-(--txt-tertiary)">
               Developer
             </p>
-            {WORKSPACE_SECTIONS.slice(4).map(({ id, label, icon }) => (
+            {WORKSPACE_SECTIONS.filter(({ id }) => id === 'webhooks').map(({ id, label, icon }) => (
               <SectionNavButton
                 key={id}
                 label={label}

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Bot } from 'lucide-react';
 import {
   IconGrid,
   IconUsers,
@@ -20,6 +21,7 @@ import {
 export type WorkspaceSettingsSection =
   | 'general'
   | 'members'
+  | 'agents'
   | 'integrations'
   | 'exports'
   | 'webhooks';
@@ -70,6 +72,7 @@ export const ACCOUNT_SECTIONS_DEVELOPER: SettingsSectionConfig<AccountSettingsSe
 export const WORKSPACE_SECTIONS: SettingsSectionConfig<WorkspaceSettingsSection>[] = [
   { id: 'general', label: 'General', icon: <IconGrid /> },
   { id: 'members', label: 'Members', icon: <IconUsers /> },
+  { id: 'agents', label: 'Agents', icon: <Bot className="size-4" /> },
   { id: 'integrations', label: 'Integrations', icon: <IconPlug /> },
   { id: 'exports', label: 'Exports', icon: <IconUpload /> },
   { id: 'webhooks', label: 'Webhooks', icon: <IconWebhook /> },

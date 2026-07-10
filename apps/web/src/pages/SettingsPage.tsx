@@ -4,6 +4,7 @@ import { Card, CardContent, Button, Avatar, Modal } from '../components/ui';
 import { CoverImageModal } from '../components/CoverImageModal';
 import { IntegrationsSection } from '../components/integrations/IntegrationsSection';
 import { ProjectEstimatesSettings } from '../components/settings/ProjectEstimatesSettings';
+import { AgentSettingsPanel } from '../components/agents/AgentSettingsPanel';
 import { UploadImageModal } from '../components/UploadImageModal';
 import { ProjectIconModal, ProjectIconDisplay } from '../components/ProjectIconModal';
 import { getImageUrl } from '../lib/utils';
@@ -3010,6 +3011,10 @@ export function SettingsPage() {
 
           {!isAccountTab && !isProjectsTab && section === 'integrations' && workspaceSlug && (
             <IntegrationsSection workspaceSlug={workspaceSlug} projects={projects} />
+          )}
+
+          {!isAccountTab && !isProjectsTab && section === 'agents' && workspaceSlug && (
+            <AgentSettingsPanel workspaceSlug={workspaceSlug} projects={projects} />
           )}
 
           {!isAccountTab && !isProjectsTab && section === 'exports' && (

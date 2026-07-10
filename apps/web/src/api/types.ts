@@ -919,3 +919,93 @@ export interface RecordRecentVisitRequest {
   entity_identifier?: string | null;
   project_id?: string | null;
 }
+
+export type AgentAutonomyLevel =
+  | 'suggest'
+  | 'comment'
+  | 'modify_issue'
+  | 'github_draft'
+  | 'github_reviewed';
+
+export type AgentAssignmentStatus = 'active' | 'cancelled' | 'completed';
+export type AgentRunStatus =
+  | 'queued'
+  | 'running'
+  | 'needs_review'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
+
+export interface AgentToolPermissionApiResponse {
+  id: string;
+  agent_id: string;
+  tool: string;
+  scope: string;
+  config?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentApiResponse {
+  id: string;
+  workspace_id: string;
+  project_id?: string | null;
+  name: string;
+  description: string;
+  avatar: string;
+  instructions: string;
+  model: string;
+  enabled: boolean;
+  autonomy_level: AgentAutonomyLevel;
+  tool_permissions: AgentToolPermissionApiResponse[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentIssueAssignmentApiResponse {
+  id: string;
+  issue_id: string;
+  agent_id: string;
+  project_id: string;
+  workspace_id: string;
+  assigned_by_id?: string | null;
+  reason: string;
+  status: AgentAssignmentStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentRunApiResponse {
+  id: string;
+  agent_id: string;
+  issue_id?: string | null;
+  project_id: string;
+  workspace_id: string;
+  trigger: string;
+  status: AgentRunStatus;
+  input?: Record<string, unknown>;
+  output?: Record<string, unknown>;
+  error: string;
+  queued_at: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  cancelled_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentUpsertRequest {
+  project_id?: string | null;
+  name: string;
+  description?: string;
+  avatar?: string;
+  instructions?: string;
+  model?: string;
+  enabled?: boolean;
+  autonomy_level?: AgentAutonomyLevel;
+  tool_permissions?: Array<{
+    tool: string;
+    scope: string;
+    config: Record<string, unknown>;
+  }>;
+}

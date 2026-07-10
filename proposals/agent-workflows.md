@@ -15,14 +15,16 @@ This document proposes the product and technical shape for making agents first-c
 
 ## Implementation checkpoint
 
-The initial backend slice adds the core persistence and REST surface for Phase 1:
+The initial Phase 1 slice now adds the core persistence, REST surface, and supervised UI:
 
 - workspace/project agent roster records with explicit tool permissions
+- a workspace settings roster for creating, editing, enabling, and scoping agents
 - manual work item agent assignments that do not replace human assignees
+- an issue sidebar for assigning agents, providing run instructions, and viewing run status
 - queued agent run records with durable input/output/error fields
 - issue activity events for agent assignment and queued runs
 
-This intentionally stops before autonomous execution. Later phases can attach the queue consumer, model execution, approval UI, and GitHub branch/PR tooling to these records.
+This intentionally stops before autonomous execution. Later phases can attach the queue consumer, model execution, approval UI, and GitHub branch/PR tooling to these records and controls.
 
 ## Goals
 
