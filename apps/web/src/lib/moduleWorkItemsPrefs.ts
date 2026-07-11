@@ -121,6 +121,7 @@ function normalizeModuleDisplay(raw: unknown): ProjectIssuesDisplayState {
     return fromDisplayPayload({
       displayProperties: o.displayProperties as ProjectIssuesDisplayPayload['displayProperties'],
       groupBy: (o.groupBy as ProjectIssuesDisplayPayload['groupBy']) ?? 'none',
+      subGroupBy: (o.subGroupBy as ProjectIssuesDisplayPayload['subGroupBy']) ?? 'none',
       orderBy: (o.orderBy as ProjectIssuesDisplayPayload['orderBy']) ?? 'last_created',
       showSubWorkItems: o.showSubWorkItems !== undefined ? Boolean(o.showSubWorkItems) : true,
       showEmptyGroups: o.showEmptyGroups !== undefined ? Boolean(o.showEmptyGroups) : true,
@@ -154,6 +155,7 @@ export function serializeModuleWorkItemsPrefs(p: PersistedModuleWorkItemsPrefs):
     display: {
       displayProperties: [...p.display.displayProperties],
       groupBy: p.display.groupBy,
+      subGroupBy: p.display.subGroupBy,
       orderBy: p.display.orderBy,
       showSubWorkItems: p.display.showSubWorkItems,
       showEmptyGroups: p.display.showEmptyGroups,
