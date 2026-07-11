@@ -1,5 +1,7 @@
 import { apiClient } from '../api/client';
 import type {
+  ApiTokenResponse,
+  CreateTokenRequest,
   CreateWorkspaceRequest,
   WorkspaceApiResponse,
   WorkspaceInviteApiResponse,
@@ -121,5 +123,51 @@ export const workspaceService = {
   async joinByToken(token: string): Promise<WorkspaceApiResponse> {
     const { data } = await apiClient.post<WorkspaceApiResponse>('/api/workspaces/join/', { token });
     return data;
+  },
+
+  /**
+   * List a workspace's service API tokens (admins only, secret never returned).
+   * GET /api/workspaces/:slug/tokens/
+   */
+  async listTokens(workspaceSlug: string): Promise<{ tokens: ApiTokenResponse[] }> {
+    const { data } = await apiClient.get<{ tokens: ApiTokenResponse[] }>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/tokens/`,
+    );
+    return data;
+  },
+
+  /**
+   * Mint a workspace-scoped service token (admins only). The plain secret is
+   * returned once and never again.
+   * POST /api/workspaces/:slug/tokens/
+   */
+  async createToken(
+    workspaceSlug: string,
+    payload: CreateTokenRequest,
+  ): Promise<{
+    token: string;
+    label: string;
+    description: string;
+    expired_at?: string | null;
+    message: string;
+  }> {
+    const { data } = await apiClient.post<{
+      token: string;
+      label: string;
+      description: string;
+      expired_at?: string | null;
+      message: string;
+    }>(`/api/workspaces/${encodeURIComponent(workspaceSlug)}/tokens/`, payload);
+    return data;
+  },
+
+  /**
+   * Revoke a workspace service token (admins only).
+   * DELETE /api/workspaces/:slug/tokens/:id/
+   */
+  async revokeToken(workspaceSlug: string, tokenId: string): Promise<void> {
+    await apiClient.delete(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/tokens/${encodeURIComponent(tokenId)}/`,
+    );
   },
 };

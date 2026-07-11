@@ -39,6 +39,21 @@ func computeCycleStatus(start, end *time.Time) string {
 
 var ErrCycleNotFound = errors.New("cycle not found")
 
+// ErrInvalidTargetCycle is returned when a complete-cycle transfer names a target
+// that is missing, in another project, or the cycle being completed itself.
+var ErrInvalidTargetCycle = errors.New("invalid target cycle")
+
+// effectiveCycleStatus reports "completed" for a cycle that was explicitly
+// completed (it carries a progress snapshot), and otherwise falls back to the
+// date-derived status. This keeps a user-completed cycle completed even when its
+// end date is still in the future.
+func effectiveCycleStatus(cy *model.Cycle) string {
+	if len(cy.ProgressSnapshot) > 0 {
+		return "completed"
+	}
+	return computeCycleStatus(cy.StartDate, cy.EndDate)
+}
+
 // ErrInvalidCycleDates is returned when a cycle's start date falls after its
 // end date.
 var ErrInvalidCycleDates = errors.New("cycle start date must be on or before the end date")
@@ -96,7 +111,7 @@ func (s *CycleService) List(ctx context.Context, workspaceSlug string, projectID
 	ids := make([]uuid.UUID, 0, len(list))
 	for i := range list {
 		ids = append(ids, list[i].ID)
-		list[i].Status = computeCycleStatus(list[i].StartDate, list[i].EndDate)
+		list[i].Status = effectiveCycleStatus(&list[i])
 	}
 	counts, err := s.cs.CountIssuesByCycleIDs(ctx, ids)
 	if err == nil {
@@ -130,7 +145,7 @@ func (s *CycleService) Create(ctx context.Context, workspaceSlug string, project
 	if err := s.cs.Create(ctx, cy); err != nil {
 		return nil, err
 	}
-	cy.Status = computeCycleStatus(cy.StartDate, cy.EndDate)
+	cy.Status = effectiveCycleStatus(cy)
 	return cy, nil
 }
 
@@ -145,7 +160,7 @@ func (s *CycleService) Get(ctx context.Context, workspaceSlug string, projectID,
 	if cy.ProjectID != projectID {
 		return nil, ErrCycleNotFound
 	}
-	cy.Status = computeCycleStatus(cy.StartDate, cy.EndDate)
+	cy.Status = effectiveCycleStatus(cy)
 	if counts, err := s.cs.CountIssuesByCycleIDs(ctx, []uuid.UUID{cy.ID}); err == nil {
 		cy.IssueCount = counts[cy.ID]
 	}
@@ -175,7 +190,7 @@ func (s *CycleService) Update(ctx context.Context, workspaceSlug string, project
 	if err := s.cs.Update(ctx, cy); err != nil {
 		return nil, err
 	}
-	cy.Status = computeCycleStatus(cy.StartDate, cy.EndDate)
+	cy.Status = effectiveCycleStatus(cy)
 	return cy, nil
 }
 
@@ -247,6 +262,68 @@ type CycleDistribution struct {
 	Labels          []interface{}          `json:"labels"`
 }
 
+// CompleteCycle marks a cycle completed and, when a target cycle is given,
+// transfers its incomplete work items (backlog/unstarted/started) into that
+// target. The cycle's state-group distribution is snapshotted first so its
+// completion numbers stay fixed even after the transfer. Returns the updated
+// cycle and how many work items were moved.
+func (s *CycleService) CompleteCycle(ctx context.Context, workspaceSlug string, projectID, cycleID uuid.UUID, targetCycleID *uuid.UUID, userID uuid.UUID) (*model.Cycle, int, error) {
+	cy, err := s.Get(ctx, workspaceSlug, projectID, cycleID, userID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var target *model.Cycle
+	if targetCycleID != nil {
+		if *targetCycleID == cycleID {
+			return nil, 0, ErrInvalidTargetCycle
+		}
+		t, err := s.cs.GetByID(ctx, *targetCycleID)
+		if err != nil || t.ProjectID != projectID {
+			return nil, 0, ErrInvalidTargetCycle
+		}
+		target = t
+	}
+
+	// Snapshot the distribution before any transfer so a completed cycle keeps the
+	// numbers it had at completion.
+	dist, err := s.cs.CycleStateDistribution(ctx, cycleID)
+	if err != nil {
+		return nil, 0, err
+	}
+	total := 0
+	for _, v := range dist {
+		total += v
+	}
+	cy.ProgressSnapshot = model.JSONMap{
+		"total":        total,
+		"backlog":      dist["backlog"],
+		"unstarted":    dist["unstarted"],
+		"started":      dist["started"],
+		"completed":    dist["completed"],
+		"cancelled":    dist["cancelled"],
+		"completed_at": time.Now().UTC().Format(time.RFC3339),
+	}
+	cy.Status = "completed"
+	if err := s.cs.Update(ctx, cy); err != nil {
+		return nil, 0, err
+	}
+
+	moved := 0
+	if target != nil {
+		moved, err = s.cs.TransferIncompleteIssues(ctx, cycleID, target, userID)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+
+	cy.Status = effectiveCycleStatus(cy)
+	if counts, err := s.cs.CountIssuesByCycleIDs(ctx, []uuid.UUID{cy.ID}); err == nil {
+		cy.IssueCount = counts[cy.ID]
+	}
+	return cy, moved, nil
+}
+
 // GetProgress computes a TProgressSnapshot-compatible response for the cycle.
 func (s *CycleService) GetProgress(ctx context.Context, workspaceSlug string, projectID, cycleID uuid.UUID, userID uuid.UUID) (*CycleProgressSnapshot, error) {
 	cy, err := s.Get(ctx, workspaceSlug, projectID, cycleID, userID)
@@ -283,4 +360,24 @@ func (s *CycleService) GetProgress(ctx context.Context, workspaceSlug string, pr
 			Labels:          []interface{}{},
 		},
 	}, nil
+}
+
+// ProgressBulk returns, per cycle in the project, issue counts grouped by state
+// group plus a "total", so the cycles list can render real completion progress.
+func (s *CycleService) ProgressBulk(ctx context.Context, workspaceSlug string, projectID, userID uuid.UUID) (map[uuid.UUID]map[string]int, error) {
+	if err := s.ensureProjectAccess(ctx, workspaceSlug, projectID, userID); err != nil {
+		return nil, err
+	}
+	dist, err := s.cs.StateDistributionByProject(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range dist {
+		total := 0
+		for _, c := range m {
+			total += c
+		}
+		m["total"] = total
+	}
+	return dist, nil
 }

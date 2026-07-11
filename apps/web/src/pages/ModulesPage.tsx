@@ -6,7 +6,7 @@ import { DateRangeModal } from '../components/workspace-views/DateRangeModal';
 import { useModulesFilter } from '../contexts/ModulesFilterContext';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
-import { moduleService } from '../services/moduleService';
+import { moduleService, type ModuleProgress } from '../services/moduleService';
 import { useModuleFavorites } from '../hooks/useModuleFavorites';
 import type {
   WorkspaceApiResponse,
@@ -165,6 +165,7 @@ export function ModulesPage() {
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [modules, setModules] = useState<ModuleApiResponse[]>([]);
+  const [moduleProgress, setModuleProgress] = useState<Record<string, ModuleProgress>>({});
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [timelineTimeframe, setTimelineTimeframe] = useState<'week' | 'month' | 'quarter'>('week');
@@ -268,13 +269,10 @@ export function ModulesPage() {
   const order = filter.order || 'asc';
   const sortedModules = [...filteredModules].sort((a, b) => {
     const getProgress = (mod: ModuleApiResponse) => {
-      const total = mod.issue_count ?? 0;
+      const pr = moduleProgress[mod.id];
+      const total = pr?.total ?? mod.issue_count ?? 0;
       if (!total) return 0;
-
-      // We don't have a completed/cancelled issue breakdown on the module payload.
-      // Use module status as a simple proxy for sorting and the progress badge.
-      const done = mod.status === 'completed' || mod.status === 'cancelled' ? total : 0;
-      return Math.round((done / total) * 100);
+      return Math.round(((pr?.completed ?? 0) / total) * 100);
     };
     let cmp = 0;
     switch (sortBy) {
@@ -312,6 +310,23 @@ export function ModulesPage() {
     };
     window.addEventListener('modules-refresh', handler);
     return () => window.removeEventListener('modules-refresh', handler);
+  }, [workspaceSlug, projectId]);
+
+  // Real per-module completion progress (completed / total by state group).
+  useEffect(() => {
+    if (!workspaceSlug || !projectId) return;
+    let cancelled = false;
+    moduleService
+      .listProgress(workspaceSlug, projectId)
+      .then((pr) => {
+        if (!cancelled) setModuleProgress(pr);
+      })
+      .catch(() => {
+        if (!cancelled) setModuleProgress({});
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [workspaceSlug, projectId]);
 
   useEffect(() => {
@@ -365,10 +380,10 @@ export function ModulesPage() {
   }, [workspaceSlug, projectId]);
 
   const getProgress = (mod: ModuleApiResponse) => {
-    const total = mod.issue_count ?? 0;
+    const pr = moduleProgress[mod.id];
+    const total = pr?.total ?? mod.issue_count ?? 0;
     if (!total) return 0;
-    const done = mod.status === 'completed' || mod.status === 'cancelled' ? total : 0;
-    return Math.round((done / total) * 100);
+    return Math.round(((pr?.completed ?? 0) / total) * 100);
   };
 
   if (loading) {

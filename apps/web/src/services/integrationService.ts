@@ -8,6 +8,8 @@ import type {
   WorkspaceIntegrationApiResponse,
 } from '../api/types';
 
+const GITHUB_ISSUE_SUMMARY_BATCH_SIZE = 100;
+
 /**
  * Integration API service.
  *
@@ -172,6 +174,7 @@ export const integrationService = {
    * GET .../integrations/github/issue-summary/?ids=a,b,c
    * Returns aggregated PR counts per issue ID for badges on the issues list page.
    * Pass an empty array to get an empty map (no request made).
+   * Requests are chunked because this endpoint currently accepts IDs via query string.
    */
   async githubIssueSummary(
     workspaceSlug: string,
@@ -179,10 +182,16 @@ export const integrationService = {
     issueIds: string[],
   ): Promise<GitHubIssueSummaryResponse['summary']> {
     if (issueIds.length === 0) return {};
-    const { data } = await apiClient.get<GitHubIssueSummaryResponse>(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/integrations/github/issue-summary/`,
-      { params: { ids: issueIds.join(',') } },
-    );
-    return data.summary ?? {};
+
+    const summary: GitHubIssueSummaryResponse['summary'] = {};
+    for (let i = 0; i < issueIds.length; i += GITHUB_ISSUE_SUMMARY_BATCH_SIZE) {
+      const batch = issueIds.slice(i, i + GITHUB_ISSUE_SUMMARY_BATCH_SIZE);
+      const { data } = await apiClient.get<GitHubIssueSummaryResponse>(
+        `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/integrations/github/issue-summary/`,
+        { params: { ids: batch.join(',') } },
+      );
+      Object.assign(summary, data.summary ?? {});
+    }
+    return summary;
   },
 };

@@ -781,6 +781,8 @@ export function IssueListPage() {
           {layout === 'board' && (
             <IssueLayoutBoard
               {...layoutProps}
+              groupedIssues={groupedIssues}
+              groupBy={listDisplay.groupBy}
               onCardMove={handleCardMove}
               onUpdateIssue={handleInlineUpdate}
             />

@@ -55,6 +55,21 @@ func (s *ProjectStore) ListByWorkspaceID(ctx context.Context, workspaceID uuid.U
 	return list, err
 }
 
+// ListVisibleByWorkspaceID returns the projects a user may see: every public
+// project in the workspace, plus any project (public or secret) they belong to.
+func (s *ProjectStore) ListVisibleByWorkspaceID(ctx context.Context, workspaceID, userID uuid.UUID) ([]model.Project, error) {
+	var list []model.Project
+	memberProjects := s.db.Model(&model.ProjectMember{}).
+		Select("project_id").
+		Where("member_id = ? AND deleted_at IS NULL", userID)
+	err := s.db.WithContext(ctx).
+		Where("workspace_id = ? AND deleted_at IS NULL", workspaceID).
+		Where("network = ? OR id IN (?)", model.NetworkPublic, memberProjects).
+		Order("created_at ASC").
+		Find(&list).Error
+	return list, err
+}
+
 func (s *ProjectStore) Update(ctx context.Context, p *model.Project) error {
 	return s.db.WithContext(ctx).Save(p).Error
 }
@@ -77,6 +92,16 @@ func (s *ProjectStore) GetByWorkspaceAndIdentifier(ctx context.Context, workspac
 }
 
 // IsInWorkspace checks that the project belongs to the workspace.
+// ListWithAutoArchive returns projects that have auto-archive enabled (archive_in > 0).
+func (s *ProjectStore) ListWithAutoArchive(ctx context.Context) ([]model.Project, error) {
+	var list []model.Project
+	err := s.db.WithContext(ctx).Where("archive_in > 0 AND deleted_at IS NULL").Find(&list).Error
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
 func (s *ProjectStore) IsInWorkspace(ctx context.Context, projectID, workspaceID uuid.UUID) (bool, error) {
 	var count int64
 	err := s.db.WithContext(ctx).Model(&model.Project{}).

@@ -80,6 +80,55 @@ func (s *ApiTokenStore) Delete(ctx context.Context, tokenID, userID uuid.UUID) e
 	return nil
 }
 
+// CreateForWorkspace creates a workspace-scoped service token owned by the
+// creating user but tagged with the workspace, and returns the plain secret once.
+func (s *ApiTokenStore) CreateForWorkspace(ctx context.Context, userID, workspaceID uuid.UUID, label, description string, expiredAt *time.Time) (plainToken string, err error) {
+	plain, err := generateToken()
+	if err != nil {
+		return "", err
+	}
+	wid := workspaceID
+	t := &model.ApiToken{
+		Label:       label,
+		Description: description,
+		Token:       hashToken(plain),
+		UserID:      userID,
+		WorkspaceID: &wid,
+		IsActive:    true,
+		ExpiredAt:   expiredAt,
+		CreatedByID: &userID,
+	}
+	if err := s.db.WithContext(ctx).Create(t).Error; err != nil {
+		return "", err
+	}
+	return plain, nil
+}
+
+// ListByWorkspaceID returns a workspace's service tokens (without the secret).
+func (s *ApiTokenStore) ListByWorkspaceID(ctx context.Context, workspaceID uuid.UUID) ([]model.ApiToken, error) {
+	var list []model.ApiToken
+	err := s.db.WithContext(ctx).Where("workspace_id = ?", workspaceID).Order("created_at DESC").Find(&list).Error
+	if err != nil {
+		return nil, err
+	}
+	for i := range list {
+		list[i].Token = ""
+	}
+	return list, nil
+}
+
+// DeleteByWorkspace revokes a token scoped to a workspace.
+func (s *ApiTokenStore) DeleteByWorkspace(ctx context.Context, tokenID, workspaceID uuid.UUID) error {
+	res := s.db.WithContext(ctx).Where("id = ? AND workspace_id = ?", tokenID, workspaceID).Delete(&model.ApiToken{})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
 // GetActiveByHash returns the token matching hash if it is active and not
 // expired, for use by the auth middleware.
 func (s *ApiTokenStore) GetActiveByHash(ctx context.Context, hash string) (*model.ApiToken, error) {

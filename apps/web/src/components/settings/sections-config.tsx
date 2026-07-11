@@ -20,6 +20,7 @@ import {
 export type WorkspaceSettingsSection =
   | 'general'
   | 'members'
+  | 'api-tokens'
   | 'integrations'
   | 'exports'
   | 'webhooks';
@@ -67,10 +68,13 @@ export const ACCOUNT_SECTIONS_DEVELOPER: SettingsSectionConfig<AccountSettingsSe
   { id: 'tokens', label: 'Personal Access Tokens', icon: <IconKey /> },
 ];
 
+// The nav groups these as Administration = slice(0, 4), Developer = slice(4).
+// Keep the first four as the admin sections; append Developer-facing ones.
 export const WORKSPACE_SECTIONS: SettingsSectionConfig<WorkspaceSettingsSection>[] = [
   { id: 'general', label: 'General', icon: <IconGrid /> },
   { id: 'members', label: 'Members', icon: <IconUsers /> },
   { id: 'integrations', label: 'Integrations', icon: <IconPlug /> },
   { id: 'exports', label: 'Exports', icon: <IconUpload /> },
   { id: 'webhooks', label: 'Webhooks', icon: <IconWebhook /> },
+  { id: 'api-tokens', label: 'API Tokens', icon: <IconKey /> },
 ];

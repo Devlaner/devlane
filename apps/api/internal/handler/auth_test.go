@@ -1,10 +1,13 @@
 package handler_test
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
 	"github.com/Devlaner/devlane/api/internal/middleware"
+	"github.com/Devlaner/devlane/api/internal/model"
+	"github.com/Devlaner/devlane/api/internal/store"
 	"github.com/Devlaner/devlane/api/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -517,4 +520,47 @@ func TestAuth_UserActivity_OK(t *testing.T) {
 
 	rr := ts.GET("/api/users/me/activity/", session)
 	require.Equal(t, http.StatusOK, rr.Code, "body=%s", rr.Body.String())
+}
+
+func TestAuth_UserActivity_IncludesIssueActivity(t *testing.T) {
+	ts := testutil.NewTestServer(t)
+	world := testutil.SeedWorld(t, ts.DB)
+	issue := testutil.CreateIssue(t, ts.DB, world.Project.ID, world.Workspace.ID, world.User.ID)
+	comment := testutil.CreateComment(t, ts.DB, issue.ID, world.Project.ID, world.Workspace.ID, world.User.ID)
+	field := "priority"
+	oldValue := "none"
+	newValue := "high"
+	actorID := world.User.ID
+	err := store.NewIssueActivityStore(ts.DB).Create(context.Background(), &model.IssueActivity{
+		IssueID:     &issue.ID,
+		ProjectID:   world.Project.ID,
+		WorkspaceID: world.Workspace.ID,
+		Verb:        "updated",
+		Field:       &field,
+		OldValue:    &oldValue,
+		NewValue:    &newValue,
+		ActorID:     &actorID,
+		CreatedByID: &actorID,
+	})
+	require.NoError(t, err)
+
+	rr := ts.GET("/api/users/me/activity/", world.Session)
+	require.Equal(t, http.StatusOK, rr.Code, "body=%s", rr.Body.String())
+	body := testutil.MustJSONMap(t, rr)
+	activities, ok := body["activities"].([]any)
+	require.True(t, ok)
+	require.Len(t, activities, 2)
+
+	types := make([]string, 0, len(activities))
+	for _, item := range activities {
+		activity, ok := item.(map[string]any)
+		require.True(t, ok)
+		types = append(types, activity["type"].(string))
+		assert.Equal(t, issue.ID.String(), activity["issue_id"])
+		assert.Equal(t, issue.Name, activity["issue_name"])
+	}
+	assert.Contains(t, types, "comment")
+	assert.Contains(t, types, "issue_activity")
+	assert.Contains(t, rr.Body.String(), comment.Comment)
+	assert.Contains(t, rr.Body.String(), "Updated priority from none to high")
 }

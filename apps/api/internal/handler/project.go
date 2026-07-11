@@ -95,6 +95,7 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 		ProjectLeadID         *string                `json:"project_lead_id"`
 		DefaultAssigneeID     *string                `json:"default_assignee_id"`
 		GuestViewAllFeatures  *bool                  `json:"guest_view_all_features"`
+		Network               *int16                 `json:"network"`
 		ModuleView            *bool                  `json:"module_view"`
 		CycleView             *bool                  `json:"cycle_view"`
 		IssueViewsView        *bool                  `json:"issue_views_view"`
@@ -104,6 +105,13 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
+	// Validate network before creating anything: Create persists the project first
+	// and only then applies network via Update, so an invalid value would otherwise
+	// leave behind a default-network project and a client 400 that invites a retry.
+	if body.Network != nil && *body.Network != model.NetworkPublic && *body.Network != model.NetworkSecret {
+		c.JSON(http.StatusBadRequest, gin.H{"error": service.ErrInvalidNetwork.Error()})
 		return
 	}
 	p, err := h.Project.Create(c.Request.Context(), slug, body.Name, body.Identifier, user.ID)
@@ -133,6 +141,7 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 		body.ProjectLeadID != nil ||
 		body.DefaultAssigneeID != nil ||
 		body.GuestViewAllFeatures != nil ||
+		body.Network != nil ||
 		body.ModuleView != nil ||
 		body.CycleView != nil ||
 		body.IssueViewsView != nil ||
@@ -207,14 +216,20 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 			defaultAssigneeSet,
 			defaultAssigneeIDPtr,
 			body.GuestViewAllFeatures,
+			body.Network,
 			body.ModuleView,
 			body.CycleView,
 			body.IssueViewsView,
 			body.PageView,
 			body.IntakeView,
 			body.IsTimeTrackingEnabled,
+			nil, // archive_in: set via project settings, not on create
 		)
 		if err != nil {
+			if err == service.ErrInvalidNetwork {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
 			// If the follow-up update fails, still return the base project creation result.
 			c.JSON(http.StatusCreated, p)
 			return
@@ -250,12 +265,14 @@ func (h *ProjectHandler) Update(c *gin.Context) {
 		ProjectLeadID         *string                `json:"project_lead_id"`
 		DefaultAssigneeID     *string                `json:"default_assignee_id"`
 		GuestViewAllFeatures  *bool                  `json:"guest_view_all_features"`
+		Network               *int16                 `json:"network"`
 		ModuleView            *bool                  `json:"module_view"`
 		CycleView             *bool                  `json:"cycle_view"`
 		IssueViewsView        *bool                  `json:"issue_views_view"`
 		PageView              *bool                  `json:"page_view"`
 		IntakeView            *bool                  `json:"intake_view"`
 		IsTimeTrackingEnabled *bool                  `json:"is_time_tracking_enabled"`
+		ArchiveIn             *int                   `json:"archive_in"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "detail": err.Error()})
@@ -313,13 +330,13 @@ func (h *ProjectHandler) Update(c *gin.Context) {
 			defaultAssigneeIDPtr = &id
 		}
 	}
-	p, err := h.Project.Update(c.Request.Context(), slug, projectID, user.ID, name, identifier, description, timezone, coverImage, body.Emoji, iconProp, body.ProjectLeadID != nil, projectLeadIDPtr, body.DefaultAssigneeID != nil, defaultAssigneeIDPtr, body.GuestViewAllFeatures, body.ModuleView, body.CycleView, body.IssueViewsView, body.PageView, body.IntakeView, body.IsTimeTrackingEnabled)
+	p, err := h.Project.Update(c.Request.Context(), slug, projectID, user.ID, name, identifier, description, timezone, coverImage, body.Emoji, iconProp, body.ProjectLeadID != nil, projectLeadIDPtr, body.DefaultAssigneeID != nil, defaultAssigneeIDPtr, body.GuestViewAllFeatures, body.Network, body.ModuleView, body.CycleView, body.IssueViewsView, body.PageView, body.IntakeView, body.IsTimeTrackingEnabled, body.ArchiveIn)
 	if err != nil {
 		if err == service.ErrProjectNotFound || err == service.ErrProjectForbidden {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
 			return
 		}
-		if err == service.ErrProjectIdentifierTooLong {
+		if err == service.ErrProjectIdentifierTooLong || err == service.ErrInvalidNetwork || err == service.ErrInvalidArchiveIn {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}

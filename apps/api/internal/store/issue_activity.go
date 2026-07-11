@@ -26,3 +26,18 @@ func (s *IssueActivityStore) ListByIssueID(ctx context.Context, issueID uuid.UUI
 		Find(&list).Error
 	return list, err
 }
+
+// ListByActorID returns recent issue activity performed by the given user,
+// newest first. This powers the user-scoped activity feed.
+func (s *IssueActivityStore) ListByActorID(ctx context.Context, actorID uuid.UUID, limit int) ([]model.IssueActivity, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	var list []model.IssueActivity
+	err := s.db.WithContext(ctx).
+		Where("actor_id = ? AND deleted_at IS NULL", actorID).
+		Order("created_at DESC").
+		Limit(limit).
+		Find(&list).Error
+	return list, err
+}

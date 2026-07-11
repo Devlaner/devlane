@@ -115,7 +115,7 @@ export function CreateProjectModal({
         cover_image: coverImage || undefined,
         emoji: emoji ?? undefined,
         icon_prop: iconProp ?? undefined,
-        guest_view_all_features: network === 'public' ? true : undefined,
+        network: network === 'public' ? 2 : 0,
         project_lead_id: projectLeadId ?? undefined,
       };
 
