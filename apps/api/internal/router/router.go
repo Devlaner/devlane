@@ -112,6 +112,7 @@ func New(cfg Config) *gin.Engine {
 		Settings:          instanceSettingStore,
 		Winv:              workspaceInviteStore,
 		Ws:                workspaceStore,
+		Projects:          projectStore,
 		NotifPrefs:        userNotifPrefStore,
 		ApiTokens:         apiTokenStore,
 		InstanceAdmins:    instanceAdminStore,

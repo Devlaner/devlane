@@ -265,6 +265,40 @@ func TestAuth_NotificationPreferences_DefaultsAndUpdate(t *testing.T) {
 	require.Equal(t, http.StatusOK, rr3.Code, "body=%s", rr3.Body.String())
 	body3 := testutil.MustJSONMap(t, rr3)
 	assert.Equal(t, false, body3["comment"])
+	assert.Equal(t, false, body3["comment_in_app"])
+	assert.Equal(t, false, body3["comment_email"])
+}
+
+func TestAuth_NotificationPreferences_ProjectScope(t *testing.T) {
+	ts := testutil.NewTestServer(t)
+	world := testutil.SeedWorld(t, ts.DB)
+
+	rr := ts.PUT("/api/users/me/notification-preferences/", map[string]any{
+		"workspace_id":   world.Workspace.ID.String(),
+		"project_id":     world.Project.ID.String(),
+		"comment_in_app": true,
+		"comment_email":  false,
+		"mention_in_app": false,
+		"mention_email":  true,
+	}, world.Session)
+	require.Equal(t, http.StatusOK, rr.Code, "body=%s", rr.Body.String())
+	body := testutil.MustJSONMap(t, rr)
+	assert.Equal(t, "project", body["scope"])
+	assert.Equal(t, true, body["comment_in_app"])
+	assert.Equal(t, false, body["comment_email"])
+	assert.Equal(t, false, body["mention_in_app"])
+	assert.Equal(t, true, body["mention_email"])
+
+	rr2 := ts.GET("/api/users/me/notification-preferences/?workspace_id="+world.Workspace.ID.String()+"&project_id="+world.Project.ID.String(), world.Session)
+	require.Equal(t, http.StatusOK, rr2.Code, "body=%s", rr2.Body.String())
+	body2 := testutil.MustJSONMap(t, rr2)
+	assert.Equal(t, "project", body2["effective_scope"])
+	assert.Equal(t, false, body2["comment_email"])
+
+	rr3 := ts.GET("/api/users/me/notification-preferences/", world.Session)
+	require.Equal(t, http.StatusOK, rr3.Code, "body=%s", rr3.Body.String())
+	body3 := testutil.MustJSONMap(t, rr3)
+	assert.Equal(t, true, body3["comment_email"])
 }
 
 func TestAuth_Tokens_ListCreateRevoke(t *testing.T) {

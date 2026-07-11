@@ -28,6 +28,7 @@ import type {
   WorkspaceMemberApiResponse,
   UserActivityItem,
   ApiTokenResponse,
+  NotificationPreferencesResponse,
 } from '../api/types';
 import {
   IconGrid,
@@ -65,6 +66,81 @@ import { ProjectLabelModal } from '../components/settings/modals/ProjectLabelMod
 import { formatRelativeTime, getTimezoneOptions } from '../lib/settingsHelpers';
 
 const COMPANY_SIZES = ['1-10', '11-50', '51-200', '201-500', '500+'];
+type NotificationScope = 'global' | 'workspace' | 'project';
+type NotificationCategory =
+  | 'property_change'
+  | 'state_change'
+  | 'issue_completed'
+  | 'comment'
+  | 'mention';
+type NotificationChannel = 'in_app' | 'email';
+type NotificationChannelState = Record<NotificationCategory, Record<NotificationChannel, boolean>>;
+
+const notificationDefaults: NotificationChannelState = {
+  property_change: { in_app: true, email: true },
+  state_change: { in_app: true, email: true },
+  issue_completed: { in_app: true, email: true },
+  comment: { in_app: true, email: true },
+  mention: { in_app: true, email: true },
+};
+
+const notificationRows: {
+  key: NotificationCategory;
+  label: string;
+  desc: string;
+}[] = [
+  {
+    key: 'property_change',
+    label: 'Property changes',
+    desc: 'Work item properties like assignees, priority, estimates, or dates change.',
+  },
+  {
+    key: 'state_change',
+    label: 'State changes',
+    desc: 'Work items move to a different workflow state.',
+  },
+  {
+    key: 'issue_completed',
+    label: 'Work item completed',
+    desc: 'A work item reaches its completed state.',
+  },
+  {
+    key: 'comment',
+    label: 'Comments',
+    desc: 'Someone leaves a comment on a work item you follow.',
+  },
+  {
+    key: 'mention',
+    label: 'Mentions',
+    desc: 'Someone mentions you in a comment or description.',
+  },
+];
+
+function notificationStateFromApi(p: NotificationPreferencesResponse): NotificationChannelState {
+  return {
+    property_change: {
+      in_app: p.property_change_in_app ?? p.property_change,
+      email: p.property_change_email ?? p.property_change,
+    },
+    state_change: {
+      in_app: p.state_change_in_app ?? p.state_change,
+      email: p.state_change_email ?? p.state_change,
+    },
+    issue_completed: {
+      in_app: p.issue_completed_in_app ?? p.issue_completed,
+      email: p.issue_completed_email ?? p.issue_completed,
+    },
+    comment: {
+      in_app: p.comment_in_app ?? p.comment,
+      email: p.comment_email ?? p.comment,
+    },
+    mention: {
+      in_app: p.mention_in_app ?? p.mention,
+      email: p.mention_email ?? p.mention,
+    },
+  };
+}
+
 export function SettingsPage() {
   const { workspaceSlug, projectId: projectIdFromPath } = useParams<{
     workspaceSlug: string;
@@ -269,11 +345,11 @@ export function SettingsPage() {
   const [firstDayOfWeek, setFirstDayOfWeek] = useState('monday');
   const [timezone, setTimezone] = useState('UTC');
   const [language, setLanguage] = useState('en');
-  const [notifProperty, setNotifProperty] = useState(true);
-  const [notifState, setNotifState] = useState(true);
-  const [notifCompleted, setNotifCompleted] = useState(true);
-  const [notifComments, setNotifComments] = useState(true);
-  const [notifMentions, setNotifMentions] = useState(true);
+  const [notificationScope, setNotificationScope] = useState<NotificationScope>('global');
+  const [notificationProjectId, setNotificationProjectId] = useState<string>('');
+  const [notificationPrefs, setNotificationPrefs] =
+    useState<NotificationChannelState>(notificationDefaults);
+  const [notificationEffectiveScope, setNotificationEffectiveScope] = useState<string>('default');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -481,15 +557,33 @@ export function SettingsPage() {
     if (!isAccountTab || accountSection !== 'notifications') return;
     let cancelled = false;
     setNotifPrefsLoaded(false);
+    const scope =
+      notificationScope === 'project'
+        ? {
+            workspace_id: workspace?.id,
+            project_id: notificationProjectId || projects[0]?.id,
+          }
+        : notificationScope === 'workspace'
+          ? { workspace_id: workspace?.id }
+          : undefined;
+    if (notificationScope !== 'global' && !scope?.workspace_id) {
+      setNotifPrefsLoaded(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+    if (notificationScope === 'project' && !scope?.project_id) {
+      setNotifPrefsLoaded(true);
+      return () => {
+        cancelled = true;
+      };
+    }
     userService
-      .getNotificationPreferences()
+      .getNotificationPreferences(scope)
       .then((p) => {
         if (cancelled) return;
-        setNotifProperty(p.property_change);
-        setNotifState(p.state_change);
-        setNotifComments(p.comment);
-        setNotifMentions(p.mention);
-        setNotifCompleted(p.issue_completed);
+        setNotificationPrefs(notificationStateFromApi(p));
+        setNotificationEffectiveScope(p.effective_scope ?? 'default');
         setNotifPrefsLoaded(true);
       })
       .catch(() => {
@@ -498,7 +592,14 @@ export function SettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [isAccountTab, accountSection]);
+  }, [
+    isAccountTab,
+    accountSection,
+    notificationScope,
+    notificationProjectId,
+    workspace?.id,
+    projects,
+  ]);
 
   useEffect(() => {
     if (!isAccountTab || accountSection !== 'activity') return;
@@ -587,6 +688,12 @@ export function SettingsPage() {
     }
   }, [isProjectsTab, workspace, projects.length, projectIdParam, navigate]); // eslint-disable-line react-hooks/exhaustive-deps -- projects for redirect; kept for future use
 
+  useEffect(() => {
+    if (!notificationProjectId && projects[0]?.id) {
+      setNotificationProjectId(projects[0].id);
+    }
+  }, [notificationProjectId, projects]);
+
   const filteredMembers = membersSearch.trim()
     ? workspaceMembers.filter((m) => {
         const term = membersSearch.toLowerCase();
@@ -609,6 +716,41 @@ export function SettingsPage() {
         })(),
       )
     : projectMembers;
+
+  const updateNotificationPreference = useCallback(
+    async (key: NotificationCategory, channel: NotificationChannel, next: boolean) => {
+      const previous = notificationPrefs;
+      const updated = {
+        ...notificationPrefs,
+        [key]: {
+          ...notificationPrefs[key],
+          [channel]: next,
+        },
+      };
+      setNotificationPrefs(updated);
+      const scope =
+        notificationScope === 'project'
+          ? {
+              workspace_id: workspace?.id,
+              project_id: notificationProjectId || projects[0]?.id,
+            }
+          : notificationScope === 'workspace'
+            ? { workspace_id: workspace?.id }
+            : {};
+      try {
+        const response = await userService.updateNotificationPreferences({
+          ...scope,
+          [`${key}_${channel}`]: next,
+        } as Partial<NotificationPreferencesResponse>);
+        setNotificationPrefs(notificationStateFromApi(response));
+        setNotificationEffectiveScope(response.effective_scope ?? notificationScope);
+      } catch {
+        setNotificationPrefs(previous);
+      }
+    },
+    [notificationPrefs, notificationScope, notificationProjectId, projects, workspace?.id],
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
@@ -1167,95 +1309,97 @@ export function SettingsPage() {
           {isAccountTab && accountSection === 'notifications' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-(--txt-primary)">
-                  Email notifications
-                </h2>
+                <h2 className="text-base font-semibold text-(--txt-primary)">Notifications</h2>
                 <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                  Stay in the loop on Work items you are subscribed to. Enable this to get notified.
+                  Control where notifications appear for your account, this workspace, or a project.
                 </p>
               </div>
-              <div className="space-y-4">
-                {[
-                  {
-                    id: 'property',
-                    label: 'Property changes',
-                    desc: "Notify me when work items' properties like assignees, priority, estimates or anything else changes.",
-                    value: notifProperty,
-                    set: setNotifProperty,
-                    key: 'property_change' as const,
-                  },
-                  {
-                    id: 'state',
-                    label: 'State change',
-                    desc: 'Notify me when the work items moves to a different state',
-                    value: notifState,
-                    set: setNotifState,
-                    key: 'state_change' as const,
-                  },
-                  {
-                    id: 'completed',
-                    label: 'Work item completed',
-                    desc: 'Notify me only when a work item is completed',
-                    value: notifCompleted,
-                    set: setNotifCompleted,
-                    key: 'issue_completed' as const,
-                  },
-                  {
-                    id: 'comments',
-                    label: 'Comments',
-                    desc: 'Notify me when someone leaves a comment on the work item',
-                    value: notifComments,
-                    set: setNotifComments,
-                    key: 'comment' as const,
-                  },
-                  {
-                    id: 'mentions',
-                    label: 'Mentions',
-                    desc: 'Notify me only when someone mentions me in the comments or description',
-                    value: notifMentions,
-                    set: setNotifMentions,
-                    key: 'mention' as const,
-                  },
-                ].map(({ id, label, desc, value, set, key }) => (
-                  <div
-                    key={id}
-                    className="flex items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3"
+
+              <div className="flex flex-wrap items-center gap-2">
+                {(
+                  [
+                    { value: 'global' as NotificationScope, label: 'Global' },
+                    { value: 'workspace' as NotificationScope, label: 'Workspace' },
+                    { value: 'project' as NotificationScope, label: 'Project' },
+                  ] as const
+                ).map((scope) => (
+                  <button
+                    key={scope.value}
+                    type="button"
+                    aria-pressed={notificationScope === scope.value}
+                    onClick={() => setNotificationScope(scope.value)}
+                    className={[
+                      'rounded-(--radius-md) border px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-default)',
+                      notificationScope === scope.value
+                        ? 'border-(--brand-default) bg-(--bg-accent-subtle) text-(--txt-accent-primary)'
+                        : 'border-(--border-subtle) text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover)',
+                    ].join(' ')}
                   >
-                    <div>
-                      <p
-                        id={`notif-toggle-label-${id}`}
-                        className="text-sm font-medium text-(--txt-primary)"
-                      >
-                        {label}
-                      </p>
+                    {scope.label}
+                  </button>
+                ))}
+                {notificationScope === 'project' && (
+                  <div className="relative min-w-56">
+                    <select
+                      value={notificationProjectId}
+                      onChange={(e) => setNotificationProjectId(e.target.value)}
+                      className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
+                    >
+                      {projects.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
+                      <IconChevronDown />
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-(--radius-md) border border-(--border-subtle)">
+                <div className="grid grid-cols-[minmax(0,1fr)_88px_88px] gap-3 border-b border-(--border-subtle) px-4 py-3 text-xs font-semibold uppercase text-(--txt-tertiary)">
+                  <span>Type</span>
+                  <span className="text-center">In-app</span>
+                  <span className="text-center">Email</span>
+                </div>
+                {notificationRows.map(({ key, label, desc }) => (
+                  <div
+                    key={key}
+                    className="grid grid-cols-[minmax(0,1fr)_88px_88px] items-center gap-3 border-b border-(--border-subtle) px-4 py-3 last:border-b-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-(--txt-primary)">{label}</p>
                       <p className="mt-0.5 text-sm text-(--txt-secondary)">{desc}</p>
                     </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={value}
-                      aria-labelledby={`notif-toggle-label-${id}`}
-                      disabled={!notifPrefsLoaded}
-                      onClick={async () => {
-                        const next = !value;
-                        set(next);
-                        try {
-                          await userService.updateNotificationPreferences({
-                            [key]: next,
-                          });
-                        } catch {
-                          set(value);
-                        }
-                      }}
-                      className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${value ? 'bg-(--brand-default)' : 'bg-(--neutral-400)'}`}
-                    >
-                      <span
-                        className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-4' : 'translate-x-0'}`}
-                      />
-                    </button>
+                    {(['in_app', 'email'] as const).map((channel) => {
+                      const value = notificationPrefs[key][channel];
+                      return (
+                        <button
+                          key={channel}
+                          type="button"
+                          role="switch"
+                          aria-checked={value}
+                          aria-label={`${label} ${channel === 'in_app' ? 'in-app' : 'email'} notifications`}
+                          disabled={!notifPrefsLoaded}
+                          onClick={() => updateNotificationPreference(key, channel, !value)}
+                          className={`relative mx-auto h-6 w-10 shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-default) ${value ? 'bg-(--brand-default)' : 'bg-(--neutral-400)'}`}
+                        >
+                          <span
+                            className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-4' : 'translate-x-0'}`}
+                          />
+                        </button>
+                      );
+                    })}
                   </div>
                 ))}
               </div>
+              <p className="text-xs text-(--txt-tertiary)">
+                {notificationEffectiveScope === notificationScope
+                  ? 'These settings are saved for the selected scope.'
+                  : `Using ${notificationEffectiveScope} defaults until you change this scope.`}
+              </p>
             </div>
           )}
 

@@ -30,6 +30,7 @@ type AuthHandler struct {
 	Settings          *store.InstanceSettingStore
 	Winv              *store.WorkspaceInviteStore
 	Ws                *store.WorkspaceStore
+	Projects          *store.ProjectStore
 	NotifPrefs        *store.UserNotificationPreferenceStore
 	ApiTokens         *store.ApiTokenStore
 	InstanceAdmins    *store.InstanceAdminStore
@@ -330,7 +331,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// GetNotificationPreferences returns account-level notification preferences.
+// GetNotificationPreferences returns notification preferences for a scope.
 // GET /api/users/me/notification-preferences/
 func (h *AuthHandler) GetNotificationPreferences(c *gin.Context) {
 	user := middleware.GetUser(c)
@@ -338,50 +339,71 @@ func (h *AuthHandler) GetNotificationPreferences(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 		return
 	}
-	if h.NotifPrefs == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"property_change": true,
-			"state_change":    true,
-			"comment":         true,
-			"mention":         true,
-			"issue_completed": true,
-		})
+	workspaceID, projectID, ok := h.notificationPreferenceScope(c, user.ID)
+	if !ok {
 		return
 	}
-	p, err := h.NotifPrefs.GetGlobal(c.Request.Context(), user.ID)
+	if h.NotifPrefs == nil {
+		c.JSON(http.StatusOK, notificationPreferenceResponse(store.DefaultNotificationPreference(user.ID, workspaceID, projectID), "default"))
+		return
+	}
+	var (
+		p              *model.UserNotificationPreference
+		effectiveScope string
+		err            error
+	)
+	if workspaceID != nil && projectID != nil {
+		p, effectiveScope, err = h.NotifPrefs.ResolveForIssue(c.Request.Context(), user.ID, *workspaceID, *projectID)
+	} else if workspaceID != nil {
+		if p, err = h.NotifPrefs.GetScoped(c.Request.Context(), user.ID, workspaceID, nil); err == nil && p != nil {
+			effectiveScope = "workspace"
+		} else if err == nil {
+			p, err = h.NotifPrefs.GetGlobal(c.Request.Context(), user.ID)
+			if p == nil && err == nil {
+				p = store.DefaultNotificationPreference(user.ID, workspaceID, nil)
+				effectiveScope = "default"
+			} else {
+				effectiveScope = "global"
+			}
+		}
+	} else {
+		p, err = h.NotifPrefs.GetGlobal(c.Request.Context(), user.ID)
+		if p == nil && err == nil {
+			p = store.DefaultNotificationPreference(user.ID, nil, nil)
+			effectiveScope = "default"
+		} else {
+			effectiveScope = "global"
+		}
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load preferences"})
 		return
 	}
-	if p == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"property_change": true,
-			"state_change":    true,
-			"comment":         true,
-			"mention":         true,
-			"issue_completed": true,
-		})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"property_change": p.PropertyChange,
-		"state_change":    p.StateChange,
-		"comment":         p.Comment,
-		"mention":         p.Mention,
-		"issue_completed": p.IssueCompleted,
-	})
+	c.JSON(http.StatusOK, notificationPreferenceResponse(p, effectiveScope))
 }
 
 // UpdateNotificationPreferencesRequest is the body for PUT /api/users/me/notification-preferences/
 type UpdateNotificationPreferencesRequest struct {
-	PropertyChange *bool `json:"property_change"`
-	StateChange    *bool `json:"state_change"`
-	Comment        *bool `json:"comment"`
-	Mention        *bool `json:"mention"`
-	IssueCompleted *bool `json:"issue_completed"`
+	WorkspaceID         *uuid.UUID `json:"workspace_id"`
+	ProjectID           *uuid.UUID `json:"project_id"`
+	PropertyChange      *bool      `json:"property_change"`
+	PropertyChangeInApp *bool      `json:"property_change_in_app"`
+	PropertyChangeEmail *bool      `json:"property_change_email"`
+	StateChange         *bool      `json:"state_change"`
+	StateChangeInApp    *bool      `json:"state_change_in_app"`
+	StateChangeEmail    *bool      `json:"state_change_email"`
+	Comment             *bool      `json:"comment"`
+	CommentInApp        *bool      `json:"comment_in_app"`
+	CommentEmail        *bool      `json:"comment_email"`
+	Mention             *bool      `json:"mention"`
+	MentionInApp        *bool      `json:"mention_in_app"`
+	MentionEmail        *bool      `json:"mention_email"`
+	IssueCompleted      *bool      `json:"issue_completed"`
+	IssueCompletedInApp *bool      `json:"issue_completed_in_app"`
+	IssueCompletedEmail *bool      `json:"issue_completed_email"`
 }
 
-// UpdateNotificationPreferences updates account-level notification preferences.
+// UpdateNotificationPreferences updates notification preferences for a scope.
 // PUT /api/users/me/notification-preferences/
 func (h *AuthHandler) UpdateNotificationPreferences(c *gin.Context) {
 	user := middleware.GetUser(c)
@@ -398,45 +420,202 @@ func (h *AuthHandler) UpdateNotificationPreferences(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
 		return
 	}
-	p, err := h.NotifPrefs.GetGlobal(c.Request.Context(), user.ID)
+	workspaceID := req.WorkspaceID
+	projectID := req.ProjectID
+	if workspaceID == nil && projectID == nil {
+		var ok bool
+		workspaceID, projectID, ok = h.notificationPreferenceScope(c, user.ID)
+		if !ok {
+			return
+		}
+	}
+	if !h.validateNotificationPreferenceScope(c, user.ID, workspaceID, projectID) {
+		return
+	}
+	if workspaceID == nil && projectID != nil {
+		project, err := h.Projects.GetByID(c.Request.Context(), *projectID)
+		if err != nil || project == nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+			return
+		}
+		workspaceID = &project.WorkspaceID
+	}
+	p, err := h.NotifPrefs.GetScoped(c.Request.Context(), user.ID, workspaceID, projectID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load preferences"})
 		return
 	}
 	if p == nil {
-		p = &model.UserNotificationPreference{UserID: user.ID}
-		p.PropertyChange = true
-		p.StateChange = true
-		p.Comment = true
-		p.Mention = true
-		p.IssueCompleted = true
+		p = store.DefaultNotificationPreference(user.ID, workspaceID, projectID)
 	}
 	if req.PropertyChange != nil {
 		p.PropertyChange = *req.PropertyChange
+		p.PropertyChangeInApp = *req.PropertyChange
+		p.PropertyChangeEmail = *req.PropertyChange
+	}
+	if req.PropertyChangeInApp != nil {
+		p.PropertyChangeInApp = *req.PropertyChangeInApp
+	}
+	if req.PropertyChangeEmail != nil {
+		p.PropertyChangeEmail = *req.PropertyChangeEmail
 	}
 	if req.StateChange != nil {
 		p.StateChange = *req.StateChange
+		p.StateChangeInApp = *req.StateChange
+		p.StateChangeEmail = *req.StateChange
+	}
+	if req.StateChangeInApp != nil {
+		p.StateChangeInApp = *req.StateChangeInApp
+	}
+	if req.StateChangeEmail != nil {
+		p.StateChangeEmail = *req.StateChangeEmail
 	}
 	if req.Comment != nil {
 		p.Comment = *req.Comment
+		p.CommentInApp = *req.Comment
+		p.CommentEmail = *req.Comment
+	}
+	if req.CommentInApp != nil {
+		p.CommentInApp = *req.CommentInApp
+	}
+	if req.CommentEmail != nil {
+		p.CommentEmail = *req.CommentEmail
 	}
 	if req.Mention != nil {
 		p.Mention = *req.Mention
+		p.MentionInApp = *req.Mention
+		p.MentionEmail = *req.Mention
+	}
+	if req.MentionInApp != nil {
+		p.MentionInApp = *req.MentionInApp
+	}
+	if req.MentionEmail != nil {
+		p.MentionEmail = *req.MentionEmail
 	}
 	if req.IssueCompleted != nil {
 		p.IssueCompleted = *req.IssueCompleted
+		p.IssueCompletedInApp = *req.IssueCompleted
+		p.IssueCompletedEmail = *req.IssueCompleted
 	}
-	if err := h.NotifPrefs.UpsertGlobal(c.Request.Context(), p); err != nil {
+	if req.IssueCompletedInApp != nil {
+		p.IssueCompletedInApp = *req.IssueCompletedInApp
+	}
+	if req.IssueCompletedEmail != nil {
+		p.IssueCompletedEmail = *req.IssueCompletedEmail
+	}
+	if err := h.NotifPrefs.UpsertScoped(c.Request.Context(), p); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save preferences"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"property_change": p.PropertyChange,
-		"state_change":    p.StateChange,
-		"comment":         p.Comment,
-		"mention":         p.Mention,
-		"issue_completed": p.IssueCompleted,
-	})
+	c.JSON(http.StatusOK, notificationPreferenceResponse(p, exactNotificationPreferenceScope(workspaceID, projectID)))
+}
+
+func (h *AuthHandler) notificationPreferenceScope(c *gin.Context, userID uuid.UUID) (*uuid.UUID, *uuid.UUID, bool) {
+	var workspaceID *uuid.UUID
+	var projectID *uuid.UUID
+	if raw := strings.TrimSpace(c.Query("workspace_id")); raw != "" {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid workspace_id"})
+			return nil, nil, false
+		}
+		workspaceID = &id
+	}
+	if raw := strings.TrimSpace(c.Query("project_id")); raw != "" {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project_id"})
+			return nil, nil, false
+		}
+		projectID = &id
+	}
+	if !h.validateNotificationPreferenceScope(c, userID, workspaceID, projectID) {
+		return nil, nil, false
+	}
+	if workspaceID == nil && projectID != nil {
+		project, err := h.Projects.GetByID(c.Request.Context(), *projectID)
+		if err != nil || project == nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+			return nil, nil, false
+		}
+		workspaceID = &project.WorkspaceID
+	}
+	return workspaceID, projectID, true
+}
+
+func (h *AuthHandler) validateNotificationPreferenceScope(c *gin.Context, userID uuid.UUID, workspaceID, projectID *uuid.UUID) bool {
+	if projectID != nil {
+		if h.Projects == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Not configured"})
+			return false
+		}
+		project, err := h.Projects.GetByID(c.Request.Context(), *projectID)
+		if err != nil || project == nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+			return false
+		}
+		if workspaceID != nil && project.WorkspaceID != *workspaceID {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Project does not belong to workspace"})
+			return false
+		}
+		workspaceID = &project.WorkspaceID
+	}
+	if workspaceID != nil {
+		if h.Ws == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Not configured"})
+			return false
+		}
+		ok, err := h.Ws.IsMember(c.Request.Context(), *workspaceID, userID)
+		if err != nil || !ok {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Workspace access required"})
+			return false
+		}
+	}
+	return true
+}
+
+func exactNotificationPreferenceScope(workspaceID, projectID *uuid.UUID) string {
+	if projectID != nil {
+		return "project"
+	}
+	if workspaceID != nil {
+		return "workspace"
+	}
+	return "global"
+}
+
+func notificationPreferenceResponse(p *model.UserNotificationPreference, effectiveScope string) gin.H {
+	if p == nil {
+		return gin.H{}
+	}
+	resp := gin.H{
+		"id":                     p.ID.String(),
+		"scope":                  exactNotificationPreferenceScope(p.WorkspaceID, p.ProjectID),
+		"effective_scope":        effectiveScope,
+		"user_id":                p.UserID.String(),
+		"property_change":        p.PropertyChange,
+		"property_change_in_app": p.PropertyChangeInApp,
+		"property_change_email":  p.PropertyChangeEmail,
+		"state_change":           p.StateChange,
+		"state_change_in_app":    p.StateChangeInApp,
+		"state_change_email":     p.StateChangeEmail,
+		"comment":                p.Comment,
+		"comment_in_app":         p.CommentInApp,
+		"comment_email":          p.CommentEmail,
+		"mention":                p.Mention,
+		"mention_in_app":         p.MentionInApp,
+		"mention_email":          p.MentionEmail,
+		"issue_completed":        p.IssueCompleted,
+		"issue_completed_in_app": p.IssueCompletedInApp,
+		"issue_completed_email":  p.IssueCompletedEmail,
+	}
+	if p.WorkspaceID != nil {
+		resp["workspace_id"] = p.WorkspaceID.String()
+	}
+	if p.ProjectID != nil {
+		resp["project_id"] = p.ProjectID.String()
+	}
+	return resp
 }
 
 // ListTokens returns the current user's API tokens (without secret values).

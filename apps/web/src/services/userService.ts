@@ -19,9 +19,15 @@ export const userService = {
     await apiClient.post('/api/users/me/change-password/', payload);
   },
 
-  async getNotificationPreferences(): Promise<NotificationPreferencesResponse> {
+  async getNotificationPreferences(scope?: {
+    workspace_id?: string;
+    project_id?: string;
+  }): Promise<NotificationPreferencesResponse> {
+    const params = new URLSearchParams();
+    if (scope?.workspace_id) params.set('workspace_id', scope.workspace_id);
+    if (scope?.project_id) params.set('project_id', scope.project_id);
     const { data } = await apiClient.get<NotificationPreferencesResponse>(
-      '/api/users/me/notification-preferences/',
+      `/api/users/me/notification-preferences/${params.toString() ? `?${params.toString()}` : ''}`,
     );
     return data;
   },

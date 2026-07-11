@@ -270,19 +270,27 @@ func (s *NotificationService) emit(ctx context.Context, receivers []uuid.UUID, p
 		return
 	}
 
-	// Preference gating: receivers who have disabled the relevant category for
-	// this `sender` value are dropped. Mention notifications still pass unless
-	// the user has explicitly turned mentions off.
+	// Preference gating: in-app rows and email delivery are controlled
+	// independently. Mention notifications still classify separately from
+	// comment notifications.
+	inAppAllowed := allowed
+	emailAllowed := allowed
 	if s.prefs != nil {
-		gated := make([]uuid.UUID, 0, len(allowed))
+		inAppGated := make([]uuid.UUID, 0, len(allowed))
+		emailGated := make([]uuid.UUID, 0, len(allowed))
 		for _, id := range allowed {
-			if s.allowedBySender(ctx, id, params.sender, params.classifyMention) {
-				gated = append(gated, id)
+			pref := s.deliveryPreferenceForSender(ctx, id, params.issue, params.sender, params.classifyMention)
+			if pref.InApp {
+				inAppGated = append(inAppGated, id)
+			}
+			if pref.Email {
+				emailGated = append(emailGated, id)
 			}
 		}
-		allowed = gated
+		inAppAllowed = inAppGated
+		emailAllowed = emailGated
 	}
-	if len(allowed) == 0 {
+	if len(inAppAllowed) == 0 && len(emailAllowed) == 0 {
 		return
 	}
 
@@ -291,8 +299,8 @@ func (s *NotificationService) emit(ctx context.Context, receivers []uuid.UUID, p
 	projectIdent := s.projectIdentifier(ctx, params.issue.ProjectID)
 	issueRef := fmt.Sprintf("%s-%d", projectIdent, params.issue.SequenceID)
 
-	rows := make([]model.Notification, 0, len(allowed))
-	for _, receiverID := range allowed {
+	rows := make([]model.Notification, 0, len(inAppAllowed))
+	for _, receiverID := range inAppAllowed {
 		sender := params.sender
 		if params.classifyMention != nil && params.classifyMention(receiverID) {
 			sender = model.NotificationSenderMentioned
@@ -323,18 +331,21 @@ func (s *NotificationService) emit(ctx context.Context, receivers []uuid.UUID, p
 			EntityName:       model.NotificationEntityIssue,
 		})
 	}
-	if err := s.ns.CreateMany(ctx, rows); err != nil {
-		s.logger().Warn("notification fan-out failed", "err", err, "issue_id", params.issue.ID, "receivers", len(rows))
+	if len(rows) > 0 {
+		if err := s.ns.CreateMany(ctx, rows); err != nil {
+			s.logger().Warn("notification fan-out failed", "err", err, "issue_id", params.issue.ID, "receivers", len(rows))
+		}
 	}
 
 	// Queue notification emails if email infrastructure is available.
 	// This runs synchronously but logs+swallows errors to avoid breaking in-app notifications.
 	if s.queue != nil && s.emailLog != nil && s.appURL != "" {
-		s.enqueueNotificationEmails(ctx, allowed, params, actorName, issueRef)
+		s.enqueueNotificationEmails(ctx, emailAllowed, params, actorName, issueRef)
 	}
 }
 
-// enqueueNotificationEmails queues an email for each receiver who received an in-app notification.
+// enqueueNotificationEmails queues an email for each receiver whose email
+// preferences allow this notification.
 // Errors are logged and swallowed — email delivery is best-effort and must not break in-app notifications.
 func (s *NotificationService) enqueueNotificationEmails(ctx context.Context, receivers []uuid.UUID, params emitParams, actorName, issueRef string) {
 	if params.issue == nil || len(receivers) == 0 {
@@ -683,39 +694,42 @@ func buildMessage(in messageInputs) model.JSONMap {
 	return m
 }
 
-// allowedBySender returns true if the receiver's preferences permit a notification
-// of this sender type. The mention classifier overrides the default sender
-// when the user is mentioned in this row, so a receiver who has comments
-// disabled but mentions enabled still gets the mention.
-func (s *NotificationService) allowedBySender(ctx context.Context, userID uuid.UUID, sender string, classify func(uuid.UUID) bool) bool {
-	if s.prefs == nil {
-		return true
-	}
+type deliveryPreference struct {
+	InApp bool
+	Email bool
+}
+
+// deliveryPreferenceForSender resolves the receiver's effective scoped
+// preferences for this issue and returns the enabled delivery channels.
+func (s *NotificationService) deliveryPreferenceForSender(ctx context.Context, userID uuid.UUID, issue *model.Issue, sender string, classify func(uuid.UUID) bool) deliveryPreference {
 	effective := sender
 	if classify != nil && classify(userID) {
 		effective = model.NotificationSenderMentioned
 	}
-	p, err := s.prefs.GetGlobal(ctx, userID)
+	if s.prefs == nil || issue == nil {
+		return deliveryPreference{InApp: true, Email: true}
+	}
+	p, _, err := s.prefs.ResolveForIssue(ctx, userID, issue.WorkspaceID, issue.ProjectID)
 	if err != nil || p == nil {
 		// Default: allow everything when no preference row exists.
-		return true
+		return deliveryPreference{InApp: true, Email: true}
 	}
 	switch effective {
 	case model.NotificationSenderMentioned:
-		return p.Mention
+		return deliveryPreference{InApp: p.MentionInApp, Email: p.MentionEmail}
 	case model.NotificationSenderCommented:
-		return p.Comment
+		return deliveryPreference{InApp: p.CommentInApp, Email: p.CommentEmail}
 	case model.NotificationSenderStateChanged:
-		return p.StateChange
+		return deliveryPreference{InApp: p.StateChangeInApp, Email: p.StateChangeEmail}
 	case model.NotificationSenderSubscribed:
-		return p.PropertyChange
+		return deliveryPreference{InApp: p.PropertyChangeInApp, Email: p.PropertyChangeEmail}
 	case model.NotificationSenderAssigned:
 		// Assignment notifications are not separately gated — receiving an
 		// assignment is fundamental to working on an issue. We honor only
 		// PropertyChange here as a coarse opt-out.
-		return p.PropertyChange
+		return deliveryPreference{InApp: p.PropertyChangeInApp, Email: p.PropertyChangeEmail}
 	}
-	return true
+	return deliveryPreference{InApp: true, Email: true}
 }
 
 // dedupExclude returns receivers minus exclude, with duplicates and uuid.Nil removed.

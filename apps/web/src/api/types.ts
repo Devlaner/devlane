@@ -309,11 +309,27 @@ export interface ChangePasswordRequest {
 
 /** GET /api/users/me/notification-preferences/ */
 export interface NotificationPreferencesResponse {
+  id?: string;
+  scope?: 'global' | 'workspace' | 'project';
+  effective_scope?: 'default' | 'global' | 'workspace' | 'project';
+  user_id?: string;
+  workspace_id?: string;
+  project_id?: string;
   property_change: boolean;
+  property_change_in_app: boolean;
+  property_change_email: boolean;
   state_change: boolean;
+  state_change_in_app: boolean;
+  state_change_email: boolean;
   comment: boolean;
+  comment_in_app: boolean;
+  comment_email: boolean;
   mention: boolean;
+  mention_in_app: boolean;
+  mention_email: boolean;
   issue_completed: boolean;
+  issue_completed_in_app: boolean;
+  issue_completed_email: boolean;
 }
 
 /** GET /api/users/me/activity/ */
