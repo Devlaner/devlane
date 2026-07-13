@@ -1,11 +1,13 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button, Input } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
 import { API_BASE, getApiErrorMessage } from '../api/client';
 import { Eye, EyeOff, CircleAlert } from 'lucide-react';
 import { AuthPageShell } from '../components/auth/AuthPageShell';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 type AuthStep = 'email' | 'password' | 'code';
@@ -14,6 +16,7 @@ type AuthMode = 'sign-in' | 'sign-up';
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation('auth');
   const { login, refreshUser } = useAuth();
 
   const state = location.state as {
@@ -212,16 +215,16 @@ export function LoginPage() {
   }, []);
 
   const title = useMemo(() => {
-    if (step === 'email') return 'Get started with Devlane';
-    if (step === 'code') return 'Check your email';
-    return 'Welcome back!';
-  }, [step]);
+    if (step === 'email') return t('getStartedTitle');
+    if (step === 'code') return t('checkEmailTitle');
+    return t('welcomeBack');
+  }, [step, t]);
 
   const subtitle = useMemo(() => {
-    if (step === 'email') return 'Enter your email to continue.';
-    if (step === 'code') return 'We sent a 6-digit code to your inbox. It expires in 10 minutes.';
-    return 'Enter your password to sign in.';
-  }, [step]);
+    if (step === 'email') return t('enterEmailSubtitle');
+    if (step === 'code') return t('codeSentSubtitle');
+    return t('enterPassword');
+  }, [step, t]);
 
   return (
     <AuthPageShell mode="sign-in" enableSignup={allowSignup}>
@@ -229,9 +232,7 @@ export function LoginPage() {
         <h1 className="mb-1 text-2xl font-semibold text-(--txt-primary)">{title}</h1>
         <p className="mb-6 text-sm text-(--txt-secondary)">{subtitle}</p>
         {step === 'email' && isPasswordEnabled && canUseMagicCode && (
-          <p className="-mt-4 mb-4 text-xs text-(--txt-tertiary)">
-            After you continue, you can use your password or choose a one-time email code instead.
-          </p>
+          <p className="-mt-4 mb-4 text-xs text-(--txt-tertiary)">{t('createAccountHint')}</p>
         )}
 
         {error && (
@@ -269,7 +270,7 @@ export function LoginPage() {
                         fill="#EA4335"
                       />
                     </svg>
-                    Continue with Google
+                    {t('continueWithGoogle')}
                   </button>
                 )}
                 {oauthProviders.github && (
@@ -281,7 +282,7 @@ export function LoginPage() {
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
                     </svg>
-                    Continue with GitHub
+                    {t('continueWithGitHub')}
                   </button>
                 )}
                 {oauthProviders.gitlab && (
@@ -293,7 +294,7 @@ export function LoginPage() {
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M23.955 13.587l-1.342-4.135-2.664-8.189a.455.455 0 0 0-.867 0L16.418 9.45H7.582L4.918 1.263a.455.455 0 0 0-.867 0L1.386 9.452.044 13.587a.924.924 0 0 0 .331 1.023L12 23.054l11.625-8.443a.92.92 0 0 0 .33-1.024" />
                     </svg>
-                    Continue with GitLab
+                    {t('continueWithGitLab')}
                   </button>
                 )}
                 <div className="relative my-2">
@@ -301,24 +302,24 @@ export function LoginPage() {
                     <div className="w-full border-t border-(--border-primary)" />
                   </div>
                   <div className="relative flex justify-center text-xs">
-                    <span className="bg-(--bg-primary) px-2 text-(--txt-tertiary)">or</span>
+                    <span className="bg-(--bg-primary) px-2 text-(--txt-tertiary)">{t('or')}</span>
                   </div>
                 </div>
               </div>
             )}
             <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
               <Input
-                label="Email"
+                label={t('emailLabel')}
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder={t('emailPlaceholder')}
                 required
                 autoComplete="email"
                 autoFocus
               />
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Checking…' : 'Continue with email'}
+                {isSubmitting ? t('checking') : t('continueWithEmail')}
               </Button>
             </form>
           </>
@@ -339,11 +340,11 @@ export function LoginPage() {
 
             <div className="relative">
               <Input
-                label="Password"
+                label={t('passwordLabel')}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
+                placeholder={t('passwordPlaceholder')}
                 required
                 autoComplete="current-password"
                 autoFocus
@@ -352,7 +353,7 @@ export function LoginPage() {
                 type="button"
                 className="absolute top-[2.1rem] right-3 text-(--txt-tertiary) hover:text-(--txt-primary)"
                 onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? t('hidePassword') : t('showPassword')}
                 aria-pressed={showPassword}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -367,12 +368,10 @@ export function LoginPage() {
                     state={{ email }}
                     className="text-xs text-(--txt-accent) hover:underline"
                   >
-                    Forgot your password?
+                    {t('forgotPassword')}
                   </Link>
                 ) : (
-                  <span className="text-xs text-(--txt-tertiary)">
-                    To reset your password, ask your administrator to configure SMTP.
-                  </span>
+                  <span className="text-xs text-(--txt-tertiary)">{t('resetPasswordNoSmtp')}</span>
                 )}
               </div>
             )}
@@ -384,19 +383,19 @@ export function LoginPage() {
                 disabled={isSubmitting}
                 className="w-full text-center text-xs font-medium text-(--txt-accent) hover:underline disabled:opacity-50"
               >
-                Sign in with email code instead
+                {t('useEmailCodeInstead')}
               </button>
             )}
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Signing in…' : 'Sign in'}
+              {isSubmitting ? t('signingIn') : t('signIn')}
             </Button>
 
             {(allowSignup || !!inviteToken) && (
               <p className="text-center text-sm text-(--txt-secondary)">
-                {"Don't have an account? "}
+                {t('dontHaveAccount')}{' '}
                 <Link to="/sign-up" className="font-medium text-(--txt-accent) hover:underline">
-                  Sign up
+                  {t('signUp')}
                 </Link>
               </p>
             )}
@@ -417,7 +416,7 @@ export function LoginPage() {
             </div>
 
             <Input
-              label="6-digit code"
+              label={t('sixDigitCodeLabel')}
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
@@ -430,7 +429,7 @@ export function LoginPage() {
             />
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Verifying…' : 'Continue'}
+              {isSubmitting ? t('verifying') : t('continue')}
             </Button>
 
             <button
@@ -439,7 +438,7 @@ export function LoginPage() {
               disabled={isSubmitting}
               className="w-full text-center text-xs text-(--txt-accent) hover:underline disabled:opacity-50"
             >
-              Resend code
+              {t('resendCode')}
             </button>
 
             {isPasswordEnabled && (
@@ -448,11 +447,15 @@ export function LoginPage() {
                 onClick={goBackToPassword}
                 className="w-full text-center text-xs text-(--txt-tertiary) hover:text-(--txt-primary)"
               >
-                Use password instead
+                {t('usePasswordInstead')}
               </button>
             )}
           </form>
         )}
+
+        <div className="mt-8 flex justify-center border-t border-(--border-subtle) pt-4">
+          <LanguageSwitcher />
+        </div>
       </div>
     </AuthPageShell>
   );
