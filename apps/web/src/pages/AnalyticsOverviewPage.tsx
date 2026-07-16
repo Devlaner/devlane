@@ -56,9 +56,7 @@ export function AnalyticsOverviewPage() {
           setMembers(mem ?? []);
         }
         if (!cancelled && projs?.length) {
-          return Promise.all(
-            projs.map((p) => issueService.list(workspaceSlug!, p.id, { limit: 200 })),
-          );
+          return Promise.all(projs.map((p) => issueService.listAll(workspaceSlug!, p.id)));
         }
         return [];
       })

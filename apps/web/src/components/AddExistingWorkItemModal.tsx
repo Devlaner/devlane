@@ -59,7 +59,7 @@ export function AddExistingWorkItemModal({
     setLoading(true);
     setError(null);
     Promise.all([
-      issueService.list(workspaceSlug, projectId, { limit: 2000 }),
+      issueService.listAll(workspaceSlug, projectId),
       moduleService.listIssueIds(workspaceSlug, projectId, moduleId),
     ])
       .then(([issues, ids]) => {

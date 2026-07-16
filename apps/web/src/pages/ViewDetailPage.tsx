@@ -197,7 +197,7 @@ export function ViewDetailPage() {
   const refetchIssues = () => {
     if (!workspaceSlug || !projectId) return;
     issueService
-      .list(workspaceSlug, projectId, { limit: 500 })
+      .listAll(workspaceSlug, projectId)
       .then(setIssues)
       .catch(() => {});
   };
@@ -279,7 +279,7 @@ export function ViewDetailPage() {
       workspaceService.getBySlug(workspaceSlug),
       projectService.get(workspaceSlug, projectId),
       projectService.list(workspaceSlug),
-      issueService.list(workspaceSlug, projectId, { limit: 500 }),
+      issueService.listAll(workspaceSlug, projectId),
       stateService.list(workspaceSlug, projectId),
       labelService.list(workspaceSlug, projectId),
       workspaceService.listMembers(workspaceSlug),

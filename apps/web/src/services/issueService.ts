@@ -63,6 +63,25 @@ export const issueService = {
     return data;
   },
 
+  /**
+   * Fetch every issue for a project by paging through `list` in chunks of 100
+   * (the server caps `limit` at 100). Use this instead of passing a large
+   * `limit`, which the server silently caps and truncates.
+   */
+  async listAll(workspaceSlug: string, projectId: string): Promise<IssueApiResponse[]> {
+    const pageSize = 100;
+    const all: IssueApiResponse[] = [];
+    let offset = 0;
+    // Bound the loop so a misbehaving backend can't spin forever.
+    for (let page = 0; page < 500; page++) {
+      const batch = await this.list(workspaceSlug, projectId, { limit: pageSize, offset });
+      all.push(...batch);
+      if (batch.length < pageSize) break;
+      offset += pageSize;
+    }
+    return all;
+  },
+
   async get(workspaceSlug: string, projectId: string, issueId: string): Promise<IssueApiResponse> {
     const { data } = await apiClient.get<IssueApiResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}/`,

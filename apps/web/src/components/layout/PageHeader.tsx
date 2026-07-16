@@ -92,7 +92,7 @@ export function PageHeader() {
       .get(workspaceSlug, projectId)
       .then((p) => {
         if (!cancelled) setProject(p ?? null);
-        return p ? issueService.list(workspaceSlug, projectId, { limit: 1000 }) : [];
+        return p ? issueService.listAll(workspaceSlug, projectId) : [];
       })
       .then((issues) => {
         if (!cancelled && Array.isArray(issues)) setProjectIssueCount(issues.length);

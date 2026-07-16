@@ -373,7 +373,7 @@ export function CyclesPage() {
       projectService.get(workspaceSlug, projectId),
       cycleService.list(workspaceSlug, projectId),
       workspaceService.listMembers(workspaceSlug),
-      issueService.list(workspaceSlug, projectId, { limit: 500 }),
+      issueService.listAll(workspaceSlug, projectId),
       stateService.list(workspaceSlug, projectId),
       labelService.list(workspaceSlug, projectId),
     ])
@@ -471,7 +471,7 @@ export function CyclesPage() {
       }
       Promise.all([
         cycleService.list(workspaceSlug, projectId),
-        issueService.list(workspaceSlug, projectId, { limit: 500 }),
+        issueService.listAll(workspaceSlug, projectId),
       ])
         .then(([list, iss]) => {
           setCycles(list ?? []);

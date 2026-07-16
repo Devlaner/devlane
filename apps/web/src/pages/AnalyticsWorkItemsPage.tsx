@@ -126,7 +126,7 @@ export function AnalyticsWorkItemsPage() {
         if (!cancelled && projs?.length) setProjects(projs);
         if (!cancelled && projs?.length) {
           return Promise.all([
-            ...projs.map((p) => issueService.list(workspaceSlug!, p.id, { limit: 200 })),
+            ...projs.map((p) => issueService.listAll(workspaceSlug!, p.id)),
             ...projs.map((p) => stateService.list(workspaceSlug!, p.id)),
           ]);
         }
