@@ -427,8 +427,11 @@ export function IssueDetailPage() {
     return t('common.time.justNow', 'just now');
   };
 
-  const postComment = async (contentHtml: string, access: 'INTERNAL' | 'EXTERNAL' = 'INTERNAL') => {
-    if (!workspaceSlug || !contentHtml.trim()) return;
+  const postComment = async (
+    contentHtml: string,
+    access: 'INTERNAL' | 'EXTERNAL' = 'INTERNAL',
+  ): Promise<boolean> => {
+    if (!workspaceSlug || !contentHtml.trim()) return false;
     setErrorMessage(null);
     setPostingComment(true);
     try {
@@ -440,19 +443,21 @@ export function IssueDetailPage() {
         access,
       );
       setComments((prev) => [...prev, created]);
+      return true;
     } catch (err) {
       setErrorMessage(
         err instanceof Error
           ? err.message
           : t('workItem.detail.postCommentFailed', 'Failed to post comment.'),
       );
+      return false;
     } finally {
       setPostingComment(false);
     }
   };
 
-  const updateComment = async (commentId: string, contentHtml: string) => {
-    if (!workspaceSlug || !contentHtml.trim()) return;
+  const updateComment = async (commentId: string, contentHtml: string): Promise<boolean> => {
+    if (!workspaceSlug || !contentHtml.trim()) return false;
     setErrorMessage(null);
     setUpdatingCommentId(commentId);
     try {
@@ -465,12 +470,14 @@ export function IssueDetailPage() {
       );
       setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
       setEditingCommentId(null);
+      return true;
     } catch (err) {
       setErrorMessage(
         err instanceof Error
           ? err.message
           : t('workItem.detail.updateCommentFailed', 'Failed to update comment.'),
       );
+      return false;
     } finally {
       setUpdatingCommentId(null);
     }
@@ -745,7 +752,7 @@ export function IssueDetailPage() {
                             <div className="mt-2">
                               <CommentEditor
                                 initialHtml={c.comment}
-                                onSubmit={(html) => void updateComment(c.id, html)}
+                                onSubmit={(html) => updateComment(c.id, html)}
                                 isSubmitting={updatingCommentId === c.id}
                                 onCancel={() => setEditingCommentId(null)}
                                 showShortcutHint
