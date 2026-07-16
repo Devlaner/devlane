@@ -113,7 +113,8 @@ export function ProjectsListPage() {
         if (!cancelled && list) setAllProjects(list);
       })
       .catch(() => {
-        if (!cancelled) setWorkspace(null);
+        if (cancelled) return;
+        setWorkspace(null);
         setAllProjects([]);
       })
       .finally(() => {

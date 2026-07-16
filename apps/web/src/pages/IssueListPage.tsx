@@ -205,7 +205,10 @@ export function IssueListPage() {
         setMembers(mem ?? []);
       })
       .catch(() => {
-        if (!cancelled) setWorkspace(null);
+        // Guard the whole reset: a stale request rejecting after the user
+        // switched projects must not wipe the newly-loaded project's data.
+        if (cancelled) return;
+        setWorkspace(null);
         setProject(null);
         setProjects([]);
         setIssues([]);
