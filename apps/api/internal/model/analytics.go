@@ -21,16 +21,21 @@ type LabelCount struct {
 }
 
 type WorkspaceIssueExport struct {
-	ID       string `gorm:"column:id" json:"id"`
-	Name     string `gorm:"column:name" json:"name"`
-	State    string `gorm:"column:state" json:"state"`
-	Priority string `gorm:"column:priority" json:"priority"`
+	ID       string `json:"id" gorm:"column:id"`
+	Name     string `json:"name" gorm:"column:name"`
+	State    string `json:"state" gorm:"column:state"`
+	Priority string `json:"priority" gorm:"column:priority"`
+	Assignee string `json:"assignee" gorm:"column:assignee"`
+	Labels   string `json:"labels" gorm:"column:labels"`
 }
 
 type ProjectIssueExport struct {
-	ID    string `gorm:"column:id" json:"id"`
-	Name  string `gorm:"column:name" json:"name"`
-	State string `gorm:"column:state" json:"state"`
+	ID       string `json:"id" gorm:"column:id"`
+	Name     string `json:"name" gorm:"column:name"`
+	State    string `json:"state" gorm:"column:state"`
+	Priority string `json:"priority" gorm:"column:priority"`
+	Assignee string `json:"assignee" gorm:"column:assignee"`
+	Labels   string `json:"labels" gorm:"column:labels"`
 }
 
 type TrendPoint struct {

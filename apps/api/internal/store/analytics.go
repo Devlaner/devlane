@@ -20,11 +20,12 @@ func (s *AnalyticsStore) GetWorkspaceStateAnalytics(ctx context.Context, slug st
 	var results []model.StateCount
 	err := s.db.WithContext(ctx).
 		Table("issues").
-		Select("issues.state, COUNT(*) as count").
+		Select("states.name AS state, COUNT(*) as count").
 		Joins("JOIN workspaces ON issues.workspace_id = workspaces.id").
 		Joins("JOIN projects ON issues.project_id = projects.id").
+		Joins("JOIN states ON issues.state_id = states.id").
 		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
-		Group("issues.state").
+		Group("states.name").
 		Scan(&results).Error
 
 	return results, err
@@ -48,12 +49,13 @@ func (s *AnalyticsStore) GetWorkspaceAssigneeAnalytics(ctx context.Context, slug
 	var results []model.AssigneeCount
 	err := s.db.WithContext(ctx).
 		Table("issues").
-		Select("COALESCE(users.email, 'Unassigned') AS email, COUNT(*) as count").
+		Select("COALESCE(users.email, 'Unassigned') AS email, COUNT(DISTINCT issues.id) as count").
 		Joins("JOIN workspaces ON issues.workspace_id = workspaces.id").
 		Joins("JOIN projects ON issues.project_id = projects.id").
-		Joins("LEFT JOIN users ON issues.assignee_id = users.id").
+		Joins("LEFT JOIN issue_assignees ON issues.id = issue_assignees.issue_id").
+		Joins("LEFT JOIN users ON issue_assignees.assignee_id = users.id").
 		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
-		Group("COALESCE(users.email, 'Unassigned')").
+		Group("users.email").
 		Scan(&results).Error
 
 	return results, err
@@ -103,10 +105,11 @@ func (s *AnalyticsStore) GetProjectAssigneeAnalytics(ctx context.Context, projec
 	var results []model.AssigneeCount
 	err := s.db.WithContext(ctx).
 		Table("issues").
-		Select("COALESCE(users.email, 'Unassigned') AS email, COUNT(*) as count").
-		Joins("LEFT JOIN users ON issues.assignee_id = users.id").
+		Select("COALESCE(users.email, 'Unassigned') AS email, COUNT(DISTINCT issues.id) as count").
+		Joins("LEFT JOIN issue_assignees ON issues.id = issue_assignees.issue_id").
+		Joins("LEFT JOIN users ON issue_assignees.assignee_id = users.id").
 		Where("issues.project_id = ? AND issues.deleted_at IS NULL", projectID).
-		Group("COALESCE(users.email, 'Unassigned')").
+		Group("users.email").
 		Scan(&results).Error
 
 	return results, err
@@ -129,10 +132,16 @@ func (s *AnalyticsStore) GetProjectLabelAnalytics(ctx context.Context, projectID
 func (s *AnalyticsStore) StreamWorkspaceIssuesForExport(ctx context.Context, slug string, fn func(model.WorkspaceIssueExport) error) error {
 	rows, err := s.db.WithContext(ctx).
 		Table("issues").
-		Select("issues.id AS id, issues.name AS name, issues.state AS state, issues.priority AS priority").
+		Select("issues.id AS id, issues.name AS name, states.name AS state, issues.priority AS priority, COALESCE(STRING_AGG(DISTINCT users.email, ', '), '') AS assignee, COALESCE(STRING_AGG(DISTINCT labels.name, ', '), '') AS labels").
 		Joins("JOIN workspaces ON issues.workspace_id = workspaces.id").
 		Joins("JOIN projects ON issues.project_id = projects.id").
+		Joins("JOIN states ON issues.state_id = states.id").
+		Joins("LEFT JOIN issue_assignees ON issues.id = issue_assignees.issue_id").
+		Joins("LEFT JOIN users ON issue_assignees.assignee_id = users.id").
+		Joins("LEFT JOIN issue_labels ON issues.id = issue_labels.issue_id").
+		Joins("LEFT JOIN labels ON issue_labels.label_id = labels.id").
 		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
+		Group("issues.id, states.name").
 		Rows()
 	if err != nil {
 		return err
@@ -154,8 +163,14 @@ func (s *AnalyticsStore) StreamWorkspaceIssuesForExport(ctx context.Context, slu
 func (s *AnalyticsStore) StreamProjectIssuesForExport(ctx context.Context, projectID uuid.UUID, fn func(model.ProjectIssueExport) error) error {
 	rows, err := s.db.WithContext(ctx).
 		Table("issues").
-		Select("issues.id AS id, issues.name AS name, issues.state AS state").
-		Where("project_id = ? AND deleted_at IS NULL", projectID).
+		Select("issues.id AS id, issues.name AS name, states.name AS state, issues.priority AS priority, COALESCE(STRING_AGG(DISTINCT users.email, ', '), '') AS assignee, COALESCE(STRING_AGG(DISTINCT labels.name, ', '), '') AS labels").
+		Joins("JOIN states ON issues.state_id = states.id").
+		Joins("LEFT JOIN issue_assignees ON issues.id = issue_assignees.issue_id").
+		Joins("LEFT JOIN users ON issue_assignees.assignee_id = users.id").
+		Joins("LEFT JOIN issue_labels ON issues.id = issue_labels.issue_id").
+		Joins("LEFT JOIN labels ON issue_labels.label_id = labels.id").
+		Where("issues.project_id = ? AND issues.deleted_at IS NULL", projectID).
+		Group("issues.id, states.name").
 		Rows()
 	if err != nil {
 		return err
@@ -194,11 +209,12 @@ func (s *AnalyticsStore) GetWorkspaceTrendAnalytics(ctx context.Context, slug st
             JOIN issues ON issue_activities.issue_id = issues.id
             JOIN workspaces ON issues.workspace_id = workspaces.id
             JOIN projects ON issues.project_id = projects.id
-            JOIN states ON issue_activities.new_state_id = states.id
+            JOIN states ON states.id::text = issue_activities.new_value
             WHERE workspaces.slug = ? 
               AND issues.deleted_at IS NULL 
               AND workspaces.deleted_at IS NULL 
               AND projects.deleted_at IS NULL
+              AND issue_activities.field = 'state_id'
               AND states.group IN ('completed', 'cancelled')
         )
         SELECT date, SUM(created) AS created, SUM(resolved) AS resolved
@@ -225,9 +241,10 @@ func (s *AnalyticsStore) GetProjectTrendAnalytics(ctx context.Context, projectID
             SELECT DATE(issue_activities.created_at) AS date, 0 AS created, 1 AS resolved
             FROM issue_activities
             JOIN issues ON issue_activities.issue_id = issues.id
-            JOIN states ON issue_activities.new_state_id = states.id
+            JOIN states ON states.id::text = issue_activities.new_value
             WHERE issues.project_id = ? 
               AND issues.deleted_at IS NULL
+              AND issue_activities.field = 'state_id'
               AND states.group IN ('completed', 'cancelled')
         )
         SELECT date, SUM(created) AS created, SUM(resolved) AS resolved

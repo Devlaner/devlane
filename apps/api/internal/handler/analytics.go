@@ -129,7 +129,7 @@ func (h *AnalyticsHandler) ExportWorkspaceCSV(c *gin.Context) {
 			c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 			c.Header("Content-Type", "text/csv")
 
-			if err := writer.Write([]string{"Issue ID", "Title", "State", "Priority"}); err != nil {
+			if err := writer.Write([]string{"Issue ID", "Title", "State", "Priority", "Assignee", "Labels"}); err != nil {
 				return err
 			}
 			headerWritten = true
@@ -140,6 +140,8 @@ func (h *AnalyticsHandler) ExportWorkspaceCSV(c *gin.Context) {
 			sanitizeCSVField(issue.Name),
 			sanitizeCSVField(issue.State),
 			sanitizeCSVField(issue.Priority),
+			sanitizeCSVField(issue.Assignee),
+			sanitizeCSVField(issue.Labels),
 		}); err != nil {
 			return err
 		}
@@ -185,7 +187,7 @@ func (h *AnalyticsHandler) ExportProjectCSV(c *gin.Context) {
 			c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 			c.Header("Content-Type", "text/csv")
 
-			if err := writer.Write([]string{"Project Issue ID", "Title", "State"}); err != nil {
+			if err := writer.Write([]string{"Project Issue ID", "Title", "State", "Priority", "Assignee", "Labels"}); err != nil {
 				return err
 			}
 			headerWritten = true
@@ -195,6 +197,9 @@ func (h *AnalyticsHandler) ExportProjectCSV(c *gin.Context) {
 			issue.ID,
 			sanitizeCSVField(issue.Name),
 			sanitizeCSVField(issue.State),
+			sanitizeCSVField(issue.Priority),
+			sanitizeCSVField(issue.Assignee),
+			sanitizeCSVField(issue.Labels),
 		}); err != nil {
 			return err
 		}
