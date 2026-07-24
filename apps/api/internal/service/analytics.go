@@ -182,36 +182,27 @@ func (s *AnalyticsService) GetProjectAnalytics(ctx context.Context, projectID, u
 	}, nil
 }
 
-func (s *AnalyticsService) ExportWorkspaceCSV(ctx context.Context, slug string, userID uuid.UUID) ([]model.WorkspaceIssueExport, error) {
+func (s *AnalyticsService) ExportWorkspaceCSV(
+	ctx context.Context,
+	slug string,
+	userID uuid.UUID,
+	fn func(model.WorkspaceIssueExport) error,
+) error {
 	if _, err := s.ensureWorkspaceAccess(ctx, slug, userID); err != nil {
-		return nil, err
+		return err
 	}
 
-	var exports []model.WorkspaceIssueExport
-
-	err := s.as.StreamWorkspaceIssuesForExport(ctx, slug, func(item model.WorkspaceIssueExport) error {
-		exports = append(exports, item)
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return exports, nil
+	return s.as.StreamWorkspaceIssuesForExport(ctx, slug, fn)
 }
 
-func (s *AnalyticsService) ExportProjectCSV(ctx context.Context, projectID, userID uuid.UUID) ([]model.ProjectIssueExport, error) {
+func (s *AnalyticsService) ExportProjectCSV(
+	ctx context.Context,
+	projectID, userID uuid.UUID,
+	fn func(model.ProjectIssueExport) error,
+) error {
 	if _, err := s.ensureProjectAccess(ctx, projectID, userID); err != nil {
-		return nil, err
-	}
-	var exports []model.ProjectIssueExport
-	err := s.as.StreamProjectIssuesForExport(ctx, projectID, func(item model.ProjectIssueExport) error {
-		exports = append(exports, item)
-		return nil
-	})
-	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return exports, nil
+	return s.as.StreamProjectIssuesForExport(ctx, projectID, fn)
 }

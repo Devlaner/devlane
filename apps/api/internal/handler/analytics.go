@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Devlaner/devlane/api/internal/middleware"
+	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -118,41 +119,48 @@ func (h *AnalyticsHandler) ExportWorkspaceCSV(c *gin.Context) {
 		return
 	}
 
-	issues, err := h.AnalyticsService.ExportWorkspaceCSV(c.Request.Context(), slug, user.ID)
-	if err != nil {
-		if errors.Is(err, service.ErrWorkspaceForbidden) {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
-			return
-		}
-		if errors.Is(err, service.ErrWorkspaceNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Workspace not found"})
-			return
-		}
-		h.Log.Error("failed to fetch workspace issues for CSV export", "error", err, "slug", slug)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch workspace data"})
-		return
-	}
-
-	safeSlug := sanitizeFilename(slug)
-	filename := fmt.Sprintf("workspace-%s-analytics-%s.csv", safeSlug, time.Now().Format("2006-01-02"))
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
-	c.Header("Content-Type", "text/csv")
-
 	writer := csv.NewWriter(c.Writer)
-	_ = writer.Write([]string{"Issue ID", "Title", "State", "Priority"})
+	headerWritten := false
 
-	for _, issue := range issues {
-		_ = writer.Write([]string{
+	err := h.AnalyticsService.ExportWorkspaceCSV(c.Request.Context(), slug, user.ID, func(issue model.WorkspaceIssueExport) error {
+		if !headerWritten {
+			safeSlug := sanitizeFilename(slug)
+			filename := fmt.Sprintf("workspace-%s-analytics-%s.csv", safeSlug, time.Now().Format("2006-01-02"))
+			c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+			c.Header("Content-Type", "text/csv")
+
+			if err := writer.Write([]string{"Issue ID", "Title", "State", "Priority"}); err != nil {
+				return err
+			}
+			headerWritten = true
+		}
+
+		if err := writer.Write([]string{
 			issue.ID,
 			sanitizeCSVField(issue.Name),
 			sanitizeCSVField(issue.State),
 			sanitizeCSVField(issue.Priority),
-		})
-	}
+		}); err != nil {
+			return err
+		}
 
-	writer.Flush()
-	if err := writer.Error(); err != nil {
-		h.Log.Error("failed to flush CSV writer", "error", err, "slug", slug)
+		writer.Flush()
+		return writer.Error()
+	})
+
+	if err != nil {
+		if !headerWritten {
+			if errors.Is(err, service.ErrWorkspaceForbidden) {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+				return
+			}
+			if errors.Is(err, service.ErrWorkspaceNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Workspace not found"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch workspace data"})
+		}
+		h.Log.Error("failed to stream workspace CSV export", "error", err, "slug", slug)
 	}
 }
 
@@ -168,38 +176,45 @@ func (h *AnalyticsHandler) ExportProjectCSV(c *gin.Context) {
 		return
 	}
 
-	issues, err := h.AnalyticsService.ExportProjectCSV(c.Request.Context(), projectID, user.ID)
-	if err != nil {
-		if errors.Is(err, service.ErrProjectForbidden) || errors.Is(err, service.ErrWorkspaceForbidden) {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
-			return
-		}
-		if errors.Is(err, service.ErrProjectNotFound) || errors.Is(err, service.ErrWorkspaceNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
-			return
-		}
-		h.Log.Error("failed to fetch project issues for CSV export", "error", err, "project_id", projectID)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch project data"})
-		return
-	}
-
-	filename := fmt.Sprintf("project-%s-analytics-%s.csv", projectID, time.Now().Format("2006-01-02"))
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
-	c.Header("Content-Type", "text/csv")
-
 	writer := csv.NewWriter(c.Writer)
-	_ = writer.Write([]string{"Project Issue ID", "Title", "State"})
+	headerWritten := false
 
-	for _, issue := range issues {
-		_ = writer.Write([]string{
+	err := h.AnalyticsService.ExportProjectCSV(c.Request.Context(), projectID, user.ID, func(issue model.ProjectIssueExport) error {
+		if !headerWritten {
+			filename := fmt.Sprintf("project-%s-analytics-%s.csv", projectID, time.Now().Format("2006-01-02"))
+			c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+			c.Header("Content-Type", "text/csv")
+
+			if err := writer.Write([]string{"Project Issue ID", "Title", "State"}); err != nil {
+				return err
+			}
+			headerWritten = true
+		}
+
+		if err := writer.Write([]string{
 			issue.ID,
 			sanitizeCSVField(issue.Name),
 			sanitizeCSVField(issue.State),
-		})
-	}
+		}); err != nil {
+			return err
+		}
 
-	writer.Flush()
-	if err := writer.Error(); err != nil {
-		h.Log.Error("failed to flush CSV writer", "error", err, "project_id", projectID)
+		writer.Flush()
+		return writer.Error()
+	})
+
+	if err != nil {
+		if !headerWritten {
+			if errors.Is(err, service.ErrProjectForbidden) || errors.Is(err, service.ErrWorkspaceForbidden) {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+				return
+			}
+			if errors.Is(err, service.ErrProjectNotFound) || errors.Is(err, service.ErrWorkspaceNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch project data"})
+		}
+		h.Log.Error("failed to stream project CSV export", "error", err, "project_id", projectID)
 	}
 }

@@ -48,12 +48,12 @@ func (s *AnalyticsStore) GetWorkspaceAssigneeAnalytics(ctx context.Context, slug
 	var results []model.AssigneeCount
 	err := s.db.WithContext(ctx).
 		Table("issues").
-		Select("users.email, COUNT(*) as count").
+		Select("COALESCE(users.email, 'Unassigned') AS email, COUNT(*) as count").
 		Joins("JOIN workspaces ON issues.workspace_id = workspaces.id").
 		Joins("JOIN projects ON issues.project_id = projects.id").
-		Joins("JOIN users ON issues.assignee_id = users.id").
+		Joins("LEFT JOIN users ON issues.assignee_id = users.id").
 		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
-		Group("users.email").
+		Group("COALESCE(users.email, 'Unassigned')").
 		Scan(&results).Error
 
 	return results, err
@@ -103,10 +103,10 @@ func (s *AnalyticsStore) GetProjectAssigneeAnalytics(ctx context.Context, projec
 	var results []model.AssigneeCount
 	err := s.db.WithContext(ctx).
 		Table("issues").
-		Select("users.email, COUNT(*) as count").
-		Joins("JOIN users ON issues.assignee_id = users.id").
+		Select("COALESCE(users.email, 'Unassigned') AS email, COUNT(*) as count").
+		Joins("LEFT JOIN users ON issues.assignee_id = users.id").
 		Where("issues.project_id = ? AND issues.deleted_at IS NULL", projectID).
-		Group("users.email").
+		Group("COALESCE(users.email, 'Unassigned')").
 		Scan(&results).Error
 
 	return results, err
@@ -176,32 +176,67 @@ func (s *AnalyticsStore) StreamProjectIssuesForExport(ctx context.Context, proje
 
 func (s *AnalyticsStore) GetWorkspaceTrendAnalytics(ctx context.Context, slug string) ([]model.TrendPoint, error) {
 	var results []model.TrendPoint
-	err := s.db.WithContext(ctx).
-		Table("issues").
-		Select("DATE(issues.created_at) AS date, "+
-			"COUNT(CASE WHEN issues.created_at IS NOT NULL THEN 1 END) AS created, "+
-			"COUNT(CASE WHEN issues.state = 'resolved' THEN 1 END) AS resolved").
-		Joins("JOIN workspaces ON issues.workspace_id = workspaces.id").
-		Joins("JOIN projects ON issues.project_id = projects.id").
-		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
-		Group("DATE(issues.created_at)").
-		Order("date ASC").
-		Scan(&results).Error
+	query := `
+        WITH events AS (
+            SELECT DATE(issues.created_at) AS date, 1 AS created, 0 AS resolved
+            FROM issues
+            JOIN workspaces ON issues.workspace_id = workspaces.id
+            JOIN projects ON issues.project_id = projects.id
+            WHERE workspaces.slug = ? 
+              AND issues.deleted_at IS NULL 
+              AND workspaces.deleted_at IS NULL 
+              AND projects.deleted_at IS NULL
 
+            UNION ALL
+
+            SELECT DATE(issue_activities.created_at) AS date, 0 AS created, 1 AS resolved
+            FROM issue_activities
+            JOIN issues ON issue_activities.issue_id = issues.id
+            JOIN workspaces ON issues.workspace_id = workspaces.id
+            JOIN projects ON issues.project_id = projects.id
+            JOIN states ON issue_activities.new_state_id = states.id
+            WHERE workspaces.slug = ? 
+              AND issues.deleted_at IS NULL 
+              AND workspaces.deleted_at IS NULL 
+              AND projects.deleted_at IS NULL
+              AND states.group IN ('completed', 'cancelled')
+        )
+        SELECT date, SUM(created) AS created, SUM(resolved) AS resolved
+        FROM events
+        WHERE date IS NOT NULL
+        GROUP BY date
+        ORDER BY date ASC
+    `
+
+	err := s.db.WithContext(ctx).Raw(query, slug, slug).Scan(&results).Error
 	return results, err
 }
 
 func (s *AnalyticsStore) GetProjectTrendAnalytics(ctx context.Context, projectID uuid.UUID) ([]model.TrendPoint, error) {
 	var results []model.TrendPoint
-	err := s.db.WithContext(ctx).
-		Table("issues").
-		Select("DATE(created_at) AS date, "+
-			"COUNT(CASE WHEN created_at IS NOT NULL THEN 1 END) AS created, "+
-			"COUNT(CASE WHEN state = 'resolved' THEN 1 END) AS resolved").
-		Where("project_id = ? AND deleted_at IS NULL", projectID).
-		Group("DATE(created_at)").
-		Order("date ASC").
-		Scan(&results).Error
+	query := `
+        WITH events AS (
+            SELECT DATE(issues.created_at) AS date, 1 AS created, 0 AS resolved
+            FROM issues
+            WHERE project_id = ? AND deleted_at IS NULL
 
+            UNION ALL
+
+            SELECT DATE(issue_activities.created_at) AS date, 0 AS created, 1 AS resolved
+            FROM issue_activities
+            JOIN issues ON issue_activities.issue_id = issues.id
+            JOIN states ON issue_activities.new_state_id = states.id
+            WHERE issues.project_id = ? 
+              AND issues.deleted_at IS NULL
+              AND states.group IN ('completed', 'cancelled')
+        )
+        SELECT date, SUM(created) AS created, SUM(resolved) AS resolved
+        FROM events
+        WHERE date IS NOT NULL
+        GROUP BY date
+        ORDER BY date ASC
+    `
+
+	err := s.db.WithContext(ctx).Raw(query, projectID, projectID).Scan(&results).Error
 	return results, err
 }
