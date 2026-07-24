@@ -173,12 +173,32 @@ func (s *AnalyticsService) ExportWorkspaceCSV(ctx context.Context, slug string, 
 	if _, err := s.ensureWorkspaceAccess(ctx, slug, userID); err != nil {
 		return nil, err
 	}
-	return s.as.StreamWorkspaceIssuesForExport(ctx, slug)
+
+	var exports []model.WorkspaceIssueExport
+
+	err := s.as.StreamWorkspaceIssuesForExport(ctx, slug, func(item model.WorkspaceIssueExport) error {
+		exports = append(exports, item)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return exports, nil
 }
 
 func (s *AnalyticsService) ExportProjectCSV(ctx context.Context, projectID, userID uuid.UUID) ([]model.ProjectIssueExport, error) {
 	if _, err := s.ensureProjectAccess(ctx, projectID, userID); err != nil {
 		return nil, err
 	}
-	return s.as.StreamProjectIssuesForExport(ctx, projectID)
+	var exports []model.ProjectIssueExport
+	err := s.as.StreamProjectIssuesForExport(ctx, projectID, func(item model.ProjectIssueExport) error {
+		exports = append(exports, item)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return exports, nil
 }
