@@ -101,7 +101,7 @@ func (s *AnalyticsService) GetWorkspaceAnalytics(ctx context.Context, slug strin
 			byAssignee[r.Email] = r.Count
 		}
 	} else if s.log != nil {
-		s.log.Warn("failed to fetch workspace assignee analytics", "error", err, "slug", slug)
+		return nil, fmt.Errorf("fetch workspace assignee analytics: %w", err)
 	}
 
 	byLabel := make(map[string]int64)
@@ -110,7 +110,12 @@ func (s *AnalyticsService) GetWorkspaceAnalytics(ctx context.Context, slug strin
 			byLabel[r.Label] = r.Count
 		}
 	} else if s.log != nil {
-		s.log.Warn("failed to fetch workspace label analytics", "error", err, "slug", slug)
+		return nil, fmt.Errorf("fetch workspace labels analytics: %w", err)
+	}
+
+	trend, err := s.as.GetWorkspaceTrendAnalytics(ctx, slug)
+	if err != nil {
+		return nil, fmt.Errorf("fetch workspace trend analytics: %w", err)
 	}
 
 	return &AnalyticsResponse{
@@ -118,6 +123,7 @@ func (s *AnalyticsService) GetWorkspaceAnalytics(ctx context.Context, slug strin
 		ByPriority: byPriority,
 		ByAssignee: byAssignee,
 		ByLabel:    byLabel,
+		Trend:      trend,
 	}, nil
 }
 
@@ -150,7 +156,7 @@ func (s *AnalyticsService) GetProjectAnalytics(ctx context.Context, projectID, u
 			byAssignee[r.Email] = r.Count
 		}
 	} else if s.log != nil {
-		s.log.Warn("failed to fetch project assignee analytics", "error", err, "project_id", projectID)
+		return nil, fmt.Errorf("fetch project assignee analytics: %w", err)
 	}
 
 	byLabel := make(map[string]int64)
@@ -159,7 +165,12 @@ func (s *AnalyticsService) GetProjectAnalytics(ctx context.Context, projectID, u
 			byLabel[r.Label] = r.Count
 		}
 	} else if s.log != nil {
-		s.log.Warn("failed to fetch project label analytics", "error", err, "project_id", projectID)
+		return nil, fmt.Errorf("fetch project labels analytics: %w", err)
+	}
+
+	trend, err := s.as.GetProjectTrendAnalytics(ctx, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("fetch project trend analytics: %w", err)
 	}
 
 	return &AnalyticsResponse{
@@ -167,6 +178,7 @@ func (s *AnalyticsService) GetProjectAnalytics(ctx context.Context, projectID, u
 		ByPriority: byPriority,
 		ByAssignee: byAssignee,
 		ByLabel:    byLabel,
+		Trend:      trend,
 	}, nil
 }
 
