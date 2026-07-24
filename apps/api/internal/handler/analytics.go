@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Devlaner/devlane/api/internal/middleware"
@@ -53,13 +54,13 @@ func (h *AnalyticsHandler) GetWorkspaceAnalytics(c *gin.Context) {
 		return
 	}
 
-	res, err := h.AnalyticsService.GetWorkspaceAnalytics(c.Request.Context(), user.ID, slug)
+	res, err := h.AnalyticsService.GetWorkspaceAnalytics(c.Request.Context(), slug, user.ID)
 	if err != nil {
-		if errors.Is(err, service.ErrAnalyticsForbidden) {
+		if errors.Is(err, service.ErrWorkspaceForbidden) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 			return
 		}
-		if errors.Is(err, service.ErrAnalyticsNotFound) {
+		if errors.Is(err, service.ErrWorkspaceNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Workspace not found"})
 			return
 		}
@@ -88,13 +89,13 @@ func (h *AnalyticsHandler) GetProjectAnalytics(c *gin.Context) {
 		return
 	}
 
-	res, err := h.AnalyticsService.GetProjectAnalytics(c.Request.Context(), user.ID, projectID)
+	res, err := h.AnalyticsService.GetProjectAnalytics(c.Request.Context(), projectID, user.ID)
 	if err != nil {
-		if errors.Is(err, service.ErrAnalyticsForbidden) {
+		if errors.Is(err, service.ErrWorkspaceForbidden) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 			return
 		}
-		if errors.Is(err, service.ErrAnalyticsNotFound) {
+		if errors.Is(err, service.ErrWorkspaceNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
 			return
 		}
@@ -114,13 +115,13 @@ func (h *AnalyticsHandler) ExportWorkspaceCSV(c *gin.Context) {
 		return
 	}
 
-	issues, err := h.AnalyticsService.ExportWorkspaceCSV(c.Request.Context(), user.ID, slug)
+	issues, err := h.AnalyticsService.ExportWorkspaceCSV(c.Request.Context(), slug, user.ID)
 	if err != nil {
-		if errors.Is(err, service.ErrAnalyticsForbidden) {
+		if errors.Is(err, service.ErrWorkspaceForbidden) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 			return
 		}
-		if errors.Is(err, service.ErrAnalyticsNotFound) {
+		if errors.Is(err, service.ErrWorkspaceNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Workspace not found"})
 			return
 		}
@@ -165,13 +166,13 @@ func (h *AnalyticsHandler) ExportProjectCSV(c *gin.Context) {
 		return
 	}
 
-	issues, err := h.AnalyticsService.ExportProjectCSV(c.Request.Context(), user.ID, projectID)
+	issues, err := h.AnalyticsService.ExportProjectCSV(c.Request.Context(), projectID, user.ID)
 	if err != nil {
-		if errors.Is(err, service.ErrAnalyticsForbidden) {
+		if errors.Is(err, service.ErrWorkspaceForbidden) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 			return
 		}
-		if errors.Is(err, service.ErrAnalyticsNotFound) {
+		if errors.Is(err, service.ErrWorkspaceNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
 			return
 		}
