@@ -13,10 +13,11 @@ import (
 )
 
 type AnalyticsResponse struct {
-	ByState    map[string]int64 `json:"by_state"`
-	ByPriority map[string]int64 `json:"by_priority"`
-	ByAssignee map[string]int64 `json:"by_assignee"`
-	ByLabel    map[string]int64 `json:"by_label"`
+	ByState    map[string]int64   `json:"by_state"`
+	ByPriority map[string]int64   `json:"by_priority"`
+	ByAssignee map[string]int64   `json:"by_assignee"`
+	ByLabel    map[string]int64   `json:"by_label"`
+	Trend      []model.TrendPoint `json:"trend"`
 }
 
 type AnalyticsService struct {

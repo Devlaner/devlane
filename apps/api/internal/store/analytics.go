@@ -173,3 +173,35 @@ func (s *AnalyticsStore) StreamProjectIssuesForExport(ctx context.Context, proje
 	}
 	return rows.Err()
 }
+
+func (s *AnalyticsStore) GetWorkspaceTrendAnalytics(ctx context.Context, slug string) ([]model.TrendPoint, error) {
+	var results []model.TrendPoint
+	err := s.db.WithContext(ctx).
+		Table("issues").
+		Select("DATE(issues.created_at) AS date, "+
+			"COUNT(CASE WHEN issues.created_at IS NOT NULL THEN 1 END) AS created, "+
+			"COUNT(CASE WHEN issues.state = 'resolved' THEN 1 END) AS resolved").
+		Joins("JOIN workspaces ON issues.workspace_id = workspaces.id").
+		Joins("JOIN projects ON issues.project_id = projects.id").
+		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
+		Group("DATE(issues.created_at)").
+		Order("date ASC").
+		Scan(&results).Error
+
+	return results, err
+}
+
+func (s *AnalyticsStore) GetProjectTrendAnalytics(ctx context.Context, projectID uuid.UUID) ([]model.TrendPoint, error) {
+	var results []model.TrendPoint
+	err := s.db.WithContext(ctx).
+		Table("issues").
+		Select("DATE(created_at) AS date, "+
+			"COUNT(CASE WHEN created_at IS NOT NULL THEN 1 END) AS created, "+
+			"COUNT(CASE WHEN state = 'resolved' THEN 1 END) AS resolved").
+		Where("project_id = ? AND deleted_at IS NULL", projectID).
+		Group("DATE(created_at)").
+		Order("date ASC").
+		Scan(&results).Error
+
+	return results, err
+}

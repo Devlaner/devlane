@@ -32,3 +32,9 @@ type ProjectIssueExport struct {
 	Name  string `gorm:"column:name" json:"name"`
 	State string `gorm:"column:state" json:"state"`
 }
+
+type TrendPoint struct {
+	Date     string `gorm:"column:date" json:"date"`
+	Created  int64  `gorm:"column:created" json:"created"`
+	Resolved int64  `gorm:"column:resolved" json:"resolved"`
+}
