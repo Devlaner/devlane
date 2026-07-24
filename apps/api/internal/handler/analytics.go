@@ -15,7 +15,7 @@ import (
 )
 
 type AnalyticsHandler struct {
-	AnalyticsService service.AnalyticsService
+	AnalyticsService *service.AnalyticsService
 	Log              *slog.Logger
 }
 
