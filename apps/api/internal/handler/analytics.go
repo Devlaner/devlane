@@ -32,15 +32,23 @@ func sanitizeCSVField(v string) string {
 	}
 }
 
+func sanitizeFilename(s string) string {
+	r := strings.NewReplacer("\"", "", "\n", "", "\r", "")
+	return r.Replace(s)
+}
+
 func parseParamUUID(c *gin.Context, key string) (uuid.UUID, bool) {
 	val := c.Param(key)
+	if val == "" {
+		val = c.Param("projectID")
+	}
 	if val == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "missing ID parameter"})
 		return uuid.Nil, false
 	}
 	parsed, err := uuid.Parse(val)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid UUID parameter"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project ID"})
 		return uuid.Nil, false
 	}
 	return parsed, true
@@ -73,13 +81,8 @@ func (h *AnalyticsHandler) GetWorkspaceAnalytics(c *gin.Context) {
 }
 
 func (h *AnalyticsHandler) GetProjectAnalytics(c *gin.Context) {
-	projectParam := c.Param("projectId")
-	if projectParam == "" {
-		projectParam = c.Param("projectID")
-	}
-	projectID, err := uuid.Parse(projectParam)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project ID"})
+	projectID, ok := parseParamUUID(c, "projectId")
+	if !ok {
 		return
 	}
 
@@ -91,11 +94,11 @@ func (h *AnalyticsHandler) GetProjectAnalytics(c *gin.Context) {
 
 	res, err := h.AnalyticsService.GetProjectAnalytics(c.Request.Context(), projectID, user.ID)
 	if err != nil {
-		if errors.Is(err, service.ErrWorkspaceForbidden) {
+		if errors.Is(err, service.ErrProjectForbidden) || errors.Is(err, service.ErrWorkspaceForbidden) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 			return
 		}
-		if errors.Is(err, service.ErrWorkspaceNotFound) {
+		if errors.Is(err, service.ErrProjectNotFound) || errors.Is(err, service.ErrWorkspaceNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
 			return
 		}
@@ -130,7 +133,7 @@ func (h *AnalyticsHandler) ExportWorkspaceCSV(c *gin.Context) {
 		return
 	}
 
-	safeSlug := strings.ReplaceAll(slug, `"`, "")
+	safeSlug := sanitizeFilename(slug)
 	filename := fmt.Sprintf("workspace-%s-analytics-%s.csv", safeSlug, time.Now().Format("2006-01-02"))
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 	c.Header("Content-Type", "text/csv")
@@ -146,17 +149,16 @@ func (h *AnalyticsHandler) ExportWorkspaceCSV(c *gin.Context) {
 			sanitizeCSVField(issue.Priority),
 		})
 	}
+
 	writer.Flush()
+	if err := writer.Error(); err != nil {
+		h.Log.Error("failed to flush CSV writer", "error", err, "slug", slug)
+	}
 }
 
 func (h *AnalyticsHandler) ExportProjectCSV(c *gin.Context) {
-	projectParam := c.Param("projectId")
-	if projectParam == "" {
-		projectParam = c.Param("projectID")
-	}
-	projectID, err := uuid.Parse(projectParam)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project ID"})
+	projectID, ok := parseParamUUID(c, "projectId")
+	if !ok {
 		return
 	}
 
@@ -168,11 +170,11 @@ func (h *AnalyticsHandler) ExportProjectCSV(c *gin.Context) {
 
 	issues, err := h.AnalyticsService.ExportProjectCSV(c.Request.Context(), projectID, user.ID)
 	if err != nil {
-		if errors.Is(err, service.ErrWorkspaceForbidden) {
+		if errors.Is(err, service.ErrProjectForbidden) || errors.Is(err, service.ErrWorkspaceForbidden) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 			return
 		}
-		if errors.Is(err, service.ErrWorkspaceNotFound) {
+		if errors.Is(err, service.ErrProjectNotFound) || errors.Is(err, service.ErrWorkspaceNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
 			return
 		}
@@ -195,5 +197,9 @@ func (h *AnalyticsHandler) ExportProjectCSV(c *gin.Context) {
 			sanitizeCSVField(issue.State),
 		})
 	}
+
 	writer.Flush()
+	if err := writer.Error(); err != nil {
+		h.Log.Error("failed to flush CSV writer", "error", err, "project_id", projectID)
+	}
 }
