@@ -129,7 +129,8 @@ func (h *AnalyticsHandler) ExportWorkspaceCSV(c *gin.Context) {
 		return
 	}
 
-	filename := fmt.Sprintf("workspace-%s-analytics-%s.csv", slug, time.Now().Format("2006-01-02"))
+	safeSlug := strings.ReplaceAll(slug, `"`, "")
+	filename := fmt.Sprintf("workspace-%s-analytics-%s.csv", safeSlug, time.Now().Format("2006-01-02"))
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 	c.Header("Content-Type", "text/csv")
 
