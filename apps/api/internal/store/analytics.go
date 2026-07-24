@@ -126,26 +126,50 @@ func (s *AnalyticsStore) GetProjectLabelAnalytics(ctx context.Context, projectID
 	return results, err
 }
 
-func (s *AnalyticsStore) GetWorkspaceIssuesForExport(ctx context.Context, slug string) ([]model.WorkspaceIssueExport, error) {
-	var exports []model.WorkspaceIssueExport
-	err := s.db.WithContext(ctx).
+func (s *AnalyticsStore) StreamWorkspaceIssuesForExport(ctx context.Context, slug string, fn func(model.WorkspaceIssueExport) error) error {
+	rows, err := s.db.WithContext(ctx).
 		Table("issues").
-		Select("issues.id, issues.name, issues.state, issues.priority").
+		Select("issues.id AS id, issues.name AS name, issues.state AS state, issues.priority AS priority").
 		Joins("JOIN workspaces ON issues.workspace_id = workspaces.id").
 		Joins("JOIN projects ON issues.project_id = projects.id").
 		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
-		Scan(&exports).Error
+		Rows()
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
 
-	return exports, err
+	for rows.Next() {
+		var item model.WorkspaceIssueExport
+		if err := s.db.ScanRows(rows, &item); err != nil {
+			return err
+		}
+		if err := fn(item); err != nil {
+			return err
+		}
+	}
+	return rows.Err()
 }
 
-func (s *AnalyticsStore) GetProjectIssuesForExport(ctx context.Context, projectID uuid.UUID) ([]model.ProjectIssueExport, error) {
-	var exports []model.ProjectIssueExport
-	err := s.db.WithContext(ctx).
+func (s *AnalyticsStore) StreamProjectIssuesForExport(ctx context.Context, projectID uuid.UUID, fn func(model.ProjectIssueExport) error) error {
+	rows, err := s.db.WithContext(ctx).
 		Table("issues").
-		Select("issues.id, issues.name, issues.state").
+		Select("issues.id AS id, issues.name AS name, issues.state AS state").
 		Where("project_id = ? AND deleted_at IS NULL", projectID).
-		Scan(&exports).Error
+		Rows()
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
 
-	return exports, err
+	for rows.Next() {
+		var item model.ProjectIssueExport
+		if err := s.db.ScanRows(rows, &item); err != nil {
+			return err
+		}
+		if err := fn(item); err != nil {
+			return err
+		}
+	}
+	return rows.Err()
 }
