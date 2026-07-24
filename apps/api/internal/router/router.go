@@ -245,9 +245,11 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 		AppBaseURL: appBaseURL,
 	}
 
+	analyticsSvc := service.NewAnalyticsService(cfg.DB, cfg.Log)
+
 	analyticsHandler := &handler.AnalyticsHandler{
-		DB:  cfg.DB,
-		Log: cfg.Log,
+		AnalyticsService: analyticsSvc,
+		Log:              cfg.Log,
 	}
 
 	projectHandler := &handler.ProjectHandler{Project: projectSvc, State: stateSvc}

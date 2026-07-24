@@ -1,8 +1,16 @@
+package service
+
+import (
+	"fmt"
+	"log/slog"
+
+	"gorm.io/gorm"
+)
+
 type analyticsService struct {
 	store AnalyticsStore
 	log   *slog.Logger
 	// DB handles authorization / existence checks inside the service
-	db *gorm.DB 
 }
 
 func NewAnalyticsService(store AnalyticsStore, log *slog.Logger, db *gorm.DB) AnalyticsService {
@@ -28,7 +36,7 @@ func (s *analyticsService) checkWorkspaceAccess(userID string, slug string) erro
 	return nil
 }
 
-// checkProjectAccess validates project presence, project slugs/IDs, and membership 
+// checkProjectAccess validates project presence, project slugs/IDs, and membership
 func (s *analyticsService) checkProjectAccess(userID string, projectID string) error {
 	var count int64
 	// Validates whether the project exists, and whether the user is authorized to access it
