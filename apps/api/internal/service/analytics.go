@@ -139,6 +139,8 @@ func (s *AnalyticsService) GetProjectAnalytics(ctx context.Context, projectID, u
 		for _, r := range priorityResults {
 			byPriority[r.Priority] = r.Count
 		}
+	} else {
+		return nil, fmt.Errorf("fetch project priority analytics: %w", err)
 	}
 
 	byAssignee := make(map[string]int64)
@@ -146,6 +148,8 @@ func (s *AnalyticsService) GetProjectAnalytics(ctx context.Context, projectID, u
 		for _, r := range assigneeResults {
 			byAssignee[r.Email] = r.Count
 		}
+	} else if s.log != nil {
+		s.log.Warn("failed to fetch project assignee analytics", "error", err, "project_id", projectID)
 	}
 
 	byLabel := make(map[string]int64)
@@ -153,6 +157,8 @@ func (s *AnalyticsService) GetProjectAnalytics(ctx context.Context, projectID, u
 		for _, r := range labelResults {
 			byLabel[r.Label] = r.Count
 		}
+	} else if s.log != nil {
+		s.log.Warn("failed to fetch project label analytics", "error", err, "project_id", projectID)
 	}
 
 	return &AnalyticsResponse{

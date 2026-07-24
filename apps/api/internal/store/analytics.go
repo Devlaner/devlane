@@ -22,7 +22,8 @@ func (s *AnalyticsStore) GetWorkspaceStateAnalytics(ctx context.Context, slug st
 		Table("issues").
 		Select("issues.state, COUNT(*) as count").
 		Joins("JOIN workspaces ON issues.workspace_id = workspaces.id").
-		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL", slug).
+		Joins("JOIN projects ON issues.project_id = projects.id").
+		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
 		Group("issues.state").
 		Scan(&results).Error
 
@@ -35,7 +36,8 @@ func (s *AnalyticsStore) GetWorkspacePriorityAnalytics(ctx context.Context, slug
 		Table("issues").
 		Select("issues.priority, COUNT(*) as count").
 		Joins("JOIN workspaces ON issues.workspace_id = workspaces.id").
-		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL", slug).
+		Joins("JOIN projects ON issues.project_id = projects.id").
+		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
 		Group("issues.priority").
 		Scan(&results).Error
 
@@ -48,8 +50,9 @@ func (s *AnalyticsStore) GetWorkspaceAssigneeAnalytics(ctx context.Context, slug
 		Table("issues").
 		Select("users.email, COUNT(*) as count").
 		Joins("JOIN workspaces ON issues.workspace_id = workspaces.id").
+		Joins("JOIN projects ON issues.project_id = projects.id").
 		Joins("JOIN users ON issues.assignee_id = users.id").
-		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL", slug).
+		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
 		Group("users.email").
 		Scan(&results).Error
 
@@ -64,7 +67,8 @@ func (s *AnalyticsStore) GetWorkspaceLabelAnalytics(ctx context.Context, slug st
 		Joins("JOIN issues ON issue_labels.issue_id = issues.id").
 		Joins("JOIN labels ON issue_labels.label_id = labels.id").
 		Joins("JOIN workspaces ON issues.workspace_id = workspaces.id").
-		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL", slug).
+		Joins("JOIN projects ON issues.project_id = projects.id").
+		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
 		Group("labels.name").
 		Scan(&results).Error
 
@@ -128,7 +132,8 @@ func (s *AnalyticsStore) GetWorkspaceIssuesForExport(ctx context.Context, slug s
 		Table("issues").
 		Select("issues.id, issues.name, issues.state, issues.priority").
 		Joins("JOIN workspaces ON issues.workspace_id = workspaces.id").
-		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL", slug).
+		Joins("JOIN projects ON issues.project_id = projects.id").
+		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
 		Scan(&exports).Error
 
 	return exports, err
