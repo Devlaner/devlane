@@ -183,14 +183,14 @@ export function IssueListPage() {
     setLoading(true);
 
     const safeFetch = <T,>(promise: Promise<T>, fallback: T): Promise<T> => {
-  return Promise.resolve(promise)
-    .then((val) => val ?? fallback)
-    .catch((err: unknown) => {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      console.warn('Secondary request ignored (Prevents crashes)', errorMessage);
-      return fallback;
-    });
-};
+      return Promise.resolve(promise)
+        .then((val) => val ?? fallback)
+        .catch((err: unknown) => {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          console.warn('Secondary request ignored (Prevents crashes)', errorMessage);
+          return fallback;
+        });
+    };
 
     Promise.all([
       workspaceService.getBySlug(workspaceSlug),

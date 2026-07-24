@@ -186,9 +186,7 @@ export function AnalyticsWorkItemsPage() {
         setAnalytics(analyticsResult.value);
       } else {
         console.error('Erreur API Analytics Go:', analyticsResult.reason);
-        setAnalyticsError(
-          t('analytics.loadFailed', 'Could not load analytics. Please try again.'),
-        );
+        setAnalyticsError(t('analytics.loadFailed', 'Could not load analytics. Please try again.'));
       }
     })().finally(() => {
       if (!cancelled) setLoading(false);
@@ -295,7 +293,9 @@ export function AnalyticsWorkItemsPage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
         <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3">
-          <p className="text-xs font-medium text-(--txt-tertiary)">{t('analytics.totalWorkItems', 'Total Work items')}</p>
+          <p className="text-xs font-medium text-(--txt-tertiary)">
+            {t('analytics.totalWorkItems', 'Total Work items')}
+          </p>
           <p className="mt-1 text-2xl font-semibold text-(--txt-primary)">{totalIssues}</p>
         </div>
         <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3">
@@ -484,7 +484,9 @@ export function AnalyticsWorkItemsPage() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <h3 className="text-base font-semibold text-(--txt-primary)">
-              {t('analytics.prioritiesCount', '{{count}} Priorities', { count: priorityRows.length })}
+              {t('analytics.prioritiesCount', '{{count}} Priorities', {
+                count: priorityRows.length,
+              })}
             </h3>
           </div>
           <button
@@ -536,8 +538,12 @@ export function AnalyticsWorkItemsPage() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-(--border-subtle)">
-                <th className="py-3 px-4 font-medium text-(--txt-secondary)">{t('common.project', 'Project')}</th>
-                <th className="py-3 px-4 font-medium text-(--txt-secondary)">{t('common.actions', 'Actions')}</th>
+                <th className="py-3 px-4 font-medium text-(--txt-secondary)">
+                  {t('common.project', 'Project')}
+                </th>
+                <th className="py-3 px-4 font-medium text-(--txt-secondary)">
+                  {t('common.actions', 'Actions')}
+                </th>
               </tr>
             </thead>
             <tbody>
