@@ -601,14 +601,20 @@ export function IssueListPage() {
   const dp = listDisplay.displayProperties;
   const hasCol = (id: SavedViewDisplayPropertyId) => dp.has(id);
 
+  // Build id -> name maps once per render instead of doing an O(cycles) /
+  // O(modules) find for every row. (Plain consts, not useMemo, because this
+  // sits after the component's early returns.)
+  const cycleNameById = new Map(cycles.map((c) => [c.id, c.name]));
+  const moduleNameById = new Map(modules.map((m) => [m.id, m.name]));
+
   const cycleName = (issue: IssueApiResponse) => {
     const id = issue.cycle_ids?.[0];
-    return id ? (cycles.find((c) => c.id === id)?.name ?? '—') : '—';
+    return id ? (cycleNameById.get(id) ?? '—') : '—';
   };
 
   const moduleName = (issue: IssueApiResponse) => {
     const id = issue.module_ids?.[0];
-    return id ? (modules.find((m) => m.id === id)?.name ?? '—') : '—';
+    return id ? (moduleNameById.get(id) ?? '—') : '—';
   };
 
   const layout = parseIssueLayout(searchParams.get('layout'));
