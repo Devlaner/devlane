@@ -14,29 +14,57 @@ import {
 } from 'recharts';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
-import { issueService } from '../services/issueService';
-import { stateService } from '../services/stateService';
+import { API_BASE } from '../api/client';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import type {
-  WorkspaceApiResponse,
-  ProjectApiResponse,
-  IssueApiResponse,
-  StateApiResponse,
-} from '../api/types';
-const IconSearch = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    aria-hidden
-  >
-    <circle cx="11" cy="11" r="8" />
-    <path d="m21 21-4.3-4.3" />
-  </svg>
-);
+import type { WorkspaceApiResponse, ProjectApiResponse } from '../api/types';
+
+interface TrendPoint {
+  date: string;
+  created: number;
+  resolved: number;
+}
+
+interface AnalyticsResponse {
+  by_state: Record<string, number>;
+  by_priority: Record<string, number>;
+  trend?: TrendPoint[];
+  partial_error?: boolean;
+  warnings?: string[];
+}
+
+const STATE_GROUP_SYNONYMS: Record<'backlog' | 'unstarted' | 'started' | 'completed', string[]> = {
+  backlog: ['backlog'],
+  unstarted: ['todo', 'to do', 'unstarted'],
+  started: ['in progress', 'started'],
+  completed: ['done', 'completed'],
+};
+
+function sumStateGroup(byState: Record<string, number>, synonyms: string[]): number {
+  const wanted = new Set(synonyms.map((s) => s.toLowerCase()));
+  return Object.entries(byState).reduce(
+    (sum, [name, count]) => (wanted.has(name.toLowerCase()) ? sum + count : sum),
+    0,
+  );
+}
+
+// Safely downloads the CSV via fetch using credentials (cookies) and correct absolute API URL
+async function downloadCsv(url: string, fallbackFilename: string) {
+  const res = await fetch(url, { credentials: 'include' });
+  if (!res.ok) {
+    throw new Error(`Export failed: ${res.status}`);
+  }
+  const blob = await res.blob();
+  const disposition = res.headers.get('Content-Disposition') ?? '';
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  const filename = match?.[1] ?? fallbackFilename;
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 0);
+}
+
 const IconBriefcase = () => (
   <svg
     width="14"
@@ -96,141 +124,114 @@ const IconDownload = () => (
     <line x1="12" y1="15" x2="12" y2="3" />
   </svg>
 );
+
 export function AnalyticsWorkItemsPage() {
   const { t } = useTranslation();
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
-  const [issues, setIssues] = useState<IssueApiResponse[]>([]);
-  const [states, setStates] = useState<StateApiResponse[]>([]);
+
+  const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useDocumentTitle(t('analytics.documentTitle', 'Analytics'));
+  // States to track downloads
+  const [exportingWorkspace, setExportingWorkspace] = useState(false);
+  const [exportingProjectId, setExportingProjectId] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  useDocumentTitle('Analytics');
 
   useEffect(() => {
     if (!workspaceSlug) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset loading when no slug (kept for future use)
       setLoading(false);
       return;
     }
     let cancelled = false;
     setLoading(true);
-    workspaceService
-      .getBySlug(workspaceSlug)
-      .then((w) => {
-        if (cancelled) return;
-        setWorkspace(w);
-        return projectService.list(workspaceSlug);
-      })
-      .then((projs) => {
-        if (!cancelled && projs?.length) setProjects(projs);
-        if (!cancelled && projs?.length) {
-          return Promise.all([
-            ...projs.map((p) => issueService.list(workspaceSlug!, p.id, { limit: 200 })),
-            ...projs.map((p) => stateService.list(workspaceSlug!, p.id)),
-          ]);
-        }
-        return [];
-      })
-      .then((results) => {
-        if (cancelled || !results?.length) return;
-        const half = results.length / 2;
-        const issueArrays = results.slice(0, half) as IssueApiResponse[][];
-        const stateArrays = results.slice(half) as StateApiResponse[][];
-        setIssues(issueArrays.flat());
-        setStates(stateArrays.flat());
-      })
-      .catch(() => {
+    setAnalyticsError(null);
+
+    (async () => {
+      let w: WorkspaceApiResponse | null = null;
+      try {
+        w = await workspaceService.getBySlug(workspaceSlug);
+      } catch (err) {
+        console.error('Erreur Workspace:', err);
         if (!cancelled) setWorkspace(null);
-        setProjects([]);
-        setIssues([]);
-        setStates([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+        return;
+      }
+      if (cancelled) return;
+      setWorkspace(w);
+
+      const [projectsResult, analyticsResult] = await Promise.allSettled([
+        projectService.list(workspaceSlug),
+        fetch(`${API_BASE}/api/workspaces/${workspaceSlug}/analytics/`, {
+          credentials: 'include',
+        }).then((res) => {
+          if (!res.ok) {
+            throw new Error(`Code erreur serveur Go : ${res.status}`);
+          }
+          return res.json() as Promise<AnalyticsResponse>;
+        }),
+      ]);
+      if (cancelled) return;
+
+      if (projectsResult.status === 'fulfilled') {
+        if (projectsResult.value) setProjects(projectsResult.value);
+      } else {
+        console.error('Erreur projets:', projectsResult.reason);
+      }
+
+      if (analyticsResult.status === 'fulfilled') {
+        setAnalytics(analyticsResult.value);
+      } else {
+        console.error('Erreur API Analytics Go:', analyticsResult.reason);
+        setAnalyticsError(t('analytics.loadFailed', 'Could not load analytics. Please try again.'));
+      }
+    })().finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug]);
+  }, [workspaceSlug, t]);
 
-  const getStateName = (stateId: string | null | undefined) =>
-    stateId ? (states.find((s) => s.id === stateId)?.name ?? stateId) : '—';
+  const exportWorkspaceCsv = async () => {
+    if (!workspaceSlug || exportingWorkspace) return;
+    setExportError(null);
+    setExportingWorkspace(true);
+    try {
+      const fallback = `workspace-${workspace?.slug ?? workspaceSlug}-analytics-${new Date()
+        .toISOString()
+        .slice(0, 10)}.csv`;
+      await downloadCsv(`${API_BASE}/api/workspaces/${workspaceSlug}/analytics/export/`, fallback);
+    } catch {
+      setExportError(t('analytics.exportFailed', 'Export failed. Please try again.'));
+    } finally {
+      setExportingWorkspace(false);
+    }
+  };
 
-  const backlogCount = issues.filter((i) => getStateName(i.state_id) === 'Backlog').length;
-  const startedCount = issues.filter((i) => getStateName(i.state_id) === 'In Progress').length;
-  const unstartedCount = issues.filter((i) => getStateName(i.state_id) === 'Todo').length;
-  const completedCount = issues.filter((i) => getStateName(i.state_id) === 'Done').length;
-
-  const priorityCounts = issues.reduce<Record<string, number>>((acc, i) => {
-    const p =
-      !i.priority || i.priority === 'none'
-        ? t('common.none', 'None')
-        : i.priority.charAt(0).toUpperCase() + i.priority.slice(1);
-    acc[p] = (acc[p] ?? 0) + 1;
-    return acc;
-  }, {});
-  const priorityRows = Object.entries(priorityCounts).map(([priority, count]) => ({
-    priority,
-    count,
-  }));
-
-  const doneStateIds = new Set(states.filter((s) => s.name === 'Done').map((s) => s.id));
-  const createdByDate = issues.reduce<Record<string, number>>((acc, i) => {
-    const d = i.created_at.slice(0, 10);
-    acc[d] = (acc[d] ?? 0) + 1;
-    return acc;
-  }, {});
-  const resolvedByDate = issues
-    .filter((i) => i.state_id && doneStateIds.has(i.state_id))
-    .reduce<Record<string, number>>((acc, i) => {
-      const d = i.updated_at.slice(0, 10);
-      acc[d] = (acc[d] ?? 0) + 1;
-      return acc;
-    }, {});
-  const allDates = Array.from(
-    new Set([...Object.keys(createdByDate), ...Object.keys(resolvedByDate)]),
-  ).sort();
-  const createdResolvedData =
-    allDates.length > 0
-      ? allDates.map((dateStr) => {
-          const d = new Date(dateStr + 'T12:00:00Z');
-          const label = d.toLocaleDateString('en-US', {
-            month: 'short',
-            day: '2-digit',
-            year: 'numeric',
-          });
-          return {
-            date: label,
-            dateKey: dateStr,
-            created: createdByDate[dateStr] ?? 0,
-            resolved: resolvedByDate[dateStr] ?? 0,
-          };
-        })
-      : [
-          {
-            date: new Date().toLocaleDateString('en-US', {
-              month: 'short',
-              day: '2-digit',
-              year: 'numeric',
-            }),
-            dateKey: new Date().toISOString().slice(0, 10),
-            created: 0,
-            resolved: 0,
-          },
-        ];
-
-  const projectRows = projects.map((p) => {
-    const projIssues = issues.filter((i) => i.project_id === p.id);
-    return {
-      project: p,
-      backlog: projIssues.filter((i) => getStateName(i.state_id) === 'Backlog').length,
-      started: projIssues.filter((i) => getStateName(i.state_id) === 'In Progress').length,
-      unstarted: projIssues.filter((i) => getStateName(i.state_id) === 'Todo').length,
-      completed: projIssues.filter((i) => getStateName(i.state_id) === 'Done').length,
-      cancelled: 0,
-    };
-  });
+  const exportProjectCsv = async (projectId: string) => {
+    if (!workspaceSlug || exportingProjectId) return;
+    setExportError(null);
+    setExportingProjectId(projectId);
+    try {
+      const proj = projects.find((p) => p.id === projectId);
+      const fallback = `project-${proj?.name ?? projectId}-analytics-${new Date()
+        .toISOString()
+        .slice(0, 10)}.csv`;
+      await downloadCsv(
+        `${API_BASE}/api/workspaces/${workspaceSlug}/projects/${projectId}/analytics/export/`,
+        fallback,
+      );
+    } catch {
+      setExportError(t('analytics.exportFailed', 'Export failed. Please try again.'));
+    } finally {
+      setExportingProjectId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -239,6 +240,7 @@ export function AnalyticsWorkItemsPage() {
       </div>
     );
   }
+
   if (!workspace) {
     return (
       <div className="text-(--txt-secondary)">
@@ -249,6 +251,19 @@ export function AnalyticsWorkItemsPage() {
 
   const baseUrl = `/${workspace.slug}/analytics`;
 
+  const byState = analytics?.by_state ?? {};
+  const backlogCount = sumStateGroup(byState, STATE_GROUP_SYNONYMS.backlog);
+  const startedCount = sumStateGroup(byState, STATE_GROUP_SYNONYMS.started);
+  const unstartedCount = sumStateGroup(byState, STATE_GROUP_SYNONYMS.unstarted);
+  const completedCount = sumStateGroup(byState, STATE_GROUP_SYNONYMS.completed);
+  const totalIssues = Object.values(byState).reduce((sum, count) => sum + count, 0);
+
+  const priorityRows = Object.entries(analytics?.by_priority ?? {}).map(([priority, count]) => ({
+    priority: priority ? priority.charAt(0).toUpperCase() + priority.slice(1) : 'None',
+    count,
+  }));
+
+  const createdResolvedData: TrendPoint[] = analytics?.trend ?? [];
   return (
     <div className="space-y-6 pb-8">
       {/* Tabs */}
@@ -257,13 +272,13 @@ export function AnalyticsWorkItemsPage() {
           to={`${baseUrl}/overview`}
           className="border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-(--txt-secondary) no-underline hover:text-(--txt-primary)"
         >
-          {t('analytics.overview', 'Overview')}
+          {t('common.overview', 'Overview')}
         </Link>
         <Link
           to={`${baseUrl}/work-items`}
           className="border-b-2 border-(--brand-default) px-4 py-2.5 text-sm font-medium text-(--txt-primary) no-underline"
         >
-          {t('analytics.workItems', 'Work items')}
+          {t('common.workItems', 'Work items')}
         </Link>
       </div>
 
@@ -271,13 +286,17 @@ export function AnalyticsWorkItemsPage() {
         {t('analytics.workItems', 'Work items')}
       </h2>
 
+      {analyticsError && (
+        <p className="text-sm text-(--txt-danger-primary) font-medium">{analyticsError}</p>
+      )}
+
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
         <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3">
           <p className="text-xs font-medium text-(--txt-tertiary)">
             {t('analytics.totalWorkItems', 'Total Work items')}
           </p>
-          <p className="mt-1 text-2xl font-semibold text-(--txt-primary)">{issues.length}</p>
+          <p className="mt-1 text-2xl font-semibold text-(--txt-primary)">{totalIssues}</p>
         </div>
         <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3">
           <p className="text-xs font-medium text-(--txt-tertiary)">
@@ -340,7 +359,7 @@ export function AnalyticsWorkItemsPage() {
                   tickLine={{ stroke: 'var(--border-subtle)' }}
                   axisLine={{ stroke: 'var(--border-subtle)' }}
                   label={{
-                    value: t('analytics.axisNoOfWorkItems', 'NO. OF WORK ITEMS'),
+                    value: t('analytics.axisWorkItemsCount', 'NO. OF WORK ITEMS'),
                     angle: -90,
                     position: 'insideLeft',
                     fill: 'var(--txt-tertiary)',
@@ -440,7 +459,7 @@ export function AnalyticsWorkItemsPage() {
                   tickLine={{ stroke: 'var(--border-subtle)' }}
                   axisLine={{ stroke: 'var(--border-subtle)' }}
                   label={{
-                    value: t('analytics.axisNoOfWorkItem', 'NO. OF WORK ITEM'),
+                    value: t('analytics.axisWorkItemCount', 'NO. OF WORK ITEM'),
                     angle: -90,
                     position: 'insideLeft',
                     fill: 'var(--txt-tertiary)',
@@ -456,33 +475,40 @@ export function AnalyticsWorkItemsPage() {
         </div>
       </section>
 
+      {exportError && (
+        <p className="text-sm text-(--txt-danger-primary) font-medium">{exportError}</p>
+      )}
+
       {/* Priority table */}
       <section>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <h3 className="text-base font-semibold text-(--txt-primary)">
-              {priorityRows.length} {t('analytics.priority', 'Priority')}
-              {priorityRows.length !== 1 ? t('analytics.prioritySuffixPlural', 'ies') : ''}
+              {t('analytics.prioritiesCount', '{{count}} Priorities', {
+                count: priorityRows.length,
+              })}
             </h3>
-            <span className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary)">
-              <IconSearch />
-            </span>
           </div>
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
+            disabled={exportingWorkspace}
+            onClick={exportWorkspaceCsv}
+            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover) disabled:opacity-60"
           >
-            <IconDownload /> {t('analytics.exportAsCsv', 'Export as csv')}
+            <IconDownload />
+            {exportingWorkspace
+              ? t('analytics.exporting', 'Exporting…')
+              : t('analytics.exportAsCsv', 'Export as CSV')}
           </button>
         </div>
         <div className="overflow-x-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-(--border-subtle)">
-                <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
+                <th className="py-3 px-4 font-medium text-(--txt-secondary)">
                   {t('analytics.priority', 'Priority')}
                 </th>
-                <th className="py-3 font-medium text-(--txt-secondary)">
+                <th className="py-3 px-4 font-medium text-(--txt-secondary)">
                   {t('analytics.count', 'Count')}
                 </th>
               </tr>
@@ -490,8 +516,8 @@ export function AnalyticsWorkItemsPage() {
             <tbody>
               {priorityRows.map(({ priority, count }) => (
                 <tr key={priority} className="border-b border-(--border-subtle) last:border-0">
-                  <td className="py-3 pr-4 text-(--txt-primary)">{priority}</td>
-                  <td className="py-3 text-(--txt-secondary)">{count}</td>
+                  <td className="py-3 px-4 text-(--txt-primary)">{priority}</td>
+                  <td className="py-3 px-4 text-(--txt-secondary)">{count}</td>
                 </tr>
               ))}
             </tbody>
@@ -506,45 +532,24 @@ export function AnalyticsWorkItemsPage() {
             <h3 className="text-base font-semibold text-(--txt-primary)">
               {t('analytics.projectsCount', '{{count}} Projects', { count: projects.length })}
             </h3>
-            <span className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary)">
-              <IconSearch />
-            </span>
           </div>
-          <button
-            type="button"
-            className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
-          >
-            <IconDownload /> {t('analytics.exportAsCsv', 'Export as csv')}
-          </button>
         </div>
         <div className="overflow-x-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-(--border-subtle)">
-                <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
-                  {t('analytics.colProject', 'Project')}
+                <th className="py-3 px-4 font-medium text-(--txt-secondary)">
+                  {t('common.project', 'Project')}
                 </th>
-                <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
-                  {t('analytics.colBacklog', 'Backlog')}
-                </th>
-                <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
-                  {t('analytics.colStarted', 'Started')}
-                </th>
-                <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
-                  {t('analytics.colUnstarted', 'Unstarted')}
-                </th>
-                <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
-                  {t('analytics.colCompleted', 'Completed')}
-                </th>
-                <th className="py-3 font-medium text-(--txt-secondary)">
-                  {t('analytics.colCancelled', 'Cancelled')}
+                <th className="py-3 px-4 font-medium text-(--txt-secondary)">
+                  {t('common.actions', 'Actions')}
                 </th>
               </tr>
             </thead>
             <tbody>
-              {projectRows.map(({ project, backlog, started, unstarted, completed, cancelled }) => (
+              {projects.map((project) => (
                 <tr key={project.id} className="border-b border-(--border-subtle) last:border-0">
-                  <td className="py-3 pr-4">
+                  <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
                       <span className="flex size-6 items-center justify-center rounded bg-(--bg-layer-2) text-[10px] font-medium text-(--txt-icon-secondary)">
                         <IconBriefcase />
@@ -552,11 +557,19 @@ export function AnalyticsWorkItemsPage() {
                       <span className="text-(--txt-primary)">{project.name}</span>
                     </div>
                   </td>
-                  <td className="py-3 pr-4 text-(--txt-secondary)">{backlog}</td>
-                  <td className="py-3 pr-4 text-(--txt-secondary)">{started}</td>
-                  <td className="py-3 pr-4 text-(--txt-secondary)">{unstarted}</td>
-                  <td className="py-3 pr-4 text-(--txt-secondary)">{completed}</td>
-                  <td className="py-3 text-(--txt-secondary)">{cancelled}</td>
+                  <td className="py-3 px-4">
+                    <button
+                      type="button"
+                      disabled={exportingProjectId === project.id}
+                      onClick={() => exportProjectCsv(project.id)}
+                      className="flex items-center gap-1 rounded border border-(--border-subtle) bg-(--bg-layer-2) px-2 py-1 text-xs text-(--txt-secondary) hover:bg-(--bg-layer-2-hover) disabled:opacity-60"
+                    >
+                      <IconDownload />
+                      {exportingProjectId === project.id
+                        ? t('analytics.exporting', 'Exporting…')
+                        : t('analytics.exportProjectCsv', 'Export Project CSV')}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

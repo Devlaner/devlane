@@ -244,6 +244,14 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 		Queue:      cfg.Queue,
 		AppBaseURL: appBaseURL,
 	}
+
+	analyticsStore := store.NewAnalyticsStore(cfg.DB)
+	analyticsSvc := service.NewAnalyticsService(analyticsStore, workspaceStore, projectStore, cfg.Log)
+	analyticsHandler := &handler.AnalyticsHandler{
+		AnalyticsService: analyticsSvc,
+		Log:              cfg.Log,
+	}
+
 	projectHandler := &handler.ProjectHandler{Project: projectSvc, State: stateSvc}
 	notifPrefHandler := &handler.NotificationPreferenceHandler{Prefs: userNotifPrefStore, Ws: workspaceStore, Projects: projectSvc}
 	favoriteSvc := service.NewFavoriteService(userFavoriteStore, workspaceStore, projectSvc)
@@ -424,6 +432,12 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 		api.POST("/workspaces/:slug/projects/:projectId/issues-bulk/delete/", issueHandler.BulkDelete)
 		api.POST("/workspaces/:slug/projects/:projectId/issues-bulk/reorder/", issueHandler.BulkReorder)
 
+		api.GET("/workspaces/:slug/analytics/", analyticsHandler.GetWorkspaceAnalytics)
+		api.GET("/workspaces/:slug/analytics/export/", analyticsHandler.ExportWorkspaceCSV)
+
+		api.GET("/workspaces/:slug/projects/:projectId/analytics/", analyticsHandler.GetProjectAnalytics)
+		api.GET("/workspaces/:slug/projects/:projectId/analytics/export/", analyticsHandler.ExportProjectCSV)
+
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/", cycleHandler.List)
 		api.GET("/workspaces/:slug/projects/:projectId/cycles-progress/", cycleHandler.CyclesProgress)
 		api.POST("/workspaces/:slug/projects/:projectId/cycles/", cycleHandler.Create)
@@ -438,8 +452,8 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/:cycleId/cycle-progress/", cycleHandler.Progress)
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/:cycleId/analytics", cycleHandler.Analytics)
 
-		api.GET("/workspaces/:slug/projects/:projectId/modules/", moduleHandler.List)
 		api.GET("/workspaces/:slug/projects/:projectId/modules-progress/", moduleHandler.ModulesProgress)
+		api.GET("/workspaces/:slug/projects/:projectId/modules/", moduleHandler.List)
 		api.POST("/workspaces/:slug/projects/:projectId/modules/", moduleHandler.Create)
 		api.GET("/workspaces/:slug/projects/:projectId/modules/:moduleId/", moduleHandler.Get)
 		api.PATCH("/workspaces/:slug/projects/:projectId/modules/:moduleId/", moduleHandler.Update)

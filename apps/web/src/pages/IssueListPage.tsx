@@ -181,39 +181,50 @@ export function IssueListPage() {
     }
     let cancelled = false;
     setLoading(true);
+
+    const safeFetch = <T,>(promise: Promise<T>, fallback: T): Promise<T> => {
+      return Promise.resolve(promise)
+        .then((val) => val ?? fallback)
+        .catch((err: unknown) => {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          console.warn('Secondary request ignored (Prevents crashes)', errorMessage);
+          return fallback;
+        });
+    };
+
     Promise.all([
       workspaceService.getBySlug(workspaceSlug),
       projectService.get(workspaceSlug, projectId),
-      projectService.list(workspaceSlug),
-      issueService.list(workspaceSlug, projectId, { limit: 100 }),
-      stateService.list(workspaceSlug, projectId),
-      labelService.list(workspaceSlug, projectId),
-      cycleService.list(workspaceSlug, projectId),
-      moduleService.list(workspaceSlug, projectId),
-      workspaceService.listMembers(workspaceSlug),
+
+      safeFetch(projectService.list(workspaceSlug), [] as ProjectApiResponse[]),
+      safeFetch(
+        issueService.list(workspaceSlug, projectId, { limit: 100 }),
+        [] as IssueApiResponse[],
+      ),
+      safeFetch(stateService.list(workspaceSlug, projectId), [] as StateApiResponse[]),
+      safeFetch(labelService.list(workspaceSlug, projectId), [] as LabelApiResponse[]),
+      safeFetch(cycleService.list(workspaceSlug, projectId), [] as CycleApiResponse[]),
+      safeFetch(moduleService.list(workspaceSlug, projectId), [] as ModuleApiResponse[]),
+      safeFetch(workspaceService.listMembers(workspaceSlug), [] as WorkspaceMemberApiResponse[]),
     ])
       .then(([w, p, list, iss, st, lab, cyc, mod, mem]) => {
         if (cancelled) return;
         setWorkspace(w);
         setProject(p);
-        setProjects(list ?? []);
-        setIssues(iss ?? []);
-        setStates(st ?? []);
-        setLabels(lab ?? []);
-        setCycles(cyc ?? []);
-        setModules(mod ?? []);
-        setMembers(mem ?? []);
+        setProjects(list);
+        setIssues(iss);
+        setStates(st);
+        setLabels(lab);
+        setCycles(cyc);
+        setModules(mod);
+        setMembers(mem);
       })
-      .catch(() => {
-        if (!cancelled) setWorkspace(null);
-        setProject(null);
-        setProjects([]);
-        setIssues([]);
-        setStates([]);
-        setLabels([]);
-        setCycles([]);
-        setModules([]);
-        setMembers([]);
+      .catch((err) => {
+        console.error('Critical error when loading Project or Workspace : ', err);
+        if (!cancelled) {
+          setWorkspace(null);
+          setProject(null);
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
