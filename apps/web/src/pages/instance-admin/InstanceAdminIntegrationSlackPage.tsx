@@ -8,6 +8,7 @@ import { authService } from '../../services/authService';
 import { getApiErrorMessage } from '../../api/client';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import type { InstanceSlackAppSection } from '../../api/types';
+import { useTranslation, Trans } from 'react-i18next';
 
 const IconSlack = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 127 127" aria-hidden>
@@ -37,6 +38,7 @@ const IconSlack = () => (
  * clears the field after save and shows a *_set badge instead.
  */
 export function InstanceAdminIntegrationSlackPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   // Form state. Secrets default to empty; if the corresponding *_set is true,
@@ -148,11 +150,14 @@ export function InstanceAdminIntegrationSlackPage() {
           <IconSlack />
         </span>
         <div>
-          <h1 className="text-base font-semibold text-(--txt-primary)">Slack App</h1>
+          <h1 className="text-base font-semibold text-(--txt-primary)">
+            {t('instanceAdmin.slack.title', 'Slack App')}
+          </h1>
           <p className="text-xs text-(--txt-secondary)">
-            Register a Slack App and paste its credentials here. The App is the bridge that lets
-            Devlane exchange notifications, synchronize activity, and enable Slack-powered workflows
-            across all workspaces on this instance.
+            {t(
+              'instanceAdmin.slack.description',
+              'Register a Slack App and paste its credentials here. The App is the bridge that lets Devlane exchange notifications, synchronize activity, and enable Slack-powered workflows across all workspaces on this instance.',
+            )}
           </p>
         </div>
       </div>
@@ -161,47 +166,59 @@ export function InstanceAdminIntegrationSlackPage() {
       {success && <p className="mb-4 text-sm text-green-600">{success}</p>}
 
       <div className="mb-6 rounded border border-(--border-subtle) bg-(--bg-surface-1) p-4 text-xs text-(--txt-secondary)">
-        <p className="font-medium text-(--txt-primary)">First time? Quick setup:</p>
+        <p className="font-medium text-(--txt-primary)">
+          {t('instanceAdmin.slack.quickSetup', 'First time? Quick setup:')}
+        </p>
         <ol className="mt-2 list-decimal space-y-1 pl-5">
           <li>
-            Open{' '}
-            <a
-              href="https://api.slack.com/apps"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-(--txt-accent) hover:underline"
-            >
-              Slack API → Your Apps → Create New App
-            </a>
-            .
+            <Trans i18nKey="instanceAdmin.slack.step1">
+              Open{' '}
+              <a
+                href="https://api.slack.com/apps"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-(--txt-accent) hover:underline"
+              >
+                Slack API → Your Apps → Create New App
+              </a>
+              .
+            </Trans>
           </li>
 
           <li>
-            {' '}
-            Under <span className="font-mono">OAuth &amp; Permissions</span>, add the Redirect URL
-            provided below.
+            <Trans i18nKey="instanceAdmin.slack.step2">
+              {' '}
+              Under <span className="font-mono">OAuth &amp; Permissions</span>, add the Redirect URL
+              provided below.
+            </Trans>
           </li>
           <li>
-            Add the required bot scopes: <span className="font-mono">chat:write</span>,{' '}
-            <span className="font-mono">channels:read</span>,{' '}
-            <span className="font-mono">groups:read</span>.
+            <Trans i18nKey="instanceAdmin.slack.step3">
+              Add the required bot scopes: <span className="font-mono">chat:write</span>,{' '}
+              <span className="font-mono">channels:read</span>,{' '}
+              <span className="font-mono">groups:read</span>.
+            </Trans>
           </li>
-          <li>Install the app in your Slack workspace.</li>
+          <li>{t('instanceAdmin.slack.step4', 'Install the app in your Slack workspace.')}</li>
           <li>
-            Copy the Client ID, Client Secret, and Signing Secret from{' '}
-            <span className="font-mono">Basic Information</span> into Devlane.
+            <Trans i18nKey="instanceAdmin.slack.step5">
+              Copy the Client ID, Client Secret, and Signing Secret from{' '}
+              <span className="font-mono">Basic Information</span> into Devlane.
+            </Trans>
           </li>
           <li>
-            Still need help? See the{' '}
-            <a
-              href="https://docs.slack.dev/quickstart/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-(--txt-accent) hover:underline"
-            >
-              Slack Quickstart Guide
-            </a>
-            .
+            <Trans i18nKey="instanceAdmin.slack.step6">
+              Still need help? See the{' '}
+              <a
+                href="https://docs.slack.dev/quickstart/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-(--txt-accent) hover:underline"
+              >
+                Slack Quickstart Guide
+              </a>
+              .
+            </Trans>
           </li>
         </ol>
       </div>
@@ -209,7 +226,7 @@ export function InstanceAdminIntegrationSlackPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="rounded border border-(--border-subtle) bg-(--bg-surface-1) p-4">
           <h2 className="mb-4 text-sm font-semibold text-(--txt-primary)">
-            Credentials from your Slack App
+            {t('instanceAdmin.slack.credentialsTitle', 'Credentials from your Slack App')}
           </h2>
           <div className="space-y-3">
             <Input
@@ -220,8 +237,10 @@ export function InstanceAdminIntegrationSlackPage() {
               placeholder="e.g. 1234567890.1234567890123"
             />
             <p className="text-[11px] text-(--txt-tertiary)">
-              Found under <span className="font-mono">Basic Information → App Credentials</span>.
-              This value is public and safe to share.
+              <Trans i18nKey="instanceAdmin.slack.clientIdHint">
+                Found under <span className="font-mono">Basic Information → App Credentials</span>.
+                This value is public and safe to share.
+              </Trans>
             </p>
 
             <div className="relative">
@@ -243,8 +262,10 @@ export function InstanceAdminIntegrationSlackPage() {
               </button>
             </div>
             <p className="text-[11px] text-(--txt-tertiary)">
-              Sent with the Client ID during the OAuth token exchange (
-              <span className="font-mono">oauth.v2.access</span>). Stored encrypted at rest.
+              <Trans i18nKey="instanceAdmin.slack.clientSecretHint">
+                Sent with the Client ID during the OAuth token exchange (
+                <span className="font-mono">oauth.v2.access</span>). Stored encrypted at rest.
+              </Trans>
             </p>
 
             <div className="relative">
@@ -268,15 +289,17 @@ export function InstanceAdminIntegrationSlackPage() {
               </button>
             </div>
             <p className="text-[11px] text-(--txt-tertiary)">
-              Used to verify that inbound requests genuinely come from Slack. Stored encrypted at
-              rest (set <span className="font-mono">INSTANCE_ENCRYPTION_KEY</span> on the API).
+              <Trans i18nKey="instanceAdmin.slack.signingSecretHint">
+                Used to verify that inbound requests genuinely come from Slack. Stored encrypted at
+                rest (set <span className="font-mono">INSTANCE_ENCRYPTION_KEY</span> on the API).
+              </Trans>
             </p>
           </div>
         </div>
 
         <div className="rounded border border-(--border-subtle) bg-(--bg-surface-1) p-4">
           <h2 className="mb-4 text-sm font-semibold text-(--txt-primary)">
-            Devlane URLs to paste into the Slack App
+            {t('instanceAdmin.slack.urlsTitle', 'Devlane URLs to paste into the Slack App')}
           </h2>
           <div className="space-y-3">
             <InstanceAdminCopyRow
@@ -296,7 +319,7 @@ export function InstanceAdminIntegrationSlackPage() {
             onClick={() => void navigate('/instance-admin/integrations')}
             className="bg-transparent text-(--txt-secondary) shadow-none hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
           >
-            Go back
+            {t('instanceAdmin.slack.goBack', 'Go back')}
           </Button>
         </div>
       </form>
