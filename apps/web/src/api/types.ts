@@ -607,6 +607,15 @@ export interface InstanceGitHubAppSection {
   webhook_secret_set?: boolean;
 }
 
+/* Slack App config (instance admin). Secrets are never echoed back. */
+export interface InstanceSlackAppSection {
+  client_id?: string;
+  client_secret?: string;
+  client_secret_set?: boolean;
+  signing_secret?: string;
+  signing_secret_set?: boolean;
+}
+
 /** Available integration provider, returned by GET /api/integrations/. */
 export interface IntegrationApiResponse {
   id: string;

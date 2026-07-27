@@ -11,3 +11,4 @@ export { InstanceAdminAIPage } from './InstanceAdminAIPage';
 export { InstanceAdminImagePage } from './InstanceAdminImagePage';
 export { InstanceAdminIntegrationsPage } from './InstanceAdminIntegrationsPage';
 export { InstanceAdminIntegrationGitHubPage } from './InstanceAdminIntegrationGitHubPage';
+export { InstanceAdminIntegrationSlackPage } from './InstanceAdminIntegrationSlackPage';

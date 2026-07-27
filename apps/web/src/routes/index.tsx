@@ -185,6 +185,12 @@ const InstanceAdminIntegrationGitHubPage = lazy(() =>
   ),
 );
 
+const InstanceAdminIntegrationSlackPage = lazy(() =>
+  import('../pages/instance-admin').then((m) =>
+    page({ InstanceAdminIntegrationSlackPage: m.InstanceAdminIntegrationSlackPage }),
+  ),
+);
+
 const InstanceSetupWelcomePage = lazy(() =>
   import('../pages/setup').then((m) =>
     page({ InstanceSetupWelcomePage: m.InstanceSetupWelcomePage }),
@@ -396,6 +402,14 @@ const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageFallback />}>
                 <InstanceAdminIntegrationGitHubPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'integrations/slack',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <InstanceAdminIntegrationSlackPage />
               </Suspense>
             ),
           },

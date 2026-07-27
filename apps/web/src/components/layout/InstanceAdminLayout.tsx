@@ -281,6 +281,7 @@ const AUTH_SUB_LABEL: Record<string, string> = {
 
 const INTEGRATIONS_SUB_LABEL: Record<string, string> = {
   github: 'GitHub',
+  slack: 'Slack',
 };
 
 export function InstanceAdminLayout() {

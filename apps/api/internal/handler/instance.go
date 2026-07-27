@@ -23,7 +23,7 @@ import (
 // Allowed instance setting section keys (must match migration seed).
 var allowedSettingKeys = map[string]bool{
 	"general": true, "email": true, "auth": true, "oauth": true, "ai": true, "image": true,
-	"github_app": true,
+	"github_app": true, "slack_app": true,
 }
 
 // InstanceHandler serves instance setup (first-run); no auth required.
@@ -269,7 +269,7 @@ func (h *InstanceSettingsHandler) GetSettings(c *gin.Context) {
 		out[k] = decryptSectionSecretsInternal(k, row.Value)
 	}
 	// Ensure all sections exist with defaults (migration seed may not have run if DB was created before seed)
-	for _, key := range []string{"general", "email", "auth", "oauth", "ai", "image", "github_app"} {
+	for _, key := range []string{"general", "email", "auth", "oauth", "ai", "image", "github_app", "slack_app"} {
 		if _, ok := out[key]; !ok {
 			out[key] = defaultSettingValue(key)
 		}
@@ -284,6 +284,7 @@ var secretKeysBySection = map[string][]string{
 	"ai":         {"api_key"},
 	"image":      {"unsplash_access_key"},
 	"github_app": {"private_key", "client_secret", "webhook_secret"},
+	"slack_app":  {"client_secret", "signing_secret"},
 }
 
 // decryptSectionSecretsInternal returns a copy of m with secret fields decrypted.
@@ -328,6 +329,8 @@ func defaultSettingValue(key string) model.JSONMap {
 			"app_id": "", "app_name": "", "client_id": "",
 			"client_secret_set": false, "private_key_set": false, "webhook_secret_set": false,
 		}
+	case "slack_app":
+		return model.JSONMap{"client_id": "", "client_secret_set": false, "signing_secret_set": false}
 	default:
 		return model.JSONMap{}
 	}
@@ -515,6 +518,41 @@ func (h *InstanceSettingsHandler) UpdateSetting(c *gin.Context) {
 		setSecret("client_secret", "client_secret_set")
 		setSecret("private_key", "private_key_set")
 		setSecret("webhook_secret", "webhook_secret_set")
+		value = merged
+	}
+	if key == "slack_app" {
+		existing, _ := h.Settings.Get(c.Request.Context(), "slack_app")
+		merged := model.JSONMap{}
+
+		if existing != nil {
+			for k, v := range existing.Value {
+				merged[k] = v
+			}
+		} else {
+			for k, v := range defaultSettingValue("slack_app") {
+				merged[k] = v
+			}
+		}
+
+		/* plain feilds */
+		for _, feild := range []string{"client_id"} {
+			if v, ok := req.Value[feild]; ok {
+				merged[feild] = v
+			}
+		}
+
+		/* Secret fields (Encrypt & Set flag) */
+		setSecret := func(feild, setKey string) {
+			if v, ok := req.Value[feild]; ok {
+				if s, ok := v.(string); ok && s != "" {
+					merged[feild] = crypto.EncryptOrPlain(s)
+					merged[setKey] = true
+				}
+			}
+		}
+
+		setSecret("client_secret", "client_secret_set")
+		setSecret("signing_secret", "signing_secret_set")
 		value = merged
 	}
 	if err := h.Settings.Upsert(c.Request.Context(), key, value); err != nil {

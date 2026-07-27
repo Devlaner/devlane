@@ -1,0 +1,12 @@
+Connected to https://smee.io/xyz123
+Forwarding https://smee.io/xyz123 to http://localhost:8080/webhooks/github
+POST http://localhost:8080/webhooks/github - 200
+POST http://localhost:8080/webhooks/github - 200
+POST http://localhost:8080/webhooks/github - 200
+POST http://localhost:8080/webhooks/github - 200
+POST http://localhost:8080/webhooks/github - 200
+POST http://localhost:8080/webhooks/github - 200
+POST http://localhost:8080/webhooks/github - 200
+POST http://localhost:8080/webhooks/github - 200
+POST http://localhost:8080/webhooks/github - 200
+POST http://localhost:8080/webhooks/github - 200
