@@ -90,6 +90,7 @@ export function SlackChannelSettingsModal({
           channel_id: selectedChannelId,
           channel_name: channelName,
         });
+        onSaved(next);
         const withEvents = await integrationService.slackUpdateProjectChannel(
           workspaceSlug,
           project.id,
@@ -99,7 +100,7 @@ export function SlackChannelSettingsModal({
             commented: eventCommented,
           },
         );
-        onSaved(withEvents ?? next);
+        onSaved(withEvents);
       }
       onClose();
     } catch (e) {

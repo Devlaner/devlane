@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/Devlaner/devlane/api/internal/crypto"
 	"github.com/Devlaner/devlane/api/internal/mail"
@@ -201,7 +202,9 @@ func HandleSlackPost(log *slog.Logger, wintegStore *store.WorkspaceIntegrationSt
 		}
 		token := crypto.DecryptOrPlain(rawToken)
 
-		err = poster(ctx, token, p.ChannelID, p.Text, p.Blocks)
+		postCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
+		err = poster(postCtx, token, p.ChannelID, p.Text, p.Blocks)
 		if err != nil {
 			if log != nil {
 				log.Error("slack post failed", "channel", p.ChannelID, "error", err)
