@@ -55,10 +55,10 @@ type ImportPayload struct {
 
 // SlackPostPayload is the payload for a slack_post task.
 type SlackPostPayload struct {
-	Token     string      `json:"token"`
-	ChannelID string      `json:"channel_id"`
-	Text      string      `json:"text"`
-	Blocks    interface{} `json:"blocks"`
+	WorkspaceIntegrationID string      `json:"workspace_integration_id"`
+	ChannelID              string      `json:"channel_id"`
+	Text                   string      `json:"text"`
+	Blocks                 interface{} `json:"blocks"`
 }
 
 // Publisher publishes tasks to RabbitMQ.

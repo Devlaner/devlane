@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Devlaner/devlane/api/internal/crypto"
 	"github.com/Devlaner/devlane/api/internal/mail"
 	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/queue"
@@ -517,17 +516,23 @@ func (s *NotificationService) enqueueSlackNotifications(ctx context.Context, par
 	if !ok || rawToken == "" {
 		return
 	}
-	token := crypto.DecryptOrPlain(rawToken)
 
 	issueURL := fmt.Sprintf("%s/issue/%s", strings.TrimSuffix(s.appURL, "/"), params.issue.ID)
 	text, blocks := slack.BuildSlackMessage(issueRef, params.issue.Name, actorName, action, issueURL)
 
-	_ = s.slackQueue.PublishSlackPost(ctx, queue.SlackPostPayload{
-		Token:     token,
-		ChannelID: link.ChannelID,
-		Text:      text,
-		Blocks:    blocks,
+	err = s.slackQueue.PublishSlackPost(ctx, queue.SlackPostPayload{
+		WorkspaceIntegrationID: link.WorkspaceIntegrationID.String(),
+		ChannelID:              link.ChannelID,
+		Text:                   text,
+		Blocks:                 blocks,
 	})
+	if err != nil {
+		s.log.Warn("Failed to enqueue Slack notification (dropped)",
+			"issue_id", params.issue.ID,
+			"project_id", params.issue.ProjectID,
+			"channel_id", link.ChannelID,
+			"error", err)
+	}
 }
 
 // actorDisplayName returns the user's display name, falling back through

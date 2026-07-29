@@ -222,7 +222,8 @@ export const integrationService = {
       const { data } = await apiClient.get<SlackChannelLinkResponse>(
         `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/integrations/slack/channel/`,
       );
-      return data;
+      // Backend answers 200 + null body when no channel is linked.
+      return data ?? null;
     } catch (err) {
       const e = err as { response?: { status?: number } };
       if (e?.response?.status === 404) return null;

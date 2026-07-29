@@ -3,9 +3,13 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
+	"github.com/Devlaner/devlane/api/internal/crypto"
 	"github.com/Devlaner/devlane/api/internal/mail"
+	"github.com/Devlaner/devlane/api/internal/store"
+	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -161,7 +165,7 @@ func HandleWebhook(deliverer func(ctx context.Context, p WebhookPayload) error) 
 }
 
 // HandleSlackPost parses slack_post task and runs the given poster.
-func HandleSlackPost(log *slog.Logger, poster func(ctx context.Context, token, channelID, text string, blocks interface{}) error) TaskHandler {
+func HandleSlackPost(log *slog.Logger, wintegStore *store.WorkspaceIntegrationStore, poster func(ctx context.Context, token, channelID, text string, blocks interface{}) error) TaskHandler {
 	return func(ctx context.Context, queue string, body []byte) error {
 		var msg struct {
 			Type    string           `json:"type"`
@@ -177,7 +181,27 @@ func HandleSlackPost(log *slog.Logger, poster func(ctx context.Context, token, c
 		if log != nil {
 			log.Info("queue processing slack_post", "channel", p.ChannelID)
 		}
-		err := poster(ctx, p.Token, p.ChannelID, p.Text, p.Blocks)
+
+		wiID, err := uuid.Parse(p.WorkspaceIntegrationID)
+		if err != nil {
+			return fmt.Errorf("invalid workspace integration ID: %w", err)
+		}
+
+		winteg, err := wintegStore.GetByID(ctx, wiID)
+		if err != nil {
+			return fmt.Errorf("get workspace integration: %w", err)
+		}
+		if winteg == nil || winteg.Config == nil {
+			return fmt.Errorf("workspace integration not found or unconfigured")
+		}
+
+		rawToken, ok := winteg.Config["bot_token"].(string)
+		if !ok || rawToken == "" {
+			return fmt.Errorf("no bot_token in workspace integration")
+		}
+		token := crypto.DecryptOrPlain(rawToken)
+
+		err = poster(ctx, token, p.ChannelID, p.Text, p.Blocks)
 		if err != nil {
 			if log != nil {
 				log.Error("slack post failed", "channel", p.ChannelID, "error", err)

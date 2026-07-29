@@ -76,14 +76,30 @@ export function SlackChannelSettingsModal({
       } else {
         // Link channel
         if (!selectedChannelId) {
-          throw new Error('Please select a channel');
+          throw new Error(
+            t('integrations.slack.selectChannelRequired', 'Please select a channel.'),
+          );
         }
-        const channelName = channels.find((c) => c.id === selectedChannelId)?.name || 'unknown';
+        const channelName = channels.find((c) => c.id === selectedChannelId)?.name;
+        if (!channelName) {
+          throw new Error(
+            t('integrations.slack.selectChannelRequired', 'Please select a channel.'),
+          );
+        }
         const next = await integrationService.slackLinkProjectChannel(workspaceSlug, project.id, {
           channel_id: selectedChannelId,
           channel_name: channelName,
         });
-        onSaved(next);
+        const withEvents = await integrationService.slackUpdateProjectChannel(
+          workspaceSlug,
+          project.id,
+          {
+            created: eventCreated,
+            state_changed: eventStateChanged,
+            commented: eventCommented,
+          },
+        );
+        onSaved(withEvents ?? next);
       }
       onClose();
     } catch (e) {

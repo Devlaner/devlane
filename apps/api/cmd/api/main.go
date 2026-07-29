@@ -126,7 +126,7 @@ func main() {
 			webhookDeliverer := service.NewWebhookDeliverer(store.NewWebhookStore(db), log)
 			consumer.Register(queue.QueueWebhooks, queue.HandleWebhook(webhookDeliverer))
 			consumer.Register(queue.QueueImports, queue.HandleImport(importerSvc.Run))
-			consumer.Register(queue.QueueSlack, queue.HandleSlackPost(log, slack.PostMessage))
+			consumer.Register(queue.QueueSlack, queue.HandleSlackPost(log, store.NewWorkspaceIntegrationStore(db), slack.PostMessage))
 			if err := consumer.Run(consumerCtx, []string{queue.QueueEmails, queue.QueueWebhooks, queue.QueueImports, queue.QueueSlack}); err != nil {
 				log.Warn("queue consumer", "error", err)
 			}
