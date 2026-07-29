@@ -160,6 +160,37 @@ func HandleWebhook(deliverer func(ctx context.Context, p WebhookPayload) error) 
 	}
 }
 
+// HandleSlackPost parses slack_post task and runs the given poster.
+func HandleSlackPost(log *slog.Logger, poster func(ctx context.Context, token, channelID, text string, blocks interface{}) error) TaskHandler {
+	return func(ctx context.Context, queue string, body []byte) error {
+		var msg struct {
+			Type    string           `json:"type"`
+			Payload SlackPostPayload `json:"payload"`
+		}
+		if err := json.Unmarshal(body, &msg); err != nil {
+			return err
+		}
+		if msg.Type != TaskSlackPost {
+			return nil
+		}
+		p := &msg.Payload
+		if log != nil {
+			log.Info("queue processing slack_post", "channel", p.ChannelID)
+		}
+		err := poster(ctx, p.Token, p.ChannelID, p.Text, p.Blocks)
+		if err != nil {
+			if log != nil {
+				log.Error("slack post failed", "channel", p.ChannelID, "error", err)
+			}
+			return err
+		}
+		if log != nil {
+			log.Info("slack post succeeded", "channel", p.ChannelID)
+		}
+		return nil
+	}
+}
+
 // HandleImport parses an import_run task and runs the given importer.
 func HandleImport(runner func(ctx context.Context, importerID string) error) TaskHandler {
 	return func(ctx context.Context, queue string, body []byte) error {

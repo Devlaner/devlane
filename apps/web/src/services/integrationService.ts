@@ -6,6 +6,8 @@ import type {
   GitHubRepositorySyncResponse,
   IntegrationApiResponse,
   WorkspaceIntegrationApiResponse,
+  SlackChannel,
+  SlackChannelLinkResponse,
 } from '../api/types';
 
 const GITHUB_ISSUE_SUMMARY_BATCH_SIZE = 100;
@@ -193,5 +195,71 @@ export const integrationService = {
       Object.assign(summary, data.summary ?? {});
     }
     return summary;
+  },
+
+  /**
+   * Build the URL to start the Slack App install flow.
+   */
+  slackInstallUrl(workspaceSlug: string): string {
+    const base = API_BASE || '';
+    return `${base}/auth/slack/install?workspace=${encodeURIComponent(workspaceSlug)}`;
+  },
+
+  /** GET /api/workspaces/:slug/integrations/slack/channels/ */
+  async slackListChannels(workspaceSlug: string): Promise<SlackChannel[]> {
+    const { data } = await apiClient.get<SlackChannel[]>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/integrations/slack/channels/`,
+    );
+    return data;
+  },
+
+  /** GET /api/workspaces/:slug/projects/:projectId/integrations/slack/channel/ */
+  async slackGetProjectChannel(
+    workspaceSlug: string,
+    projectId: string,
+  ): Promise<SlackChannelLinkResponse | null> {
+    try {
+      const { data } = await apiClient.get<SlackChannelLinkResponse>(
+        `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/integrations/slack/channel/`,
+      );
+      return data;
+    } catch (err) {
+      const e = err as { response?: { status?: number } };
+      if (e?.response?.status === 404) return null;
+      throw err;
+    }
+  },
+
+  /** POST /api/workspaces/:slug/projects/:projectId/integrations/slack/channel/ */
+  async slackLinkProjectChannel(
+    workspaceSlug: string,
+    projectId: string,
+    payload: { channel_id: string; channel_name: string },
+  ): Promise<SlackChannelLinkResponse> {
+    const { data } = await apiClient.post<SlackChannelLinkResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/integrations/slack/channel/`,
+      payload,
+    );
+    return data;
+  },
+
+  /** PATCH /api/workspaces/:slug/projects/:projectId/integrations/slack/channel/ */
+  async slackUpdateProjectChannel(
+    workspaceSlug: string,
+    projectId: string,
+    events: Record<string, boolean>,
+  ): Promise<SlackChannelLinkResponse> {
+    const { data } = await apiClient.patch<SlackChannelLinkResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/integrations/slack/channel/`,
+      { events },
+    );
+    return data;
+  },
+
+  /** DELETE /api/workspaces/:slug/projects/:projectId/integrations/slack/channel/ */
+  async slackUnlinkProjectChannel(workspaceSlug: string, projectId: string): Promise<void> {
+    await apiClient.delete(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/integrations/slack/channel/`,
+    );
   },
 };

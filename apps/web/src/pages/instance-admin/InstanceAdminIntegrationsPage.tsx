@@ -6,7 +6,7 @@ import { Skeleton } from '../../components/ui';
 import { instanceSettingsService } from '../../services/instanceService';
 import { getApiErrorMessage } from '../../api/client';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-import type { InstanceGitHubAppSection } from '../../api/types';
+import type { InstanceGitHubAppSection, InstanceSlackAppSection } from '../../api/types';
 
 const IconGitHub = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -14,8 +14,14 @@ const IconGitHub = () => (
   </svg>
 );
 
+const IconSlack = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.958a2.528 2.528 0 0 1 2.523 2.52 2.528 2.528 0 0 1-2.523 2.522 2.527 2.527 0 0 1-2.52-2.522v-2.52h2.52zM15.165 17.687a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
+  </svg>
+);
+
 interface ProviderRow {
-  id: 'github';
+  id: 'github' | 'slack';
   name: string;
   desc: string;
   Icon: () => React.ReactElement;
@@ -34,9 +40,14 @@ function isGitHubAppConfigured(s: InstanceGitHubAppSection): boolean {
   );
 }
 
+function isSlackAppConfigured(s: InstanceSlackAppSection): boolean {
+  return !!(s.client_id && s.client_secret_set);
+}
+
 export function InstanceAdminIntegrationsPage() {
   const { t } = useTranslation();
   const [github, setGithub] = useState<InstanceGitHubAppSection>({});
+  const [slack, setSlack] = useState<InstanceSlackAppSection>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   useDocumentTitle(t('instanceAdmin.integrations.documentTitle', 'Integrations'));
@@ -49,6 +60,8 @@ export function InstanceAdminIntegrationsPage() {
         if (cancelled) return;
         const g = (settings.github_app || {}) as InstanceGitHubAppSection;
         setGithub(g);
+        const sl = (settings.slack_app || {}) as InstanceSlackAppSection;
+        setSlack(sl);
       })
       .catch((err) => {
         if (!cancelled) setError(getApiErrorMessage(err));
@@ -72,6 +85,17 @@ export function InstanceAdminIntegrationsPage() {
       Icon: IconGitHub,
       editPath: '/instance-admin/integrations/github',
       configured: isGitHubAppConfigured(github),
+    },
+    {
+      id: 'slack',
+      name: 'Slack',
+      desc: t(
+        'instanceAdmin.integrations.slack.desc',
+        'Push issue events directly to Slack channels. Get notified when issues are created, move across states, or receive comments.',
+      ),
+      Icon: IconSlack,
+      editPath: '/instance-admin/integrations/slack',
+      configured: isSlackAppConfigured(slack),
     },
   ];
 

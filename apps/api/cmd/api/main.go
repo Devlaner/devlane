@@ -19,6 +19,7 @@ import (
 	"github.com/Devlaner/devlane/api/internal/redis"
 	"github.com/Devlaner/devlane/api/internal/router"
 	"github.com/Devlaner/devlane/api/internal/service"
+	"github.com/Devlaner/devlane/api/internal/slack"
 	"github.com/Devlaner/devlane/api/internal/store"
 )
 
@@ -125,7 +126,8 @@ func main() {
 			webhookDeliverer := service.NewWebhookDeliverer(store.NewWebhookStore(db), log)
 			consumer.Register(queue.QueueWebhooks, queue.HandleWebhook(webhookDeliverer))
 			consumer.Register(queue.QueueImports, queue.HandleImport(importerSvc.Run))
-			if err := consumer.Run(consumerCtx, []string{queue.QueueEmails, queue.QueueWebhooks, queue.QueueImports}); err != nil {
+			consumer.Register(queue.QueueSlack, queue.HandleSlackPost(log, slack.PostMessage))
+			if err := consumer.Run(consumerCtx, []string{queue.QueueEmails, queue.QueueWebhooks, queue.QueueImports, queue.QueueSlack}); err != nil {
 				log.Warn("queue consumer", "error", err)
 			}
 		}

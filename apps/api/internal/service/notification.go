@@ -8,9 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Devlaner/devlane/api/internal/crypto"
 	"github.com/Devlaner/devlane/api/internal/mail"
 	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/queue"
+	"github.com/Devlaner/devlane/api/internal/slack"
 	"github.com/Devlaner/devlane/api/internal/store"
 	"github.com/google/uuid"
 )
@@ -23,18 +25,21 @@ import (
 // own DB writes succeed. emit() returns are logged and swallowed: a transient
 // notifications-table failure must not roll back the user's actual change.
 type NotificationService struct {
-	ns       *store.NotificationStore
-	ws       *store.WorkspaceStore
-	is       *store.IssueStore                      // for assignee + creator lookups (receiver computation)
-	ps       *store.ProjectStore                    // for project-membership filter
-	us       *store.UserStore                       // for actor display name
-	ss       *store.StateStore                      // for state name resolution in Message payload
-	subs     *store.IssueSubscriberStore            // optional — subscriber-based receivers
-	prefs    *store.UserNotificationPreferenceStore // optional — preference gating
-	log      *slog.Logger
-	emailLog *store.EmailNotificationLogStore // optional — email notification audit logging
-	queue    *queue.Publisher                 // optional — RabbitMQ publisher for email notifications
-	appURL   string                           // optional — base URL for issue links in notification emails
+	ns          *store.NotificationStore
+	ws          *store.WorkspaceStore
+	is          *store.IssueStore                      // for assignee + creator lookups (receiver computation)
+	ps          *store.ProjectStore                    // for project-membership filter
+	us          *store.UserStore                       // for actor display name
+	ss          *store.StateStore                      // for state name resolution in Message payload
+	subs        *store.IssueSubscriberStore            // optional — subscriber-based receivers
+	prefs       *store.UserNotificationPreferenceStore // optional — preference gating
+	log         *slog.Logger
+	emailLog    *store.EmailNotificationLogStore // optional — email notification audit logging
+	queue       *queue.Publisher                 // optional — RabbitMQ publisher for email notifications
+	slackQueue  *queue.Publisher                 // optional — RabbitMQ publisher for slack notifications
+	slackStore  *store.SlackChannelLinkStore     // optional
+	wintegStore *store.WorkspaceIntegrationStore // optional
+	appURL      string                           // optional — base URL for issue links in notification emails
 }
 
 func NewNotificationService(
@@ -78,6 +83,17 @@ func (s *NotificationService) SetEmailLogStore(e *store.EmailNotificationLogStor
 // SetQueue wires the RabbitMQ publisher for email notifications. Optional.
 func (s *NotificationService) SetQueue(q *queue.Publisher) {
 	s.queue = q
+}
+
+// SetSlackQueue wires the RabbitMQ publisher for slack notifications. Optional.
+func (s *NotificationService) SetSlackQueue(q *queue.Publisher) {
+	s.slackQueue = q
+}
+
+// SetSlackStores wires the stores needed for Slack notifications. Optional.
+func (s *NotificationService) SetSlackStores(sl *store.SlackChannelLinkStore, wi *store.WorkspaceIntegrationStore) {
+	s.slackStore = sl
+	s.wintegStore = wi
 }
 
 // SetAppBaseURL wires the base URL for issue links in notification emails. Optional.
@@ -241,6 +257,19 @@ func (s *NotificationService) emit(ctx context.Context, receivers []uuid.UUID, p
 	if params.issue == nil {
 		return
 	}
+
+	// Queue slack notifications if available. Slack notifications go to a
+	// channel (not individual users), so they must fire regardless of the
+	// in-app receiver list. We do this first so that even a solo developer
+	// (who is excluded from their own in-app notifications) still gets
+	// messages posted to the linked Slack channel.
+	if s.slackQueue != nil && s.slackStore != nil && s.wintegStore != nil && s.appURL != "" {
+		actorName := s.actorDisplayName(ctx, params.actorID)
+		projectIdent := s.projectIdentifier(ctx, params.issue.ProjectID)
+		issueRef := fmt.Sprintf("%s-%d", projectIdent, params.issue.SequenceID)
+		s.enqueueSlackNotifications(ctx, params, actorName, issueRef)
+	}
+
 	if len(receivers) == 0 {
 		return
 	}
@@ -441,6 +470,66 @@ func (s *NotificationService) enqueueNotificationEmails(ctx context.Context, rec
 	}
 }
 
+func (s *NotificationService) enqueueSlackNotifications(ctx context.Context, params emitParams, actorName, issueRef string) {
+	if params.issue == nil {
+		return
+	}
+
+	var action string
+	var eventType string
+	switch params.sender {
+	case model.NotificationSenderCreated:
+		action = "created"
+		eventType = "created"
+	case model.NotificationSenderAssigned:
+		action = "was assigned"
+		eventType = "state_changed" // fallback to state_changed
+	case model.NotificationSenderStateChanged:
+		action = "moved to " + params.after
+		eventType = "state_changed"
+	case model.NotificationSenderCommented, model.NotificationSenderMentioned:
+		action = "was commented on"
+		eventType = "commented"
+	case model.NotificationSenderSubscribed:
+		action = "changed " + params.field + " to " + params.after
+		eventType = "state_changed" // fallback to state_changed config toggle
+	default:
+		return
+	}
+
+	link, err := s.slackStore.GetByProject(ctx, params.issue.ProjectID)
+	if err != nil || link == nil {
+		return
+	}
+
+	if link.Events != nil {
+		if enabled, ok := link.Events[eventType].(bool); ok && !enabled {
+			return
+		}
+	}
+
+	winteg, err := s.wintegStore.GetByID(ctx, link.WorkspaceIntegrationID)
+	if err != nil || winteg == nil || winteg.Config == nil {
+		return
+	}
+
+	rawToken, ok := winteg.Config["bot_token"].(string)
+	if !ok || rawToken == "" {
+		return
+	}
+	token := crypto.DecryptOrPlain(rawToken)
+
+	issueURL := fmt.Sprintf("%s/issue/%s", strings.TrimSuffix(s.appURL, "/"), params.issue.ID)
+	text, blocks := slack.BuildSlackMessage(issueRef, params.issue.Name, actorName, action, issueURL)
+
+	_ = s.slackQueue.PublishSlackPost(ctx, queue.SlackPostPayload{
+		Token:     token,
+		ChannelID: link.ChannelID,
+		Text:      text,
+		Blocks:    blocks,
+	})
+}
+
 // actorDisplayName returns the user's display name, falling back through
 // first+last name → username → "Someone".
 func (s *NotificationService) actorDisplayName(ctx context.Context, id uuid.UUID) string {
@@ -503,6 +592,19 @@ func (s *NotificationService) computeIssueReceivers(ctx context.Context, issue *
 }
 
 // ----- Public emitters ----------------------------------------------------
+
+// IssueCreated notifies linked Slack channels when an issue is created.
+// (It intentionally sends no in-app notifications, since the creator already knows).
+func (s *NotificationService) IssueCreated(ctx context.Context, issue *model.Issue, actorID uuid.UUID) {
+	if issue == nil {
+		return
+	}
+	s.emit(ctx, []uuid.UUID{}, emitParams{
+		issue:   issue,
+		actorID: actorID,
+		sender:  model.NotificationSenderCreated,
+	})
+}
 
 // IssueAssigned notifies the newly-added assignees. Receivers = added IDs only.
 func (s *NotificationService) IssueAssigned(ctx context.Context, issue *model.Issue, actorID uuid.UUID, added []uuid.UUID) {

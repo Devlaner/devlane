@@ -15,6 +15,7 @@ const (
 	QueueEmails   = "devlane.emails"
 	QueueWebhooks = "devlane.webhooks"
 	QueueImports  = "devlane.imports"
+	QueueSlack    = "devlane.slack"
 	QueueDefault  = "devlane.default"
 )
 
@@ -22,6 +23,7 @@ const (
 const (
 	TaskSendEmail      = "send_email"
 	TaskWebhookDeliver = "webhook_deliver"
+	TaskSlackPost      = "slack_post"
 	TaskImportRun      = "import_run"
 )
 
@@ -51,6 +53,14 @@ type ImportPayload struct {
 	ImporterID string `json:"importer_id"`
 }
 
+// SlackPostPayload is the payload for a slack_post task.
+type SlackPostPayload struct {
+	Token     string      `json:"token"`
+	ChannelID string      `json:"channel_id"`
+	Text      string      `json:"text"`
+	Blocks    interface{} `json:"blocks"`
+}
+
 // Publisher publishes tasks to RabbitMQ.
 type Publisher struct {
 	ch     *amqp.Channel
@@ -60,13 +70,13 @@ type Publisher struct {
 
 // NewPublisher declares queues and returns a publisher.
 func NewPublisher(ch *amqp.Channel, log *slog.Logger) (*Publisher, error) {
-	for _, q := range []string{QueueEmails, QueueWebhooks, QueueImports, QueueDefault} {
+	for _, q := range []string{QueueEmails, QueueWebhooks, QueueImports, QueueSlack, QueueDefault} {
 		if _, err := ch.QueueDeclare(q, true, false, false, false, nil); err != nil {
 			return nil, fmt.Errorf("declare queue %s: %w", q, err)
 		}
 	}
 	return &Publisher{ch: ch, log: log, queues: map[string]bool{
-		QueueEmails: true, QueueWebhooks: true, QueueImports: true, QueueDefault: true,
+		QueueEmails: true, QueueWebhooks: true, QueueImports: true, QueueSlack: true, QueueDefault: true,
 	}}, nil
 }
 
@@ -116,6 +126,17 @@ func (p *Publisher) PublishImport(ctx context.Context, payload ImportPayload) er
 	}
 	return p.PublishJSON(ctx, QueueImports, map[string]interface{}{
 		"type":    TaskImportRun,
+		"payload": payload,
+	})
+}
+
+// PublishSlackPost enqueues a slack_post task.
+func (p *Publisher) PublishSlackPost(ctx context.Context, payload SlackPostPayload) error {
+	if p.log != nil {
+		p.log.Debug("queue publish slack_post", "channel", payload.ChannelID)
+	}
+	return p.PublishJSON(ctx, QueueSlack, map[string]interface{}{
+		"type":    TaskSlackPost,
 		"payload": payload,
 	})
 }

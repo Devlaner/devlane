@@ -6,16 +6,24 @@ import { Button, Card, CardContent, Badge, Modal } from '../ui';
 import { integrationService } from '../../services/integrationService';
 import { getApiErrorMessage } from '../../api/client';
 import { RepoSyncSettingsModal } from './RepoSyncSettingsModal';
+import { SlackChannelSettingsModal } from './SlackChannelSettingsModal';
 import type {
   GitHubRepositoryApiResponse,
   GitHubRepositorySyncResponse,
   ProjectApiResponse,
   WorkspaceIntegrationApiResponse,
+  SlackChannelLinkResponse,
 } from '../../api/types';
 
 const IconGitHub = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
     <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+  </svg>
+);
+
+const IconSlack = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.958a2.528 2.528 0 0 1 2.523 2.52 2.528 2.528 0 0 1-2.523 2.522 2.527 2.527 0 0 1-2.52-2.522v-2.52h2.52zM15.165 17.687a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
   </svg>
 );
 
@@ -46,6 +54,15 @@ export function IntegrationsSection({ workspaceSlug, projects }: IntegrationsSec
     Record<string, GitHubRepositorySyncResponse | null>
   >({});
 
+  // Slack project links
+  const [slackProjectLinks, setSlackProjectLinks] = useState<
+    Record<string, SlackChannelLinkResponse | null>
+  >({});
+  const [slackSettingsOpenForProjectId, setSlackSettingsOpenForProjectId] = useState<string | null>(
+    null,
+  );
+  const [slackDisconnecting, setSlackDisconnecting] = useState(false);
+
   // Repo link modal state.
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [linkingProjectId, setLinkingProjectId] = useState<string | null>(null);
@@ -62,8 +79,10 @@ export function IntegrationsSection({ workspaceSlug, projects }: IntegrationsSec
     () => installed.find((wi) => wi.provider === 'github') ?? null,
     [installed],
   );
+  const slack = useMemo(() => installed.find((wi) => wi.provider === 'slack') ?? null, [installed]);
 
   const isConnected = !!github;
+  const isSlackConnected = !!slack;
 
   // Surface OAuth callback redirect outcome (?connected=github or ?error=...).
   useEffect(() => {
@@ -71,6 +90,11 @@ export function IntegrationsSection({ workspaceSlug, projects }: IntegrationsSec
     const errParam = searchParams.get('error');
     if (connected === 'github') {
       setSuccess(t('integrations.github.connected', 'GitHub connected.'));
+      const next = new URLSearchParams(searchParams);
+      next.delete('connected');
+      setSearchParams(next, { replace: true });
+    } else if (connected === 'slack') {
+      setSuccess(t('integrations.slack.connected', 'Slack connected.'));
       const next = new URLSearchParams(searchParams);
       next.delete('connected');
       setSearchParams(next, { replace: true });
@@ -128,6 +152,31 @@ export function IntegrationsSection({ workspaceSlug, projects }: IntegrationsSec
     };
   }, [workspaceSlug, isConnected, projects]);
 
+  // When connected, hydrate per-project slack links.
+  useEffect(() => {
+    if (!isSlackConnected || projects.length === 0) {
+      setSlackProjectLinks({});
+      return;
+    }
+    let cancelled = false;
+    Promise.all(
+      projects.map((p) =>
+        integrationService
+          .slackGetProjectChannel(workspaceSlug, p.id)
+          .then((r) => [p.id, r] as const)
+          .catch(() => [p.id, null] as const),
+      ),
+    ).then((entries) => {
+      if (cancelled) return;
+      const next: Record<string, SlackChannelLinkResponse | null> = {};
+      for (const [pid, r] of entries) next[pid] = r;
+      setSlackProjectLinks(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug, isSlackConnected, projects]);
+
   const handleConnect = () => {
     // Top-level navigation — GitHub will redirect us back to /<slug>/settings?section=integrations.
     window.location.href = integrationService.githubInstallUrl(workspaceSlug);
@@ -147,13 +196,41 @@ export function IntegrationsSection({ workspaceSlug, projects }: IntegrationsSec
     setError('');
     try {
       await integrationService.uninstall(workspaceSlug, 'github');
-      setInstalled([]);
+      setInstalled((prev) => prev.filter((i) => i.provider !== 'github'));
       setProjectSyncs({});
       setSuccess(t('integrations.github.disconnected', 'GitHub disconnected.'));
     } catch (e) {
       setError(getApiErrorMessage(e));
     } finally {
       setDisconnecting(false);
+    }
+  };
+
+  const handleSlackConnect = () => {
+    window.location.href = integrationService.slackInstallUrl(workspaceSlug);
+  };
+
+  const handleSlackDisconnect = async () => {
+    if (
+      !confirm(
+        t(
+          'integrations.slack.disconnectConfirm',
+          'Disconnect Slack from this workspace? Project channels will be unlinked.',
+        ),
+      )
+    )
+      return;
+    setSlackDisconnecting(true);
+    setError('');
+    try {
+      await integrationService.uninstall(workspaceSlug, 'slack');
+      setInstalled((prev) => prev.filter((i) => i.provider !== 'slack'));
+      setSlackProjectLinks({});
+      setSuccess(t('integrations.slack.disconnected', 'Slack disconnected.'));
+    } catch (e) {
+      setError(getApiErrorMessage(e));
+    } finally {
+      setSlackDisconnecting(false);
     }
   };
 
@@ -420,6 +497,154 @@ export function IntegrationsSection({ workspaceSlug, projects }: IntegrationsSec
         </div>
       )}
 
+      {/* --- Slack Section --- */}
+      <div>
+        <p className="mb-2 mt-8 px-1 text-xs font-medium uppercase tracking-wider text-(--txt-tertiary)">
+          {t('integrations.communications', 'Communications')}
+        </p>
+        <Card variant="outlined">
+          <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-(--radius-md) bg-(--bg-layer-1) text-(--txt-icon-secondary)">
+                <IconSlack />
+              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-semibold text-(--txt-primary)">
+                    {t('integrations.slack.name', 'Slack')}
+                  </h3>
+                  {isSlackConnected ? (
+                    <Badge variant="success">
+                      {t('integrations.status.connected', 'Connected')}
+                    </Badge>
+                  ) : (
+                    <Badge variant="neutral">
+                      {t('integrations.status.available', 'Available')}
+                    </Badge>
+                  )}
+                  {slack?.suspended_at && (
+                    <Badge variant="warning">
+                      {t('integrations.status.suspended', 'Suspended')}
+                    </Badge>
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-(--txt-secondary)">
+                  {t(
+                    'integrations.slack.description',
+                    'Push issue events directly to Slack channels. Get notified when issues are created, move across states, or receive comments.',
+                  )}
+                </p>
+                {!isSlackConnected && (
+                  <ul className="mt-3 space-y-1 text-sm text-(--txt-tertiary)">
+                    <li>
+                      •{' '}
+                      {t(
+                        'integrations.slack.feature.notify',
+                        'Route notifications to project-specific channels',
+                      )}
+                    </li>
+                    <li>
+                      •{' '}
+                      {t(
+                        'integrations.slack.feature.events',
+                        'Customize which events trigger a message',
+                      )}
+                    </li>
+                  </ul>
+                )}
+              </div>
+            </div>
+            <div className="shrink-0">
+              {loading ? (
+                <Button variant="secondary" disabled>
+                  {t('common.loading', 'Loading…')}
+                </Button>
+              ) : isSlackConnected ? (
+                <Button
+                  variant="secondary"
+                  disabled={slackDisconnecting}
+                  onClick={() => void handleSlackDisconnect()}
+                >
+                  {slackDisconnecting
+                    ? t('integrations.slack.disconnecting', 'Disconnecting…')
+                    : t('integrations.slack.disconnect', 'Disconnect')}
+                </Button>
+              ) : (
+                <Button onClick={() => void handleSlackConnect()}>
+                  {t('integrations.slack.connect', 'Connect')}
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {isSlackConnected && projects.length > 0 && (
+        <div>
+          <p className="mb-2 mt-6 px-1 text-xs font-medium uppercase tracking-wider text-(--txt-tertiary)">
+            {t('integrations.slack.linkedChannels', 'Linked channels')}
+          </p>
+          <Card variant="outlined">
+            <CardContent className="p-0">
+              <ul className="divide-y divide-(--border-subtle)">
+                {projects.map((p) => {
+                  const link = slackProjectLinks[p.id];
+                  return (
+                    <li key={p.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-(--txt-primary)">
+                          {p.name}
+                          {p.identifier ? (
+                            <span className="ml-2 text-xs font-normal text-(--txt-tertiary)">
+                              {p.identifier}
+                            </span>
+                          ) : null}
+                        </p>
+                        {link ? (
+                          <p className="truncate text-xs text-(--txt-secondary)">
+                            #{link.channel_name}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-(--txt-tertiary)">
+                            {t('integrations.slack.noChannelLinked', 'No channel linked.')}
+                          </p>
+                        )}
+                      </div>
+                      {link ? (
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setSlackSettingsOpenForProjectId(p.id)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
+                            aria-label={t(
+                              'integrations.slack.configureAria',
+                              'Configure Slack channel for {{name}}',
+                              { name: p.name },
+                            )}
+                            title={t('integrations.settings', 'Settings')}
+                          >
+                            <Settings2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setSlackSettingsOpenForProjectId(p.id)}
+                        >
+                          {t('integrations.slack.linkChannel', 'Link channel')}
+                        </Button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* --- Modals --- */}
       <Modal
         open={linkModalOpen}
         onClose={() => {
@@ -510,6 +735,22 @@ export function IntegrationsSection({ workspaceSlug, projects }: IntegrationsSec
               project={proj}
               initialSync={projectSyncs[proj.id] ?? null}
               onSaved={(next) => setProjectSyncs((prev) => ({ ...prev, [proj.id]: next }))}
+            />
+          );
+        })()}
+
+      {slackSettingsOpenForProjectId &&
+        (() => {
+          const proj = projects.find((p) => p.id === slackSettingsOpenForProjectId);
+          if (!proj) return null;
+          return (
+            <SlackChannelSettingsModal
+              open
+              onClose={() => setSlackSettingsOpenForProjectId(null)}
+              workspaceSlug={workspaceSlug}
+              project={proj}
+              initialLink={slackProjectLinks[proj.id] ?? null}
+              onSaved={(next) => setSlackProjectLinks((prev) => ({ ...prev, [proj.id]: next }))}
             />
           );
         })()}
