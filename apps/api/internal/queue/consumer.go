@@ -201,6 +201,9 @@ func HandleSlackPost(log *slog.Logger, wintegStore *store.WorkspaceIntegrationSt
 			return fmt.Errorf("no bot_token in workspace integration")
 		}
 		token := crypto.DecryptOrPlain(rawToken)
+		if token == "" {
+			return fmt.Errorf("failed to decrypt workspace integration bot token")
+		}
 
 		postCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()
