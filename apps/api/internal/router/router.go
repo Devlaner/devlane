@@ -91,6 +91,7 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 
 	// Integration stores
 	integrationStore := store.NewIntegrationStore(cfg.DB)
+	slackChannelLinkStore := store.NewSlackChannelLinkStore(cfg.DB)
 	workspaceIntegrationStore := store.NewWorkspaceIntegrationStore(cfg.DB)
 	githubRepoStore := store.NewGithubRepositoryStore(cfg.DB)
 	githubRepoSyncStore := store.NewGithubRepositorySyncStore(cfg.DB)
@@ -175,6 +176,10 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 		notificationSvc.SetEmailLogStore(emailLogStore)
 		notificationSvc.SetQueue(cfg.Queue)
 		notificationSvc.SetAppBaseURL(appBaseURL)
+
+		// Wire Slack notifications to the same publisher
+		notificationSvc.SetSlackQueue(cfg.Queue)
+		notificationSvc.SetSlackStores(slackChannelLinkStore, workspaceIntegrationStore)
 	}
 	issueSvc.SetNotificationService(notificationSvc)
 	issueSvc.SetSubscriberStore(issueSubscriberStore)
@@ -205,7 +210,7 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 	}
 
 	integrationSvc := service.NewIntegrationService(
-		integrationStore, workspaceIntegrationStore, workspaceStore, instanceSettingStore, githubClient,
+		integrationStore, workspaceIntegrationStore, workspaceStore, instanceSettingStore, slackChannelLinkStore, githubClient,
 	)
 	githubSyncSvc := service.NewGithubSyncService(
 		integrationSvc, workspaceIntegrationStore, githubRepoStore, githubRepoSyncStore,
@@ -551,6 +556,13 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 		api.GET("/workspaces/:slug/integrations/", integrationHandler.ListInstalled)
 		api.DELETE("/workspaces/:slug/integrations/:provider/", integrationHandler.Uninstall)
 
+		// Slack Channel Link Routes
+		api.GET("/workspaces/:slug/integrations/slack/channels/", integrationHandler.SlackListChannels)
+		api.GET("/workspaces/:slug/projects/:projectId/integrations/slack/channel/", integrationHandler.SlackGetChannel)
+		api.POST("/workspaces/:slug/projects/:projectId/integrations/slack/channel/", integrationHandler.SlackLinkChannel)
+		api.PATCH("/workspaces/:slug/projects/:projectId/integrations/slack/channel/", integrationHandler.SlackUpdateChannel)
+		api.DELETE("/workspaces/:slug/projects/:projectId/integrations/slack/channel/", integrationHandler.SlackUnlinkChannel)
+
 		// GitHub-specific (workspace-level): list installation repos.
 		api.GET("/workspaces/:slug/integrations/github/repositories/", integrationHandler.GitHubListRepositories)
 
@@ -615,6 +627,10 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 	// their workspace.
 	r.GET("/auth/github-app/install", middleware.RequireAuth(authSvc, cfg.Log), integrationHandler.GitHubInstallStart)
 	r.GET("/auth/github-app/callback", middleware.RequireAuth(authSvc, cfg.Log), integrationHandler.GitHubInstallCallback)
+
+	// Slack App install flow.
+	r.GET("/auth/slack/install", middleware.RequireAuth(authSvc, cfg.Log), integrationHandler.SlackInstallStart)
+	r.GET("/auth/slack/callback", middleware.RequireAuth(authSvc, cfg.Log), integrationHandler.SlackInstallCallback)
 
 	// GitHub webhook receiver — public; HMAC-signature-verified.
 	r.POST("/webhooks/github", integrationHandler.GitHubWebhook)

@@ -11,7 +11,6 @@ interface CommentReactionsProps {
   projectId: string;
   issueId: string;
   commentId: string;
-  /** ID of the current user — needed to know which reactions are "mine" so we can toggle. */
   currentUserId?: string | null;
 }
 

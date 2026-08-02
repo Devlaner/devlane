@@ -646,6 +646,9 @@ func (s *IssueService) Create(ctx context.Context, workspaceSlug string, project
 			}
 		}
 	}
+	if s.notify != nil {
+		s.notify.IssueCreated(ctx, issue, userID)
+	}
 	s.dispatchIssueWebhook(ctx, issue, "created")
 	return issue, nil
 }

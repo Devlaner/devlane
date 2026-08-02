@@ -11,12 +11,16 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Devlaner/devlane/api/internal/crypto"
 	gh "github.com/Devlaner/devlane/api/internal/github"
 	"github.com/Devlaner/devlane/api/internal/middleware"
+	"github.com/Devlaner/devlane/api/internal/model"
+	"github.com/Devlaner/devlane/api/internal/oauth"
 	"github.com/Devlaner/devlane/api/internal/service"
 	"github.com/Devlaner/devlane/api/internal/store"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // IntegrationHandler exposes generic integration endpoints. Provider-specific
@@ -79,6 +83,134 @@ func (h *IntegrationHandler) Uninstall(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusNoContent, nil)
+}
+
+// ---------------------------------------------------------------------------
+// Slack App install flow (browser → slack.com → callback → workspace settings)
+// ---------------------------------------------------------------------------
+
+// SlackInstallStart redirects the user to slack.com to install the App.
+// We carry the workspace slug in the OAuth state cookie so the callback can
+// link the resulting installation to the right workspace.
+// GET /auth/slack/install?workspace=:slug
+func (h *IntegrationHandler) SlackInstallStart(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
+	workspaceSlug := strings.TrimSpace(c.Query("workspace"))
+	if workspaceSlug == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "workspace query param is required"})
+		return
+	}
+
+	stateBytes := make([]byte, 16)
+	rand.Read(stateBytes)
+	// Encode workspace slug into the state so we can recover it in the callback.
+	// Use the same format as GitHub: hex:slug. The full string is both the cookie
+	// value and the OAuth state param, so they match on the round-trip.
+	state := hex.EncodeToString(stateBytes) + ":" + workspaceSlug
+
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "slack_app_state",
+		Value:    state,
+		Path:     "/",
+		MaxAge:   600,
+		HttpOnly: true,
+		Secure:   isSecureRequest(c),
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	// Let's fetch the slack settings from the database
+	settings, _ := h.Settings.Get(c.Request.Context(), "slack_app")
+	clientID := ""
+	if settings != nil && settings.Value != nil {
+		if cid, ok := settings.Value["client_id"].(string); ok {
+			clientID = cid
+		}
+	}
+
+	if clientID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Slack App is not configured. Ask an instance admin to set the slack_app section."})
+		return
+	}
+
+	redirectURI := h.APIPublicURL + "/auth/slack/callback"
+	provider := oauth.NewSlackProvider(oauth.ProviderConfig{
+		ClientID:    clientID,
+		RedirectURI: redirectURI,
+	})
+	installURL := provider.AuthURL(state)
+	c.Redirect(http.StatusFound, installURL)
+}
+
+// SlackInstallCallback handles the redirect back from slack.com after the
+// user authorizes the App. Slack appends ?code=&state= to the redirect URL.
+// GET /auth/slack/callback?code=...&state=...
+func (h *IntegrationHandler) SlackInstallCallback(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		next := "/login"
+		if h.AppBaseURL != "" {
+			next = strings.TrimSuffix(h.AppBaseURL, "/") + "/login"
+		}
+		c.Redirect(http.StatusTemporaryRedirect, next)
+		return
+	}
+
+	code := c.Query("code")
+	stateRaw := c.Query("state")
+	cookieVal, _ := c.Cookie("slack_app_state")
+
+	// Clear cookie regardless of outcome
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name: "slack_app_state", Value: "", Path: "/", MaxAge: -1, HttpOnly: true,
+		Secure: isSecureRequest(c), SameSite: http.SameSiteLaxMode,
+	})
+
+	if cookieVal == "" || cookieVal != stateRaw {
+		h.redirectIntegration(c, "", "Slack App install state mismatch")
+		return
+	}
+
+	parts := strings.SplitN(stateRaw, ":", 2)
+	if len(parts) != 2 {
+		h.redirectIntegration(c, "", "Invalid Slack App install state")
+		return
+	}
+	workspaceSlug := parts[1]
+
+	settings, _ := h.Settings.Get(c.Request.Context(), "slack_app")
+	clientID, clientSecret := "", ""
+	if settings != nil && settings.Value != nil {
+		if cid, ok := settings.Value["client_id"].(string); ok {
+			clientID = cid
+		}
+		if sec, ok := settings.Value["client_secret"].(string); ok {
+			clientSecret = crypto.DecryptOrPlain(sec)
+		}
+	}
+
+	provider := oauth.NewSlackProvider(oauth.ProviderConfig{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		RedirectURI:  h.APIPublicURL + "/auth/slack/callback",
+	})
+
+	tokenData, err := provider.Exchange(c.Request.Context(), code)
+	if err != nil {
+		h.redirectIntegration(c, workspaceSlug, "Failed to exchange Slack code: "+err.Error())
+		return
+	}
+
+	if _, err := h.Integration.InstallSlack(c.Request.Context(), workspaceSlug, user.ID, tokenData); err != nil {
+		h.redirectIntegrationFor(c, workspaceSlug, "slack", "Failed to save Slack integration: "+err.Error())
+		return
+	}
+
+	h.redirectIntegrationFor(c, workspaceSlug, "slack", "")
 }
 
 // ---------------------------------------------------------------------------
@@ -175,6 +307,10 @@ func (h *IntegrationHandler) GitHubInstallCallback(c *gin.Context) {
 }
 
 func (h *IntegrationHandler) redirectIntegration(c *gin.Context, workspaceSlug, errMsg string) {
+	h.redirectIntegrationFor(c, workspaceSlug, "github", errMsg)
+}
+
+func (h *IntegrationHandler) redirectIntegrationFor(c *gin.Context, workspaceSlug, provider, errMsg string) {
 	target := strings.TrimSuffix(h.AppBaseURL, "/")
 	if target == "" {
 		target = ""
@@ -189,7 +325,7 @@ func (h *IntegrationHandler) redirectIntegration(c *gin.Context, workspaceSlug, 
 	if errMsg != "" {
 		q.Set("error", errMsg)
 	} else {
-		q.Set("connected", "github")
+		q.Set("connected", provider)
 	}
 	target += "?" + q.Encode()
 	c.Redirect(http.StatusTemporaryRedirect, target)
@@ -531,6 +667,139 @@ func (h *IntegrationHandler) GitHubWebhook(c *gin.Context) {
 		// Still return 200 — failure is logged in github_webhook_events.
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// ---------------------------------------------------------------------------
+// Slack Channel Link management
+// ---------------------------------------------------------------------------
+
+// SlackListChannels fetches all available channels from Slack
+// GET /api/workspaces/:slug/integrations/slack/channels/
+func (h *IntegrationHandler) SlackListChannels(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
+	channels, err := h.Integration.SlackListChannels(c.Request.Context(), c.Param("slug"), user.ID)
+	if err != nil {
+		writeIntegrationError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, channels)
+}
+
+// SlackLinkChannel saves a Slack channel to be used for a specific project
+// POST /api/workspaces/:slug/projects/:projectId/integrations/slack/channel/
+func (h *IntegrationHandler) SlackLinkChannel(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
+	projectID, err := uuid.Parse(c.Param("projectId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+
+	var req struct {
+		ChannelID   string `json:"channel_id"`
+		ChannelName string `json:"channel_name"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
+	link, err := h.Integration.SlackLinkChannel(c.Request.Context(), c.Param("slug"), projectID, user.ID, req.ChannelID, req.ChannelName)
+	if err != nil {
+		writeIntegrationError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, link)
+}
+
+// SlackGetChannel fetches the linked Slack channel for a specific project
+// GET /api/workspaces/:slug/projects/:projectId/integrations/slack/channel/
+func (h *IntegrationHandler) SlackGetChannel(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
+	projectID, err := uuid.Parse(c.Param("projectId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+
+	link, err := h.Integration.SlackGetChannel(c.Request.Context(), c.Param("slug"), projectID, user.ID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusOK, nil)
+			return
+		}
+		writeIntegrationError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, link)
+}
+
+// SlackUpdateChannel updates the events enabled for a specific project's Slack channel
+// PATCH /api/workspaces/:slug/projects/:projectId/integrations/slack/channel/
+func (h *IntegrationHandler) SlackUpdateChannel(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
+	projectID, err := uuid.Parse(c.Param("projectId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+
+	var req struct {
+		Events model.JSONMap `json:"events"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
+	link, err := h.Integration.SlackUpdateChannel(c.Request.Context(), c.Param("slug"), projectID, user.ID, req.Events)
+	if err != nil {
+		writeIntegrationError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, link)
+}
+
+// SlackUnlinkChannel unlinks a Slack channel from a specific project
+// DELETE /api/workspaces/:slug/projects/:projectId/integrations/slack/channel/
+func (h *IntegrationHandler) SlackUnlinkChannel(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
+	projectID, err := uuid.Parse(c.Param("projectId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+
+	if err := h.Integration.SlackUnlinkChannel(c.Request.Context(), c.Param("slug"), projectID, user.ID); err != nil {
+		writeIntegrationError(c, err)
+		return
+	}
+	c.JSON(http.StatusNoContent, nil)
 }
 
 // writeIntegrationError maps service errors to HTTP responses.
