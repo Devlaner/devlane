@@ -52,60 +52,66 @@ export function AnalyticsOverviewPage() {
   const [states, setStates] = useState<StateApiResponse[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useDocumentTitle(t('analytics.documentTitle', 'Analytics'));
 
   useEffect(() => {
     if (!workspaceSlug) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset loading when no slug (kept for future use)
       setLoading(false);
       return;
     }
     let cancelled = false;
     setLoading(true);
-    workspaceService
-      .getBySlug(workspaceSlug)
-      .then((w) => {
+    setLoadError(false);
+
+    const loadAnalytics = async () => {
+      try {
+        let loadedWorkspace: WorkspaceApiResponse;
+        try {
+          loadedWorkspace = await workspaceService.getBySlug(workspaceSlug);
+        } catch {
+          if (cancelled) return;
+          setWorkspace(null);
+          setProjects([]);
+          setIssues([]);
+          setStates([]);
+          setMembers([]);
+          return;
+        }
+
         if (cancelled) return;
-        setWorkspace(w);
-        return Promise.all([
+        setWorkspace(loadedWorkspace);
+
+        const [projs, mem] = await Promise.all([
           projectService.list(workspaceSlug),
           workspaceService.listMembers(workspaceSlug),
         ]);
-      })
-      .then((res) => {
-        const [projs, mem] = res ?? [[], []];
-        if (!cancelled) {
-          setProjects(projs ?? []);
-          setMembers(mem ?? []);
-        }
-        if (cancelled) return null;
-        if (projs?.length) {
-          return Promise.all([
-            Promise.all(projs.map((p) => fetchAllProjectIssues(workspaceSlug, p.id))),
-            Promise.all(projs.map((p) => stateService.list(workspaceSlug, p.id))),
-          ]);
-        }
-        setIssues([]);
-        setStates([]);
-        return null;
-      })
-      .then((result) => {
-        if (cancelled || !result) return;
-        const [issueArrays, stateArrays] = result;
+        const [issueArrays, stateArrays] = projs.length
+          ? await Promise.all([
+              Promise.all(projs.map((p) => fetchAllProjectIssues(workspaceSlug, p.id))),
+              Promise.all(projs.map((p) => stateService.list(workspaceSlug, p.id))),
+            ])
+          : [[], []];
+
+        if (cancelled) return;
+        setProjects(projs);
+        setMembers(mem);
         setIssues(issueArrays.flat());
         setStates(stateArrays.flat());
-      })
-      .catch(() => {
-        if (!cancelled) setWorkspace(null);
+      } catch {
+        if (cancelled) return;
         setProjects([]);
         setIssues([]);
         setStates([]);
         setMembers([]);
-      })
-      .finally(() => {
+        setLoadError(true);
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    };
+
+    void loadAnalytics();
     return () => {
       cancelled = true;
     };
@@ -149,6 +155,13 @@ export function AnalyticsOverviewPage() {
     return (
       <div className="text-(--txt-secondary)">
         {t('common.workspaceNotFound', 'Workspace not found.')}
+      </div>
+    );
+  }
+  if (loadError) {
+    return (
+      <div role="alert" className="text-(--txt-danger-primary)">
+        {t('analytics.loadError', 'Could not load analytics data.')}
       </div>
     );
   }
