@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import {
@@ -12,13 +12,36 @@ import {
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
 import { issueService } from '../services/issueService';
+import { stateService } from '../services/stateService';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
   IssueApiResponse,
+  StateApiResponse,
   WorkspaceMemberApiResponse,
 } from '../api/types';
+
+const ISSUE_PAGE_SIZE = 100;
+
+async function fetchAllProjectIssues(
+  workspaceSlug: string,
+  projectId: string,
+): Promise<IssueApiResponse[]> {
+  const issues: IssueApiResponse[] = [];
+  let offset = 0;
+
+  while (true) {
+    const page = await issueService.list(workspaceSlug, projectId, {
+      limit: ISSUE_PAGE_SIZE,
+      offset,
+    });
+    issues.push(...page);
+
+    if (page.length < ISSUE_PAGE_SIZE) return issues;
+    offset += page.length;
+  }
+}
 
 export function AnalyticsOverviewPage() {
   const { t } = useTranslation();
@@ -26,6 +49,7 @@ export function AnalyticsOverviewPage() {
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
+  const [states, setStates] = useState<StateApiResponse[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -55,22 +79,28 @@ export function AnalyticsOverviewPage() {
           setProjects(projs ?? []);
           setMembers(mem ?? []);
         }
-        if (!cancelled && projs?.length) {
-          return Promise.all(
-            projs.map((p) => issueService.list(workspaceSlug!, p.id, { limit: 200 })),
-          );
+        if (cancelled) return null;
+        if (projs?.length) {
+          return Promise.all([
+            Promise.all(projs.map((p) => fetchAllProjectIssues(workspaceSlug, p.id))),
+            Promise.all(projs.map((p) => stateService.list(workspaceSlug, p.id))),
+          ]);
         }
-        return [];
+        setIssues([]);
+        setStates([]);
+        return null;
       })
-      .then((issueArrays) => {
-        if (cancelled || !Array.isArray(issueArrays)) return;
-        if (issueArrays.length > 0 && Array.isArray(issueArrays[0]))
-          setIssues((issueArrays as IssueApiResponse[][]).flat());
+      .then((result) => {
+        if (cancelled || !result) return;
+        const [issueArrays, stateArrays] = result;
+        setIssues(issueArrays.flat());
+        setStates(stateArrays.flat());
       })
       .catch(() => {
         if (!cancelled) setWorkspace(null);
         setProjects([]);
         setIssues([]);
+        setStates([]);
         setMembers([]);
       })
       .finally(() => {
@@ -89,6 +119,24 @@ export function AnalyticsOverviewPage() {
   const cycles: unknown[] = [];
   const modules: unknown[] = [];
   const pages: unknown[] = [];
+
+  const completionByProjectId = useMemo(() => {
+    const stateGroupById = new Map(states.map((s) => [s.id, s.group]));
+    const stats = new Map<string, { total: number; completed: number }>();
+    for (const issue of issues) {
+      const group = issue.state_id ? stateGroupById.get(issue.state_id) : undefined;
+      if (group === 'cancelled' || group === 'canceled') continue;
+      const entry = stats.get(issue.project_id) ?? { total: 0, completed: 0 };
+      entry.total += 1;
+      if (group === 'completed') entry.completed += 1;
+      stats.set(issue.project_id, entry);
+    }
+    const pctById = new Map<string, number>();
+    for (const [projectId, { total, completed }] of stats) {
+      pctById.set(projectId, total > 0 ? Math.round((completed / total) * 100) : 0);
+    }
+    return pctById;
+  }, [issues, states]);
 
   if (loading) {
     return (
@@ -250,22 +298,25 @@ export function AnalyticsOverviewPage() {
             {t('analytics.activeProjects', 'Active Projects')}
           </h3>
           <ul className="space-y-2">
-            {projects.map((p) => (
-              <li
-                key={p.id}
-                className="flex items-center gap-3 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3"
-              >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-(--bg-layer-2) text-sm font-medium text-(--txt-icon-secondary)">
-                  {p.name.charAt(0)}
-                </span>
-                <span className="min-w-0 flex-1 truncate font-medium text-(--txt-primary)">
-                  {p.name}
-                </span>
-                <span className="shrink-0 rounded bg-(--bg-danger-subtle) px-2 py-0.5 text-xs font-medium text-(--txt-danger-primary)">
-                  0%
-                </span>
-              </li>
-            ))}
+            {projects.map((p) => {
+              const pct = completionByProjectId.get(p.id) ?? 0;
+              return (
+                <li
+                  key={p.id}
+                  className="flex items-center gap-3 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-3"
+                >
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-(--bg-layer-2) text-sm font-medium text-(--txt-icon-secondary)">
+                    {p.name.charAt(0)}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate font-medium text-(--txt-primary)">
+                    {p.name}
+                  </span>
+                  <span className="shrink-0 rounded bg-(--bg-danger-subtle) px-2 py-0.5 text-xs font-medium text-(--txt-danger-primary)">
+                    {pct}%
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </section>
       </div>
