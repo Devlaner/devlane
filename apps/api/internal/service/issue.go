@@ -966,19 +966,8 @@ func (s *IssueService) ReplaceAssignees(ctx context.Context, workspaceSlug strin
 		return err
 	}
 	prevAssignees, _ := s.is.ListAssigneesForIssue(ctx, issueID)
-	if err := s.is.ClearAssigneesForIssue(ctx, issueID); err != nil {
+	if err := s.is.ReplaceAssignees(ctx, issue.ID, issue.ProjectID, issue.WorkspaceID, assigneeIDs); err != nil {
 		return err
-	}
-	for _, assigneeID := range assigneeIDs {
-		a := &model.IssueAssignee{
-			IssueID:     issue.ID,
-			AssigneeID:  assigneeID,
-			ProjectID:   issue.ProjectID,
-			WorkspaceID: issue.WorkspaceID,
-		}
-		if err := s.is.AddAssignee(ctx, a); err != nil {
-			return err
-		}
 	}
 	prevSet := uuidSet(prevAssignees)
 	added := make([]uuid.UUID, 0, len(assigneeIDs))
@@ -1001,19 +990,8 @@ func (s *IssueService) ReplaceLabels(ctx context.Context, workspaceSlug string, 
 	if err != nil {
 		return err
 	}
-	if err := s.is.ClearLabelsForIssue(ctx, issueID); err != nil {
+	if err := s.is.ReplaceLabels(ctx, issue.ID, issue.ProjectID, issue.WorkspaceID, labelIDs); err != nil {
 		return err
-	}
-	for _, labelID := range labelIDs {
-		l := &model.IssueLabel{
-			IssueID:     issue.ID,
-			LabelID:     labelID,
-			ProjectID:   issue.ProjectID,
-			WorkspaceID: issue.WorkspaceID,
-		}
-		if err := s.is.AddLabel(ctx, l); err != nil {
-			return err
-		}
 	}
 	return nil
 }
