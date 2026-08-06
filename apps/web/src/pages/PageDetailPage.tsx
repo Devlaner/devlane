@@ -88,6 +88,15 @@ export function PageDetailPage() {
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [page, setPage] = useState<PageApiResponse | null>(null);
+  // Latest page, readable from async callbacks without re-deriving their
+  // identity — lets an in-flight save detect that the route changed and avoid
+  // writing the previous page's content onto the newly-opened one.
+  const pageRef = useRef<PageApiResponse | null>(page);
+  pageRef.current = page;
+  // Seed HTML for the editor. Updated only on genuine document swaps (load,
+  // route change, version restore) — never from an autosave round-trip — so the
+  // editor is never reseeded (and the caret never jumps) while the user types.
+  const [seedHtml, setSeedHtml] = useState('<p></p>');
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -132,13 +141,18 @@ export function PageDetailPage() {
     async (html: string) => {
       if (!workspaceSlug || !page) return;
       if (html === lastSavedHtml.current) return;
+      const savingPageId = page.id;
       setBodyStatus({ kind: 'saving' });
       try {
         const updated = await pageService.updateContent(workspaceSlug, page.id, html);
+        // The route may have changed while the request was in flight; the save
+        // still persisted, but don't touch the current page's state.
+        if (pageRef.current?.id !== savingPageId) return;
         lastSavedHtml.current = html;
         setPage(updated);
         setBodyStatus({ kind: 'saved', at: Date.now() });
       } catch (err) {
+        if (pageRef.current?.id !== savingPageId) return;
         setBodyStatus({
           kind: 'error',
           message: err instanceof Error ? err.message : t('page.saveFailed', 'Save failed'),
@@ -173,7 +187,7 @@ export function PageDetailPage() {
   }, [saveBodyNow]);
 
   const editor = usePageEditor({
-    initialHtml: page?.description_html ?? '<p></p>',
+    initialHtml: seedHtml,
     placeholder: t('page.editorPlaceholder', 'Start writing… or press “/” for commands'),
     readOnly: editorReadOnly,
     onUpdate: onEditorUpdate,
@@ -236,6 +250,7 @@ export function PageDetailPage() {
         setProject(p ?? null);
         setPage(pg);
         setTitleInput(pg.name ?? '');
+        setSeedHtml(pg.description_html ?? '<p></p>');
         lastSavedHtml.current = pg.description_html ?? '<p></p>';
         setIsFavorite(favIds.includes(pg.id));
         setNotFound(false);
@@ -259,12 +274,15 @@ export function PageDetailPage() {
       if (!workspaceSlug || !page) return;
       const trimmed = next.trim();
       if (trimmed === page.name) return;
+      const savingPageId = page.id;
       setTitleStatus({ kind: 'saving' });
       try {
         const updated = await pageService.update(workspaceSlug, page.id, { name: trimmed });
+        if (pageRef.current?.id !== savingPageId) return;
         setPage(updated);
         setTitleStatus({ kind: 'saved', at: Date.now() });
       } catch (err) {
+        if (pageRef.current?.id !== savingPageId) return;
         setTitleStatus({
           kind: 'error',
           message: err instanceof Error ? err.message : t('page.saveFailed', 'Save failed'),
@@ -298,19 +316,34 @@ export function PageDetailPage() {
     }
   };
 
-  // Save on unmount/navigation if there are unsaved changes.
+  // Refs to the latest save handlers + title, so the flush effect below can run
+  // them without taking them as deps (which would re-fire it on every autosave).
+  const saveBodyNowRef = useRef(saveBodyNow);
+  saveBodyNowRef.current = saveBodyNow;
+  const saveTitleNowRef = useRef(saveTitleNow);
+  saveTitleNowRef.current = saveTitleNow;
+  const titleInputRef = useRef(titleInput);
+  titleInputRef.current = titleInput;
+
+  // Flush any pending body/title save when the page changes or on unmount, so
+  // edits made in the last debounce window aren't dropped and a stale timer
+  // can't later fire against the newly-opened page. The route guards in
+  // saveBodyNow/saveTitleNow keep the flushed save from overwriting it.
   useEffect(() => {
     return () => {
       if (bodySaveTimer.current) {
         window.clearTimeout(bodySaveTimer.current);
         bodySaveTimer.current = null;
+        const html = editorRef.current?.getHTML();
+        if (html !== undefined) void saveBodyNowRef.current(html);
       }
       if (titleSaveTimer.current) {
         window.clearTimeout(titleSaveTimer.current);
         titleSaveTimer.current = null;
+        void saveTitleNowRef.current(titleInputRef.current);
       }
     };
-  }, []);
+  }, [workspaceSlug, projectId, pageId]);
 
   // Click outside the options dropdown closes it.
   useEffect(() => {
@@ -396,7 +429,9 @@ export function PageDetailPage() {
       const updated = await pageService.restoreVersion(workspaceSlug, page.id, versionId);
       setPage(updated);
       lastSavedHtml.current = updated.description_html ?? '<p></p>';
-      editor?.commands.setContent(updated.description_html ?? '', { emitUpdate: false });
+      // Reseed the editor with the restored content via the seed prop (a genuine
+      // document swap), which the editor's sync effect applies.
+      setSeedHtml(updated.description_html ?? '<p></p>');
       setBodyStatus({ kind: 'saved', at: Date.now() });
       setPreviewVersion(null);
       void loadVersions();
