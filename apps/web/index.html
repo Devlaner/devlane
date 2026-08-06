@@ -1,6 +1,29 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en">
   <head>
+    <script>
+      // Apply the saved theme before the bundle paints so dark/pink users don't
+      // flash light first. Mirrors ThemeContext (key, values, system fallback).
+      (function () {
+        try {
+          var pref = localStorage.getItem('devlane-theme');
+          if (pref !== 'light' && pref !== 'dark' && pref !== 'system' && pref !== 'pink') {
+            pref = 'system';
+          }
+          var effective = pref;
+          if (pref === 'system') {
+            effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          if (effective === 'dark' || effective === 'pink') {
+            document.documentElement.setAttribute('data-theme', effective);
+          } else {
+            document.documentElement.removeAttribute('data-theme');
+          }
+        } catch (e) {
+          /* localStorage blocked; fall back to the default light theme */
+        }
+      })();
+    </script>
     <link rel="icon" href="/devlane-2-dark-no-bg.png" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
