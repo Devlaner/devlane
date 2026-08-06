@@ -2,8 +2,11 @@
 import { Extension } from '@tiptap/core';
 import Suggestion from '@tiptap/suggestion';
 import type { Editor, Range } from '@tiptap/core';
+import i18n from '../../i18n';
 
 interface SlashCommand {
+  /** i18n key stem, shared with the page editor's slash menu (editor.slash.<key>.*). */
+  key: string;
   title: string;
   description: string;
   icon: string;
@@ -12,6 +15,7 @@ interface SlashCommand {
 
 const COMMANDS: SlashCommand[] = [
   {
+    key: 'heading1',
     title: 'Heading 1',
     description: 'Big section heading',
     icon: 'H1',
@@ -19,6 +23,7 @@ const COMMANDS: SlashCommand[] = [
       editor.chain().focus().deleteRange(range).toggleHeading({ level: 1 }).run(),
   },
   {
+    key: 'heading2',
     title: 'Heading 2',
     description: 'Medium section heading',
     icon: 'H2',
@@ -26,6 +31,7 @@ const COMMANDS: SlashCommand[] = [
       editor.chain().focus().deleteRange(range).toggleHeading({ level: 2 }).run(),
   },
   {
+    key: 'heading3',
     title: 'Heading 3',
     description: 'Small section heading',
     icon: 'H3',
@@ -33,6 +39,7 @@ const COMMANDS: SlashCommand[] = [
       editor.chain().focus().deleteRange(range).toggleHeading({ level: 3 }).run(),
   },
   {
+    key: 'bulletList',
     title: 'Bullet list',
     description: 'A simple bullet list',
     icon: '••',
@@ -40,6 +47,7 @@ const COMMANDS: SlashCommand[] = [
       editor.chain().focus().deleteRange(range).toggleBulletList().run(),
   },
   {
+    key: 'numberedList',
     title: 'Numbered list',
     description: 'An ordered list',
     icon: '1.',
@@ -47,6 +55,7 @@ const COMMANDS: SlashCommand[] = [
       editor.chain().focus().deleteRange(range).toggleOrderedList().run(),
   },
   {
+    key: 'quote',
     title: 'Quote',
     description: 'Block quote',
     icon: '❝',
@@ -54,6 +63,7 @@ const COMMANDS: SlashCommand[] = [
       editor.chain().focus().deleteRange(range).toggleBlockquote().run(),
   },
   {
+    key: 'codeBlock',
     title: 'Code block',
     description: 'Fenced code',
     icon: '</>',
@@ -61,6 +71,7 @@ const COMMANDS: SlashCommand[] = [
       editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
   },
   {
+    key: 'divider',
     title: 'Divider',
     description: 'Horizontal rule',
     icon: '—',
@@ -68,6 +79,10 @@ const COMMANDS: SlashCommand[] = [
       editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
   },
 ];
+
+/** Localised label/description for a slash command, shared with the page editor. */
+const cmdTitle = (c: SlashCommand) => i18n.t(`editor.slash.${c.key}.title`, c.title);
+const cmdDesc = (c: SlashCommand) => i18n.t(`editor.slash.${c.key}.subtitle`, c.description);
 
 /**
  * TipTap extension that opens a slash-command palette when the user types `/`.
@@ -96,7 +111,7 @@ export function createSlashCommands() {
             const q = query.toLowerCase().trim();
             if (!q) return COMMANDS;
             return COMMANDS.filter(
-              (c) => c.title.toLowerCase().includes(q) || c.description.toLowerCase().includes(q),
+              (c) => cmdTitle(c).toLowerCase().includes(q) || cmdDesc(c).toLowerCase().includes(q),
             );
           },
           render: () => {
@@ -111,7 +126,7 @@ export function createSlashCommands() {
               popup.innerHTML = '';
               if (currentItems.length === 0) {
                 const empty = document.createElement('div');
-                empty.textContent = 'No matches';
+                empty.textContent = i18n.t('editor.slash.noMatch', 'No matches');
                 empty.className = 'px-3 py-2 text-xs text-(--txt-tertiary)';
                 popup.appendChild(empty);
                 return;
@@ -133,10 +148,10 @@ export function createSlashCommands() {
                 body.className = 'min-w-0 flex-1';
                 const t = document.createElement('span');
                 t.className = 'block truncate';
-                t.textContent = cmd.title;
+                t.textContent = cmdTitle(cmd);
                 const d = document.createElement('span');
                 d.className = 'block truncate text-[11px] text-(--txt-tertiary)';
-                d.textContent = cmd.description;
+                d.textContent = cmdDesc(cmd);
                 body.appendChild(t);
                 body.appendChild(d);
                 btn.appendChild(body);
