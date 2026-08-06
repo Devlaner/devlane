@@ -157,6 +157,12 @@ function ModuleProgressCircle({ progress }: { progress: number }) {
   );
 }
 
+// The modules filter provider lives at the app-shell root and outlives this
+// page, so its status/lead/member ids (which are project-specific) would carry
+// over into another project. Track the project the filter was last set for at
+// module scope so it survives remounts, and reset when the project changes.
+let lastFilteredProjectId: string | undefined;
+
 export function ModulesPage() {
   const { t } = useTranslation();
   const { workspaceSlug, projectId } = useParams<{
@@ -164,6 +170,13 @@ export function ModulesPage() {
     projectId: string;
   }>();
   const filter = useModulesFilter();
+  const resetFilter = filter.reset;
+  useEffect(() => {
+    if (projectId && projectId !== lastFilteredProjectId) {
+      lastFilteredProjectId = projectId;
+      resetFilter();
+    }
+  }, [projectId, resetFilter]);
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [modules, setModules] = useState<ModuleApiResponse[]>([]);
