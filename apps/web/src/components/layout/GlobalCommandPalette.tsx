@@ -147,7 +147,6 @@ export function GlobalCommandPalette({
         id: 'create-issue',
         category: t('commandPalette.category.workItem', 'Work item'),
         label: t('commandPalette.createIssue', 'Create new work item'),
-        shortcut: 'C',
         matchText: t('commandPalette.createIssue.match', 'new issue task'),
         icon: <CirclePlus className="size-[15px] shrink-0" strokeWidth={2} />,
         run: () => runAndClose(onRequestCreateWorkItem),
@@ -172,7 +171,6 @@ export function GlobalCommandPalette({
         id: 'create-project',
         category: t('commandPalette.category.project', 'Project'),
         label: t('commandPalette.createProject', 'Go to projects'),
-        shortcut: 'P',
         matchText: t('commandPalette.createProject.match', 'create new project list'),
         icon: <FolderKanban className="size-[15px] shrink-0 opacity-90" strokeWidth={2} />,
         run: () => runAndClose(() => navigate(`${baseUrl}/projects`)),
@@ -541,16 +539,6 @@ export function GlobalCommandPalette({
 
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.nativeEvent.isComposing) return;
-
-    if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1 && query.trim() === '') {
-      const letter = e.key.toUpperCase();
-      const hit = filtered.find((c) => c.shortcut?.toUpperCase() === letter);
-      if (hit) {
-        e.preventDefault();
-        hit.run();
-        return;
-      }
-    }
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
