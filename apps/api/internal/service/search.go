@@ -42,5 +42,5 @@ func (s *SearchService) Search(ctx context.Context, workspaceSlug, query string,
 	if q == "" {
 		return store.EmptyResults(), nil
 	}
-	return s.ss.Search(ctx, wrk.ID, q, projectID, searchPerGroupLimit)
+	return s.ss.Search(ctx, wrk.ID, q, projectID, userID, searchPerGroupLimit)
 }
