@@ -12,6 +12,7 @@ import (
 	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/store"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // GithubEventService processes inbound webhook events: it owns the side-effects
@@ -101,6 +102,13 @@ func (s *GithubEventService) HandleWebhook(ctx context.Context, event, deliveryI
 		Status:             "received",
 	}
 	if err := s.events.Create(ctx, logRow); err != nil {
+		// A concurrent duplicate delivery loses the race on the unique
+		// delivery_id constraint. The winning delivery is already running the
+		// side effects, so stop here instead of dispatching them again.
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			s.logger().Debug("github webhook delivery already processed (concurrent)", "delivery_id", deliveryID, "event", event)
+			return nil
+		}
 		s.logger().Error("failed to record github webhook event", "delivery_id", deliveryID, "error", err)
 	}
 
