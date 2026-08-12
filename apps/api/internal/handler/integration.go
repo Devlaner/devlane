@@ -637,8 +637,18 @@ func (h *IntegrationHandler) GitHubIssueSummary(c *gin.Context) {
 // auth — authentication is the HMAC signature in X-Hub-Signature-256.
 // POST /webhooks/github
 func (h *IntegrationHandler) GitHubWebhook(c *gin.Context) {
+	// This route is public (auth is the HMAC signature). Cap the body before
+	// reading it so an unauthenticated client can't exhaust memory with a huge
+	// payload. GitHub caps webhook deliveries at 25 MiB.
+	const maxWebhookBody = 25 << 20
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxWebhookBody)
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "Payload too large"})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read body"})
 		return
 	}
