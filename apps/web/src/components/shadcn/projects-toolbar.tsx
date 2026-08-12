@@ -158,7 +158,7 @@ export function ProjectsToolbar({ members, scopeControl }: ProjectsToolbarProps)
   });
 
   const searchQuery = searchParams.get('q') ?? '';
-  const view = searchParams.get('view') === 'table' ? 'table' : 'grid';
+  const view = searchParams.get('view') === 'grid' ? 'grid' : 'table';
 
   return (
     <div

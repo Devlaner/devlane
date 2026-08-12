@@ -1,10 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowDown, ArrowUp, CalendarDays, ChevronsUpDown, Signal, Tag, User } from 'lucide-react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  ArrowDown,
+  ArrowUp,
+  CalendarDays,
+  ChevronsUpDown,
+  ListTodo,
+  SearchX,
+  Signal,
+  Tag,
+  User,
+} from 'lucide-react';
+import { ViewsToolbar } from '@/components/shadcn/views-toolbar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/ui/avatar';
 import { Badge } from '@/components/shadcn/ui/badge';
 import { Button } from '@/components/shadcn/ui/button';
+import { Card, CardContent } from '@/components/shadcn/ui/card';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -24,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/ui/table';
+import { ToggleGroup, ToggleGroupItem } from '@/components/shadcn/ui/toggle-group';
 import { IssueLayoutBoard } from '../components/work-item/layouts/IssueLayoutBoard';
 import { IssueLayoutCalendar } from '../components/work-item/layouts/IssueLayoutCalendar';
 import { IssueLayoutGantt } from '../components/work-item/layouts/IssueLayoutGantt';
@@ -47,7 +60,10 @@ import type {
   WorkspaceMemberApiResponse,
 } from '../api/types';
 import type { Priority } from '../types';
-import { parseWorkspaceViewFiltersFromSearchParams } from '../types/workspaceViewFilters';
+import {
+  DEFAULT_WORKSPACE_VIEW_FILTERS,
+  parseWorkspaceViewFiltersFromSearchParams,
+} from '../types/workspaceViewFilters';
 import {
   DISPLAY_PROPERTY_KEYS,
   DISPLAY_PROPERTY_LABELS,
@@ -121,7 +137,9 @@ function isCustomViewId(viewId: string | undefined): boolean {
  */
 export function WorkspaceViewsPageV2() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { workspaceSlug, viewId } = useParams<{ workspaceSlug?: string; viewId?: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { filters, setFilters, display, setDisplay } = useWorkspaceViewsState();
   const { user: currentUser } = useAuth();
 
@@ -132,8 +150,13 @@ export function WorkspaceViewsPageV2() {
   const [labels, setLabels] = useState<LabelApiResponse[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [viewLoading, setViewLoading] = useState(false);
   const [viewNotFound, setViewNotFound] = useState(false);
+  /* Only a saved view carries a name of its own; the static ones are named
+     here so the page heading can label either kind. */
+  const [savedViewName, setSavedViewName] = useState<string | null>(null);
 
   /* Stable per-mount timestamp for the work-item layouts' date cells. */
   const [now] = useState(() => Date.now());
@@ -151,6 +174,9 @@ export function WorkspaceViewsPageV2() {
     if (prevViewIdRef.current !== viewId) {
       prevViewIdRef.current = viewId;
       viewAppliedRef.current = false;
+      /* The previous view's name would otherwise head this one until its own
+         fetch lands. */
+      queueMicrotask(() => setSavedViewName(null));
     }
     if (!workspaceSlug || !viewId || !isCustomViewId(viewId) || viewAppliedRef.current) return;
     viewAppliedRef.current = true;
@@ -159,6 +185,7 @@ export function WorkspaceViewsPageV2() {
       .get(workspaceSlug, viewId)
       .then((view) => {
         setViewNotFound(false);
+        setSavedViewName(view.name ?? null);
         const savedFilters = view.filters as Record<string, string> | undefined;
         if (savedFilters && typeof savedFilters === 'object') {
           setFilters(parseWorkspaceViewFiltersFromSearchParams(new URLSearchParams(savedFilters)));
@@ -204,6 +231,7 @@ export function WorkspaceViewsPageV2() {
     }
     let cancelled = false;
     setLoading(true);
+    setLoadError(false);
     workspaceService
       .getBySlug(workspaceSlug)
       .then((w) => {
@@ -246,6 +274,7 @@ export function WorkspaceViewsPageV2() {
         setStates([]);
         setLabels([]);
         setMembers([]);
+        setLoadError(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -253,7 +282,7 @@ export function WorkspaceViewsPageV2() {
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug]);
+  }, [workspaceSlug, reloadToken]);
 
   const stateMap = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
   const labelMap = useMemo(() => new Map(labels.map((l) => [l.id, l])), [labels]);
@@ -307,6 +336,41 @@ export function WorkspaceViewsPageV2() {
       return display.sortOrder === 'asc' ? cmp : -cmp;
     });
   }, [filteredIssues, display.sortBy, display.sortOrder, stateMap, memberMap]);
+
+  /* The toolbar's search is URL-backed and applies on top of the view's own
+     filters, so a shared link lands on the same narrowed list. */
+  const searchQuery = searchParams.get('q')?.trim().toLowerCase() ?? '';
+  const visibleIssues = useMemo(() => {
+    if (!searchQuery) return sortedIssues;
+    return sortedIssues.filter((issue) => {
+      const project = projectMap.get(issue.project_id);
+      const identifier = project
+        ? `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? ''}`.toLowerCase()
+        : '';
+      return (
+        (issue.name ?? '').toLowerCase().includes(searchQuery) || identifier.includes(searchQuery)
+      );
+    });
+  }, [sortedIssues, searchQuery, projectMap]);
+
+  const groupOf = useCallback(
+    (issue: IssueApiResponse) => stateMap.get(issue.state_id ?? '')?.group?.toLowerCase(),
+    [stateMap],
+  );
+
+  /* Segment counts read the unfiltered set, matching the Projects page: they
+     say how much each scope holds, not how much the current filters leave. */
+  const assignedCount = currentUser?.id
+    ? issues.filter((issue) => issue.assignee_ids?.includes(currentUser.id)).length
+    : 0;
+  const createdCount = currentUser?.id
+    ? issues.filter((issue) => issue.created_by_id === currentUser.id).length
+    : 0;
+  const completedCount = visibleIssues.filter((issue) => groupOf(issue) === 'completed').length;
+  const openCount = visibleIssues.filter((issue) => {
+    const group = groupOf(issue);
+    return group !== 'completed' && group !== 'canceled' && group !== 'cancelled';
+  }).length;
 
   const handleSort = (column: SortableColumn) => {
     const nextOrder: SortOrder =
@@ -393,45 +457,70 @@ export function WorkspaceViewsPageV2() {
   const memberInitial = (member: WorkspaceMemberApiResponse) =>
     (member.member_display_name ?? member.member_email ?? '?').charAt(0).toUpperCase();
 
+  const currentViewId = viewId ?? 'all-issues';
+  const staticViewLabels: Record<string, string> = {
+    'all-issues': t('views.allWorkItems', 'All work items'),
+    assigned: t('views.assigned', 'Assigned'),
+    created: t('views.created', 'Created'),
+    subscribed: t('views.subscribed', 'Subscribed'),
+  };
+  const pageTitle = isCustomViewId(currentViewId)
+    ? (savedViewName ?? t('views.documentTitleFallback', 'View'))
+    : (staticViewLabels[currentViewId] ?? staticViewLabels['all-issues']);
+
+  /* The table is the densest layout, so the placeholder is shaped like it:
+     heading, toolbar, then rows. */
+  const contentSkeleton = (
+    <div className="space-y-2">
+      <Skeleton className="h-10 w-full rounded-xl" />
+      {Array.from({ length: 8 }).map((_, index) => (
+        <Skeleton key={index} className="h-11 w-full" />
+      ))}
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="space-y-2">
-        <Skeleton className="h-10 w-full" />
-        {Array.from({ length: 8 }).map((_, index) => (
-          <Skeleton key={index} className="h-11 w-full" />
-        ))}
+      <div
+        className="space-y-6 pb-8"
+        aria-busy="true"
+        aria-label={t('views.loading', 'Loading work items')}
+      >
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-4 w-72 max-w-full" />
+        </div>
+        <Skeleton className="h-24 w-full rounded-xl" />
+        {contentSkeleton}
       </div>
     );
   }
 
-  if (!workspace) {
+  if (loadError || !workspace) {
     return (
-      <p className="text-muted-foreground text-sm">
-        {t('common.workspaceNotFound', 'Workspace not found.')}
-      </p>
-    );
-  }
-
-  if (viewLoading) {
-    return (
-      <p className="text-muted-foreground text-sm">{t('views.loadingView', 'Loading view…')}</p>
-    );
-  }
-
-  if (viewNotFound) {
-    return (
-      <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-12 text-center">
-        <p className="font-medium">{t('views.viewDoesNotExist', 'View does not exist')}</p>
-        <p className="text-muted-foreground max-w-md text-sm">
+      <div
+        className="flex min-h-80 flex-col items-center justify-center rounded-xl border border-dashed px-6 py-12 text-center"
+        role="alert"
+      >
+        <span className="bg-destructive/10 text-destructive flex size-12 items-center justify-center rounded-full">
+          <ListTodo aria-hidden="true" />
+        </span>
+        <h1 className="mt-4 text-xl font-semibold">
+          {t('views.loadErrorTitle', 'Work items could not be loaded')}
+        </h1>
+        <p className="text-muted-foreground mt-2 max-w-md text-sm">
           {t(
-            'views.viewNotFoundDescription',
-            "The view you are looking for does not exist or you don't have permission to view it.",
+            'views.loadErrorDescription',
+            'Check your connection and try again. Your work items have not been changed.',
           )}
         </p>
-        <Button asChild variant="outline">
-          <Link to={`/${workspace.slug}/app-v2/views/all-issues`}>
-            {t('views.allWorkItems', 'All work items')}
-          </Link>
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-5"
+          onClick={() => setReloadToken((value) => value + 1)}
+        >
+          {t('common.retry', 'Try again')}
         </Button>
       </div>
     );
@@ -443,99 +532,123 @@ export function WorkspaceViewsPageV2() {
     return project ? `${baseUrl}/projects/${project.id}/issues/${issue.id}` : baseUrl;
   };
 
+  const clearDiscoveryFilters = () => {
+    setFilters(DEFAULT_WORKSPACE_VIEW_FILTERS);
+    const next = new URLSearchParams(searchParams);
+    next.delete('q');
+    setSearchParams(next, { replace: true });
+  };
+
+  const hasDiscoveryFilters =
+    Boolean(searchQuery) ||
+    filters.priority.length > 0 ||
+    filters.stateGroup.length > 0 ||
+    filters.assigneeIds.length > 0 ||
+    filters.createdByIds.length > 0 ||
+    filters.projectIds.length > 0 ||
+    filters.grouping !== 'all';
+
   const emptyState = (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed py-12 text-center">
-      <p className="text-muted-foreground text-sm">
-        {t(
-          'views.emptyWorkItems',
-          "No work items yet. Create one from a project's Work items section or add a view to get started.",
+    <Card className="items-center gap-0 border-dashed px-6 py-14 text-center shadow-none">
+      <span className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-full">
+        {issues.length === 0 ? <ListTodo aria-hidden="true" /> : <SearchX aria-hidden="true" />}
+      </span>
+      <CardContent className="mt-4 max-w-md px-0">
+        <h2 className="font-semibold">
+          {issues.length === 0
+            ? t('views.emptyWorkItemsTitle', 'No work items yet')
+            : t('views.noFilterResultsTitle', 'No work items found')}
+        </h2>
+        <p className="text-muted-foreground mt-2 text-sm leading-6">
+          {issues.length === 0
+            ? t(
+                'views.emptyWorkItems',
+                "No work items yet. Create one from a project's Work items section or add a view to get started.",
+              )
+            : t('views.noFilterResults', 'No work items match the current search and filters.')}
+        </p>
+        {issues.length > 0 && hasDiscoveryFilters && (
+          <Button type="button" variant="outline" className="mt-5" onClick={clearDiscoveryFilters}>
+            <SearchX aria-hidden="true" />
+            {t('common.clearFilters', 'Clear filters')}
+          </Button>
         )}
-      </p>
-    </div>
+      </CardContent>
+    </Card>
   );
 
-  /* Kanban, calendar and gantt reuse the shipped work-item layouts, which take
-     a single project. A representative one satisfies the prop while the map
-     drives each card's own identifier and link. */
-  if (
-    display.layout === 'kanban' ||
-    display.layout === 'calendar' ||
-    display.layout === 'gantt_chart'
-  ) {
-    const layoutProject = projects[0];
-    if (!layoutProject) return emptyState;
-    const layoutProps = {
-      workspaceSlug: workspace.slug,
-      project: layoutProject,
-      projectsById: Object.fromEntries(projectMap),
-      issues: sortedIssues,
-      states,
-      labels,
-      members,
-      prSummary: {},
-      baseUrl,
-      issueHref: (id: string) => {
-        const issue = sortedIssues.find((i) => i.id === id);
-        return issue ? issueHref(issue) : baseUrl;
-      },
-      now,
-    };
-    return (
-      <div className="min-h-0 flex-1 overflow-auto rounded-xl border">
-        {display.layout === 'kanban' && (
-          <IssueLayoutBoard {...layoutProps} groupByStateGroup onCardMove={handleCardMove} />
-        )}
-        {display.layout === 'calendar' && <IssueLayoutCalendar {...layoutProps} />}
-        {display.layout === 'gantt_chart' && <IssueLayoutGantt {...layoutProps} />}
-      </div>
-    );
-  }
+  const notFoundState = (
+    <Card className="items-center gap-0 border-dashed px-6 py-14 text-center shadow-none">
+      <span className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-full">
+        <SearchX aria-hidden="true" />
+      </span>
+      <CardContent className="mt-4 max-w-md px-0">
+        <h2 className="font-semibold">{t('views.viewDoesNotExist', 'View does not exist')}</h2>
+        <p className="text-muted-foreground mt-2 text-sm leading-6">
+          {t(
+            'views.viewNotFoundDescription',
+            "The view you are looking for does not exist or you don't have permission to view it.",
+          )}
+        </p>
+        <Button asChild variant="outline" className="mt-5">
+          <Link to={`${baseUrl}/app-v2/views/all-issues`}>
+            {t('views.allWorkItems', 'All work items')}
+          </Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
 
-  if (display.layout === 'list') {
-    if (sortedIssues.length === 0) return emptyState;
-    return (
-      <div className="divide-y rounded-xl border">
-        {sortedIssues.map((issue) => {
-          const project = projectMap.get(issue.project_id);
-          const assignee = issue.assignee_ids?.[0]
-            ? memberMap.get(issue.assignee_ids[0])
-            : undefined;
-          return (
-            <Link
-              key={issue.id}
-              to={issueHref(issue)}
-              className="hover:bg-muted/50 flex items-center gap-3 px-4 py-3 transition-colors"
-            >
-              {project && (
-                <Badge variant="secondary" className="shrink-0 font-mono text-[10px]">
-                  {project.identifier ?? project.id.slice(0, 8)}-
-                  {issue.sequence_id ?? issue.id.slice(-4)}
-                </Badge>
-              )}
-              <span className="min-w-0 flex-1 truncate text-sm font-medium">{issue.name}</span>
-              {issue.priority && issue.priority !== 'none' && (
-                <Badge variant={PRIORITY_BADGE[issue.priority as Priority]} className="shrink-0">
-                  {issue.priority}
-                </Badge>
-              )}
-              <span className="text-muted-foreground shrink-0 text-xs">
-                {stateMap.get(issue.state_id ?? '')?.name ?? '—'}
-              </span>
-              {assignee && (
-                <Avatar className="size-6 shrink-0">
-                  <AvatarImage
-                    src={getImageUrl(assignee.member_avatar) ?? ''}
-                    alt={assignee.member_display_name ?? ''}
-                  />
-                  <AvatarFallback className="text-[10px]">{memberInitial(assignee)}</AvatarFallback>
-                </Avatar>
-              )}
-            </Link>
-          );
-        })}
-      </div>
-    );
-  }
+  const scopeControl = (
+    <ToggleGroup
+      type="single"
+      value={isCustomViewId(currentViewId) ? '' : currentViewId}
+      onValueChange={(value) => {
+        if (value) navigate(`${baseUrl}/app-v2/views/${value}`);
+      }}
+      variant="default"
+      size="sm"
+      spacing={1}
+      className="bg-muted/60 w-fit max-w-full shrink-0 touch-pan-x overflow-x-auto rounded-lg p-1 sm:p-0.5"
+      aria-label={t('views.scope', 'View scope')}
+    >
+      <ToggleGroupItem
+        value="all-issues"
+        className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
+      >
+        {staticViewLabels['all-issues']}
+        <span className="text-muted-foreground min-w-3 text-center text-xs font-normal tabular-nums">
+          {issues.length}
+        </span>
+      </ToggleGroupItem>
+      <ToggleGroupItem
+        value="assigned"
+        className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
+      >
+        {staticViewLabels.assigned}
+        <span className="text-muted-foreground min-w-3 text-center text-xs font-normal tabular-nums">
+          {assignedCount}
+        </span>
+      </ToggleGroupItem>
+      <ToggleGroupItem
+        value="created"
+        className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
+      >
+        {staticViewLabels.created}
+        <span className="text-muted-foreground min-w-3 text-center text-xs font-normal tabular-nums">
+          {createdCount}
+        </span>
+      </ToggleGroupItem>
+      {/* Subscribed carries no count: the API does not expose issue
+          subscribers yet, so any number here would be the wrong one. */}
+      <ToggleGroupItem
+        value="subscribed"
+        className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
+      >
+        {staticViewLabels.subscribed}
+      </ToggleGroupItem>
+    </ToggleGroup>
+  );
 
   /* Spreadsheet: the name column is pinned, the rest scroll horizontally.
      Created and updated are always present, matching the shipped table. */
@@ -806,41 +919,128 @@ export function WorkspaceViewsPageV2() {
     return <span className="block px-3">{renderStaticCell(issue, key)}</span>;
   };
 
-  return (
-    <div className="min-h-0 flex-1 overflow-hidden rounded-xl border">
-      <Table className="min-w-max">
-        <TableHeader className="bg-muted/50">
-          <TableRow className="hover:bg-transparent">
-            <TableHead className="bg-muted/50 sticky left-0 z-20 min-w-56 px-0">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => handleSort('name')}
-                className="text-muted-foreground hover:text-foreground w-full justify-start rounded-none px-3 font-medium"
+  /** Wraps whichever layout is selected in the page's list chrome. */
+  const renderContent = () => {
+    if (viewNotFound) return notFoundState;
+    if (viewLoading) return contentSkeleton;
+    if (visibleIssues.length === 0) return emptyState;
+
+    /* Kanban, calendar and gantt reuse the shipped work-item layouts, which take
+       a single project. A representative one satisfies the prop while the map
+       drives each card's own identifier and link. */
+    if (
+      display.layout === 'kanban' ||
+      display.layout === 'calendar' ||
+      display.layout === 'gantt_chart'
+    ) {
+      const layoutProject = projects[0];
+      if (!layoutProject) return emptyState;
+      const layoutProps = {
+        workspaceSlug: workspace.slug,
+        project: layoutProject,
+        projectsById: Object.fromEntries(projectMap),
+        issues: visibleIssues,
+        states,
+        labels,
+        members,
+        prSummary: {},
+        baseUrl,
+        issueHref: (id: string) => {
+          const issue = visibleIssues.find((i) => i.id === id);
+          return issue ? issueHref(issue) : baseUrl;
+        },
+        now,
+      };
+      return (
+        <section
+          className="max-h-[70vh] overflow-auto rounded-xl border"
+          aria-label={t('views.boardLabel', 'Work items board')}
+        >
+          {display.layout === 'kanban' && (
+            <IssueLayoutBoard {...layoutProps} groupByStateGroup onCardMove={handleCardMove} />
+          )}
+          {display.layout === 'calendar' && <IssueLayoutCalendar {...layoutProps} />}
+          {display.layout === 'gantt_chart' && <IssueLayoutGantt {...layoutProps} />}
+        </section>
+      );
+    }
+
+    if (display.layout === 'list') {
+      return (
+        <section
+          className="divide-y overflow-hidden rounded-xl border"
+          aria-label={t('views.listLabel', 'Work items list')}
+        >
+          {visibleIssues.map((issue) => {
+            const project = projectMap.get(issue.project_id);
+            const assignee = issue.assignee_ids?.[0]
+              ? memberMap.get(issue.assignee_ids[0])
+              : undefined;
+            return (
+              <Link
+                key={issue.id}
+                to={issueHref(issue)}
+                className="hover:bg-muted/50 flex items-center gap-3 px-4 py-3 transition-colors"
               >
-                {t('views.workItems', 'Work items')}
-                {sortIndicator('name')}
-              </Button>
-            </TableHead>
-            {scrollableColumns.map(renderHeadCell)}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sortedIssues.length === 0 ? (
-            <TableRow className="hover:bg-transparent">
-              <TableCell
-                colSpan={1 + scrollableColumns.length}
-                className="text-muted-foreground h-32 text-center"
-              >
-                {t(
-                  'views.emptyWorkItems',
-                  "No work items yet. Create one from a project's Work items section or add a view to get started.",
+                {project && (
+                  <Badge variant="secondary" className="shrink-0 font-mono text-[10px]">
+                    {project.identifier ?? project.id.slice(0, 8)}-
+                    {issue.sequence_id ?? issue.id.slice(-4)}
+                  </Badge>
                 )}
-              </TableCell>
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">{issue.name}</span>
+                {issue.priority && issue.priority !== 'none' && (
+                  <Badge variant={PRIORITY_BADGE[issue.priority as Priority]} className="shrink-0">
+                    {issue.priority}
+                  </Badge>
+                )}
+                <span className="text-muted-foreground shrink-0 text-xs">
+                  {stateMap.get(issue.state_id ?? '')?.name ?? '—'}
+                </span>
+                {assignee && (
+                  <Avatar className="size-6 shrink-0">
+                    <AvatarImage
+                      src={getImageUrl(assignee.member_avatar) ?? ''}
+                      alt={assignee.member_display_name ?? ''}
+                    />
+                    <AvatarFallback className="text-[10px]">
+                      {memberInitial(assignee)}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+              </Link>
+            );
+          })}
+        </section>
+      );
+    }
+
+    /* Spreadsheet: the name column is pinned, the rest scroll horizontally. */
+    return (
+      <section
+        className="overflow-hidden rounded-xl border"
+        aria-label={t('views.tableLabel', 'Work items table')}
+      >
+        <Table className="min-w-max">
+          <TableHeader className="bg-muted/50">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="bg-muted/50 sticky left-0 z-20 min-w-56 px-0">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleSort('name')}
+                  className="text-muted-foreground hover:text-foreground w-full justify-start rounded-none px-3 font-medium"
+                >
+                  {t('views.workItems', 'Work items')}
+                  {sortIndicator('name')}
+                </Button>
+              </TableHead>
+              {scrollableColumns.map(renderHeadCell)}
             </TableRow>
-          ) : (
-            sortedIssues.map((issue) => {
+          </TableHeader>
+          <TableBody>
+            {visibleIssues.map((issue) => {
               const project = projectMap.get(issue.project_id);
               return (
                 <TableRow key={issue.id}>
@@ -875,10 +1075,42 @@ export function WorkspaceViewsPageV2() {
                   ))}
                 </TableRow>
               );
-            })
-          )}
-        </TableBody>
-      </Table>
+            })}
+          </TableBody>
+        </Table>
+      </section>
+    );
+  };
+
+  return (
+    <div className="space-y-6 pb-8">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{pageTitle}</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {t('views.pageDescription', 'Track work items across every project in your workspace.')}
+          </p>
+        </div>
+        <p className="text-muted-foreground text-sm tabular-nums" aria-live="polite">
+          {t('views.summary', 'Work items {{items}} · Open {{open}} · Completed {{completed}}', {
+            items: visibleIssues.length,
+            open: openCount,
+            completed: completedCount,
+          })}
+        </p>
+      </header>
+
+      <ViewsToolbar workspaceSlug={workspace.slug} scopeControl={scopeControl} />
+
+      {renderContent()}
+
+      {hasDiscoveryFilters && (
+        <p className="sr-only" aria-live="polite">
+          {t('views.visibleCount', '{{count}} work items visible', {
+            count: visibleIssues.length,
+          })}
+        </p>
+      )}
     </div>
   );
 }

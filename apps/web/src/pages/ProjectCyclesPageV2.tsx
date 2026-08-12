@@ -1,218 +1,659 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { CalendarRange } from 'lucide-react';
-import { Badge } from '@/components/shadcn/ui/badge';
+import { Link, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/shadcn/ui/card';
+  Archive,
+  CalendarRange,
+  ChevronDown,
+  CircleAlert,
+  ExternalLink,
+  Link2,
+  MoreHorizontal,
+  Pencil,
+  Search,
+  Star,
+  Trash2,
+  X,
+} from 'lucide-react';
+import { UpdateCycleModal } from '@/components/UpdateCycleModal';
+import { CycleBurndownChart } from '@/components/cycles/CycleBurndownChart';
+import { CyclesFiltersMenu } from '@/components/shadcn/cycles-filters-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/shadcn/ui/alert-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/ui/avatar';
+import { Badge } from '@/components/shadcn/ui/badge';
+import { Button } from '@/components/shadcn/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/ui/card';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/shadcn/ui/collapsible';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/shadcn/ui/dropdown-menu';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/shadcn/ui/empty';
+import { Input } from '@/components/shadcn/ui/input';
 import { Progress } from '@/components/shadcn/ui/progress';
 import { Skeleton } from '@/components/shadcn/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/ui/tabs';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { cycleService, type CycleProgress } from '../services/cycleService';
-import { cyclePathSegment } from '../lib/cycle';
-import { EMPTY_PROGRESS, completionPercent, formatDate, matchesQuery } from '../lib/projectV2';
+import { useProjectCyclesController } from '../hooks/useProjectCyclesController';
+import { formatDate } from '../lib/projectV2';
+import { getImageUrl } from '../lib/utils';
 import type { CycleApiResponse } from '../api/types';
+import type { Priority } from '../types';
 
-/** Which tab a cycle belongs to, from its dates rather than its status field. */
-type CycleBucket = 'active' | 'upcoming' | 'completed';
+const PRIORITY_ORDER: Record<Priority, number> = {
+  urgent: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+  none: 4,
+};
 
-/**
- * Buckets a cycle by date. The API's `status` field is derived the same way
- * server-side, but it is not always present on freshly created cycles, so the
- * dates are the more reliable source here.
- */
-function bucketOf(cycle: CycleApiResponse, now: number): CycleBucket {
-  const start = cycle.start_date ? Date.parse(cycle.start_date) : NaN;
-  const end = cycle.end_date ? Date.parse(cycle.end_date) : NaN;
-  if (!Number.isNaN(end) && end < now) return 'completed';
-  if (!Number.isNaN(start) && start > now) return 'upcoming';
-  /* Undated cycles are drafts in practice; they sit with the upcoming ones
-     rather than claiming to be running. */
-  if (Number.isNaN(start) && Number.isNaN(end)) return 'upcoming';
-  return 'active';
+function cycleDateRange(cycle: CycleApiResponse): string {
+  const start = cycle.start_date ? formatDate(cycle.start_date) : null;
+  const end = cycle.end_date ? formatDate(cycle.end_date) : null;
+  if (!start && !end) return '—';
+  return `${start ?? '—'} → ${end ?? '—'}`;
 }
 
 /**
- * Design preview of a project's cycles, built from shadcn primitives. It stands
- * alongside CyclesPage rather than replacing it, so the two can be compared
- * side by side.
- *
- * Cards rather than the shipped page's rows: a cycle is read as a unit — dates,
- * progress and counts together — and three tabs replace the shipped page's
- * stacked sections.
+ * The v2 design of a project's cycles. Loading, filtering, bucketing and the
+ * active cycle's statistics come from useProjectCyclesController — the same
+ * controller the shipped page uses — so this is a redesign of that page rather
+ * than a second implementation of it.
  */
 export function ProjectCyclesPageV2() {
   const { t } = useTranslation();
   const { workspaceSlug, projectId } = useParams<{ workspaceSlug: string; projectId: string }>();
-  const [searchParams] = useSearchParams();
   useDocumentTitle(t('common.cycles', 'Cycles'));
 
-  const [cycles, setCycles] = useState<CycleApiResponse[]>([]);
-  const [progress, setProgress] = useState<Record<string, CycleProgress>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    workspace,
+    project,
+    cycles,
+    members,
+    labels,
+    loading,
+    filters,
+    setFilters,
+    filteredCycles,
+    upcomingCycles,
+    completedCycles,
+    activeCycle,
+    activeCycleIssues,
+    activeBurndownChart,
+    activeBurndownTotal,
+    activeCycleProgressStats,
+    activeCycleAssigneeStats,
+    activeCycleLabelStats,
+    cyclePath,
+    getIssueCount,
+    getProgress,
+    getStateName,
+    getOwnerMember,
+    isFavorite,
+    toggleFavorite,
+    deleteCycle,
+    applyCycleUpdate,
+  } = useProjectCyclesController(workspaceSlug, projectId);
 
-  const query = searchParams.get('q') ?? '';
+  const [editCycle, setEditCycle] = useState<CycleApiResponse | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CycleApiResponse | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    if (!workspaceSlug || !projectId) return;
-    let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- the spinner belongs to this fetch
-    setLoading(true);
-    Promise.all([
-      cycleService.list(workspaceSlug, projectId),
-      /* Progress is decoration: a failure leaves the bars at zero rather than
-         failing the page. */
-      cycleService.listProgress(workspaceSlug, projectId).catch(() => ({})),
-    ])
-      .then(([list, prog]) => {
-        if (cancelled) return;
-        setCycles(list ?? []);
-        setProgress(prog ?? {});
-        setError(null);
-      })
-      .catch(() => {
-        if (!cancelled) setError(t('cycles.loadError', 'Could not load cycles.'));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaceSlug, projectId, t]);
+  const v2CyclePath = (cycle: CycleApiResponse) =>
+    /* The controller builds the shipped path; the preview lives one segment
+       deeper, so the same slug is reused under app-v2. */
+    cyclePath(cycle).replace(`/${workspaceSlug}/projects/`, `/${workspaceSlug}/app-v2/projects/`);
 
-  /* Read once per mount rather than on every render: bucketing must not shift
-     under the reader mid-session, and the clock is not a render input. */
-  const [now] = useState(() => Date.now());
+  const memberName = (memberId: string | null) => {
+    if (!memberId) return t('cycles.unassigned', 'Unassigned');
+    const member = members.find((entry) => entry.member_id === memberId);
+    return (
+      member?.member_display_name?.trim() ||
+      member?.member_email?.split('@')[0] ||
+      memberId.slice(0, 8)
+    );
+  };
 
-  const buckets = useMemo(() => {
-    const result: Record<CycleBucket, CycleApiResponse[]> = {
-      active: [],
-      upcoming: [],
-      completed: [],
-    };
-    for (const cycle of cycles) {
-      if (!matchesQuery(query, cycle.name, cycle.description)) continue;
-      result[bucketOf(cycle, now)].push(cycle);
+  const initials = (name: string) =>
+    name
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('');
+
+  const copyCycleLink = (cycle: CycleApiResponse) => {
+    const url = `${window.location.origin}${v2CyclePath(cycle)}`;
+    void navigator.clipboard
+      ?.writeText(url)
+      .then(() => toast.success(t('common.linkCopied', 'Link copied')))
+      .catch(() => toast.error(t('common.copyLinkError', 'Could not copy that link.')));
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteCycle(deleteTarget.id);
+      toast.success(t('cycles.deleteSuccess', 'Cycle deleted'));
+      setDeleteTarget(null);
+    } catch {
+      toast.error(t('cycles.deleteError', 'Could not delete that cycle.'));
+    } finally {
+      setDeleting(false);
     }
-    /* Active and upcoming read soonest-first; completed reads most-recent-first,
-       which is the order each is actually scanned in. */
-    result.active.sort((a, b) => (a.end_date ?? '').localeCompare(b.end_date ?? ''));
-    result.upcoming.sort((a, b) => (a.start_date ?? '').localeCompare(b.start_date ?? ''));
-    result.completed.sort((a, b) => (b.end_date ?? '').localeCompare(a.end_date ?? ''));
-    return result;
-  }, [cycles, query, now]);
+  };
 
   if (loading) {
     return (
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <Skeleton key={index} className="h-40 w-full rounded-xl" />
-        ))}
+      <div className="space-y-6 pb-8" aria-busy="true">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-4 w-72 max-w-full" />
+        </div>
+        <Skeleton className="h-16 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+        <Skeleton className="h-40 w-full rounded-xl" />
       </div>
     );
   }
 
-  const renderBucket = (bucket: CycleBucket) => {
-    const list = buckets[bucket];
-    if (list.length === 0) {
-      return (
-        <p className="text-muted-foreground rounded-xl border border-dashed p-10 text-center text-sm">
-          {cycles.length === 0
-            ? t('cycles.empty', 'No cycles yet')
-            : t('cycles.noMatches', 'No cycles match the current search.')}
-        </p>
-      );
-    }
+  if (!workspace || !project) {
     return (
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {list.map((cycle) => {
-          const counts = progress[cycle.id] ?? EMPTY_PROGRESS;
-          const percent = completionPercent(counts);
-          return (
-            <Card key={cycle.id} className="gap-3">
-              <CardHeader>
-                <CardTitle className="truncate">
-                  {/* Keyed on the name slug, matching the shipped cycle route. */}
-                  <Link
-                    to={`/${workspaceSlug}/app-v2/projects/${projectId}/cycles/${cyclePathSegment(cycle)}`}
-                    className="hover:underline"
-                  >
-                    {cycle.name}
-                  </Link>
-                </CardTitle>
-                <CardDescription className="flex items-center gap-1.5">
-                  <CalendarRange className="size-3.5 shrink-0" />
-                  {formatDate(cycle.start_date)} — {formatDate(cycle.end_date)}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Progress value={percent} className="h-2 flex-1" />
-                  <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                    {percent}%
+      <Empty className="min-h-80 rounded-xl border border-dashed" role="alert">
+        <EmptyHeader>
+          <EmptyMedia variant="icon" className="bg-destructive/10 text-destructive">
+            <CircleAlert aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle>{t('cycles.loadError', 'Could not load cycles.')}</EmptyTitle>
+          <EmptyDescription>{t('common.projectNotFound', 'Project not found.')}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
+  }
+
+  const renderCycleRow = (cycle: CycleApiResponse) => {
+    const owner = getOwnerMember(cycle.owned_by_id);
+    const percent = getProgress(cycle);
+    const favorite = isFavorite(cycle.id);
+
+    return (
+      <div
+        key={cycle.id}
+        className="hover:bg-muted/40 flex flex-wrap items-center gap-3 border-b px-4 py-3 last:border-b-0"
+      >
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="ghost"
+          className="size-8 shrink-0"
+          onClick={() => toggleFavorite({ id: cycle.id, name: cycle.name })}
+          aria-pressed={favorite}
+          aria-label={`${
+            favorite
+              ? t('common.removeFromFavorites', 'Remove from favorites')
+              : t('common.addToFavorites', 'Add to favorites')
+          }: ${cycle.name}`}
+        >
+          <Star aria-hidden="true" className={favorite ? 'fill-amber-400 text-amber-400' : ''} />
+        </Button>
+
+        <Link
+          to={v2CyclePath(cycle)}
+          className="focus-visible:ring-ring min-w-40 flex-1 truncate rounded-sm font-medium outline-none hover:underline focus-visible:ring-2"
+        >
+          {cycle.name}
+        </Link>
+
+        <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-xs">
+          <CalendarRange className="size-3.5" aria-hidden="true" />
+          {cycleDateRange(cycle)}
+        </span>
+
+        <span className="flex w-32 shrink-0 items-center gap-2">
+          <Progress value={percent} className="h-1.5 flex-1" />
+          <span className="text-muted-foreground text-xs tabular-nums">{percent}%</span>
+        </span>
+
+        <Badge variant="secondary" className="shrink-0 tabular-nums">
+          {t('cycles.workItemCount', '{{count}} work items', { count: getIssueCount(cycle.id) })}
+        </Badge>
+
+        {owner ? (
+          <Avatar className="size-6 shrink-0" title={owner.name}>
+            <AvatarImage src={getImageUrl(owner.avatarUrl) ?? ''} alt="" />
+            <AvatarFallback className="text-[10px]">{initials(owner.name)}</AvatarFallback>
+          </Avatar>
+        ) : (
+          <span className="text-muted-foreground shrink-0 text-xs">
+            {t('cycles.noOwner', 'No lead')}
+          </span>
+        )}
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              className="size-8 shrink-0"
+              aria-label={t('cycles.cycleMenu', '{{cycle}} actions', { cycle: cycle.name })}
+            >
+              <MoreHorizontal aria-hidden="true" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onSelect={() => setEditCycle(cycle)}>
+              <Pencil aria-hidden="true" />
+              {t('common.edit', 'Edit')}
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a href={v2CyclePath(cycle)} target="_blank" rel="noreferrer">
+                <ExternalLink aria-hidden="true" />
+                {t('common.openInNewTab', 'Open in new tab')}
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => copyCycleLink(cycle)}>
+              <Link2 aria-hidden="true" />
+              {t('common.copyLink', 'Copy link')}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {/* Archiving is offered for completed cycles only, matching the
+                shipped menu's rule (and, as there, it is not wired yet). */}
+            <DropdownMenuItem disabled={cycle.status !== 'completed'}>
+              <Archive aria-hidden="true" />
+              <span className="flex flex-col gap-0.5">
+                {t('common.archive', 'Archive')}
+                {cycle.status !== 'completed' && (
+                  <span className="text-muted-foreground text-[11px] leading-tight">
+                    {t('cycles.onlyCompletedArchivable', 'Only completed cycles can be archived.')}
                   </span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <Badge variant="secondary">
-                    {t('common.total', 'Total')} {counts.total}
-                  </Badge>
-                  <Badge variant="secondary">
-                    {t('states.started', 'In Progress')} {counts.started}
-                  </Badge>
-                  <Badge variant="secondary">
-                    {t('states.completed', 'Done')} {counts.completed}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                )}
+              </span>
+            </DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onSelect={() => setDeleteTarget(cycle)}>
+              <Trash2 aria-hidden="true" />
+              {t('common.delete', 'Delete')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     );
   };
 
+  const section = (
+    title: string,
+    list: CycleApiResponse[],
+    defaultOpen: boolean,
+    emptyLabel: string,
+  ) => (
+    <Collapsible defaultOpen={defaultOpen} className="rounded-xl border">
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="hover:bg-muted/40 group flex w-full items-center gap-2 px-4 py-3 text-left"
+        >
+          <ChevronDown
+            aria-hidden="true"
+            className="size-4 transition-transform group-data-[state=closed]:-rotate-90"
+          />
+          <span className="text-sm font-medium">{title}</span>
+          <Badge variant="secondary" className="tabular-nums">
+            {list.length}
+          </Badge>
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        {list.length === 0 ? (
+          <p className="text-muted-foreground border-t px-4 py-6 text-center text-sm">
+            {emptyLabel}
+          </p>
+        ) : (
+          <div className="border-t">{list.map(renderCycleRow)}</div>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      {error && (
-        <p className="text-destructive text-sm" role="alert">
-          {error}
-        </p>
+    <div className="space-y-6 pb-8">
+      {workspaceSlug && projectId && (
+        <UpdateCycleModal
+          open={editCycle !== null}
+          onClose={() => setEditCycle(null)}
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
+          cycle={editCycle}
+          onUpdated={(updated) => {
+            applyCycleUpdate(updated);
+            setEditCycle(null);
+            toast.success(t('cycles.updateSuccess', 'Cycle updated'));
+          }}
+        />
       )}
 
-      {/* Active first: it is the tab a reader opening this page wants. */}
-      <Tabs defaultValue="active" className="flex min-h-0 flex-1 flex-col gap-3">
-        <TabsList>
-          <TabsTrigger value="active">
-            {t('cycles.active', 'Active')}
-            <Badge variant="secondary">{buckets.active.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="upcoming">
-            {t('cycles.upcoming', 'Upcoming')}
-            <Badge variant="secondary">{buckets.upcoming.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="completed">
-            {t('cycles.completed', 'Completed')}
-            <Badge variant="secondary">{buckets.completed.length}</Badge>
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="active" className="min-h-0 flex-1 overflow-auto">
-          {renderBucket('active')}
-        </TabsContent>
-        <TabsContent value="upcoming" className="min-h-0 flex-1 overflow-auto">
-          {renderBucket('upcoming')}
-        </TabsContent>
-        <TabsContent value="completed" className="min-h-0 flex-1 overflow-auto">
-          {renderBucket('completed')}
-        </TabsContent>
-      </Tabs>
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('cycles.confirmDeleteTitle', 'Delete {{cycle}}?', {
+                cycle: deleteTarget?.name ?? '',
+              })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t(
+                'cycles.confirmDeleteDescription',
+                'The cycle is removed. Its work items stay in the project.',
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                void confirmDelete();
+              }}
+            >
+              {t('common.delete', 'Delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('common.cycles', 'Cycles')}</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {t('cycles.pageDescription', 'Time-boxed delivery windows for {{project}}.', {
+              project: project.name,
+            })}
+          </p>
+        </div>
+        <p className="text-muted-foreground text-sm tabular-nums" aria-live="polite">
+          {t('cycles.summary', '{{visible}} of {{total}} cycles', {
+            visible: filteredCycles.length,
+            total: cycles.length,
+          })}
+        </p>
+      </header>
+
+      <div
+        className="bg-card/50 flex flex-wrap items-center gap-2 rounded-xl border p-3 shadow-xs sm:p-4"
+        role="region"
+        aria-label={t('cycles.toolbar', 'Cycle controls')}
+      >
+        <div className="relative w-full min-w-0 sm:w-64 sm:flex-1">
+          <Search
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2"
+            aria-hidden="true"
+          />
+          <Input
+            value={filters.searchQuery ?? ''}
+            onChange={(event) =>
+              setFilters((previous) => ({ ...previous, searchQuery: event.target.value || null }))
+            }
+            placeholder={t('cycles.searchPlaceholder', 'Search cycles')}
+            aria-label={t('cycles.searchPlaceholder', 'Search cycles')}
+            className="h-11 pr-12 pl-10 sm:h-9"
+          />
+          {filters.searchQuery && (
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              onClick={() => setFilters((previous) => ({ ...previous, searchQuery: null }))}
+              aria-label={t('common.clearSearch', 'Clear search')}
+              className="absolute top-1/2 right-1 size-10 -translate-y-1/2 sm:size-8"
+            >
+              <X aria-hidden="true" />
+            </Button>
+          )}
+        </div>
+
+        <CyclesFiltersMenu filters={filters} onChange={setFilters} />
+      </div>
+
+      {activeCycle ? (
+        <Card className="gap-4">
+          <CardHeader className="gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="text-lg">
+                <Link to={v2CyclePath(activeCycle)} className="hover:underline">
+                  {activeCycle.name}
+                </Link>
+              </CardTitle>
+              <Badge variant="secondary">{t('cycles.active', 'Active')}</Badge>
+              <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                <CalendarRange className="size-3.5" aria-hidden="true" />
+                {cycleDateRange(activeCycle)}
+              </span>
+              <span className="text-muted-foreground ml-auto text-sm tabular-nums">
+                {t('cycles.percentClosed', '{{percent}}% closed', {
+                  percent: activeCycleProgressStats.percentClosed,
+                })}
+              </span>
+            </div>
+            <Progress value={activeCycleProgressStats.percentClosed} className="h-2" />
+            <div className="flex flex-wrap gap-1.5">
+              <Badge variant="secondary" className="tabular-nums">
+                {t('common.total', 'Total')} {activeCycleProgressStats.total}
+              </Badge>
+              <Badge variant="secondary" className="tabular-nums">
+                {t('states.started', 'In Progress')} {activeCycleProgressStats.started}
+              </Badge>
+              <Badge variant="secondary" className="tabular-nums">
+                {t('stateGroup.backlog', 'Backlog')} {activeCycleProgressStats.backlog}
+              </Badge>
+              <Badge variant="secondary" className="tabular-nums">
+                {t('states.completed', 'Done')} {activeCycleProgressStats.completed}
+              </Badge>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            {activeBurndownChart && (
+              <CycleBurndownChart
+                completionChart={activeBurndownChart}
+                total={activeBurndownTotal}
+                startDate={activeCycle.start_date}
+                endDate={activeCycle.end_date}
+              />
+            )}
+
+            <Tabs defaultValue="priority">
+              <TabsList>
+                <TabsTrigger value="priority">
+                  {t('cycles.tabs.priority', 'Priority work items')}
+                </TabsTrigger>
+                <TabsTrigger value="assignees">{t('common.assignees', 'Assignees')}</TabsTrigger>
+                <TabsTrigger value="labels">{t('common.labels', 'Labels')}</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="priority" className="pt-3">
+                {activeCycleIssues.length === 0 ? (
+                  <p className="text-muted-foreground py-6 text-center text-sm">
+                    {t('cycles.tabs.priorityEmpty', 'Add work items to view priority breakdown.')}
+                  </p>
+                ) : (
+                  <ul className="space-y-1">
+                    {[...activeCycleIssues]
+                      .sort(
+                        (a, b) =>
+                          (PRIORITY_ORDER[(a.priority as Priority) ?? 'none'] ?? 99) -
+                          (PRIORITY_ORDER[(b.priority as Priority) ?? 'none'] ?? 99),
+                      )
+                      .map((issue) => (
+                        <li key={issue.id}>
+                          <Link
+                            to={`/${workspaceSlug}/app-v2/projects/${projectId}/work-items/${issue.id}`}
+                            className="hover:bg-muted/50 flex items-center gap-2 rounded-md px-2 py-1.5 text-sm"
+                          >
+                            <span className="min-w-0 flex-1 truncate">{issue.name}</span>
+                            <Badge
+                              variant={issue.priority === 'urgent' ? 'destructive' : 'secondary'}
+                              className="shrink-0"
+                            >
+                              {issue.priority ?? '—'}
+                            </Badge>
+                            <Badge variant="outline" className="shrink-0">
+                              {getStateName(issue.state_id)}
+                            </Badge>
+                            {issue.target_date && (
+                              <span className="text-muted-foreground shrink-0 text-xs">
+                                {formatDate(issue.target_date)}
+                              </span>
+                            )}
+                          </Link>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </TabsContent>
+
+              <TabsContent value="assignees" className="pt-3">
+                {activeCycleAssigneeStats.length === 0 ? (
+                  <p className="text-muted-foreground py-6 text-center text-sm">
+                    {t('cycles.tabs.assigneesEmpty', 'No assignees in this cycle.')}
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {activeCycleAssigneeStats.map((stat) => {
+                      const name = memberName(stat.memberId);
+                      const member = stat.memberId
+                        ? members.find((entry) => entry.member_id === stat.memberId)
+                        : null;
+                      return (
+                        <li
+                          key={stat.memberId ?? '__unassigned__'}
+                          className="flex items-center gap-3"
+                        >
+                          <Avatar className="size-6 shrink-0">
+                            <AvatarImage src={getImageUrl(member?.member_avatar) ?? ''} alt="" />
+                            <AvatarFallback className="text-[10px]">
+                              {initials(name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="min-w-0 flex-1 truncate text-sm">{name}</span>
+                          <Progress value={stat.percent} className="h-1.5 w-32 shrink-0" />
+                          <span className="text-muted-foreground w-20 shrink-0 text-right text-xs tabular-nums">
+                            {stat.completed}/{stat.total}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </TabsContent>
+
+              <TabsContent value="labels" className="pt-3">
+                {activeCycleLabelStats.length === 0 ? (
+                  <p className="text-muted-foreground py-6 text-center text-sm">
+                    {t('cycles.tabs.labelsEmpty', 'No labels in this cycle.')}
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {activeCycleLabelStats.map((stat) => {
+                      const label = stat.labelId
+                        ? labels.find((entry) => entry.id === stat.labelId)
+                        : null;
+                      return (
+                        <li
+                          key={stat.labelId ?? '__no_label__'}
+                          className="flex items-center gap-3"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className="size-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: label?.color || 'var(--muted-foreground)' }}
+                          />
+                          <span className="min-w-0 flex-1 truncate text-sm">
+                            {label?.name ?? t('cycles.noLabel', 'No label')}
+                          </span>
+                          <Progress value={stat.percent} className="h-1.5 w-32 shrink-0" />
+                          <span className="text-muted-foreground w-20 shrink-0 text-right text-xs tabular-nums">
+                            {stat.completed}/{stat.total}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      ) : (
+        cycles.length > 0 && (
+          <Card className="border-dashed shadow-none">
+            <CardContent className="text-muted-foreground py-8 text-center text-sm">
+              {t('cycles.noActive', 'No cycle is running right now.')}
+            </CardContent>
+          </Card>
+        )
+      )}
+
+      {cycles.length === 0 ? (
+        <Empty className="rounded-xl border border-dashed">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <CalendarRange aria-hidden="true" />
+            </EmptyMedia>
+            <EmptyTitle>{t('cycles.empty', 'No cycles yet')}</EmptyTitle>
+            <EmptyDescription>
+              {t(
+                'cycles.emptyDescription',
+                'Cycles group work into time-boxed windows so a team can see what ships when.',
+              )}
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent />
+        </Empty>
+      ) : (
+        <div className="space-y-4">
+          {section(
+            t('cycles.upcoming', 'Upcoming'),
+            upcomingCycles,
+            true,
+            t('cycles.noUpcoming', 'No upcoming cycles.'),
+          )}
+          {section(
+            t('cycles.completed', 'Completed'),
+            completedCycles,
+            false,
+            t('cycles.noCompleted', 'No completed cycles.'),
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -5,8 +5,6 @@ import { AppSidebar } from '@/components/shadcn/app-sidebar';
 import { ArchivesToolbar } from '@/components/shadcn/archives-toolbar';
 import { DraftsToolbar } from '@/components/shadcn/drafts-toolbar';
 import { ProjectSearchToolbar } from '@/components/shadcn/project-search-toolbar';
-import { ProjectWorkItemsToolbar } from '@/components/shadcn/project-work-items-toolbar';
-import { ViewsToolbar } from '@/components/shadcn/views-toolbar';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -18,6 +16,7 @@ import {
 import { Separator } from '@/components/shadcn/ui/separator';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/shadcn/ui/sidebar';
 import { Skeleton } from '@/components/shadcn/ui/skeleton';
+import { Toaster } from '@/components/shadcn/ui/sonner';
 import { useV2Header, V2HeaderProvider } from '../contexts/AppShellV2HeaderContext';
 import { ProjectSavedViewDisplayProvider } from '../contexts/ProjectSavedViewDisplayContext';
 import { WorkspaceViewsStateProvider } from '../contexts/WorkspaceViewsStateContext';
@@ -38,8 +37,8 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
  */
 export function AppShellV2Page() {
   return (
-    /* The views toolbar sits in this header while the views page renders below
-       it, so the filter and display state they share is held above both. */
+    /* The views page and its toolbar both read this filter and display state,
+       so it is held above the routes that render them. */
     <WorkspaceViewsStateProvider>
       {/* The saved-view pages read this; the shipped tree mounts it in AppShell,
           which the v2 tree sits outside of. */}
@@ -163,18 +162,15 @@ function AppShellV2Layout() {
               </BreadcrumbList>
             </Breadcrumb>
           </div>
-          {/* Projects owns its toolbar in the page body. Its search, filters,
-              view switcher and primary action need room to wrap on small
-              screens instead of competing with the breadcrumb in this 64px
-              shell header. */}
-          {isViewsRoute && workspaceSlug && <ViewsToolbar workspaceSlug={workspaceSlug} />}
+          {/* Projects and Views own their toolbars in the page body. Their
+              search, filters, view switcher and primary action need room to
+              wrap on small screens instead of competing with the breadcrumb in
+              this 64px shell header. */}
           {isDraftsRoute && workspaceSlug && <DraftsToolbar workspaceSlug={workspaceSlug} />}
           {isArchivesRoute && workspaceSlug && <ArchivesToolbar workspaceSlug={workspaceSlug} />}
-          {/* Work items is the one project page with filters of its own; the
-              rest share the plain search field. */}
-          {workspaceSlug && projectId && !detailMatch && projectPage === 'work-items' && (
-            <ProjectWorkItemsToolbar workspaceSlug={workspaceSlug} projectId={projectId} />
-          )}
+          {/* Work items owns its responsive controls in the page body, matching
+              the Projects page. The remaining project lists share this compact
+              header search field. */}
           {projectId &&
             !detailMatch &&
             projectPage !== 'work-items' &&
@@ -188,6 +184,9 @@ function AppShellV2Layout() {
         <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 pt-0">
           <Outlet />
         </div>
+        {/* Scoped to the v2 shell: the shipped interface has its own feedback
+            patterns, and mounting one toaster per tree keeps them separate. */}
+        <Toaster position="bottom-right" />
       </SidebarInset>
     </SidebarProvider>
   );

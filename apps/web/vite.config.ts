@@ -11,6 +11,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    // These are only reachable through lazily imported pages, so Vite's initial
+    // scan misses them and discovers them mid-session — which re-optimizes the
+    // dep bundle, changes its hash, and makes the in-flight dynamic import fail
+    // with "Failed to fetch dynamically imported module". Pre-bundling them at
+    // startup keeps the first visit to those pages stable.
+    include: ['sonner', 'cmdk', 'react-day-picker'],
+  },
   build: {
     rollupOptions: {
       output: {

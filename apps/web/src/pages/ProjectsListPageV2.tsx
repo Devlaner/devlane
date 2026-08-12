@@ -316,7 +316,7 @@ export function ProjectsListPageV2() {
     favoriteProjectIds,
     currentUserId: user?.id,
   });
-  const viewMode = searchParams.get('view') === 'table' ? 'table' : 'grid';
+  const viewMode = searchParams.get('view') === 'grid' ? 'grid' : 'table';
   const segment: ProjectSegment = searchState.favoritesOnly
     ? 'favorites'
     : searchState.myProjectsOnly
