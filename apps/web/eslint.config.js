@@ -29,11 +29,27 @@ export default defineConfig([
     },
   },
   {
+    // Vendored shadcn/ui primitives (`npx shadcn add …`). These are upstream
+    // files we re-pull rather than hand-author, so the rules that assume our
+    // own authoring conventions are relaxed here — keeping the directory
+    // diff-clean against upstream. Anything we write ourselves lives outside
+    // this path and is still fully linted.
+    files: ['src/components/shadcn/**/*.{ts,tsx}'],
+    rules: {
+      // Upstream co-locates cva variant objects with the component.
+      'react-refresh/only-export-components': 'off',
+      // Upstream ships English a11y labels ("Close", "Previous"); those get
+      // translated at the call site or by wrapping the primitive, not by
+      // editing the vendored file.
+      'i18next/no-literal-string': 'off',
+    },
+  },
+  {
     // Guard against new hardcoded user-facing strings: flag literal JSX text so
     // every visible string goes through t()/<Trans>. The i18n setup itself and
     // tests are exempt.
     files: ['src/**/*.tsx'],
-    ignores: ['src/i18n/**', '**/*.test.tsx'],
+    ignores: ['src/i18n/**', '**/*.test.tsx', 'src/components/shadcn/**'],
     rules: {
       'i18next/no-literal-string': [
         'error',

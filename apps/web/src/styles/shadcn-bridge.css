@@ -1,0 +1,129 @@
+/**
+ * shadcn/ui token bridge.
+ *
+ * shadcn components are written against a fixed set of variable names
+ * (--background, --foreground, --primary, --border, ...). Devlane has its own
+ * semantic layer in tokens.css (--bg-canvas, --txt-primary, --border-subtle, ...).
+ *
+ * This file maps the shadcn names onto the Devlane ones so both systems render
+ * the same palette from a single source of truth. Because every mapping is a
+ * var() reference rather than a literal color, the existing theme switches
+ * (light default, [data-theme='dark'], [data-theme='pink']) apply to shadcn
+ * components for free — no per-theme duplication needed here.
+ *
+ * Only values that cannot be expressed as an alias are redefined per theme.
+ * Imported after tokens.css so the Devlane variables it reads are already set.
+ */
+
+/* shadcn components ship `dark:` variants. Tailwind v4 needs to be told that
+   "dark" means our theme attribute, not the `prefers-color-scheme` default. */
+@custom-variant dark ([data-theme='dark'] &);
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  :root,
+  :host {
+    /* Corner radius shadcn derives its sm/md/lg/xl scale from.
+       Devlane is a sharp-cornered UI, so this stays small on purpose. */
+    --radius: 0.375rem;
+
+    --background: var(--bg-canvas);
+    --foreground: var(--txt-primary);
+
+    /* Cards and popovers sit above the canvas -> layer-2. */
+    --card: var(--bg-layer-2);
+    --card-foreground: var(--txt-primary);
+    --popover: var(--bg-layer-2);
+    --popover-foreground: var(--txt-primary);
+
+    /* "primary" in shadcn is the filled-action color. */
+    --primary: var(--bg-accent-primary);
+    --primary-foreground: var(--txt-icon-on-color);
+
+    /* "secondary" is the quiet filled surface (secondary buttons, chips). */
+    --secondary: var(--bg-layer-1);
+    --secondary-foreground: var(--txt-primary);
+
+    /* "muted" backs subdued surfaces; its foreground is de-emphasized text. */
+    --muted: var(--bg-layer-1);
+    --muted-foreground: var(--txt-tertiary);
+
+    /* "accent" is the hover/active wash on ghost items, not the brand color. */
+    --accent: var(--bg-layer-1-hover);
+    --accent-foreground: var(--txt-primary);
+
+    --destructive: var(--bg-danger-primary);
+    --destructive-foreground: var(--txt-icon-on-color);
+
+    --border: var(--border-subtle);
+    --input: var(--border-subtle);
+    --ring: var(--border-accent-strong);
+
+    /* Charts: brand ramp first, then the status hues, so series stay
+       distinguishable without introducing colors outside the palette. */
+    --chart-1: var(--brand-700);
+    --chart-2: var(--green-700);
+    --chart-3: var(--amber-600);
+    --chart-4: var(--red-700);
+    --chart-5: var(--brand-500);
+
+    /* Sidebar is surface-1 in Devlane (near-white in light, neutral-100 in dark). */
+    --sidebar: var(--bg-surface-1);
+    --sidebar-foreground: var(--txt-secondary);
+    --sidebar-primary: var(--bg-accent-primary);
+    --sidebar-primary-foreground: var(--txt-icon-on-color);
+    --sidebar-accent: var(--bg-layer-1-hover);
+    --sidebar-accent-foreground: var(--txt-primary);
+    --sidebar-border: var(--border-subtle);
+    --sidebar-ring: var(--border-accent-strong);
+  }
+
+  /* Dark mode needs one correction: --txt-on-color flips to a light-on-dark
+     value, but filled brand/danger surfaces stay dark enough to need white
+     text. Everything else resolves correctly through the aliases above. */
+  [data-theme='dark'] {
+    --primary-foreground: var(--neutral-white);
+    --destructive-foreground: var(--neutral-white);
+  }
+}

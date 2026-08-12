@@ -16,6 +16,20 @@ const page = (m: { [k: string]: React.ComponentType }) => ({
 const LoginPage = lazy(() =>
   import('../pages/LoginPage').then((m) => page({ LoginPage: m.LoginPage })),
 );
+const LoginPageV2 = lazy(() =>
+  import('../pages/LoginPageV2').then((m) => page({ LoginPageV2: m.LoginPageV2 })),
+);
+const SignUpPageV2 = lazy(() =>
+  import('../pages/SignUpPageV2').then((m) => page({ SignUpPageV2: m.SignUpPageV2 })),
+);
+const AppShellV2Page = lazy(() =>
+  import('../pages/AppShellV2Page').then((m) => page({ AppShellV2Page: m.AppShellV2Page })),
+);
+const AppShellV2Placeholder = lazy(() =>
+  import('../pages/AppShellV2Page').then((m) =>
+    page({ AppShellV2Placeholder: m.AppShellV2Placeholder }),
+  ),
+);
 const ForgotPasswordPage = lazy(() =>
   import('../pages/ForgotPasswordPage').then((m) =>
     page({ ForgotPasswordPage: m.ForgotPasswordPage }),
@@ -47,6 +61,11 @@ const ProfilePage = lazy(() =>
 );
 const ProjectsListPage = lazy(() =>
   import('../pages/ProjectsListPage').then((m) => page({ ProjectsListPage: m.ProjectsListPage })),
+);
+const ProjectsListPageV2 = lazy(() =>
+  import('../pages/ProjectsListPageV2').then((m) =>
+    page({ ProjectsListPageV2: m.ProjectsListPageV2 }),
+  ),
 );
 const WorkspaceViewsPage = lazy(() =>
   import('../pages/WorkspaceViewsPage').then((m) =>
@@ -410,6 +429,14 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: 'login-v2',
+        element: (
+          <Suspense fallback={<PageFallback />}>
+            <LoginPageV2 />
+          </Suspense>
+        ),
+      },
+      {
         path: 'forgot-password',
         element: (
           <Suspense fallback={<PageFallback />}>
@@ -430,6 +457,14 @@ const router = createBrowserRouter([
         element: (
           <Suspense fallback={<PageFallback />}>
             <SignUpPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'sign-up-v2',
+        element: (
+          <Suspense fallback={<PageFallback />}>
+            <SignUpPageV2 />
           </Suspense>
         ),
       },
@@ -467,6 +502,32 @@ const router = createBrowserRouter([
             </Suspense>
           </ProtectedRoute>
         ),
+      },
+      {
+        /* Design previews. AppShellV2Page is the layout: it brings its own
+           shell, so it sits outside AppLayout rather than inside it — nesting
+           it there would render the shipped sidebar behind this one. The v2
+           pages are its children, so the preview sidebar stays put while
+           navigating between them. */
+        path: ':workspaceSlug/app-v2',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<PageFallback />}>
+              <AppShellV2Page />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+        children: [
+          { index: true, element: <AppShellV2Placeholder /> },
+          {
+            path: 'projects',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <ProjectsListPageV2 />
+              </Suspense>
+            ),
+          },
+        ],
       },
       {
         element: <AppLayout />,

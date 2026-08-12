@@ -1,8 +1,12 @@
 export { LoginPage } from './LoginPage';
+export { LoginPageV2 } from './LoginPageV2';
+export { SignUpPageV2 } from './SignUpPageV2';
+export { AppShellV2Page } from './AppShellV2Page';
 export { WorkspaceHomePage } from './WorkspaceHomePage';
 export { NotificationsPage } from './NotificationsPage';
 export { ProfilePage } from './ProfilePage';
 export { ProjectsListPage } from './ProjectsListPage';
+export { ProjectsListPageV2 } from './ProjectsListPageV2';
 export { WorkspaceViewsPage } from './WorkspaceViewsPage';
 export { DraftsPage } from './DraftsPage';
 export { ArchivesPage } from './ArchivesPage';
