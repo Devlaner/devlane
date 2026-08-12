@@ -1,27 +1,57 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Archive, ArchiveRestore, Inbox } from 'lucide-react';
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowUpRight,
+  CheckCheck,
+  Inbox,
+  Loader2,
+  Mail,
+  MailOpen,
+  Search,
+  SearchX,
+} from 'lucide-react';
+import { NotificationSnoozeMenu } from '@/components/shadcn/notification-snooze-menu';
 import { Avatar, AvatarFallback } from '@/components/shadcn/ui/avatar';
 import { Badge } from '@/components/shadcn/ui/badge';
 import { Button } from '@/components/shadcn/ui/button';
+import { Card } from '@/components/shadcn/ui/card';
+import { Input } from '@/components/shadcn/ui/input';
+import { Separator } from '@/components/shadcn/ui/separator';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/shadcn/ui/sheet';
 import { Skeleton } from '@/components/shadcn/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/ui/tabs';
 import { NotificationContent } from '../components/notifications/NotificationContent';
-import { SnoozeMenu } from '../components/notifications/SnoozeMenu';
 import { useSetV2Header } from '../contexts/AppShellV2HeaderContext';
 import { formatTimeAgo } from '../lib/projectV2';
 import { notificationService } from '../services/notificationService';
 import { workspaceService } from '../services/workspaceService';
 import type { NotificationApiResponse, WorkspaceApiResponse } from '../api/types';
 
-type InboxTab = 'all' | 'mentions' | 'archived';
+type InboxTab = 'all' | 'unread' | 'mentions' | 'archived';
 
 const TABS: { id: InboxTab; label: string }[] = [
   { id: 'all', label: 'All' },
+  { id: 'unread', label: 'Unread' },
   { id: 'mentions', label: 'Mentions' },
   { id: 'archived', label: 'Archived' },
 ];
+
+function listOptions(tab: InboxTab) {
+  return {
+    unreadOnly: tab === 'unread',
+    mentionsOnly: tab === 'mentions',
+    archived: tab === 'archived' ? ('archived' as const) : ('inbox' as const),
+  };
+}
 
 /** Actor, work item reference and name, tolerating partial system payloads. */
 function rowLabels(n: NotificationApiResponse, fallbackActor: string) {
@@ -36,61 +66,245 @@ function rowLabels(n: NotificationApiResponse, fallbackActor: string) {
 
 /** First letters of a display name, for the avatar fallback. */
 function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || '?'
+  );
+}
+
+interface NotificationDetailProps {
+  notification: NotificationApiResponse;
+  pendingAction: string | null;
+  actionError: string | null;
+  onToggleRead: () => void | Promise<void>;
+  onArchive: () => void | Promise<void>;
+  onSnooze: (until: Date) => void | Promise<void>;
+  onUnsnooze: () => void | Promise<void>;
+  onOpenIssue: () => void;
+}
+
+function NotificationDetail({
+  notification,
+  pendingAction,
+  actionError,
+  onToggleRead,
+  onArchive,
+  onSnooze,
+  onUnsnooze,
+  onOpenIssue,
+}: NotificationDetailProps) {
+  const { t } = useTranslation();
+  const { actor, ref, issueName } = rowLabels(
+    notification,
+    t('notifications.actorFallback', 'Someone'),
+  );
+  const isBusy = pendingAction !== null;
+  const readBusy = pendingAction === `read:${notification.id}`;
+  const archiveBusy =
+    pendingAction === `archive:${notification.id}` ||
+    pendingAction === `unarchive:${notification.id}`;
+  const snoozeBusy =
+    pendingAction === `snooze:${notification.id}` ||
+    pendingAction === `unsnooze:${notification.id}`;
+  const canOpenIssue = Boolean(notification.message?.issue?.id && notification.project_id);
+
+  return (
+    <article className="flex h-full min-h-0 flex-col">
+      <header className="shrink-0 space-y-4 p-4 pr-14 sm:p-6 sm:pr-16 lg:pr-6">
+        <div className="flex min-w-0 items-start gap-3">
+          <Avatar className="size-10 shrink-0">
+            <AvatarFallback>{initials(actor)}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base leading-6 font-semibold sm:text-lg">{notification.title}</h2>
+            <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+              <span>{actor}</span>
+              <span aria-hidden>·</span>
+              <span>{formatTimeAgo(notification.created_at)}</span>
+              {ref !== '—' && (
+                <Badge variant="outline" className="font-normal">
+                  {ref}
+                </Badge>
+              )}
+            </div>
+            {issueName && <p className="text-muted-foreground mt-1 text-sm">{issueName}</p>}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-11 sm:h-8"
+            disabled={isBusy}
+            onClick={() => void onToggleRead()}
+          >
+            {readBusy ? (
+              <Loader2 className="animate-spin" />
+            ) : notification.read_at ? (
+              <Mail />
+            ) : (
+              <MailOpen />
+            )}
+            {notification.read_at
+              ? t('notifications.markUnread', 'Mark unread')
+              : t('notifications.markRead', 'Mark read')}
+          </Button>
+
+          <NotificationSnoozeMenu
+            snoozedUntil={notification.snoozed_till ?? null}
+            busy={snoozeBusy}
+            disabled={isBusy}
+            onSnooze={onSnooze}
+            onUnsnooze={onUnsnooze}
+          />
+
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-11 sm:h-8"
+            disabled={isBusy}
+            onClick={() => void onArchive()}
+          >
+            {archiveBusy ? (
+              <Loader2 className="animate-spin" />
+            ) : notification.archived_at ? (
+              <ArchiveRestore />
+            ) : (
+              <Archive />
+            )}
+            {notification.archived_at
+              ? t('common.unarchive', 'Unarchive')
+              : t('common.archive', 'Archive')}
+          </Button>
+
+          {canOpenIssue && (
+            <Button
+              type="button"
+              size="sm"
+              className="h-11 sm:ml-auto sm:h-8"
+              disabled={isBusy}
+              onClick={onOpenIssue}
+            >
+              {t('notifications.openIssue', 'Open issue')}
+              <ArrowUpRight />
+            </Button>
+          )}
+        </div>
+      </header>
+
+      <Separator />
+      {actionError && (
+        <div className="border-b px-4 py-3 text-sm text-destructive sm:px-6 lg:hidden" role="alert">
+          {actionError}
+        </div>
+      )}
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="max-w-3xl">
+          <NotificationContent notification={notification} />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function InboxLoadingState() {
+  return (
+    <div className="flex min-h-[calc(100svh-5rem)] flex-col gap-4 lg:h-[calc(100svh-5rem)]">
+      <div className="flex items-center justify-between gap-4 px-1 py-1">
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-28" />
+          <Skeleton className="h-4 w-64 max-w-full" />
+        </div>
+        <Skeleton className="h-9 w-32" />
+      </div>
+
+      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(20rem,26rem)_minmax(0,1fr)]">
+        <Card className="gap-0 overflow-hidden py-0 lg:min-h-0">
+          <div className="space-y-3 p-3 sm:p-4">
+            <Skeleton className="h-11 w-full lg:h-9" />
+            <Skeleton className="h-11 w-full lg:h-9" />
+          </div>
+          <Separator />
+          <div className="space-y-2 p-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Skeleton key={index} className="h-16 w-full" />
+            ))}
+          </div>
+        </Card>
+        <Card className="hidden min-h-0 gap-0 overflow-hidden py-0 lg:flex">
+          <div className="flex h-full items-center justify-center p-8">
+            <Skeleton className="h-24 w-64 max-w-full" />
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
 }
 
 /**
- * Design preview of the workspace inbox, built from shadcn primitives. It
- * stands alongside NotificationsPage rather than replacing it, so the two can
- * be compared side by side.
- *
- * The shipped page carries its tabs and its "mark all read" button inside the
- * list column. Here the tabs stay with the list they filter, but the actions
- * that apply to the selected row move into the shell's header — the v2 shell
- * has one header row for exactly this, and stacking a second one inside the
- * page is what the shipped layout ends up doing.
+ * Responsive notification inbox composed from the project's shadcn
+ * primitives. Desktop uses a master-detail surface; tablet and mobile open the
+ * selected notification in a Sheet so the list keeps a usable reading width.
  */
-export function NotificationsPageV2() {
+interface NotificationsInboxV2Props {
+  workspaceSlug: string | undefined;
+}
+
+function NotificationsInboxV2({ workspaceSlug }: NotificationsInboxV2Props) {
   const { t } = useTranslation();
-  const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const navigate = useNavigate();
+  const inboxRootRef = useRef<HTMLElement>(null);
+  const lastSelectionButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const [inboxTab, setInboxTab] = useState<InboxTab>('all');
+  const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [notifications, setNotifications] = useState<NotificationApiResponse[]>([]);
   const [loading, setLoading] = useState(Boolean(workspaceSlug));
-  const [error, setError] = useState<string | null>(null);
-  /* IDs the user explicitly marked unread in this session; the auto-mark-read
-     effect below skips them so the toggle actually sticks. */
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  /* IDs the user explicitly marked unread in this session; selecting one
+     again must not immediately undo that choice. */
   const [explicitUnreadIds, setExplicitUnreadIds] = useState<Set<string>>(new Set());
+
+  const inboxTitle = t('notifications.documentTitle', 'Inbox');
+  useSetV2Header({ parent: null, title: inboxTitle, actions: null });
 
   useEffect(() => {
     if (!workspaceSlug) return;
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- the spinner belongs to this fetch
     setLoading(true);
+    setLoadError(null);
     Promise.all([
       workspaceService.getBySlug(workspaceSlug),
-      notificationService.list(workspaceSlug, {
-        mentionsOnly: inboxTab === 'mentions',
-        archived: inboxTab === 'archived' ? 'archived' : 'inbox',
-      }),
+      notificationService.list(workspaceSlug, listOptions(inboxTab)),
     ])
-      .then(([w, list]) => {
+      .then(([nextWorkspace, list]) => {
         if (cancelled) return;
-        setWorkspace(w ?? null);
-        setNotifications(list ?? []);
-        setError(null);
+        const nextNotifications = list ?? [];
+        setWorkspace(nextWorkspace ?? null);
+        setNotifications(nextNotifications);
+        setSelectedId((current) =>
+          current && nextNotifications.some((notification) => notification.id === current)
+            ? current
+            : null,
+        );
       })
       .catch(() => {
         if (cancelled) return;
         setNotifications([]);
-        setError(t('notifications.loadError', 'Could not load notifications.'));
+        setLoadError(t('notifications.loadError', 'Could not load notifications.'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -98,129 +312,174 @@ export function NotificationsPageV2() {
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug, inboxTab, t]);
+  }, [workspaceSlug, inboxTab, reloadKey, t]);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1023px)');
+    const closeSheetOnDesktop = (event: MediaQueryListEvent) => {
+      if (!event.matches) setMobileDetailOpen(false);
+    };
+    media.addEventListener('change', closeSheetOnDesktop);
+    return () => media.removeEventListener('change', closeSheetOnDesktop);
+  }, []);
 
   const selected = useMemo(
     () => (selectedId ? (notifications.find((n) => n.id === selectedId) ?? null) : null),
     [notifications, selectedId],
   );
 
-  /* Auto-mark-on-select. Skipped on the Archived tab — re-reading archived rows
-     should not flip them to read silently — and skipped for rows the user just
-     marked unread, which would otherwise be re-marked read immediately. */
-  useEffect(() => {
-    if (!workspaceSlug || !selected || selected.read_at || inboxTab === 'archived') return;
-    if (explicitUnreadIds.has(selected.id)) return;
-    let cancelled = false;
-    notificationService
-      .markRead(workspaceSlug, selected.id)
-      .then(() => {
-        if (cancelled) return;
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === selected.id ? { ...n, read_at: new Date().toISOString() } : n)),
-        );
-      })
-      .catch(() => {
-        /* Read state is best-effort; a failure won't block the UI. */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaceSlug, selected, inboxTab, explicitUnreadIds]);
+  const visibleNotifications = useMemo(() => {
+    const needle = query.trim().toLocaleLowerCase();
+    const fallbackActor = t('notifications.actorFallback', 'Someone');
+    return notifications.filter((notification) => {
+      if (inboxTab === 'unread' && notification.read_at) return false;
+      if (!needle) return true;
+      const { actor, ref, issueName } = rowLabels(notification, fallbackActor);
+      return [
+        notification.title,
+        actor,
+        ref,
+        issueName,
+        notification.entity_identifier,
+        notification.entity_name,
+      ].some((value) => value?.toLocaleLowerCase().includes(needle));
+    });
+  }, [notifications, query, inboxTab, t]);
 
-  const removeFromList = (id: string) =>
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const performAction = useCallback(
+    async (key: string, action: () => Promise<void>) => {
+      setPendingAction(key);
+      setActionError(null);
+      try {
+        await action();
+      } catch {
+        setActionError(
+          t('notifications.actionError', "That action couldn't be completed. Please try again."),
+        );
+      } finally {
+        setPendingAction(null);
+      }
+    },
+    [t],
+  );
+
+  const removeFromList = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((notification) => notification.id !== id));
+    setExplicitUnreadIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
 
   const onArchiveRow = useCallback(
-    async (id: string) => {
-      if (!workspaceSlug) return;
-      await notificationService.archive(workspaceSlug, id);
-      if (inboxTab === 'archived') {
-        /* Already in the archive view — keep it visible for the unarchive affordance. */
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, archived_at: new Date().toISOString() } : n)),
-        );
-        return;
-      }
-      removeFromList(id);
-      setSelectedId((prev) => (prev === id ? null : prev));
-    },
-    [workspaceSlug, inboxTab],
+    (id: string) =>
+      performAction(`archive:${id}`, async () => {
+        if (!workspaceSlug) return;
+        await notificationService.archive(workspaceSlug, id);
+        if (inboxTab === 'archived') {
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === id ? { ...n, archived_at: new Date().toISOString() } : n)),
+          );
+          return;
+        }
+        removeFromList(id);
+        setSelectedId((current) => (current === id ? null : current));
+      }),
+    [workspaceSlug, inboxTab, performAction, removeFromList],
   );
 
   const onUnarchiveRow = useCallback(
-    async (id: string) => {
-      if (!workspaceSlug) return;
-      await notificationService.unarchive(workspaceSlug, id);
-      if (inboxTab === 'archived') {
-        removeFromList(id);
-        setSelectedId((prev) => (prev === id ? null : prev));
-      } else {
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, archived_at: null } : n)),
-        );
-      }
-    },
-    [workspaceSlug, inboxTab],
+    (id: string) =>
+      performAction(`unarchive:${id}`, async () => {
+        if (!workspaceSlug) return;
+        await notificationService.unarchive(workspaceSlug, id);
+        if (inboxTab === 'archived') {
+          removeFromList(id);
+          setSelectedId((current) => (current === id ? null : current));
+        } else {
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === id ? { ...n, archived_at: null } : n)),
+          );
+        }
+      }),
+    [workspaceSlug, inboxTab, performAction, removeFromList],
   );
 
-  const onMarkAllRead = useCallback(async () => {
-    if (!workspaceSlug) return;
-    await notificationService.markAllRead(workspaceSlug);
-    const refreshed = await notificationService.list(workspaceSlug, {
-      mentionsOnly: inboxTab === 'mentions',
-      archived: inboxTab === 'archived' ? 'archived' : 'inbox',
-    });
-    setNotifications(refreshed ?? []);
-  }, [workspaceSlug, inboxTab]);
+  const onMarkAllRead = useCallback(
+    () =>
+      performAction('mark-all-read', async () => {
+        if (!workspaceSlug) return;
+        await notificationService.markAllRead(workspaceSlug);
+        const refreshed = await notificationService.list(workspaceSlug, listOptions(inboxTab));
+        setNotifications(refreshed ?? []);
+        setExplicitUnreadIds(new Set());
+        if (inboxTab === 'unread') {
+          setSelectedId(null);
+          setMobileDetailOpen(false);
+        }
+      }),
+    [workspaceSlug, inboxTab, performAction],
+  );
 
-  const onToggleReadOnSelected = useCallback(async () => {
-    if (!workspaceSlug || !selected) return;
-    if (selected.read_at) {
-      await notificationService.markUnread(workspaceSlug, selected.id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === selected.id ? { ...n, read_at: null } : n)),
-      );
-      /* Remember the user wanted this unread; the auto-mark effect will skip it. */
-      setExplicitUnreadIds((prev) => new Set(prev).add(selected.id));
-    } else {
-      await notificationService.markRead(workspaceSlug, selected.id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === selected.id ? { ...n, read_at: new Date().toISOString() } : n)),
-      );
-      setExplicitUnreadIds((prev) => {
-        if (!prev.has(selected.id)) return prev;
-        const next = new Set(prev);
-        next.delete(selected.id);
-        return next;
-      });
-    }
-  }, [workspaceSlug, selected]);
+  const onToggleReadOnSelected = useCallback(() => {
+    if (!selected) return Promise.resolve();
+    return performAction(`read:${selected.id}`, async () => {
+      if (!workspaceSlug) return;
+      if (selected.read_at) {
+        await notificationService.markUnread(workspaceSlug, selected.id);
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === selected.id ? { ...n, read_at: null } : n)),
+        );
+        setExplicitUnreadIds((prev) => new Set(prev).add(selected.id));
+      } else {
+        await notificationService.markRead(workspaceSlug, selected.id);
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === selected.id ? { ...n, read_at: new Date().toISOString() } : n)),
+        );
+        setExplicitUnreadIds((prev) => {
+          if (!prev.has(selected.id)) return prev;
+          const next = new Set(prev);
+          next.delete(selected.id);
+          return next;
+        });
+      }
+    });
+  }, [workspaceSlug, selected, performAction]);
 
   const onSnoozeSelected = useCallback(
-    async (until: Date) => {
-      if (!workspaceSlug || !selected) return;
-      await notificationService.snooze(workspaceSlug, selected.id, until);
-      /* Snoozed rows leave the inbox view; they stay in the Archived tab. */
-      if (inboxTab !== 'archived') {
-        removeFromList(selected.id);
-        setSelectedId(null);
-      } else {
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === selected.id ? { ...n, snoozed_till: until.toISOString() } : n)),
-        );
-      }
+    (until: Date) => {
+      if (!selected) return Promise.resolve();
+      return performAction(`snooze:${selected.id}`, async () => {
+        if (!workspaceSlug) return;
+        await notificationService.snooze(workspaceSlug, selected.id, until);
+        if (inboxTab !== 'archived') {
+          removeFromList(selected.id);
+          setSelectedId((current) => (current === selected.id ? null : current));
+          setMobileDetailOpen(false);
+        } else {
+          setNotifications((prev) =>
+            prev.map((n) =>
+              n.id === selected.id ? { ...n, snoozed_till: until.toISOString() } : n,
+            ),
+          );
+        }
+      });
     },
-    [workspaceSlug, selected, inboxTab],
+    [workspaceSlug, selected, inboxTab, performAction, removeFromList],
   );
 
-  const onUnsnoozeSelected = useCallback(async () => {
-    if (!workspaceSlug || !selected) return;
-    await notificationService.unsnooze(workspaceSlug, selected.id);
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === selected.id ? { ...n, snoozed_till: null } : n)),
-    );
-  }, [workspaceSlug, selected]);
+  const onUnsnoozeSelected = useCallback(() => {
+    if (!selected) return Promise.resolve();
+    return performAction(`unsnooze:${selected.id}`, async () => {
+      if (!workspaceSlug) return;
+      await notificationService.unsnooze(workspaceSlug, selected.id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === selected.id ? { ...n, snoozed_till: null } : n)),
+      );
+    });
+  }, [workspaceSlug, selected, performAction]);
 
   const onOpenIssue = useCallback(() => {
     const issueId = selected?.message?.issue?.id;
@@ -229,76 +488,47 @@ export function NotificationsPageV2() {
     navigate(`/${workspaceSlug}/app-v2/projects/${projectId}/work-items/${issueId}`);
   }, [workspaceSlug, selected, navigate]);
 
-  /* The row actions act on the selection, so they belong in the header next to
-     the breadcrumb rather than inside the detail pane. */
-  const headerActions = useMemo(
-    () => (
-      <div className="ml-auto flex items-center gap-2 px-4">
-        {inboxTab !== 'archived' && (
-          <Button size="sm" variant="outline" onClick={() => void onMarkAllRead()}>
-            {t('notifications.markAllRead', 'Mark all read')}
-          </Button>
-        )}
-        {selected && (
-          <>
-            <Button size="sm" variant="outline" onClick={() => void onToggleReadOnSelected()}>
-              {selected.read_at
-                ? t('notifications.markUnread', 'Mark unread')
-                : t('notifications.markRead', 'Mark read')}
-            </Button>
-            <SnoozeMenu
-              snoozedUntil={selected.snoozed_till ?? null}
-              onSnooze={onSnoozeSelected}
-              onUnsnooze={onUnsnoozeSelected}
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                void (selected.archived_at
-                  ? onUnarchiveRow(selected.id)
-                  : onArchiveRow(selected.id))
-              }
-            >
-              {selected.archived_at
-                ? t('common.unarchive', 'Unarchive')
-                : t('common.archive', 'Archive')}
-            </Button>
-            {selected.message?.issue?.id && selected.project_id && (
-              <Button size="sm" onClick={onOpenIssue}>
-                {t('notifications.openIssue', 'Open issue')}
-              </Button>
-            )}
-          </>
-        )}
-      </div>
-    ),
-    [
-      inboxTab,
-      selected,
-      t,
-      onMarkAllRead,
-      onToggleReadOnSelected,
-      onSnoozeSelected,
-      onUnsnoozeSelected,
-      onArchiveRow,
-      onUnarchiveRow,
-      onOpenIssue,
-    ],
-  );
+  const selectNotification = (
+    notification: NotificationApiResponse,
+    trigger: HTMLButtonElement,
+  ) => {
+    lastSelectionButtonRef.current = trigger;
+    setSelectedId(notification.id);
+    setActionError(null);
+    if (window.matchMedia('(max-width: 1023px)').matches) setMobileDetailOpen(true);
 
-  useSetV2Header({ parent: null, title: null, actions: headerActions });
+    if (
+      workspaceSlug &&
+      inboxTab !== 'archived' &&
+      !notification.read_at &&
+      !explicitUnreadIds.has(notification.id)
+    ) {
+      void performAction(`read:${notification.id}`, async () => {
+        await notificationService.markRead(workspaceSlug, notification.id);
+        setNotifications((prev) =>
+          prev.map((item) =>
+            item.id === notification.id ? { ...item, read_at: new Date().toISOString() } : item,
+          ),
+        );
+      });
+    }
+  };
 
-  if (loading) {
+  if (loading && !workspace) return <InboxLoadingState />;
+
+  if (loadError && !workspace) {
     return (
-      <div className="flex min-h-0 flex-1 gap-4">
-        <div className="w-[min(420px,35%)] space-y-2">
-          <Skeleton className="h-9 w-64" />
-          {Array.from({ length: 8 }).map((_, index) => (
-            <Skeleton key={index} className="h-16 w-full" />
-          ))}
+      <div className="flex min-h-[calc(100svh-5rem)] items-center justify-center rounded-xl border bg-card p-6">
+        <div className="max-w-sm text-center">
+          <Inbox className="text-muted-foreground mx-auto size-8" aria-hidden />
+          <h1 className="mt-4 text-lg font-semibold">{inboxTitle}</h1>
+          <p className="text-muted-foreground mt-2 text-sm" role="alert">
+            {loadError}
+          </p>
+          <Button className="mt-4" onClick={() => setReloadKey((value) => value + 1)}>
+            {t('notifications.retry', 'Try again')}
+          </Button>
         </div>
-        <Skeleton className="min-h-0 flex-1 rounded-xl" />
       </div>
     );
   }
@@ -317,135 +547,338 @@ export function NotificationsPageV2() {
           'notifications.empty.mentions',
           'No mentions yet. When someone @-mentions you in an issue or comment, it shows here.',
         )
-      : inboxTab === 'archived'
+      : inboxTab === 'unread'
         ? t(
-            'notifications.empty.archived',
-            'No archived notifications. Archive a row from the inbox to declutter without losing it.',
+            'notifications.empty.unread',
+            "You're all caught up. There are no unread notifications.",
           )
-        : t(
-            'notifications.empty.all',
-            'Inbox zero. Notifications about issues you’re involved with will land here.',
-          );
+        : inboxTab === 'archived'
+          ? t(
+              'notifications.empty.archived',
+              'No archived notifications. Archive a row from the inbox to declutter without losing it.',
+            )
+          : t(
+              'notifications.empty.all',
+              'Inbox zero. Notifications about issues you’re involved with will land here.',
+            );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      {error && (
-        <p className="text-destructive text-sm" role="alert">
-          {error}
-        </p>
-      )}
-
-      <div className="flex min-h-0 flex-1 gap-4">
-        <div className="flex w-[min(420px,35%)] min-w-0 shrink-0 flex-col gap-3">
-          <Tabs
-            value={inboxTab}
-            onValueChange={(value) => {
-              setInboxTab(value as InboxTab);
-              setSelectedId(null);
-            }}
+    <section
+      ref={inboxRootRef}
+      aria-labelledby="inbox-heading"
+      className="flex min-h-[calc(100svh-5rem)] flex-col gap-4 lg:h-[calc(100svh-5rem)] lg:overflow-hidden"
+    >
+      <header className="flex shrink-0 flex-col gap-4 px-1 py-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 id="inbox-heading" className="text-xl font-semibold tracking-tight">
+            {inboxTitle}
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {t('notifications.subtitle', "Updates from work you're involved in, in one place.")}
+          </p>
+        </div>
+        {inboxTab !== 'archived' && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-11 self-start sm:h-8 sm:self-auto"
+            disabled={loading || Boolean(pendingAction)}
+            onClick={() => void onMarkAllRead()}
           >
-            <TabsList>
-              {TABS.map((tab) => (
-                <TabsTrigger key={tab.id} value={tab.id}>
-                  {t(`notifications.tab.${tab.id}`, tab.label)}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+            {pendingAction === 'mark-all-read' ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <CheckCheck />
+            )}
+            {t('notifications.markAllRead', 'Mark all read')}
+          </Button>
+        )}
+      </header>
 
-          <div className="min-h-0 flex-1 overflow-auto rounded-xl border">
-            {notifications.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
-                <Inbox className="text-muted-foreground size-6" aria-hidden />
-                <p className="text-muted-foreground text-sm">{emptyMessage}</p>
+      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(20rem,26rem)_minmax(0,1fr)]">
+        <Card
+          role="region"
+          aria-label={t('notifications.listLabel', 'Notifications')}
+          className="min-w-0 gap-0 overflow-hidden py-0 lg:min-h-0"
+        >
+          <div className="flex shrink-0 flex-col gap-3 p-3 sm:p-4">
+            <Tabs
+              value={inboxTab}
+              onValueChange={(value) => {
+                if (!TABS.some((tab) => tab.id === value)) return;
+                setInboxTab(value as InboxTab);
+                setSelectedId(null);
+                setMobileDetailOpen(false);
+                setActionError(null);
+              }}
+            >
+              <TabsList className="h-11 w-full rounded-xl bg-muted lg:h-9">
+                {TABS.map((tab) => (
+                  <TabsTrigger
+                    key={tab.id}
+                    value={tab.id}
+                    className="rounded-lg border-0 px-2 font-normal text-muted-foreground shadow-none data-[state=active]:bg-card data-[state=active]:font-medium data-[state=active]:text-foreground data-[state=active]:shadow-sm dark:data-[state=active]:bg-card"
+                    disabled={loading || Boolean(pendingAction)}
+                  >
+                    {t(`notifications.tab.${tab.id}`, tab.label)}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+
+            <div className="relative w-full">
+              <label htmlFor="notification-search" className="sr-only">
+                {t('common.search', 'Search')}
+              </label>
+              <Search
+                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                aria-hidden
+              />
+              <Input
+                id="notification-search"
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={t('notifications.searchPlaceholder', 'Search notifications…')}
+                className="h-11 pl-9 lg:h-9"
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          {actionError && (
+            <div className="border-b px-4 py-3 text-sm text-destructive" role="alert">
+              {actionError}
+            </div>
+          )}
+
+          <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+            {loading ? (
+              <div className="space-y-2 p-3" aria-label={t('common.loading', 'Loading…')}>
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <Skeleton key={index} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : loadError ? (
+              <div className="flex min-h-64 flex-col items-center justify-center px-6 py-12 text-center">
+                <Inbox className="text-muted-foreground size-7" aria-hidden />
+                <p className="text-muted-foreground mt-3 max-w-xs text-sm" role="alert">
+                  {loadError}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => setReloadKey((value) => value + 1)}
+                >
+                  {t('notifications.retry', 'Try again')}
+                </Button>
+              </div>
+            ) : visibleNotifications.length === 0 ? (
+              <div className="flex min-h-64 flex-col items-center justify-center px-6 py-12 text-center">
+                {query.trim() ? (
+                  <SearchX className="text-muted-foreground size-7" aria-hidden />
+                ) : (
+                  <Inbox className="text-muted-foreground size-7" aria-hidden />
+                )}
+                <p className="text-muted-foreground mt-3 max-w-xs text-sm">
+                  {query.trim()
+                    ? t('notifications.noSearchResults', 'No notifications match your search.')
+                    : emptyMessage}
+                </p>
               </div>
             ) : (
-              <ul className="divide-y">
-                {notifications.map((n) => {
+              <ul
+                className="space-y-1 p-1.5"
+                aria-label={t('notifications.listLabel', 'Notifications')}
+              >
+                {visibleNotifications.map((notification) => {
                   const { actor, ref, issueName } = rowLabels(
-                    n,
+                    notification,
                     t('notifications.actorFallback', 'Someone'),
                   );
-                  const isSelected = selectedId === n.id;
-                  const isArchived = Boolean(n.archived_at);
+                  const isSelected = selectedId === notification.id;
+                  const isArchived = Boolean(notification.archived_at);
+                  const isUnread = !notification.read_at && !isArchived;
+                  const contextLabel =
+                    [ref !== '—' ? ref : '', issueName].filter(Boolean).join(' · ') || actor;
+                  const rowActionPending =
+                    pendingAction === `archive:${notification.id}` ||
+                    pendingAction === `unarchive:${notification.id}`;
+                  const archiveLabel = isArchived
+                    ? t('common.unarchive', 'Unarchive')
+                    : t('common.archive', 'Archive');
+
                   return (
-                    <li key={n.id} className="group relative">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedId(n.id)}
-                        className={`flex w-full gap-3 px-3 py-3 text-left transition-colors ${
-                          isSelected ? 'bg-muted' : 'hover:bg-muted/50'
-                        }`}
-                      >
-                        <Avatar className="size-8 shrink-0">
-                          <AvatarFallback className="text-xs">{initials(actor)}</AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">{n.title}</p>
-                          <p className="text-muted-foreground mt-0.5 truncate text-sm">
-                            {ref}
-                            {issueName ? ` — ${issueName}` : ''}
-                          </p>
-                        </div>
-                        <span className="shrink-0 text-right">
-                          <span className="text-muted-foreground block text-xs">
-                            {formatTimeAgo(n.created_at)}
-                          </span>
-                          {!n.read_at && !isArchived && (
-                            <Badge className="mt-1" variant="secondary">
-                              {t('notifications.new', 'New')}
-                            </Badge>
+                    <li
+                      key={notification.id}
+                      className={`group relative rounded-lg transition-colors before:pointer-events-none ${
+                        isSelected
+                          ? 'bg-accent text-accent-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-primary'
+                          : 'hover:bg-muted/60'
+                      }`}
+                    >
+                      <div className="flex min-w-0 items-stretch">
+                        <button
+                          type="button"
+                          data-notification-trigger
+                          aria-current={isSelected ? 'true' : undefined}
+                          disabled={Boolean(pendingAction)}
+                          onClick={(event) => selectNotification(notification, event.currentTarget)}
+                          className="focus-visible:ring-ring flex min-h-16 min-w-0 flex-1 items-start gap-2.5 py-2 pr-2 pl-3.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-60"
+                        >
+                          <Avatar aria-hidden className="mt-0.5 size-8 shrink-0">
+                            <AvatarFallback className="text-xs">{initials(actor)}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1 pt-0.5">
+                            <div className="flex min-w-0 items-center gap-1.5">
+                              {isUnread && (
+                                <span
+                                  aria-hidden
+                                  className="bg-primary size-1.5 shrink-0 rounded-full"
+                                />
+                              )}
+                              <p
+                                className={`truncate text-sm leading-5 ${
+                                  notification.read_at ? 'font-medium' : 'font-semibold'
+                                }`}
+                              >
+                                {isUnread && (
+                                  <span className="sr-only">{t('notifications.new', 'New')}: </span>
+                                )}
+                                {notification.title}
+                              </p>
+                            </div>
+                            <div className="text-muted-foreground mt-0.5 flex min-w-0 items-center gap-2 text-xs leading-4">
+                              <span className="truncate">{contextLabel}</span>
+                              <time
+                                dateTime={notification.created_at}
+                                className="ml-auto shrink-0 tabular-nums"
+                              >
+                                {formatTimeAgo(notification.created_at)}
+                              </time>
+                            </div>
+                          </div>
+                        </button>
+
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          disabled={Boolean(pendingAction)}
+                          aria-label={`${archiveLabel}: ${notification.title}`}
+                          aria-busy={rowActionPending || undefined}
+                          title={archiveLabel}
+                          onClick={() =>
+                            void (isArchived
+                              ? onUnarchiveRow(notification.id)
+                              : onArchiveRow(notification.id))
+                          }
+                          className="text-muted-foreground hover:text-foreground my-auto mr-1.5 size-11 shrink-0 lg:size-9"
+                        >
+                          {rowActionPending ? (
+                            <Loader2 className="animate-spin" />
+                          ) : isArchived ? (
+                            <ArchiveRestore />
+                          ) : (
+                            <Archive />
                           )}
-                        </span>
-                      </button>
-                      {/* Kept focusable so keyboard users reach it; the fade is
-                          visual only. */}
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        aria-label={
-                          isArchived
-                            ? t('common.unarchive', 'Unarchive')
-                            : t('common.archive', 'Archive')
-                        }
-                        title={
-                          isArchived
-                            ? t('common.unarchive', 'Unarchive')
-                            : t('common.archive', 'Archive')
-                        }
-                        onClick={() =>
-                          void (isArchived ? onUnarchiveRow(n.id) : onArchiveRow(n.id))
-                        }
-                        className="absolute top-2 right-2 size-7 opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
-                      >
-                        {isArchived ? <ArchiveRestore /> : <Archive />}
-                      </Button>
+                        </Button>
+                      </div>
                     </li>
                   );
                 })}
               </ul>
             )}
           </div>
-        </div>
+        </Card>
 
-        <div className="min-h-0 min-w-0 flex-1 overflow-auto rounded-xl border">
+        <Card
+          role="region"
+          aria-label={
+            selected
+              ? selected.title
+              : t('notifications.detailDescription', 'Notification details and actions.')
+          }
+          className="hidden min-h-0 min-w-0 gap-0 overflow-hidden py-0 lg:flex"
+        >
           {!selected ? (
-            <div className="text-muted-foreground flex h-full items-center justify-center p-8 text-sm">
-              {t('notifications.selectPrompt', 'Select a notification to see details.')}
+            <div className="text-muted-foreground flex h-full min-h-80 flex-col items-center justify-center p-8 text-center">
+              <MailOpen className="size-8" aria-hidden />
+              <p className="mt-3 max-w-xs text-sm">
+                {t('notifications.selectPrompt', 'Select a notification to see details.')}
+              </p>
             </div>
           ) : (
-            <div className="p-6">
-              <h2 className="truncate text-lg font-semibold">{selected.title}</h2>
-              <p className="text-muted-foreground mt-1 text-sm">
-                {formatTimeAgo(selected.created_at)}
-              </p>
-              <div className="mt-6">
-                <NotificationContent notification={selected} />
-              </div>
-            </div>
+            <NotificationDetail
+              notification={selected}
+              pendingAction={pendingAction}
+              actionError={actionError}
+              onToggleRead={onToggleReadOnSelected}
+              onArchive={() =>
+                selected.archived_at ? onUnarchiveRow(selected.id) : onArchiveRow(selected.id)
+              }
+              onSnooze={onSnoozeSelected}
+              onUnsnooze={onUnsnoozeSelected}
+              onOpenIssue={onOpenIssue}
+            />
           )}
-        </div>
+        </Card>
       </div>
-    </div>
+
+      <Sheet open={mobileDetailOpen && Boolean(selected)} onOpenChange={setMobileDetailOpen}>
+        <SheetContent
+          className="w-full gap-0 p-0 sm:max-w-2xl [&>button]:top-2 [&>button]:right-2 [&>button]:flex [&>button]:size-11 [&>button]:items-center [&>button]:justify-center"
+          side="right"
+          onCloseAutoFocus={(event) => {
+            const previousTrigger = lastSelectionButtonRef.current;
+            const fallback = inboxRootRef.current?.querySelector<HTMLButtonElement>(
+              '[data-notification-trigger], #notification-search',
+            );
+            const focusTarget = previousTrigger?.isConnected ? previousTrigger : fallback;
+            if (!focusTarget) return;
+            event.preventDefault();
+            requestAnimationFrame(() => focusTarget.focus());
+          }}
+        >
+          {selected && (
+            <>
+              <SheetHeader className="sr-only">
+                <SheetTitle>{selected.title}</SheetTitle>
+                <SheetDescription>
+                  {t('notifications.detailDescription', 'Notification details and actions.')}
+                </SheetDescription>
+              </SheetHeader>
+              <NotificationDetail
+                notification={selected}
+                pendingAction={pendingAction}
+                actionError={actionError}
+                onToggleRead={onToggleReadOnSelected}
+                onArchive={() =>
+                  selected.archived_at ? onUnarchiveRow(selected.id) : onArchiveRow(selected.id)
+                }
+                onSnooze={onSnoozeSelected}
+                onUnsnooze={onUnsnoozeSelected}
+                onOpenIssue={onOpenIssue}
+              />
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+    </section>
+  );
+}
+
+/** Remount the inbox when its workspace changes so in-flight local state from
+ * one workspace can never be applied to another workspace's notification id. */
+export function NotificationsPageV2() {
+  const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
+  return (
+    <NotificationsInboxV2
+      key={workspaceSlug ?? 'missing-workspace'}
+      workspaceSlug={workspaceSlug}
+    />
   );
 }

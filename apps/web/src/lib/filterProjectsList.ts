@@ -109,7 +109,7 @@ export function filterProjectsList({
     if (favoritesOnly && !favoriteProjectIds.includes(project.id)) return false;
 
     if (accessFilters.length > 0) {
-      const access: 'private' | 'public' = project.guest_view_all_features ? 'public' : 'private';
+      const access: 'private' | 'public' = project.network === 0 ? 'private' : 'public';
       if (!accessFilters.includes(access)) return false;
     }
 

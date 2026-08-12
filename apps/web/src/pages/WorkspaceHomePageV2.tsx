@@ -85,6 +85,22 @@ export function WorkspaceHomePageV2() {
   const [stickyOpen, setStickyOpen] = useState(false);
   const [stickyContent, setStickyContent] = useState('');
   const [stickySubmitting, setStickySubmitting] = useState(false);
+  const [stickiesDarkTheme, setStickiesDarkTheme] = useState(
+    () =>
+      typeof document !== 'undefined' &&
+      document.documentElement.getAttribute('data-theme') === 'dark',
+  );
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const syncTheme = () => setStickiesDarkTheme(root.getAttribute('data-theme') === 'dark');
+
+    syncTheme();
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!workspaceSlug) return;
@@ -393,7 +409,7 @@ export function WorkspaceHomePageV2() {
                   key={sticky.id}
                   workspaceSlug={workspaceSlug ?? ''}
                   sticky={sticky}
-                  isDarkTheme={false}
+                  isDarkTheme={stickiesDarkTheme}
                   onUpdate={(updated) =>
                     setStickies((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
                   }

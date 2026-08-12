@@ -31,6 +31,7 @@ import {
   SidebarMenuSubItem,
 } from '@/components/shadcn/ui/sidebar';
 import { Skeleton } from '@/components/shadcn/ui/skeleton';
+import { PROJECTS_REFRESH_EVENT } from '../../lib/projectListEvents';
 import { projectService } from '../../services/projectService';
 import type { ProjectApiResponse } from '../../api/types';
 
@@ -122,21 +123,30 @@ export function NavProjects() {
   useEffect(() => {
     if (!workspaceSlug) return;
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- the skeleton belongs to this fetch
-    setLoading(true);
-    projectService
-      .list(workspaceSlug)
-      .then((list) => {
-        if (!cancelled) setProjects(list ?? []);
-      })
-      .catch(() => {
-        /* The group renders empty; the rest of the sidebar still works. */
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    let requestId = 0;
+    const loadProjects = (showSkeleton: boolean) => {
+      const currentRequestId = ++requestId;
+      if (showSkeleton) setLoading(true);
+      projectService
+        .list(workspaceSlug)
+        .then((list) => {
+          if (!cancelled && currentRequestId === requestId) setProjects(list ?? []);
+        })
+        .catch(() => {
+          /* The group renders its previous value; the rest of the sidebar still works. */
+        })
+        .finally(() => {
+          if (!cancelled && currentRequestId === requestId) setLoading(false);
+        });
+    };
+
+    const refreshProjects = () => loadProjects(false);
+
+    loadProjects(true);
+    window.addEventListener(PROJECTS_REFRESH_EVENT, refreshProjects);
     return () => {
       cancelled = true;
+      window.removeEventListener(PROJECTS_REFRESH_EVENT, refreshProjects);
     };
   }, [workspaceSlug]);
 

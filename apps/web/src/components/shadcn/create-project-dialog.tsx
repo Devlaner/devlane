@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/shadcn/ui/button';
 import {
@@ -20,7 +20,6 @@ import {
 } from '@/components/shadcn/ui/select';
 import { Textarea } from '@/components/shadcn/ui/textarea';
 import { projectService } from '../../services/projectService';
-import { workspaceService } from '../../services/workspaceService';
 import { getApiErrorMessage } from '../../api/client';
 import type { ProjectApiResponse, WorkspaceMemberApiResponse } from '../../api/types';
 
@@ -32,6 +31,7 @@ interface CreateProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspaceSlug: string;
+  members: WorkspaceMemberApiResponse[];
   onSuccess?: (project: ProjectApiResponse) => void;
 }
 
@@ -46,6 +46,7 @@ export function CreateProjectDialog({
   open,
   onOpenChange,
   workspaceSlug,
+  members,
   onSuccess,
 }: CreateProjectDialogProps) {
   const { t } = useTranslation();
@@ -55,20 +56,8 @@ export function CreateProjectDialog({
   const [description, setDescription] = useState('');
   const [network, setNetwork] = useState<'public' | 'secret'>('public');
   const [projectLeadId, setProjectLeadId] = useState<string>('');
-  const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    workspaceService
-      .listMembers(workspaceSlug)
-      .then(setMembers)
-      .catch(() => {
-        /* The lead is optional, so an unreadable member list just leaves the
-           dropdown empty rather than blocking the form. */
-      });
-  }, [open, workspaceSlug]);
 
   const reset = () => {
     setName('');

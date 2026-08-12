@@ -5,7 +5,6 @@ import { AppSidebar } from '@/components/shadcn/app-sidebar';
 import { ArchivesToolbar } from '@/components/shadcn/archives-toolbar';
 import { DraftsToolbar } from '@/components/shadcn/drafts-toolbar';
 import { ProjectSearchToolbar } from '@/components/shadcn/project-search-toolbar';
-import { ProjectsToolbar } from '@/components/shadcn/projects-toolbar';
 import { ProjectWorkItemsToolbar } from '@/components/shadcn/project-work-items-toolbar';
 import { ViewsToolbar } from '@/components/shadcn/views-toolbar';
 import {
@@ -164,9 +163,10 @@ function AppShellV2Layout() {
               </BreadcrumbList>
             </Breadcrumb>
           </div>
-          {/* The toolbar belongs to the header, not the page, mirroring how the
-              shipped AppShell hangs its per-page controls off the header. */}
-          {isProjectsRoute && workspaceSlug && <ProjectsToolbar workspaceSlug={workspaceSlug} />}
+          {/* Projects owns its toolbar in the page body. Its search, filters,
+              view switcher and primary action need room to wrap on small
+              screens instead of competing with the breadcrumb in this 64px
+              shell header. */}
           {isViewsRoute && workspaceSlug && <ViewsToolbar workspaceSlug={workspaceSlug} />}
           {isDraftsRoute && workspaceSlug && <DraftsToolbar workspaceSlug={workspaceSlug} />}
           {isArchivesRoute && workspaceSlug && <ArchivesToolbar workspaceSlug={workspaceSlug} />}
