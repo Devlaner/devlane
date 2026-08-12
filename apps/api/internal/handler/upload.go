@@ -187,6 +187,14 @@ func (h *UploadHandler) ServeFile(c *gin.Context) {
 
 	c.Header("Content-Type", info.ContentType)
 	c.Header("X-Content-Type-Options", "nosniff")
-	c.Header("Content-Disposition", "inline")
+	// Attachments are arbitrary user files with an unvalidated content-type, so
+	// force a download instead of rendering them inline: an uploaded .html or
+	// SVG would otherwise execute on the API origin when opened. The uploads/
+	// prefix (avatars, covers, logos) is validated as images and stays inline.
+	disposition := "inline"
+	if strings.HasPrefix(path, "attachments/") {
+		disposition = "attachment"
+	}
+	c.Header("Content-Disposition", disposition)
 	c.DataFromReader(http.StatusOK, info.Size, info.ContentType, obj, nil)
 }
