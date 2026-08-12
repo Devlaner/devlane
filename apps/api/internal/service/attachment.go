@@ -81,6 +81,9 @@ func (s *AttachmentService) ensureProjectAccess(ctx context.Context, workspaceSl
 	if !inWorkspace {
 		return ErrProjectNotFound
 	}
+	if err := enforceProjectVisibility(ctx, s.ps, s.ws, wrk.ID, projectID, userID); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -117,6 +120,9 @@ func (s *AttachmentService) AuthorizeDownload(ctx context.Context, issueID, asse
 	}
 	if !ok {
 		return ErrProjectForbidden
+	}
+	if err := enforceProjectVisibility(ctx, s.ps, s.ws, att.WorkspaceID, att.ProjectID, userID); err != nil {
+		return err
 	}
 	return nil
 }

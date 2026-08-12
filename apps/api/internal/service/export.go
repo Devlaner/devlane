@@ -58,6 +58,9 @@ func (s *ExportService) ExportIssues(ctx context.Context, slug string, userID uu
 		if !in {
 			return "", nil, ErrProjectNotFound
 		}
+		if err := enforceProjectVisibility(ctx, s.ps, s.ws, wrk.ID, pid, userID); err != nil {
+			return "", nil, err
+		}
 	}
 
 	data, err := s.buildWorkbook(ctx, projectIDs)

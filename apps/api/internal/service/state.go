@@ -47,6 +47,9 @@ func (s *StateService) ensureProjectAccess(ctx context.Context, workspaceSlug st
 	if !inWorkspace {
 		return uuid.Nil, ErrProjectNotFound
 	}
+	if err := enforceProjectVisibility(ctx, s.ps, s.ws, wrk.ID, projectID, userID); err != nil {
+		return uuid.Nil, err
+	}
 	return wrk.ID, nil
 }
 

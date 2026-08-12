@@ -97,6 +97,9 @@ func (s *CycleService) ensureProjectAccess(ctx context.Context, workspaceSlug st
 	if !inWorkspace {
 		return ErrProjectNotFound
 	}
+	if err := enforceProjectVisibility(ctx, s.ps, s.ws, wrk.ID, projectID, userID); err != nil {
+		return err
+	}
 	return nil
 }
 

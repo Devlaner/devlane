@@ -58,6 +58,9 @@ func (s *IntakeService) ensureProjectAccess(ctx context.Context, workspaceSlug s
 	if !inWorkspace {
 		return nil, ErrProjectNotFound
 	}
+	if err := enforceProjectVisibility(ctx, s.ps, s.ws, wrk.ID, projectID, userID); err != nil {
+		return nil, err
+	}
 	return wrk, nil
 }
 

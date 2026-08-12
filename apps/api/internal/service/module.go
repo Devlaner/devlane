@@ -55,6 +55,9 @@ func (s *ModuleService) ensureProjectAccess(ctx context.Context, workspaceSlug s
 	if !inWorkspace {
 		return ErrProjectNotFound
 	}
+	if err := enforceProjectVisibility(ctx, s.ps, s.ws, wrk.ID, projectID, userID); err != nil {
+		return err
+	}
 	return nil
 }
 
