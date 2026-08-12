@@ -109,6 +109,23 @@ func (s *ExportService) ListHistory(ctx context.Context, slug string, userID uui
 
 const exportPageSize = 500
 
+// neutralizeFormula guards a spreadsheet cell against formula injection. Excel,
+// LibreOffice and Sheets execute a cell whose text begins with =, +, -, @, tab
+// or carriage return as a formula, so user-controlled text (issue/project/state
+// names) that starts with one of those is prefixed with a single quote, which
+// forces it to be treated as literal text. Non-string values pass through.
+func neutralizeFormula(v interface{}) interface{} {
+	s, ok := v.(string)
+	if !ok || s == "" {
+		return v
+	}
+	switch s[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		return "'" + s
+	}
+	return v
+}
+
 func (s *ExportService) buildWorkbook(ctx context.Context, projectIDs []uuid.UUID) ([]byte, error) {
 	f := excelize.NewFile()
 	defer func() { _ = f.Close() }()
@@ -161,7 +178,7 @@ func (s *ExportService) buildWorkbook(ctx context.Context, projectIDs []uuid.UUI
 				}
 				for c, v := range values {
 					cell, _ := excelize.CoordinatesToCellName(c+1, row)
-					_ = f.SetCellValue(sheet, cell, v)
+					_ = f.SetCellValue(sheet, cell, neutralizeFormula(v))
 				}
 				row++
 			}
