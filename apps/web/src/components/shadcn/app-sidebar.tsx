@@ -1,18 +1,31 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-import { Archive, BarChart3, Layers, LayoutGrid, Settings2, SquareTerminal } from 'lucide-react';
+import {
+  Archive,
+  BarChart3,
+  House,
+  Inbox,
+  Layers,
+  LayoutGrid,
+  Pencil,
+  UserRound,
+} from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext';
+import { WorkspaceFavoritesTree } from '@/components/layout/WorkspaceFavoritesTree';
 import { NavMain } from '@/components/shadcn/nav-main';
 import { NavProjects } from '@/components/shadcn/nav-projects';
-import { NavSecondary } from '@/components/shadcn/nav-secondary';
 import { NavUser } from '@/components/shadcn/nav-user';
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -32,63 +45,62 @@ function buildData(
       email: user?.email ?? '',
       avatar: user?.avatar ?? '',
     },
-    navMain: [
+    primaryNav: [
       {
         /* Inside the preview shell, so navigating here keeps this sidebar. */
         title: 'Home',
         url: base ? `${base}/app-v2` : '/',
-        icon: SquareTerminal,
-        isActive: true,
-        items: [
-          /* Inside the preview shell, so navigating here keeps this sidebar. */
-          { title: 'Inbox', url: `${base}/app-v2/notifications` },
-          {
-            title: 'Your work',
-            url: user ? `${base}/app-v2/profile/${user.id}` : `${base}/app-v2`,
-          },
-          /* Inside the preview shell, so navigating here keeps this sidebar. */
-          { title: 'Drafts', url: `${base}/app-v2/drafts` },
-        ],
+        icon: House,
       },
+      {
+        /* Inside the preview shell, so navigating here keeps this sidebar. */
+        title: 'Inbox',
+        url: `${base}/app-v2/notifications`,
+        icon: Inbox,
+      },
+      {
+        title: 'Your work',
+        url: user ? `${base}/app-v2/profile/${user.id}` : `${base}/app-v2`,
+        icon: UserRound,
+      },
+    ],
+    workspaceNav: [
       {
         /* Inside the preview shell, so navigating here keeps this sidebar. */
         title: 'Projects',
         url: `${base}/app-v2/projects`,
         icon: LayoutGrid,
-        items: [
-          { title: 'All projects', url: `${base}/app-v2/projects` },
-          { title: 'Project settings', url: `${base}/settings/projects` },
-        ],
+      },
+      {
+        /* Inside the preview shell, so navigating here keeps this sidebar. */
+        title: 'Views',
+        url: `${base}/app-v2/views/all-issues`,
+        icon: Layers,
       },
       {
         /* Inside the preview shell, so navigating here keeps this sidebar. */
         title: 'Analytics',
         url: `${base}/app-v2/analytics/overview`,
         icon: BarChart3,
-        items: [
-          { title: 'Overview', url: `${base}/app-v2/analytics/overview` },
-          { title: 'Work items', url: `${base}/app-v2/analytics/work-items` },
-        ],
       },
       {
-        title: 'Settings',
-        url: `${base}/settings`,
-        icon: Settings2,
-        items: [
-          { title: 'Account', url: `${base}/settings/account` },
-          { title: 'Projects', url: `${base}/settings/projects` },
-        ],
+        /* Inside the preview shell, so navigating here keeps this sidebar. */
+        title: 'Drafts',
+        url: `${base}/app-v2/drafts`,
+        icon: Pencil,
       },
-    ],
-    navSecondary: [
-      /* Inside the preview shell, so navigating here keeps this sidebar. */
-      { title: 'Views', url: `${base}/app-v2/views/all-issues`, icon: Layers },
-      { title: 'Archives', url: `${base}/app-v2/archives`, icon: Archive },
+      {
+        /* Inside the preview shell, so navigating here keeps this sidebar. */
+        title: 'Archives',
+        url: `${base}/app-v2/archives`,
+        icon: Archive,
+      },
     ],
   };
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { t } = useTranslation();
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const { user } = useAuth();
 
@@ -131,9 +143,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={data.primaryNav} />
+        <NavMain items={data.workspaceNav} label={t('nav.section.workspace', 'Workspace')} />
+        {workspaceSlug ? (
+          <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+            <SidebarGroupLabel>{t('nav.section.favorites', 'Favorites')}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <WorkspaceFavoritesTree workspaceSlug={workspaceSlug} baseUrl={`${base}/app-v2`} />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
         <NavProjects />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

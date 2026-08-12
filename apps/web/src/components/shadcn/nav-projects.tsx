@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import {
@@ -10,9 +10,7 @@ import {
   Inbox,
   Layers,
   LayoutGrid,
-  MoreHorizontal,
   RefreshCw,
-  Settings,
   SquareKanban,
   type LucideIcon,
 } from 'lucide-react';
@@ -23,30 +21,18 @@ import {
   CollapsibleTrigger,
 } from '@/components/shadcn/ui/collapsible';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/shadcn/ui/dropdown-menu';
-import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  useSidebar,
 } from '@/components/shadcn/ui/sidebar';
 import { Skeleton } from '@/components/shadcn/ui/skeleton';
 import { projectService } from '../../services/projectService';
 import type { ProjectApiResponse } from '../../api/types';
-
-/** How many projects to list before the group needs a "More" link. */
-const MAX_PROJECTS_LISTED = 6;
 
 /**
  * The per-project pages, in the order the shipped project sidebar lists them.
@@ -121,7 +107,6 @@ function projectInitial(project: ProjectApiResponse): string {
  */
 export function NavProjects() {
   const { t } = useTranslation();
-  const { isMobile } = useSidebar();
   const { workspaceSlug, projectId: activeProjectId } = useParams<{
     workspaceSlug: string;
     projectId?: string;
@@ -133,7 +118,6 @@ export function NavProjects() {
      group renders its empty state immediately rather than a skeleton that
      never resolves. */
   const [loading, setLoading] = useState(Boolean(workspaceSlug));
-  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     if (!workspaceSlug) return;
@@ -157,10 +141,6 @@ export function NavProjects() {
   }, [workspaceSlug]);
 
   const base = workspaceSlug ? `/${workspaceSlug}` : '';
-  const visible = useMemo(
-    () => (showAll ? projects : projects.slice(0, MAX_PROJECTS_LISTED)),
-    [projects, showAll],
-  );
 
   if (loading) {
     return (
@@ -192,7 +172,7 @@ export function NavProjects() {
           </SidebarMenuItem>
         )}
 
-        {visible.map((project) => {
+        {projects.map((project) => {
           const projectBase = `${base}/app-v2/projects/${project.id}`;
           const pages = PROJECT_PAGES.filter((page) => !page.flag || project[page.flag] !== false);
           /* Expanded for the project being viewed, so its pages are reachable
@@ -200,10 +180,15 @@ export function NavProjects() {
           const isActive = activeProjectId === project.id;
 
           return (
-            <Collapsible key={project.id} asChild defaultOpen={isActive}>
+            <Collapsible
+              key={project.id}
+              asChild
+              defaultOpen={isActive}
+              className="group/collapsible"
+            >
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip={project.name} isActive={isActive}>
-                  <Link to={`${projectBase}/work-items`}>
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuButton tooltip={project.name} isActive={isActive}>
                     <span
                       aria-hidden
                       className="bg-sidebar-accent text-sidebar-accent-foreground flex size-4 shrink-0 items-center justify-center rounded text-[10px] font-medium"
@@ -211,44 +196,9 @@ export function NavProjects() {
                       {projectInitial(project)}
                     </span>
                     <span className="truncate">{project.name}</span>
-                  </Link>
-                </SidebarMenuButton>
-
-                <CollapsibleTrigger asChild>
-                  <SidebarMenuAction className="right-7 data-[state=open]:rotate-90">
-                    <ChevronRight />
-                    <span className="sr-only">{t('common.toggle', 'Toggle')}</span>
-                  </SidebarMenuAction>
+                    <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                  </SidebarMenuButton>
                 </CollapsibleTrigger>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <SidebarMenuAction showOnHover>
-                      <MoreHorizontal />
-                      <span className="sr-only">{t('common.more', 'More')}</span>
-                    </SidebarMenuAction>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    className="w-48"
-                    side={isMobile ? 'bottom' : 'right'}
-                    align={isMobile ? 'end' : 'start'}
-                  >
-                    <DropdownMenuItem asChild>
-                      <Link to={`${projectBase}/work-items`}>
-                        <Folder className="text-muted-foreground" />
-                        <span>{t('projects.open', 'Open project')}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {/* No v2 settings page exists, so this leaves the preview. */}
-                    <DropdownMenuItem asChild>
-                      <Link to={`${base}/projects/${project.id}/settings`}>
-                        <Settings className="text-muted-foreground" />
-                        <span>{t('projects.settings', 'Project settings')}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
 
                 <CollapsibleContent>
                   <SidebarMenuSub>
@@ -272,15 +222,6 @@ export function NavProjects() {
             </Collapsible>
           );
         })}
-
-        {projects.length > MAX_PROJECTS_LISTED && !showAll && (
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => setShowAll(true)}>
-              <MoreHorizontal />
-              <span>{t('common.more', 'More')}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        )}
       </SidebarMenu>
     </SidebarGroup>
   );
