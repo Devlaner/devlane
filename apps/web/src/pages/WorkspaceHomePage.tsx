@@ -10,6 +10,7 @@ import { stickiesService } from '../services/stickiesService';
 import { StickyNoteCard } from '../components/stickies/StickyNoteCard';
 import { pickRandomStickyBackground } from '../components/stickies/stickyPalette';
 import { OPEN_HOME_WIDGETS } from '../lib/homeWidgetsEvents';
+import { safeUrl } from '../lib/sanitize';
 import { recentsService } from '../services/recentsService';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import type {
@@ -425,7 +426,9 @@ function QuicklinkCardRow({
   const menuRootRef = useRef<HTMLDivElement>(null);
   const label = ql.title?.trim() || ql.url;
   const isInternal = !!ql.project_id;
-  const href = isInternal ? `${baseUrl}/projects/${ql.project_id}` : ql.url;
+  // External quicklink URLs are user-supplied, so run them through safeUrl to
+  // block javascript:/data: and other non http(s) schemes.
+  const href = isInternal ? `${baseUrl}/projects/${ql.project_id}` : safeUrl(ql.url);
 
   useEffect(() => {
     if (!menuOpen) return;
