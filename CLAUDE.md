@@ -127,6 +127,23 @@ src/
 - **Editor**: TipTap 3.22.3 — keep all `@tiptap/*` packages on the **same exact version** (they share peer deps; mismatches break silently).
 - **Lazy boundaries**: every page is `lazy()` with a `<Suspense fallback={<PageFallback />}>`. New pages should follow the same pattern in `routes/index.tsx`.
 
+## V2 interface design system
+
+The v2 web interface (`apps/web/src/pages/*V2.tsx`, routes below
+`/:workspaceSlug/app-v2`, `apps/web/src/components/shadcn/**`) is built on
+shadcn/ui. **Read [AGENTS.md](AGENTS.md) before designing or implementing
+anything on that surface** — it is the authoritative design direction and
+lists the reference sources:
+
+- [shadcn/ui docs](https://ui.shadcn.com/docs/components) — primary reference for component APIs, composition, accessibility, and states.
+- [shadcn-ui/ui repo](https://github.com/shadcn-ui/ui) — source of truth when the docs are insufficient.
+- [AdminCN Free](https://shadcnstudio.com/templates/admin-dashboard/admincn-free) — visual/interaction reference for dashboard composition, navigation, tables, forms, and settings pages.
+
+Component config lives in `apps/web/components.json` (`new-york` style, slate
+base, lucide icons, `@/components/shadcn/ui` alias). Reuse existing primitives
+from that directory before adding new ones, and adapt references to Devlane's
+services, routes, and theme tokens rather than vendoring template code.
+
 ## Working with this repo
 
 - When adding an API endpoint, the change usually touches: `model/` (if new entity) → `store/` → `service/` → `handler/` → register in `router/router.go` → corresponding service in `apps/web/src/services/` → web consumer.
