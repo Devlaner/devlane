@@ -25,11 +25,6 @@ const SignUpPageV2 = lazy(() =>
 const AppShellV2Page = lazy(() =>
   import('../pages/AppShellV2Page').then((m) => page({ AppShellV2Page: m.AppShellV2Page })),
 );
-const AppShellV2Placeholder = lazy(() =>
-  import('../pages/AppShellV2Page').then((m) =>
-    page({ AppShellV2Placeholder: m.AppShellV2Placeholder }),
-  ),
-);
 const ForgotPasswordPage = lazy(() =>
   import('../pages/ForgotPasswordPage').then((m) =>
     page({ ForgotPasswordPage: m.ForgotPasswordPage }),
@@ -71,6 +66,99 @@ const WorkspaceViewsPage = lazy(() =>
   import('../pages/WorkspaceViewsPage').then((m) =>
     page({ WorkspaceViewsPage: m.WorkspaceViewsPage }),
   ),
+);
+const WorkspaceViewsPageV2 = lazy(() =>
+  import('../pages/WorkspaceViewsPageV2').then((m) =>
+    page({ WorkspaceViewsPageV2: m.WorkspaceViewsPageV2 }),
+  ),
+);
+const DraftsPageV2 = lazy(() =>
+  import('../pages/DraftsPageV2').then((m) => page({ DraftsPageV2: m.DraftsPageV2 })),
+);
+const ArchivesPageV2 = lazy(() =>
+  import('../pages/ArchivesPageV2').then((m) => page({ ArchivesPageV2: m.ArchivesPageV2 })),
+);
+const AnalyticsOverviewPageV2 = lazy(() =>
+  import('../pages/AnalyticsOverviewPageV2').then((m) =>
+    page({ AnalyticsOverviewPageV2: m.AnalyticsOverviewPageV2 }),
+  ),
+);
+const ProjectWorkItemsPageV2 = lazy(() =>
+  import('../pages/ProjectWorkItemsPageV2').then((m) =>
+    page({ ProjectWorkItemsPageV2: m.ProjectWorkItemsPageV2 }),
+  ),
+);
+const ProjectEpicsPageV2 = lazy(() =>
+  import('../pages/ProjectEpicsPageV2').then((m) =>
+    page({ ProjectEpicsPageV2: m.ProjectEpicsPageV2 }),
+  ),
+);
+const ProjectCyclesPageV2 = lazy(() =>
+  import('../pages/ProjectCyclesPageV2').then((m) =>
+    page({ ProjectCyclesPageV2: m.ProjectCyclesPageV2 }),
+  ),
+);
+const ProjectModulesPageV2 = lazy(() =>
+  import('../pages/ProjectModulesPageV2').then((m) =>
+    page({ ProjectModulesPageV2: m.ProjectModulesPageV2 }),
+  ),
+);
+const ProjectViewsPageV2 = lazy(() =>
+  import('../pages/ProjectViewsPageV2').then((m) =>
+    page({ ProjectViewsPageV2: m.ProjectViewsPageV2 }),
+  ),
+);
+const ProjectPagesPageV2 = lazy(() =>
+  import('../pages/ProjectPagesPageV2').then((m) =>
+    page({ ProjectPagesPageV2: m.ProjectPagesPageV2 }),
+  ),
+);
+const ProjectIntakePageV2 = lazy(() =>
+  import('../pages/ProjectIntakePageV2').then((m) =>
+    page({ ProjectIntakePageV2: m.ProjectIntakePageV2 }),
+  ),
+);
+const EpicDetailPageV2 = lazy(() =>
+  import('../pages/EpicDetailPageV2').then((m) => page({ EpicDetailPageV2: m.EpicDetailPageV2 })),
+);
+const CycleDetailPageV2 = lazy(() =>
+  import('../pages/CycleDetailPageV2').then((m) =>
+    page({ CycleDetailPageV2: m.CycleDetailPageV2 }),
+  ),
+);
+const IssueDetailPageV2 = lazy(() =>
+  import('../pages/IssueDetailPageV2').then((m) =>
+    page({ IssueDetailPageV2: m.IssueDetailPageV2 }),
+  ),
+);
+const PageDetailPageV2 = lazy(() =>
+  import('../pages/PageDetailPageV2').then((m) => page({ PageDetailPageV2: m.PageDetailPageV2 })),
+);
+const ModuleDetailPageV2 = lazy(() =>
+  import('../pages/ModuleDetailPageV2').then((m) =>
+    page({ ModuleDetailPageV2: m.ModuleDetailPageV2 }),
+  ),
+);
+const ViewDetailPageV2 = lazy(() =>
+  import('../pages/ViewDetailPageV2').then((m) => page({ ViewDetailPageV2: m.ViewDetailPageV2 })),
+);
+const WorkspaceHomePageV2 = lazy(() =>
+  import('../pages/WorkspaceHomePageV2').then((m) =>
+    page({ WorkspaceHomePageV2: m.WorkspaceHomePageV2 }),
+  ),
+);
+const AnalyticsWorkItemsPageV2 = lazy(() =>
+  import('../pages/AnalyticsWorkItemsPageV2').then((m) =>
+    page({ AnalyticsWorkItemsPageV2: m.AnalyticsWorkItemsPageV2 }),
+  ),
+);
+const NotificationsPageV2 = lazy(() =>
+  import('../pages/NotificationsPageV2').then((m) =>
+    page({ NotificationsPageV2: m.NotificationsPageV2 }),
+  ),
+);
+const ProfilePageV2 = lazy(() =>
+  import('../pages/ProfilePageV2').then((m) => page({ ProfilePageV2: m.ProfilePageV2 })),
 );
 const DraftsPage = lazy(() =>
   import('../pages/DraftsPage').then((m) => page({ DraftsPage: m.DraftsPage })),
@@ -518,7 +606,14 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
         children: [
-          { index: true, element: <AppShellV2Placeholder /> },
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <WorkspaceHomePageV2 />
+              </Suspense>
+            ),
+          },
           {
             path: 'projects',
             element: (
@@ -526,6 +621,193 @@ const router = createBrowserRouter([
                 <ProjectsListPageV2 />
               </Suspense>
             ),
+          },
+          {
+            /* The per-project pages the v2 sidebar links to. Same segments as
+               the shipped project routes, so the two trees can be compared by
+               swapping `/app-v2/projects/:id` for `/projects/:id`. */
+            path: 'projects/:projectId',
+            element: <Outlet />,
+            children: [
+              { index: true, element: <Navigate to="work-items" replace /> },
+              {
+                path: 'work-items',
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <ProjectWorkItemsPageV2 />
+                  </Suspense>
+                ),
+              },
+              {
+                path: 'work-items/:issueId',
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <IssueDetailPageV2 />
+                  </Suspense>
+                ),
+              },
+              {
+                path: 'epics',
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <ProjectEpicsPageV2 />
+                  </Suspense>
+                ),
+              },
+              {
+                path: 'epics/:epicId',
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <EpicDetailPageV2 />
+                  </Suspense>
+                ),
+              },
+              {
+                path: 'cycles',
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <ProjectCyclesPageV2 />
+                  </Suspense>
+                ),
+              },
+              {
+                path: 'cycles/:cycleId',
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <CycleDetailPageV2 />
+                  </Suspense>
+                ),
+              },
+              {
+                path: 'modules',
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <ProjectModulesPageV2 />
+                  </Suspense>
+                ),
+              },
+              {
+                path: 'modules/:moduleId',
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <ModuleDetailPageV2 />
+                  </Suspense>
+                ),
+              },
+              {
+                path: 'views',
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <ProjectViewsPageV2 />
+                  </Suspense>
+                ),
+              },
+              {
+                path: 'views/:viewId',
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <ViewDetailPageV2 />
+                  </Suspense>
+                ),
+              },
+              {
+                path: 'pages',
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <ProjectPagesPageV2 />
+                  </Suspense>
+                ),
+              },
+              {
+                path: 'pages/:pageId',
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <PageDetailPageV2 />
+                  </Suspense>
+                ),
+              },
+              {
+                path: 'intake',
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <ProjectIntakePageV2 />
+                  </Suspense>
+                ),
+              },
+              {
+                /* The shipped BoardPage is a redirect and nothing else; nested
+                   here its slug/id guard is structurally satisfied, so the whole
+                   page collapses into this route entry. */
+                path: 'board',
+                element: <Navigate to="../work-items?layout=board" replace relative="path" />,
+              },
+            ],
+          },
+          /* Same shape as the shipped views routes: the bare path lands on the
+             default view rather than rendering an empty picker. */
+          { path: 'views', element: <Navigate to="all-issues" replace /> },
+          {
+            path: 'views/:viewId',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <WorkspaceViewsPageV2 />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'drafts',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <DraftsPageV2 />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'archives',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <ArchivesPageV2 />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'notifications',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <NotificationsPageV2 />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'profile/:userId',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <ProfilePageV2 />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'analytics',
+            element: <Outlet />,
+            children: [
+              { index: true, element: <Navigate to="overview" replace /> },
+              {
+                path: 'overview',
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <AnalyticsOverviewPageV2 />
+                  </Suspense>
+                ),
+              },
+              {
+                path: 'work-items',
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <AnalyticsWorkItemsPageV2 />
+                  </Suspense>
+                ),
+              },
+            ],
           },
         ],
       },

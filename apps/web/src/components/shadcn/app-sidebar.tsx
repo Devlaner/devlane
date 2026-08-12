@@ -2,15 +2,7 @@
 
 import * as React from 'react';
 import { useParams } from 'react-router-dom';
-import {
-  Archive,
-  BarChart3,
-  FileStack,
-  Layers,
-  LayoutGrid,
-  Settings2,
-  SquareTerminal,
-} from 'lucide-react';
+import { Archive, BarChart3, Layers, LayoutGrid, Settings2, SquareTerminal } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { NavMain } from '@/components/shadcn/nav-main';
@@ -28,8 +20,8 @@ import {
 } from '@/components/shadcn/ui/sidebar';
 
 /* The block's sample data, replaced with Devlane's own pages. Every url is a
-   real route; the sample projects are gone because this preview has no project
-   selected, so the group lists the workspace-level project pages instead. */
+   real route. The projects group is not built here — NavProjects loads the
+   workspace's real projects itself. */
 function buildData(
   base: string,
   user: { name: string; email: string; avatar: string; id: string } | null,
@@ -42,14 +34,20 @@ function buildData(
     },
     navMain: [
       {
+        /* Inside the preview shell, so navigating here keeps this sidebar. */
         title: 'Home',
-        url: base || '/',
+        url: base ? `${base}/app-v2` : '/',
         icon: SquareTerminal,
         isActive: true,
         items: [
-          { title: 'Inbox', url: `${base}/notifications` },
-          { title: 'Your work', url: user ? `${base}/profile/${user.id}` : base || '/' },
-          { title: 'Drafts', url: `${base}/drafts` },
+          /* Inside the preview shell, so navigating here keeps this sidebar. */
+          { title: 'Inbox', url: `${base}/app-v2/notifications` },
+          {
+            title: 'Your work',
+            url: user ? `${base}/app-v2/profile/${user.id}` : `${base}/app-v2`,
+          },
+          /* Inside the preview shell, so navigating here keeps this sidebar. */
+          { title: 'Drafts', url: `${base}/app-v2/drafts` },
         ],
       },
       {
@@ -63,12 +61,13 @@ function buildData(
         ],
       },
       {
+        /* Inside the preview shell, so navigating here keeps this sidebar. */
         title: 'Analytics',
-        url: `${base}/analytics`,
+        url: `${base}/app-v2/analytics/overview`,
         icon: BarChart3,
         items: [
-          { title: 'Overview', url: `${base}/analytics/overview` },
-          { title: 'Work items', url: `${base}/analytics/work-items` },
+          { title: 'Overview', url: `${base}/app-v2/analytics/overview` },
+          { title: 'Work items', url: `${base}/app-v2/analytics/work-items` },
         ],
       },
       {
@@ -82,13 +81,9 @@ function buildData(
       },
     ],
     navSecondary: [
-      { title: 'Views', url: `${base}/views/all-issues`, icon: Layers },
-      { title: 'Archives', url: `${base}/archives`, icon: Archive },
-    ],
-    projects: [
-      { name: 'All work items', url: `${base}/views/all-issues`, icon: FileStack },
-      { name: 'Projects', url: `${base}/app-v2/projects`, icon: LayoutGrid },
-      { name: 'Archives', url: `${base}/archives`, icon: Archive },
+      /* Inside the preview shell, so navigating here keeps this sidebar. */
+      { title: 'Views', url: `${base}/app-v2/views/all-issues`, icon: Layers },
+      { title: 'Archives', url: `${base}/app-v2/archives`, icon: Archive },
     ],
   };
 }
@@ -137,7 +132,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        <NavProjects />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
