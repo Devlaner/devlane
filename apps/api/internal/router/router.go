@@ -107,6 +107,7 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 	authSvc := auth.NewService(userStore, sessionStore, passwordResetTokenStore)
 	authSvc.SetAccountStore(accountStore)
 	authSvc.SetApiTokenStore(apiTokenStore)
+	authSvc.SetWorkspaceStore(workspaceStore)
 	accountSvc := service.NewAccountService(userStore, sessionStore, store.NewEmailChangeRequestStore(cfg.DB), cfg.MagicCodeSecret)
 	appBaseURL := cfg.AppBaseURL
 	if appBaseURL == "" {
