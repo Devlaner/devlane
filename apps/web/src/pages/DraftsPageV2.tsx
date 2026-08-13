@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import {
   CalendarDays,
   Copy,
@@ -50,6 +51,7 @@ import { moduleService } from '../services/moduleService';
 import { projectService } from '../services/projectService';
 import { stateService } from '../services/stateService';
 import { workspaceService } from '../services/workspaceService';
+import { attachWorkItemRelations } from '../lib/workItemRelations';
 import type {
   CycleApiResponse,
   IssueApiResponse,
@@ -391,11 +393,19 @@ export function DraftsPageV2() {
           is_draft: data.isDraft === true ? true : undefined,
         });
         if (created?.id) {
-          if (data.cycleId) {
-            await cycleService.addIssue(workspaceSlug, data.projectId, data.cycleId, created.id);
-          }
-          if (data.moduleId) {
-            await moduleService.addIssue(workspaceSlug, data.projectId, data.moduleId, created.id);
+          const relationsAttached = await attachWorkItemRelations(
+            workspaceSlug,
+            data.projectId,
+            created.id,
+            { cycleId: data.cycleId, moduleIds: [data.moduleId] },
+          );
+          if (!relationsAttached) {
+            toast.warning(
+              t(
+                'workItem.create.relationWarning',
+                'Work item created, but one or more planning properties could not be attached.',
+              ),
+            );
           }
         }
       }
@@ -409,6 +419,7 @@ export function DraftsPageV2() {
       setCreateError(
         err instanceof Error ? err.message : t('drafts.saveFailed', 'Failed to save draft.'),
       );
+      throw err;
     }
   };
 

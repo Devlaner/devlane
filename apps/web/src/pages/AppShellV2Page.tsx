@@ -21,6 +21,15 @@ import { useV2Header, V2HeaderProvider } from '../contexts/AppShellV2HeaderConte
 import { ProjectSavedViewDisplayProvider } from '../contexts/ProjectSavedViewDisplayContext';
 import { WorkspaceViewsStateProvider } from '../contexts/WorkspaceViewsStateContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import type { WorkspaceViewDisplay } from '../types/workspaceViewDisplay';
+
+const V2_WORKSPACE_VIEW_DISPLAY: WorkspaceViewDisplay = {
+  properties: ['id', 'state', 'priority', 'assignee', 'labels', 'due_date'],
+  showSubWorkItems: true,
+  layout: 'list',
+  sortBy: 'created_at',
+  sortOrder: 'desc',
+};
 
 /**
  * Layout for the v2 previews: the shadcn `sidebar-08` shell with the other v2
@@ -39,7 +48,7 @@ export function AppShellV2Page() {
   return (
     /* The views page and its toolbar both read this filter and display state,
        so it is held above the routes that render them. */
-    <WorkspaceViewsStateProvider>
+    <WorkspaceViewsStateProvider initialDisplay={V2_WORKSPACE_VIEW_DISPLAY}>
       {/* The saved-view pages read this; the shipped tree mounts it in AppShell,
           which the v2 tree sits outside of. */}
       <ProjectSavedViewDisplayProvider>

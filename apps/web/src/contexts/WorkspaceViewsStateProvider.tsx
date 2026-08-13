@@ -9,9 +9,20 @@ import {
 } from '../types/workspaceViewDisplay';
 import { WorkspaceViewsStateContext } from './workspaceViewsStateContextRef';
 
-export function WorkspaceViewsStateProvider({ children }: { children: ReactNode }) {
+interface WorkspaceViewsStateProviderProps {
+  children: ReactNode;
+  initialDisplay?: WorkspaceViewDisplay;
+}
+
+export function WorkspaceViewsStateProvider({
+  children,
+  initialDisplay = DEFAULT_WORKSPACE_VIEW_DISPLAY,
+}: WorkspaceViewsStateProviderProps) {
   const [filters, setFiltersState] = useState<WorkspaceViewFilters>(DEFAULT_WORKSPACE_VIEW_FILTERS);
-  const [display, setDisplayState] = useState<WorkspaceViewDisplay>(DEFAULT_WORKSPACE_VIEW_DISPLAY);
+  const [display, setDisplayState] = useState<WorkspaceViewDisplay>(() => ({
+    ...initialDisplay,
+    properties: [...initialDisplay.properties],
+  }));
 
   const setFilters = useCallback(
     (f: WorkspaceViewFilters | ((prev: WorkspaceViewFilters) => WorkspaceViewFilters)) => {

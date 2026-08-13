@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Boxes, Plus } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/ui/avatar';
 import { Badge } from '@/components/shadcn/ui/badge';
@@ -17,7 +18,7 @@ import {
   TableRow,
 } from '@/components/shadcn/ui/table';
 import { AddExistingWorkItemModal } from '../components/AddExistingWorkItemModal';
-import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
+import { CreateWorkItemDialog } from '@/components/shadcn/create-work-item-dialog';
 import { ModuleLinksSection } from '../components/module-work-items/ModuleLinksSection';
 import { useSetV2Header } from '../contexts/AppShellV2HeaderContext';
 import { buildGroupedIssues } from '../lib/issueListGroupAndSort';
@@ -46,6 +47,7 @@ import { moduleService } from '../services/moduleService';
 import { projectService } from '../services/projectService';
 import { stateService } from '../services/stateService';
 import { workspaceService } from '../services/workspaceService';
+import { attachWorkItemRelations } from '../lib/workItemRelations';
 import type {
   CycleApiResponse,
   IssueApiResponse,
@@ -454,7 +456,7 @@ export function ModuleDetailPageV2() {
       )}
 
       {workspaceSlug && (
-        <CreateWorkItemModal
+        <CreateWorkItemDialog
           open={createOpen}
           onClose={closeCreate}
           workspaceSlug={workspaceSlug}
@@ -479,21 +481,35 @@ export function ModuleDetailPageV2() {
                 is_draft: data.isDraft === true ? true : undefined,
               });
               if (created?.id) {
-                await moduleService.addIssue(
+                const relationsAttached = await attachWorkItemRelations(
                   workspaceSlug,
                   data.projectId,
-                  resolvedModuleId,
                   created.id,
+                  {
+                    cycleId: data.cycleId,
+                    moduleIds: [
+                      data.moduleId,
+                      data.projectId === projectId ? resolvedModuleId : undefined,
+                    ],
+                  },
                 );
+                if (!relationsAttached) {
+                  toast.warning(
+                    t(
+                      'workItem.create.relationWarning',
+                      'Work item created, but one or more planning properties could not be attached.',
+                    ),
+                  );
+                }
               }
               refetchIssues();
-              closeCreate();
             } catch (err) {
               setCreateError(
                 err instanceof Error
                   ? err.message
                   : t('module.createError', 'Failed to create work item'),
               );
+              throw err;
             }
           }}
         />

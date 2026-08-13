@@ -1,8 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CalendarDays, Check, Layers, Search, Signal, Tag, User } from 'lucide-react';
-import { Badge } from '@/components/shadcn/ui/badge';
+import {
+  CalendarDays,
+  Check,
+  ChevronsUpDown,
+  FolderKanban,
+  Layers,
+  Link2,
+  LoaderCircle,
+  Plus,
+  Signal,
+  Tag,
+  User,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/shadcn/ui/button';
+import { Checkbox } from '@/components/shadcn/ui/checkbox';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/shadcn/ui/command';
 import {
   Dialog,
   DialogContent,
@@ -17,13 +38,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/ui/dropdown-menu';
 import { Input } from '@/components/shadcn/ui/input';
 import { Label } from '@/components/shadcn/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/ui/popover';
 import {
   Select,
   SelectContent,
@@ -32,24 +52,27 @@ import {
   SelectValue,
 } from '@/components/shadcn/ui/select';
 import { Textarea } from '@/components/shadcn/ui/textarea';
-import { cycleService } from '../../services/cycleService';
-import { labelService } from '../../services/labelService';
-import { moduleService } from '../../services/moduleService';
-import { stateService } from '../../services/stateService';
-import { workspaceService } from '../../services/workspaceService';
 import type {
   CycleApiResponse,
+  IssueApiResponse,
   LabelApiResponse,
   ModuleApiResponse,
   ProjectApiResponse,
   StateApiResponse,
 } from '../../api/types';
+import { cycleService } from '../../services/cycleService';
+import { issueService } from '../../services/issueService';
+import { labelService } from '../../services/labelService';
+import { moduleService } from '../../services/moduleService';
+import { stateService } from '../../services/stateService';
+import { workspaceService } from '../../services/workspaceService';
 import type { Priority } from '../../types';
 import type { WorkItemInitialValues } from '../CreateWorkItemModal';
 
 const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low', 'none'];
+const EMPTY_VALUE = '__none__';
 
-/** What a submitted form hands back — same shape the shipped modal emits. */
+/** What a submitted form hands back — the same shape as the legacy composer. */
 export interface CreateWorkItemDialogSubmit {
   title: string;
   description: string;
@@ -82,16 +105,6 @@ export interface CreateWorkItemDialogProps {
   onSave?: (data: CreateWorkItemDialogSubmit) => void | Promise<void>;
 }
 
-/**
- * Design preview of the work item composer, built from shadcn primitives. It
- * stands alongside CreateWorkItemModal rather than replacing it, so the two can
- * be compared side by side.
- *
- * The props and the submitted payload match the shipped modal, so a caller can
- * swap one for the other. Two things the shipped modal has are deliberately not
- * carried over: the parent-item picker, which opens a second modal of its own,
- * and inline label creation — both belong to flows outside this preview.
- */
 export function CreateWorkItemDialog({
   open,
   onClose,
@@ -105,6 +118,7 @@ export function CreateWorkItemDialog({
   onSave,
 }: CreateWorkItemDialogProps) {
   const { t } = useTranslation();
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -117,6 +131,7 @@ export function CreateWorkItemDialog({
   const [dueDate, setDueDate] = useState('');
   const [cycleId, setCycleId] = useState<string | null>(null);
   const [moduleId, setModuleId] = useState<string | null>(defaultModuleId ?? null);
+  const [parentId, setParentId] = useState<string | null>(null);
   const [createMore, setCreateMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -124,23 +139,25 @@ export function CreateWorkItemDialog({
   const [labels, setLabels] = useState<LabelApiResponse[]>([]);
   const [cycles, setCycles] = useState<CycleApiResponse[]>([]);
   const [modules, setModules] = useState<ModuleApiResponse[]>([]);
+  const [issues, setIssues] = useState<IssueApiResponse[]>([]);
   const [members, setMembers] = useState<Array<{ id: string; name: string }>>([]);
+
   const [assigneeSearch, setAssigneeSearch] = useState('');
   const [labelSearch, setLabelSearch] = useState('');
+  const [labelMenuOpen, setLabelMenuOpen] = useState(false);
+  const [parentPickerOpen, setParentPickerOpen] = useState(false);
+  const [createLabelLoading, setCreateLabelLoading] = useState(false);
+  const [createLabelError, setCreateLabelError] = useState<string | null>(null);
 
-  const selectedProject = projects.find((p) => p.id === projectId) ?? projects[0];
-  const pid = selectedProject?.id ?? '';
+  const selectedProject = projects.find((project) => project.id === projectId);
   const showModules = selectedProject?.module_view ?? true;
   const showCycles = selectedProject?.cycle_view ?? true;
 
-  /* The form is seeded when the dialog opens, and only then: `initialValues`
-     and `projects` are fresh objects on most renders, so reacting to them
-     would wipe out what is being typed. */
+  /* Seed only when a composer flow opens (or switches from one edit target to
+     another). Project-dependent fields must not be cleared as a side effect of
+     this initial seed. */
   const seedRef = useRef({ defaultProjectId, defaultModuleId, projects });
   seedRef.current = { defaultProjectId, defaultModuleId, projects };
-
-  /* Re-seeding also when `initialValues` changes identity, so picking Edit or
-     Duplicate on another row while the dialog is open loads that row. */
   useEffect(() => {
     if (!open) return;
     const seed = seedRef.current;
@@ -156,27 +173,47 @@ export function CreateWorkItemDialog({
     setDueDate(iv?.dueDate ?? '');
     setCycleId(iv?.cycleId ?? null);
     setModuleId(iv?.moduleId ?? seed.defaultModuleId ?? null);
+    setParentId(iv?.parentId ?? null);
+    setCreateMore(false);
+    setAssigneeSearch('');
+    setLabelSearch('');
+    setCreateLabelError(null);
+    setLabelMenuOpen(false);
+    setParentPickerOpen(false);
   }, [open, initialValues]);
 
-  /* Property options belong to the selected project, so switching projects
-     reloads them. */
+  /* Every option in this group belongs to the selected project, including the
+     available parent work items. */
   useEffect(() => {
-    if (!open || !workspaceSlug || !pid) {
+    if (!open || !workspaceSlug || !projectId) {
+      setStates([]);
+      setLabels([]);
+      setCycles([]);
+      setModules([]);
+      setIssues([]);
       return;
     }
+
     let cancelled = false;
+    setStates([]);
+    setLabels([]);
+    setCycles([]);
+    setModules([]);
+    setIssues([]);
     Promise.all([
-      stateService.list(workspaceSlug, pid),
-      labelService.list(workspaceSlug, pid),
-      cycleService.list(workspaceSlug, pid),
-      moduleService.list(workspaceSlug, pid),
+      stateService.list(workspaceSlug, projectId),
+      labelService.list(workspaceSlug, projectId),
+      cycleService.list(workspaceSlug, projectId),
+      moduleService.list(workspaceSlug, projectId),
+      issueService.list(workspaceSlug, projectId, { limit: 100 }),
     ])
-      .then(([st, lab, cy, mod]) => {
+      .then(([nextStates, nextLabels, nextCycles, nextModules, nextIssues]) => {
         if (cancelled) return;
-        setStates(st ?? []);
-        setLabels(lab ?? []);
-        setCycles(cy ?? []);
-        setModules(mod ?? []);
+        setStates(nextStates ?? []);
+        setLabels(nextLabels ?? []);
+        setCycles(nextCycles ?? []);
+        setModules(nextModules ?? []);
+        setIssues(nextIssues ?? []);
       })
       .catch(() => {
         if (cancelled) return;
@@ -184,11 +221,13 @@ export function CreateWorkItemDialog({
         setLabels([]);
         setCycles([]);
         setModules([]);
+        setIssues([]);
       });
+
     return () => {
       cancelled = true;
     };
-  }, [open, workspaceSlug, pid]);
+  }, [open, workspaceSlug, projectId]);
 
   useEffect(() => {
     if (!open || !workspaceSlug) return;
@@ -198,11 +237,11 @@ export function CreateWorkItemDialog({
       .then((list) => {
         if (cancelled) return;
         setMembers(
-          (list ?? []).map((m) => ({
-            id: m.member_id,
+          (list ?? []).map((member) => ({
+            id: member.member_id,
             name:
-              m.member_display_name?.trim() ||
-              m.member_email?.split('@')[0] ||
+              member.member_display_name?.trim() ||
+              member.member_email?.split('@')[0] ||
               t('common.member', 'Member'),
           })),
         );
@@ -215,27 +254,37 @@ export function CreateWorkItemDialog({
     };
   }, [open, workspaceSlug, t]);
 
-  /* A project with cycles or modules turned off cannot carry the selection the
-     previous project left behind. */
-  useEffect(() => {
-    if (!showCycles) setCycleId(null);
-    if (!showModules) setModuleId(null);
-  }, [showCycles, showModules]);
-
-  const stateMap = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
-  const labelMap = useMemo(() => new Map(labels.map((l) => [l.id, l])), [labels]);
+  const stateMap = useMemo(() => new Map(states.map((state) => [state.id, state])), [states]);
+  const labelMap = useMemo(() => new Map(labels.map((label) => [label.id, label])), [labels]);
 
   const filteredMembers = useMemo(() => {
-    const needle = assigneeSearch.trim().toLowerCase();
-    return needle ? members.filter((m) => m.name.toLowerCase().includes(needle)) : members;
-  }, [members, assigneeSearch]);
+    const query = assigneeSearch.trim().toLowerCase();
+    return query ? members.filter((member) => member.name.toLowerCase().includes(query)) : members;
+  }, [assigneeSearch, members]);
 
   const filteredLabels = useMemo(() => {
-    const needle = labelSearch.trim().toLowerCase();
-    return needle ? labels.filter((l) => l.name.toLowerCase().includes(needle)) : labels;
-  }, [labels, labelSearch]);
+    const query = labelSearch.trim().toLowerCase();
+    return query ? labels.filter((label) => label.name.toLowerCase().includes(query)) : labels;
+  }, [labelSearch, labels]);
 
-  /** Clears everything the user typed but keeps the project selection. */
+  const selectedState = stateId ? stateMap.get(stateId) : undefined;
+  const selectedParent = parentId ? issues.find((issue) => issue.id === parentId) : undefined;
+  const assigneeNames = assigneeIds
+    .map((id) => members.find((member) => member.id === id)?.name)
+    .filter((name): name is string => Boolean(name));
+  const selectedLabels = labelIds
+    .map((id) => labelMap.get(id))
+    .filter((label): label is LabelApiResponse => Boolean(label));
+
+  const canCreateLabel =
+    Boolean(labelSearch.trim()) &&
+    !labels.some((label) => label.name.toLowerCase() === labelSearch.trim().toLowerCase());
+
+  const fieldTriggerClass =
+    'h-11 w-full min-w-0 justify-between px-3 font-normal sm:h-9 [&>span]:min-w-0 [&>span]:truncate';
+  const menuItemClass = 'min-h-11 sm:min-h-8';
+  const menuContentClass = 'w-[min(22rem,calc(100vw-2rem))] p-0';
+
   const resetFields = () => {
     setTitle('');
     setDescription('');
@@ -247,62 +296,143 @@ export function CreateWorkItemDialog({
     setDueDate('');
     setCycleId(null);
     setModuleId(null);
+    setParentId(null);
+    setAssigneeSearch('');
+    setLabelSearch('');
+    setCreateLabelError(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim() || submitting) return;
+  const focusTitle = () => {
+    requestAnimationFrame(() => titleInputRef.current?.focus());
+  };
+
+  const handleProjectChange = (nextProjectId: string) => {
+    if (nextProjectId === projectId) return;
+    setProjectId(nextProjectId);
+    setStateId('');
+    setLabelIds([]);
+    setCycleId(null);
+    setModuleId(null);
+    setParentId(null);
+    setLabelSearch('');
+    setCreateLabelError(null);
+    setParentPickerOpen(false);
+  };
+
+  const handleCreateLabel = async () => {
+    const name = labelSearch.trim();
+    if (!name || !workspaceSlug || !projectId || createLabelLoading) return;
+    setCreateLabelError(null);
+    setCreateLabelLoading(true);
+    try {
+      const created = await labelService.create(workspaceSlug, projectId, { name });
+      setLabels((current) => [...current.filter((label) => label.id !== created.id), created]);
+      setLabelIds((current) => (current.includes(created.id) ? current : [...current, created.id]));
+      setLabelSearch('');
+      setLabelMenuOpen(false);
+    } catch (error) {
+      setCreateLabelError(
+        error instanceof Error
+          ? error.message
+          : t('workItem.create.labelError', 'Failed to create label.'),
+      );
+    } finally {
+      setCreateLabelLoading(false);
+    }
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!title.trim() || !projectId || submitting) return;
+
+    const payload: CreateWorkItemDialogSubmit = {
+      title,
+      description,
+      projectId,
+      stateId: stateId || undefined,
+      priority: priority !== 'none' ? priority : undefined,
+      assigneeIds: assigneeIds.length ? assigneeIds : undefined,
+      assigneeId: assigneeIds[0] ?? undefined,
+      labelIds: labelIds.length ? labelIds : undefined,
+      startDate: startDate || undefined,
+      dueDate: dueDate || undefined,
+      cycleId: cycleId ?? undefined,
+      moduleId: moduleId ?? undefined,
+      parentId: parentId ?? undefined,
+      isDraft: draftOnly ? true : undefined,
+    };
+
     if (!onSave) {
-      if (createMore) resetFields();
-      else onClose();
+      if (createMore) {
+        resetFields();
+        focusTitle();
+      } else {
+        onClose();
+      }
       return;
     }
+
     setSubmitting(true);
     try {
-      await onSave({
-        title,
-        description,
-        projectId,
-        stateId: stateId || undefined,
-        priority: priority !== 'none' ? priority : undefined,
-        assigneeIds: assigneeIds.length ? assigneeIds : undefined,
-        assigneeId: assigneeIds[0] ?? undefined,
-        labelIds: labelIds.length ? labelIds : undefined,
-        startDate: startDate || undefined,
-        dueDate: dueDate || undefined,
-        cycleId: cycleId ?? undefined,
-        moduleId: moduleId ?? undefined,
-        isDraft: draftOnly ? true : undefined,
-      });
-      /* "Create more" clears the form for the next item instead of closing.
-         Closing is decided here rather than by the caller, so a caller that
-         closes on every save cannot defeat the toggle. */
-      if (createMore) resetFields();
-      else onClose();
+      await onSave(payload);
+      if (createMore) {
+        resetFields();
+        focusTitle();
+      } else {
+        onClose();
+      }
+    } catch {
+      /* Callers expose the actionable API message through `createError`.
+         Keeping the form open also preserves everything the user entered. */
     } finally {
       setSubmitting(false);
     }
   };
 
-  const selectedState = stateId ? stateMap.get(stateId) : undefined;
-  const firstLabel = labelIds[0] ? labelMap.get(labelIds[0]) : undefined;
-  const selectedCycle = cycleId ? cycles.find((c) => c.id === cycleId) : undefined;
-  const selectedModule = moduleId ? modules.find((m) => m.id === moduleId) : undefined;
-  const assigneeNames = assigneeIds
-    .map((id) => members.find((m) => m.id === id)?.name)
-    .filter(Boolean);
+  const requestClose = () => {
+    if (!submitting) onClose();
+  };
 
-  const propertyTriggerClass = 'h-8 gap-1.5 rounded-full text-xs font-normal';
+  const assigneeSummary =
+    assigneeNames.length === 0
+      ? t('workItem.create.addAssignees', 'Add assignees')
+      : assigneeNames.length === 1
+        ? assigneeNames[0]
+        : t('workItem.create.selectedCount', '{{name}} +{{count}}', {
+            name: assigneeNames[0],
+            count: assigneeNames.length - 1,
+          });
+  const labelSummary =
+    selectedLabels.length === 0
+      ? t('workItem.create.addLabels', 'Add labels')
+      : selectedLabels.length === 1
+        ? selectedLabels[0].name
+        : t('workItem.create.selectedCount', '{{name}} +{{count}}', {
+            name: selectedLabels[0].name,
+            count: selectedLabels.length - 1,
+          });
 
   return (
     <Dialog
       open={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) requestClose();
       }}
     >
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
+      <DialogContent
+        showCloseButton={false}
+        className="grid max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-none grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-3xl"
+        onEscapeKeyDown={(event) => {
+          if (submitting) event.preventDefault();
+        }}
+        onPointerDownOutside={(event) => {
+          if (submitting) event.preventDefault();
+        }}
+        onInteractOutside={(event) => {
+          if (submitting) event.preventDefault();
+        }}
+      >
+        <DialogHeader className="relative gap-1 border-b px-4 py-4 pr-14 text-left sm:px-6 sm:py-5 sm:pr-16">
           <DialogTitle>
             {draftOnly
               ? t('drafts.draftWorkItem', 'Draft a work item')
@@ -316,363 +446,551 @@ export function CreateWorkItemDialog({
                 )
               : t('workItem.create.description', 'Add a work item to a project.')}
           </DialogDescription>
-        </DialogHeader>
-
-        <form id="create-work-item-v2-form" onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="create-work-item-project">{t('common.project', 'Project')}</Label>
-            <Select value={projectId} onValueChange={setProjectId}>
-              <SelectTrigger id="create-work-item-project" className="w-full">
-                <SelectValue placeholder={t('common.project', 'Project')} />
-              </SelectTrigger>
-              <SelectContent>
-                {projects.map((project) => (
-                  <SelectItem key={project.id} value={project.id}>
-                    {project.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="create-work-item-title">{t('common.title', 'Title')}</Label>
-            <Input
-              id="create-work-item-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t('common.title', 'Title')}
-              autoFocus
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="create-work-item-description">
-              {t('common.description', 'Description')}
-            </Label>
-            {/* Plain text, as in the shipped composer — the rich editor belongs
-                to the work item detail page. */}
-            <Textarea
-              id="create-work-item-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={t('workItem.create.descriptionPlaceholder', 'Click to add description')}
-              rows={4}
-            />
-          </div>
-
-          {/* Properties as a row of pills, mirroring the shipped composer's
-              strip rather than stacking a dozen labelled fields. */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" size="sm" className={propertyTriggerClass}>
-                  <span
-                    className="size-2.5 shrink-0 rounded-full border"
-                    style={
-                      selectedState?.color ? { backgroundColor: selectedState.color } : undefined
-                    }
-                  />
-                  {selectedState?.name ?? t('views.state', 'State')}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
-                {states.length === 0 ? (
-                  <DropdownMenuLabel className="text-muted-foreground font-normal">
-                    {t('drafts.noStates', 'No states.')}
-                  </DropdownMenuLabel>
-                ) : (
-                  <DropdownMenuRadioGroup value={stateId} onValueChange={setStateId}>
-                    {states.map((state) => (
-                      <DropdownMenuRadioItem key={state.id} value={state.id}>
-                        {state.name}
-                      </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" size="sm" className={propertyTriggerClass}>
-                  <Signal className="opacity-70" />
-                  <span className="capitalize">
-                    {priority === 'none' ? t('views.priority', 'Priority') : priority}
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-40">
-                <DropdownMenuRadioGroup
-                  value={priority}
-                  onValueChange={(next) => setPriority(next as Priority)}
-                >
-                  {PRIORITIES.map((value) => (
-                    <DropdownMenuRadioItem key={value} value={value} className="capitalize">
-                      {value}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" size="sm" className={propertyTriggerClass}>
-                  <User className="opacity-70" />
-                  {assigneeNames.length === 0
-                    ? t('views.assignees', 'Assignees')
-                    : assigneeNames[0]}
-                  {assigneeNames.length > 1 && (
-                    <Badge variant="secondary">+{assigneeNames.length - 1}</Badge>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
-                <div className="relative p-1">
-                  <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
-                  <Input
-                    value={assigneeSearch}
-                    onChange={(e) => setAssigneeSearch(e.target.value)}
-                    placeholder={t('common.search', 'Search')}
-                    aria-label={t('common.search', 'Search')}
-                    className="h-8 pl-8"
-                    /* The menu's own typeahead would otherwise steal the keys
-                       as they are typed into this field. */
-                    onKeyDown={(e) => e.stopPropagation()}
-                  />
-                </div>
-                <DropdownMenuSeparator />
-                {filteredMembers.length === 0 ? (
-                  <DropdownMenuLabel className="text-muted-foreground font-normal">
-                    {t('common.noResults', 'No results')}
-                  </DropdownMenuLabel>
-                ) : (
-                  filteredMembers.map((member) => (
-                    <DropdownMenuCheckboxItem
-                      key={member.id}
-                      checked={assigneeIds.includes(member.id)}
-                      /* Kept open so several people can be picked in one go. */
-                      onSelect={(e) => e.preventDefault()}
-                      onCheckedChange={(checked) =>
-                        setAssigneeIds((prev) =>
-                          checked ? [...prev, member.id] : prev.filter((id) => id !== member.id),
-                        )
-                      }
-                    >
-                      {member.name}
-                    </DropdownMenuCheckboxItem>
-                  ))
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" size="sm" className={propertyTriggerClass}>
-                  {firstLabel ? (
-                    <span
-                      className="size-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: firstLabel.color ?? 'currentColor' }}
-                    />
-                  ) : (
-                    <Tag className="opacity-70" />
-                  )}
-                  {firstLabel?.name ?? t('views.labels', 'Labels')}
-                  {labelIds.length > 1 && <Badge variant="secondary">+{labelIds.length - 1}</Badge>}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
-                <div className="relative p-1">
-                  <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
-                  <Input
-                    value={labelSearch}
-                    onChange={(e) => setLabelSearch(e.target.value)}
-                    placeholder={t('common.search', 'Search')}
-                    aria-label={t('common.search', 'Search')}
-                    className="h-8 pl-8"
-                    onKeyDown={(e) => e.stopPropagation()}
-                  />
-                </div>
-                <DropdownMenuSeparator />
-                {filteredLabels.length === 0 ? (
-                  <DropdownMenuLabel className="text-muted-foreground font-normal">
-                    {t('views.noLabels', 'No labels.')}
-                  </DropdownMenuLabel>
-                ) : (
-                  filteredLabels.map((label) => (
-                    <DropdownMenuCheckboxItem
-                      key={label.id}
-                      checked={labelIds.includes(label.id)}
-                      onSelect={(e) => e.preventDefault()}
-                      onCheckedChange={(checked) =>
-                        setLabelIds((prev) =>
-                          checked ? [...prev, label.id] : prev.filter((id) => id !== label.id),
-                        )
-                      }
-                    >
-                      <span
-                        className="size-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: label.color ?? 'currentColor' }}
-                      />
-                      {label.name}
-                    </DropdownMenuCheckboxItem>
-                  ))
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {showCycles && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className={propertyTriggerClass}
-                  >
-                    <Layers className="opacity-70" />
-                    {selectedCycle?.name ?? t('views.cycle', 'Cycle')}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
-                  {cycles.length === 0 ? (
-                    <DropdownMenuLabel className="text-muted-foreground font-normal">
-                      {t('views.selectCycle', 'Select cycle')}
-                    </DropdownMenuLabel>
-                  ) : (
-                    <>
-                      {cycles.map((cycle) => (
-                        <DropdownMenuItem key={cycle.id} onSelect={() => setCycleId(cycle.id)}>
-                          {cycle.name}
-                        </DropdownMenuItem>
-                      ))}
-                      {cycleId && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onSelect={() => setCycleId(null)}>
-                            {t('common.clear', 'Clear')}
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-
-            {showModules && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className={propertyTriggerClass}
-                  >
-                    <Layers className="opacity-70" />
-                    {selectedModule?.name ?? t('views.module', 'Module')}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
-                  {modules.length === 0 ? (
-                    <DropdownMenuLabel className="text-muted-foreground font-normal">
-                      {t('views.selectModules', 'Select modules')}
-                    </DropdownMenuLabel>
-                  ) : (
-                    <>
-                      {modules.map((module) => (
-                        <DropdownMenuItem key={module.id} onSelect={() => setModuleId(module.id)}>
-                          {module.name}
-                        </DropdownMenuItem>
-                      ))}
-                      {moduleId && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onSelect={() => setModuleId(null)}>
-                            {t('common.clear', 'Clear')}
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" size="sm" className={propertyTriggerClass}>
-                  <CalendarDays className="opacity-70" />
-                  {startDate || t('views.startDate', 'Start date')}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-auto p-2">
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="h-8"
-                />
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" size="sm" className={propertyTriggerClass}>
-                  <CalendarDays className="opacity-70" />
-                  {dueDate || t('views.dueDate', 'Due date')}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-auto p-2">
-                <Input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="h-8"
-                />
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          {createError && <p className="text-destructive text-sm">{createError}</p>}
-        </form>
-
-        <DialogFooter className="sm:justify-between">
           <Button
             type="button"
             variant="ghost"
-            size="sm"
-            aria-pressed={createMore}
-            onClick={() => setCreateMore((prev) => !prev)}
-            className="gap-1.5"
+            size="icon"
+            className="absolute top-2 right-2 size-11 sm:top-3 sm:right-3 sm:size-8"
+            aria-label={t('common.close', 'Close')}
+            disabled={submitting}
+            onClick={requestClose}
           >
-            <span
-              className={
-                createMore
-                  ? 'border-primary bg-primary text-primary-foreground flex size-4 items-center justify-center rounded-sm border'
-                  : 'border-input flex size-4 items-center justify-center rounded-sm border'
-              }
-            >
-              {createMore && <Check className="size-3" />}
-            </span>
-            {t('workItem.create.createMore', 'Create more')}
+            <X />
           </Button>
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
-              {t('common.cancel', 'Cancel')}
-            </Button>
-            <Button
-              type="submit"
-              form="create-work-item-v2-form"
-              disabled={submitting || !title.trim() || !projectId}
-            >
-              {draftOnly
-                ? t('drafts.saveDraft', 'Save draft')
-                : t('workItem.create.submit', 'Create work item')}
-            </Button>
+        </DialogHeader>
+
+        <form id="create-work-item-v2-form" onSubmit={handleSubmit} className="contents">
+          <div className="min-h-0 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+            <div className="space-y-6">
+              <section className="space-y-4" aria-labelledby="create-work-item-basics-heading">
+                <h3 id="create-work-item-basics-heading" className="sr-only">
+                  {t('workItem.create.basics', 'Work item details')}
+                </h3>
+
+                <div className="space-y-2">
+                  <Label htmlFor="create-work-item-project">{t('common.project', 'Project')}</Label>
+                  <Select value={projectId} onValueChange={handleProjectChange}>
+                    <SelectTrigger
+                      id="create-work-item-project"
+                      className="h-11 w-full sm:h-9"
+                      disabled={submitting || projects.length === 0}
+                    >
+                      <FolderKanban className="text-muted-foreground" />
+                      <SelectValue placeholder={t('common.selectProject', 'Select project')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id} className={menuItemClass}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="create-work-item-title">{t('common.title', 'Title')}</Label>
+                  <Input
+                    ref={titleInputRef}
+                    id="create-work-item-title"
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    placeholder={t('workItem.create.titlePlaceholder', 'What needs to be done?')}
+                    className="h-11 sm:h-9"
+                    disabled={submitting}
+                    autoFocus
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="create-work-item-description">
+                    {t('common.description', 'Description')}
+                  </Label>
+                  <Textarea
+                    id="create-work-item-description"
+                    value={description}
+                    onChange={(event) => setDescription(event.target.value)}
+                    placeholder={t(
+                      'workItem.create.descriptionPlaceholder',
+                      'Add context, acceptance criteria, or links…',
+                    )}
+                    className="min-h-28 resize-y"
+                    disabled={submitting}
+                  />
+                </div>
+              </section>
+
+              <section className="space-y-3" aria-labelledby="create-work-item-properties-heading">
+                <div>
+                  <h3 id="create-work-item-properties-heading" className="text-sm font-medium">
+                    {t('workItem.create.properties', 'Properties')}
+                  </h3>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {t(
+                      'workItem.create.propertiesHint',
+                      'Add planning details now or update them later.',
+                    )}
+                  </p>
+                </div>
+
+                <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+                  <div className="min-w-0 space-y-2">
+                    <Label htmlFor="create-work-item-state">{t('views.state', 'State')}</Label>
+                    <Select
+                      value={stateId || EMPTY_VALUE}
+                      onValueChange={(value) => setStateId(value === EMPTY_VALUE ? '' : value)}
+                      disabled={submitting}
+                    >
+                      <SelectTrigger id="create-work-item-state" className="h-11 w-full sm:h-9">
+                        <span
+                          className="size-2.5 shrink-0 rounded-full border"
+                          style={
+                            selectedState?.color
+                              ? { backgroundColor: selectedState.color }
+                              : undefined
+                          }
+                        />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={EMPTY_VALUE} className={menuItemClass}>
+                          {t('workItem.create.noState', 'No state')}
+                        </SelectItem>
+                        {states.map((state) => (
+                          <SelectItem key={state.id} value={state.id} className={menuItemClass}>
+                            {state.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="min-w-0 space-y-2">
+                    <Label htmlFor="create-work-item-priority">
+                      {t('views.priority', 'Priority')}
+                    </Label>
+                    <Select
+                      value={priority}
+                      onValueChange={(value) => setPriority(value as Priority)}
+                      disabled={submitting}
+                    >
+                      <SelectTrigger id="create-work-item-priority" className="h-11 w-full sm:h-9">
+                        <Signal className="text-muted-foreground" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PRIORITIES.map((value) => (
+                          <SelectItem
+                            key={value}
+                            value={value}
+                            className={`${menuItemClass} capitalize`}
+                          >
+                            {value}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="min-w-0 space-y-2">
+                    <Label htmlFor="create-work-item-assignees">
+                      {t('views.assignees', 'Assignees')}
+                    </Label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          id="create-work-item-assignees"
+                          type="button"
+                          variant="outline"
+                          className={fieldTriggerClass}
+                          disabled={submitting}
+                        >
+                          <span className="flex min-w-0 items-center gap-2">
+                            <User className="text-muted-foreground" />
+                            <span className="truncate">{assigneeSummary}</span>
+                          </span>
+                          <ChevronsUpDown className="text-muted-foreground" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className={menuContentClass}>
+                        <div className="p-2">
+                          <Input
+                            value={assigneeSearch}
+                            onChange={(event) => setAssigneeSearch(event.target.value)}
+                            placeholder={t('common.search', 'Search')}
+                            aria-label={t('workItem.create.searchAssignees', 'Search assignees')}
+                            className="h-11 sm:h-9"
+                            onKeyDown={(event) => event.stopPropagation()}
+                          />
+                        </div>
+                        <DropdownMenuSeparator />
+                        <div className="max-h-60 overflow-y-auto p-1">
+                          {assigneeIds.length > 0 && (
+                            <>
+                              <DropdownMenuItem
+                                className={menuItemClass}
+                                onSelect={() => setAssigneeIds([])}
+                              >
+                                {t('workItem.create.noAssignee', 'No assignee')}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                            </>
+                          )}
+                          {filteredMembers.length === 0 ? (
+                            <DropdownMenuLabel className="text-muted-foreground py-3 font-normal">
+                              {t('common.noResults', 'No results')}
+                            </DropdownMenuLabel>
+                          ) : (
+                            filteredMembers.map((member) => (
+                              <DropdownMenuCheckboxItem
+                                key={member.id}
+                                checked={assigneeIds.includes(member.id)}
+                                className={menuItemClass}
+                                onSelect={(event) => event.preventDefault()}
+                                onCheckedChange={(checked) =>
+                                  setAssigneeIds((current) =>
+                                    checked
+                                      ? current.includes(member.id)
+                                        ? current
+                                        : [...current, member.id]
+                                      : current.filter((id) => id !== member.id),
+                                  )
+                                }
+                              >
+                                {member.name}
+                              </DropdownMenuCheckboxItem>
+                            ))
+                          )}
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <div className="min-w-0 space-y-2">
+                    <Label htmlFor="create-work-item-labels">{t('views.labels', 'Labels')}</Label>
+                    <DropdownMenu
+                      open={labelMenuOpen}
+                      onOpenChange={(nextOpen) => {
+                        setLabelMenuOpen(nextOpen);
+                        if (!nextOpen) {
+                          setLabelSearch('');
+                          setCreateLabelError(null);
+                        }
+                      }}
+                    >
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          id="create-work-item-labels"
+                          type="button"
+                          variant="outline"
+                          className={fieldTriggerClass}
+                          disabled={submitting}
+                        >
+                          <span className="flex min-w-0 items-center gap-2">
+                            {selectedLabels[0]?.color ? (
+                              <span
+                                className="size-2.5 shrink-0 rounded-full"
+                                style={{ backgroundColor: selectedLabels[0].color }}
+                              />
+                            ) : (
+                              <Tag className="text-muted-foreground" />
+                            )}
+                            <span className="truncate">{labelSummary}</span>
+                          </span>
+                          <ChevronsUpDown className="text-muted-foreground" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className={menuContentClass}>
+                        <div className="p-2">
+                          <Input
+                            value={labelSearch}
+                            onChange={(event) => {
+                              setLabelSearch(event.target.value);
+                              setCreateLabelError(null);
+                            }}
+                            placeholder={t('common.search', 'Search')}
+                            aria-label={t('workItem.create.searchLabels', 'Search labels')}
+                            className="h-11 sm:h-9"
+                            onKeyDown={(event) => event.stopPropagation()}
+                          />
+                        </div>
+                        <DropdownMenuSeparator />
+                        <div className="max-h-60 overflow-y-auto p-1">
+                          {filteredLabels.map((label) => (
+                            <DropdownMenuCheckboxItem
+                              key={label.id}
+                              checked={labelIds.includes(label.id)}
+                              className={menuItemClass}
+                              onSelect={(event) => event.preventDefault()}
+                              onCheckedChange={(checked) =>
+                                setLabelIds((current) =>
+                                  checked
+                                    ? current.includes(label.id)
+                                      ? current
+                                      : [...current, label.id]
+                                    : current.filter((id) => id !== label.id),
+                                )
+                              }
+                            >
+                              <span
+                                className="size-2.5 shrink-0 rounded-full"
+                                style={{ backgroundColor: label.color ?? 'currentColor' }}
+                              />
+                              {label.name}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                          {filteredLabels.length === 0 && !canCreateLabel && (
+                            <DropdownMenuLabel className="text-muted-foreground py-3 font-normal">
+                              {t('common.noResults', 'No results')}
+                            </DropdownMenuLabel>
+                          )}
+                          {canCreateLabel && (
+                            <>
+                              {filteredLabels.length > 0 && <DropdownMenuSeparator />}
+                              <DropdownMenuItem
+                                className={menuItemClass}
+                                disabled={createLabelLoading}
+                                onSelect={(event) => {
+                                  event.preventDefault();
+                                  void handleCreateLabel();
+                                }}
+                              >
+                                {createLabelLoading ? (
+                                  <LoaderCircle className="animate-spin" />
+                                ) : (
+                                  <Plus />
+                                )}
+                                {t('workItem.create.createLabel', 'Create label “{{name}}”', {
+                                  name: labelSearch.trim(),
+                                })}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {createLabelError && (
+                            <p
+                              role="alert"
+                              aria-live="polite"
+                              className="text-destructive px-2 py-2 text-xs"
+                            >
+                              {createLabelError}
+                            </p>
+                          )}
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <div className="min-w-0 space-y-2">
+                    <Label htmlFor="create-work-item-start-date">
+                      {t('views.startDate', 'Start date')}
+                    </Label>
+                    <div className="relative">
+                      <CalendarDays className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                      <Input
+                        id="create-work-item-start-date"
+                        type="date"
+                        value={startDate}
+                        onChange={(event) => setStartDate(event.target.value)}
+                        className="h-11 min-w-0 pl-9 sm:h-9"
+                        disabled={submitting}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 space-y-2">
+                    <Label htmlFor="create-work-item-due-date">
+                      {t('views.dueDate', 'Due date')}
+                    </Label>
+                    <div className="relative">
+                      <CalendarDays className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                      <Input
+                        id="create-work-item-due-date"
+                        type="date"
+                        value={dueDate}
+                        onChange={(event) => setDueDate(event.target.value)}
+                        className="h-11 min-w-0 pl-9 sm:h-9"
+                        disabled={submitting}
+                      />
+                    </div>
+                  </div>
+
+                  {showCycles && (
+                    <div className="min-w-0 space-y-2">
+                      <Label htmlFor="create-work-item-cycle">{t('views.cycle', 'Cycle')}</Label>
+                      <Select
+                        value={cycleId ?? EMPTY_VALUE}
+                        onValueChange={(value) => setCycleId(value === EMPTY_VALUE ? null : value)}
+                        disabled={submitting}
+                      >
+                        <SelectTrigger id="create-work-item-cycle" className="h-11 w-full sm:h-9">
+                          <Layers className="text-muted-foreground" />
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={EMPTY_VALUE} className={menuItemClass}>
+                            {t('workItem.create.noCycle', 'No cycle')}
+                          </SelectItem>
+                          {cycles.map((cycle) => (
+                            <SelectItem key={cycle.id} value={cycle.id} className={menuItemClass}>
+                              {cycle.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {showModules && (
+                    <div className="min-w-0 space-y-2">
+                      <Label htmlFor="create-work-item-module">{t('views.module', 'Module')}</Label>
+                      <Select
+                        value={moduleId ?? EMPTY_VALUE}
+                        onValueChange={(value) => setModuleId(value === EMPTY_VALUE ? null : value)}
+                        disabled={submitting}
+                      >
+                        <SelectTrigger id="create-work-item-module" className="h-11 w-full sm:h-9">
+                          <Layers className="text-muted-foreground" />
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={EMPTY_VALUE} className={menuItemClass}>
+                            {t('workItem.create.noModule', 'No module')}
+                          </SelectItem>
+                          {modules.map((module) => (
+                            <SelectItem key={module.id} value={module.id} className={menuItemClass}>
+                              {module.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div className="min-w-0 space-y-2 sm:col-span-2">
+                    <Label htmlFor="create-work-item-parent">
+                      {t('workItem.create.parent', 'Parent work item')}
+                    </Label>
+                    <Popover open={parentPickerOpen} onOpenChange={setParentPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          id="create-work-item-parent"
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={parentPickerOpen}
+                          className={fieldTriggerClass}
+                          disabled={submitting}
+                        >
+                          <span className="flex min-w-0 items-center gap-2">
+                            <Link2 className="text-muted-foreground" />
+                            <span className="truncate">
+                              {selectedParent?.name ??
+                                (parentId
+                                  ? parentId.slice(0, 8)
+                                  : t('workItem.create.addParent', 'Add parent'))}
+                            </span>
+                          </span>
+                          <ChevronsUpDown className="text-muted-foreground" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="start" className={`${menuContentClass} p-0`}>
+                        <Command>
+                          <CommandInput
+                            placeholder={t('workItem.create.searchParents', 'Search work items…')}
+                          />
+                          <CommandList className="max-h-64">
+                            <CommandEmpty>{t('common.noResults', 'No results')}</CommandEmpty>
+                            <CommandGroup>
+                              {parentId && (
+                                <CommandItem
+                                  value="clear-parent-selection"
+                                  className={menuItemClass}
+                                  onSelect={() => {
+                                    setParentId(null);
+                                    setParentPickerOpen(false);
+                                  }}
+                                >
+                                  <X />
+                                  {t('workItem.create.noParent', 'No parent')}
+                                </CommandItem>
+                              )}
+                              {issues.map((issue) => (
+                                <CommandItem
+                                  key={issue.id}
+                                  value={`${issue.name} ${issue.id}`}
+                                  className={menuItemClass}
+                                  onSelect={() => {
+                                    setParentId(issue.id);
+                                    setParentPickerOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={parentId === issue.id ? 'opacity-100' : 'opacity-0'}
+                                  />
+                                  <span className="truncate">{issue.name}</span>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              </section>
+
+              {createError && (
+                <p
+                  id="create-work-item-error"
+                  role="alert"
+                  aria-live="polite"
+                  className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm"
+                >
+                  {createError}
+                </p>
+              )}
+            </div>
           </div>
-        </DialogFooter>
+
+          <DialogFooter className="flex flex-col gap-3 border-t px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div className="flex min-h-11 items-center gap-2 sm:min-h-9">
+              <Checkbox
+                id="create-work-item-create-more"
+                checked={createMore}
+                onCheckedChange={(checked) => setCreateMore(checked === true)}
+                disabled={submitting}
+              />
+              <Label htmlFor="create-work-item-create-more" className="cursor-pointer font-normal">
+                {t('workItem.create.createMore', 'Create more')}
+              </Label>
+            </div>
+            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 sm:h-9"
+                onClick={requestClose}
+                disabled={submitting}
+              >
+                {t('common.discard', 'Discard')}
+              </Button>
+              <Button
+                type="submit"
+                className="h-11 sm:h-9"
+                disabled={submitting || !title.trim() || !projectId}
+                aria-describedby={createError ? 'create-work-item-error' : undefined}
+              >
+                {submitting && <LoaderCircle className="animate-spin" />}
+                {submitting
+                  ? t('common.creating', 'Creating…')
+                  : draftOnly
+                    ? t('drafts.saveDraft', 'Save draft')
+                    : t('workItem.create.submit', 'Create work item')}
+              </Button>
+            </div>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

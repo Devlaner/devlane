@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
@@ -92,18 +92,21 @@ const GROUPING_LABELS: Record<GroupingOption, string> = {
   backlog: 'Backlog',
 };
 
-/** The workspace views that exist without anyone creating them. */
-const STATIC_VIEWS = [
-  { id: 'all-issues', name: 'All work items' },
-  { id: 'assigned', name: 'Assigned' },
-  { id: 'created', name: 'Created' },
-  { id: 'subscribed', name: 'Subscribed' },
-] as const;
+const LIST_DISPLAY_PROPERTY_KEYS: DisplayPropertyKey[] = [
+  'id',
+  'state',
+  'priority',
+  'assignee',
+  'labels',
+  'cycle',
+  'module',
+  'start_date',
+  'due_date',
+];
 
 interface ViewsToolbarProps {
   workspaceSlug: string;
-  /** Segmented control for the static views, rendered by the page. */
-  scopeControl?: ReactNode;
+  onCreateWorkItem?: () => void;
 }
 
 interface FilterChipProps {
@@ -140,7 +143,7 @@ function FilterChip({ label, removeLabel, onRemove }: FilterChipProps) {
  * Projects toolbar — because its controls need room to wrap on small screens
  * rather than competing with the breadcrumb in the 64px shell header.
  */
-export function ViewsToolbar({ workspaceSlug, scopeControl }: ViewsToolbarProps) {
+export function ViewsToolbar({ workspaceSlug, onCreateWorkItem }: ViewsToolbarProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { viewId } = useParams<{ viewId?: string }>();
@@ -187,18 +190,26 @@ export function ViewsToolbar({ workspaceSlug, scopeControl }: ViewsToolbarProps)
   }, [workspaceSlug]);
 
   const selectedViewId = viewId ?? 'all-issues';
-  const allViews = useMemo(
+  const staticViews = useMemo(
     () => [
-      ...STATIC_VIEWS.map((v) => ({ id: v.id, name: v.name })),
-      ...customViews.map((v) => ({ id: v.id, name: v.name })),
+      { id: 'all-issues', name: t('views.allWorkItems', 'All work items') },
+      { id: 'assigned', name: t('views.assigned', 'Assigned') },
+      { id: 'created', name: t('views.created', 'Created') },
+      { id: 'subscribed', name: t('views.subscribed', 'Subscribed') },
     ],
-    [customViews],
+    [t],
+  );
+  const allViews = useMemo(
+    () => [...staticViews, ...customViews.map((v) => ({ id: v.id, name: v.name }))],
+    [customViews, staticViews],
   );
   const selectedView = allViews.find((v) => v.id === selectedViewId);
-  const selectedViewName = selectedView?.name ?? STATIC_VIEWS[0].name;
+  const selectedViewName = selectedView?.name ?? staticViews[0].name;
   const filteredViews = allViews.filter((v) =>
     v.name.toLowerCase().includes(viewSearch.trim().toLowerCase()),
   );
+  const visibleDisplayPropertyKeys =
+    display.layout === 'list' ? LIST_DISPLAY_PROPERTY_KEYS : DISPLAY_PROPERTY_KEYS;
 
   const activeFilterCount =
     filters.priority.length +
@@ -321,221 +332,228 @@ export function ViewsToolbar({ workspaceSlug, scopeControl }: ViewsToolbarProps)
       role="region"
       aria-label={t('views.toolbar', 'View controls')}
     >
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-        {scopeControl}
-
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center xl:ml-auto">
-          <div className="col-span-2 flex min-w-0 items-center gap-2 sm:col-span-1 sm:w-auto">
-            <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
-              <Search
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2"
-                aria-hidden="true"
-              />
-              <Input
-                ref={searchInputRef}
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder={t('views.searchPlaceholder', 'Search work items')}
-                aria-label={t('views.searchPlaceholder', 'Search work items')}
-                className="h-11 pr-12 pl-10 sm:h-9"
-              />
-              {searchQuery && (
-                <Button
-                  type="button"
-                  size="icon-sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setSearchQuery('');
-                    requestAnimationFrame(() => searchInputRef.current?.focus());
-                  }}
-                  aria-label={t('common.clearSearch', 'Clear search')}
-                  className="absolute top-1/2 right-1 size-10 -translate-y-1/2 sm:size-8"
-                >
-                  <X aria-hidden="true" />
-                </Button>
-              )}
-            </div>
-
-            {/* View picker. A popover rather than a dropdown menu, because the
-                search field inside would fight the menu's own typeahead. */}
-            <Popover
-              open={viewPickerOpen}
-              onOpenChange={(open) => {
-                setViewPickerOpen(open);
-                /* Cleared on close rather than on open, so the list is not
-                   briefly filtered by the previous query as the popover
-                   animates in. */
-                if (!open) setViewSearch('');
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative order-last w-full min-w-0 sm:order-none sm:w-64 sm:flex-1">
+          <Search
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2"
+            aria-hidden="true"
+          />
+          <Input
+            ref={searchInputRef}
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder={t('views.searchPlaceholder', 'Search work items')}
+            aria-label={t('views.searchPlaceholder', 'Search work items')}
+            className="h-11 pr-12 pl-10 sm:h-9"
+          />
+          {searchQuery && (
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              onClick={() => {
+                setSearchQuery('');
+                requestAnimationFrame(() => searchInputRef.current?.focus());
               }}
+              aria-label={t('common.clearSearch', 'Clear search')}
+              className="absolute top-1/2 right-1 size-10 -translate-y-1/2 sm:size-8"
             >
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 max-w-52 flex-1 justify-between sm:h-9 sm:flex-none"
-                >
-                  <span className="truncate">{selectedViewName}</span>
-                  <ChevronsUpDown className="opacity-60" aria-hidden="true" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-64 p-0">
-                <div className="relative border-b p-2">
-                  <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2" />
-                  <Input
-                    value={viewSearch}
-                    onChange={(e) => setViewSearch(e.target.value)}
-                    placeholder={t('common.search', 'Search')}
-                    aria-label={t('common.search', 'Search')}
-                    className="h-8 pl-8"
-                    autoFocus
-                  />
-                </div>
-                <div className="max-h-72 overflow-y-auto p-1">
-                  {filteredViews.length === 0 ? (
-                    <p className="text-muted-foreground px-2 py-6 text-center text-sm">
-                      {t('common.noResults', 'No results')}
-                    </p>
-                  ) : (
-                    filteredViews.map((view) => (
-                      <button
-                        key={view.id}
-                        type="button"
-                        onClick={() => {
-                          setViewPickerOpen(false);
-                          navigate(`/${workspaceSlug}/app-v2/views/${view.id}`);
-                        }}
-                        className="hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm"
-                      >
-                        <span className="min-w-0 flex-1 truncate">{view.name}</span>
-                        {selectedViewId === view.id && <Check className="size-4 shrink-0" />}
-                      </button>
-                    ))
-                  )}
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
+              <X aria-hidden="true" />
+            </Button>
+          )}
+        </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11 flex-1 justify-between sm:h-9 sm:flex-none"
-              >
-                <Filter aria-hidden="true" />
-                {t('common.filters', 'Filters')}
-                {activeFilterCount > 0 && (
-                  <Badge variant="secondary" className="ml-1 min-w-5 px-1.5">
-                    {activeFilterCount}
-                  </Badge>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              className="max-h-[min(70vh,32rem)] w-64 overflow-y-auto"
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 flex-1 justify-between sm:h-9 sm:flex-none"
             >
-              <DropdownMenuLabel>{t('views.grouping', 'Grouping')}</DropdownMenuLabel>
-              <DropdownMenuRadioGroup
-                value={filters.grouping}
-                onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, grouping: value as GroupingOption }))
-                }
-              >
-                {GROUPING_OPTIONS.map((option) => (
-                  <DropdownMenuRadioItem key={option} value={option}>
-                    {GROUPING_LABELS[option]}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>{t('views.priority', 'Priority')}</DropdownMenuLabel>
-              {PRIORITIES.map((priority) => (
-                <DropdownMenuCheckboxItem
-                  key={priority}
-                  checked={filters.priority.includes(priority)}
-                  onCheckedChange={() => toggleFilterValue('priority', priority)}
-                >
-                  {PRIORITY_LABELS[priority]}
-                </DropdownMenuCheckboxItem>
-              ))}
-
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>{t('views.state', 'State')}</DropdownMenuLabel>
-              {STATE_GROUPS.map((group) => (
-                <DropdownMenuCheckboxItem
-                  key={group}
-                  checked={filters.stateGroup.includes(group)}
-                  onCheckedChange={() => toggleFilterValue('stateGroup', group)}
-                >
-                  {STATE_GROUP_LABELS[group]}
-                </DropdownMenuCheckboxItem>
-              ))}
-
-              {projects.length > 0 && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>{t('common.projects', 'Projects')}</DropdownMenuLabel>
-                  {projects.slice(0, MAX_PEOPLE_LISTED).map((project) => (
-                    <DropdownMenuCheckboxItem
-                      key={project.id}
-                      checked={filters.projectIds.includes(project.id)}
-                      onCheckedChange={() => toggleFilterValue('projectIds', project.id)}
-                    >
-                      {project.name}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </>
-              )}
-
-              {members.length > 0 && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>{t('views.assignees', 'Assignees')}</DropdownMenuLabel>
-                  {members.slice(0, MAX_PEOPLE_LISTED).map((member) => (
-                    <DropdownMenuCheckboxItem
-                      key={`assignee-${member.id}`}
-                      checked={filters.assigneeIds.includes(member.member_id)}
-                      onCheckedChange={() => toggleFilterValue('assigneeIds', member.member_id)}
-                    >
-                      {peopleLabel(member)}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>{t('views.createdBy', 'Created by')}</DropdownMenuLabel>
-                  {members.slice(0, MAX_PEOPLE_LISTED).map((member) => (
-                    <DropdownMenuCheckboxItem
-                      key={`created-by-${member.id}`}
-                      checked={filters.createdByIds.includes(member.member_id)}
-                      onCheckedChange={() => toggleFilterValue('createdByIds', member.member_id)}
-                    >
-                      {peopleLabel(member)}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </>
-              )}
-
+              <Filter aria-hidden="true" />
+              {t('common.filters', 'Filters')}
               {activeFilterCount > 0 && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => setFilters(DEFAULT_WORKSPACE_VIEW_FILTERS)}>
-                    <X />
-                    {t('common.clearFilters', 'Clear filters')}
-                  </DropdownMenuItem>
-                </>
+                <Badge variant="secondary" className="ml-1 min-w-5 px-1.5">
+                  {activeFilterCount}
+                </Badge>
               )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="start"
+            className="max-h-[min(70vh,32rem)] w-64 overflow-y-auto"
+          >
+            <DropdownMenuLabel>{t('views.grouping', 'Grouping')}</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={filters.grouping}
+              onValueChange={(value) =>
+                setFilters((prev) => ({ ...prev, grouping: value as GroupingOption }))
+              }
+            >
+              {GROUPING_OPTIONS.map((option) => (
+                <DropdownMenuRadioItem key={option} value={option}>
+                  {GROUPING_LABELS[option]}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>{t('views.priority', 'Priority')}</DropdownMenuLabel>
+            {PRIORITIES.map((priority) => (
+              <DropdownMenuCheckboxItem
+                key={priority}
+                checked={filters.priority.includes(priority)}
+                onCheckedChange={() => toggleFilterValue('priority', priority)}
+              >
+                {PRIORITY_LABELS[priority]}
+              </DropdownMenuCheckboxItem>
+            ))}
+
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>{t('views.state', 'State')}</DropdownMenuLabel>
+            {STATE_GROUPS.map((group) => (
+              <DropdownMenuCheckboxItem
+                key={group}
+                checked={filters.stateGroup.includes(group)}
+                onCheckedChange={() => toggleFilterValue('stateGroup', group)}
+              >
+                {STATE_GROUP_LABELS[group]}
+              </DropdownMenuCheckboxItem>
+            ))}
+
+            {projects.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>{t('common.projects', 'Projects')}</DropdownMenuLabel>
+                {projects.slice(0, MAX_PEOPLE_LISTED).map((project) => (
+                  <DropdownMenuCheckboxItem
+                    key={project.id}
+                    checked={filters.projectIds.includes(project.id)}
+                    onCheckedChange={() => toggleFilterValue('projectIds', project.id)}
+                  >
+                    {project.name}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </>
+            )}
+
+            {members.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>{t('views.assignees', 'Assignees')}</DropdownMenuLabel>
+                {members.slice(0, MAX_PEOPLE_LISTED).map((member) => (
+                  <DropdownMenuCheckboxItem
+                    key={`assignee-${member.id}`}
+                    checked={filters.assigneeIds.includes(member.member_id)}
+                    onCheckedChange={() => toggleFilterValue('assigneeIds', member.member_id)}
+                  >
+                    {peopleLabel(member)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>{t('views.createdBy', 'Created by')}</DropdownMenuLabel>
+                {members.slice(0, MAX_PEOPLE_LISTED).map((member) => (
+                  <DropdownMenuCheckboxItem
+                    key={`created-by-${member.id}`}
+                    checked={filters.createdByIds.includes(member.member_id)}
+                    onCheckedChange={() => toggleFilterValue('createdByIds', member.member_id)}
+                  >
+                    {peopleLabel(member)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </>
+            )}
+
+            {activeFilterCount > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => setFilters(DEFAULT_WORKSPACE_VIEW_FILTERS)}>
+                  <X />
+                  {t('common.clearFilters', 'Clear filters')}
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <div className="ml-auto flex max-w-full items-center gap-2 overflow-x-auto pb-1 sm:overflow-visible sm:pb-0">
+          {onCreateWorkItem && (
+            <Button
+              type="button"
+              className="order-first h-11 shrink-0 sm:order-last sm:h-9"
+              onClick={onCreateWorkItem}
+            >
+              <Plus aria-hidden="true" />
+              {t('views.newWorkItem', 'New work item')}
+            </Button>
+          )}
+
+          {/* View picker. A popover rather than a dropdown menu, because the
+              search field inside would fight the menu's own typeahead. */}
+          <Popover
+            open={viewPickerOpen}
+            onOpenChange={(open) => {
+              setViewPickerOpen(open);
+              /* Cleared on close rather than on open, so the list is not
+                 briefly filtered by the previous query as the popover
+                 animates in. */
+              if (!open) setViewSearch('');
+            }}
+          >
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 max-w-48 shrink-0 justify-between sm:h-9"
+              >
+                <span className="truncate">{selectedViewName}</span>
+                <ChevronsUpDown className="opacity-60" aria-hidden="true" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-64 p-0">
+              <div className="relative border-b p-2">
+                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2" />
+                <Input
+                  value={viewSearch}
+                  onChange={(e) => setViewSearch(e.target.value)}
+                  placeholder={t('common.search', 'Search')}
+                  aria-label={t('common.search', 'Search')}
+                  className="h-8 pl-8"
+                  autoFocus
+                />
+              </div>
+              <div className="max-h-72 overflow-y-auto p-1">
+                {filteredViews.length === 0 ? (
+                  <p className="text-muted-foreground px-2 py-6 text-center text-sm">
+                    {t('common.noResults', 'No results')}
+                  </p>
+                ) : (
+                  filteredViews.map((view) => (
+                    <button
+                      key={view.id}
+                      type="button"
+                      onClick={() => {
+                        setViewPickerOpen(false);
+                        navigate(`/${workspaceSlug}/app-v2/views/${view.id}`);
+                      }}
+                      className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none focus-visible:ring-2"
+                    >
+                      <span className="min-w-0 flex-1 truncate">{view.name}</span>
+                      {selectedViewId === view.id && <Check className="size-4 shrink-0" />}
+                    </button>
+                  ))
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 flex-1 justify-between sm:h-9 sm:flex-none"
+                className="h-11 shrink-0 justify-between sm:h-9"
               >
                 <Settings2 aria-hidden="true" />
                 {t('common.display', 'Display')}
@@ -545,13 +563,13 @@ export function ViewsToolbar({ workspaceSlug, scopeControl }: ViewsToolbarProps)
               <DropdownMenuLabel>
                 {t('views.displayProperties', 'Display Properties')}
               </DropdownMenuLabel>
-              {DISPLAY_PROPERTY_KEYS.map((key) => (
+              {visibleDisplayPropertyKeys.map((key) => (
                 <DropdownMenuCheckboxItem
                   key={key}
                   checked={display.properties.includes(key)}
                   onCheckedChange={() => toggleDisplayProperty(key)}
                 >
-                  {DISPLAY_PROPERTY_LABELS[key]}
+                  {t(`display.property.${key}`, DISPLAY_PROPERTY_LABELS[key])}
                 </DropdownMenuCheckboxItem>
               ))}
               <DropdownMenuSeparator />
@@ -578,7 +596,7 @@ export function ViewsToolbar({ workspaceSlug, scopeControl }: ViewsToolbarProps)
             }}
             variant="outline"
             spacing={0}
-            className="col-span-2 h-11 w-full sm:h-9 sm:w-auto"
+            className="h-11 shrink-0 sm:h-9"
             aria-label={t('views.layout', 'Layout')}
           >
             {VIEW_LAYOUTS.map((layout) => {
@@ -587,7 +605,7 @@ export function ViewsToolbar({ workspaceSlug, scopeControl }: ViewsToolbarProps)
                 <ToggleGroupItem
                   key={layout}
                   value={layout}
-                  className="h-11 flex-1 px-3 sm:h-9 sm:flex-none"
+                  className="h-11 px-3 sm:h-9"
                   aria-label={VIEW_LAYOUT_LABELS[layout]}
                   title={VIEW_LAYOUT_LABELS[layout]}
                 >
@@ -599,7 +617,8 @@ export function ViewsToolbar({ workspaceSlug, scopeControl }: ViewsToolbarProps)
 
           <Button
             type="button"
-            className="col-span-2 h-11 w-full sm:h-9 sm:w-auto"
+            variant="outline"
+            className="h-11 shrink-0 sm:h-9"
             onClick={() => setCreateViewOpen(true)}
           >
             <Plus aria-hidden="true" />

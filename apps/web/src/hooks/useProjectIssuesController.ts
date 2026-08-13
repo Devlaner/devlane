@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
 import { issueService } from '../services/issueService';
@@ -9,6 +10,7 @@ import { labelService } from '../services/labelService';
 import { cycleService } from '../services/cycleService';
 import { moduleService } from '../services/moduleService';
 import { integrationService } from '../services/integrationService';
+import { attachWorkItemRelations } from '../lib/workItemRelations';
 import { buildGroupedIssues, buildSubGroupedIssues } from '../lib/issueListGroupAndSort';
 import {
   cloneDefaultProjectIssuesDisplay,
@@ -597,21 +599,32 @@ export function useProjectIssuesController(workspaceSlug?: string, projectId?: s
         is_draft: data.isDraft === true ? true : undefined,
       });
       if (created?.id) {
-        if (data.cycleId) {
-          await cycleService.addIssue(workspaceSlug, data.projectId, data.cycleId, created.id);
-        }
-        if (data.moduleId) {
-          await moduleService.addIssue(workspaceSlug, data.projectId, data.moduleId, created.id);
+        const relationsAttached = await attachWorkItemRelations(
+          workspaceSlug,
+          data.projectId,
+          created.id,
+          { cycleId: data.cycleId, moduleIds: [data.moduleId] },
+        );
+        if (!relationsAttached) {
+          toast.warning(
+            t(
+              'workItem.create.relationWarning',
+              'Work item created, but one or more planning properties could not be attached.',
+            ),
+          );
         }
       }
       refetchIssues();
-      handleCloseCreate();
     } catch (err) {
       setCreateError(
         err instanceof Error
           ? err.message
           : t('workItem.list.createFailed', 'Failed to create work item'),
       );
+      /* The composer owns its open state so "Create more" can keep it open.
+         Rejecting also tells the composer not to treat a failed request as a
+         successful save and close over the inline error. */
+      throw err;
     }
   };
 

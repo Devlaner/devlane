@@ -1,22 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import {
   ArrowDown,
   ArrowUp,
   CalendarDays,
+  CircleAlert,
   ChevronsUpDown,
   ListTodo,
+  RefreshCw,
   SearchX,
   Signal,
   Tag,
   User,
 } from 'lucide-react';
+import {
+  CreateWorkItemDialog,
+  type CreateWorkItemDialogSubmit,
+} from '@/components/shadcn/create-work-item-dialog';
 import { ViewsToolbar } from '@/components/shadcn/views-toolbar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/ui/avatar';
 import { Badge } from '@/components/shadcn/ui/badge';
 import { Button } from '@/components/shadcn/ui/button';
-import { Card, CardContent } from '@/components/shadcn/ui/card';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -26,34 +32,49 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/shadcn/ui/dropdown-menu';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/shadcn/ui/empty';
 import { Input } from '@/components/shadcn/ui/input';
+import { ScrollArea, ScrollBar } from '@/components/shadcn/ui/scroll-area';
 import { Skeleton } from '@/components/shadcn/ui/skeleton';
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from '@/components/shadcn/ui/table';
-import { ToggleGroup, ToggleGroupItem } from '@/components/shadcn/ui/toggle-group';
 import { IssueLayoutBoard } from '../components/work-item/layouts/IssueLayoutBoard';
 import { IssueLayoutCalendar } from '../components/work-item/layouts/IssueLayoutCalendar';
 import { IssueLayoutGantt } from '../components/work-item/layouts/IssueLayoutGantt';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspaceViewsState } from '../contexts/WorkspaceViewsStateContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { formatTimeAgo } from '../lib/projectV2';
 import { getImageUrl } from '../lib/utils';
 import { applyWorkspaceViewFilters } from '../lib/workspaceViewFiltersApply';
+import { attachWorkItemRelations } from '../lib/workItemRelations';
+import { cycleService } from '../services/cycleService';
 import { issueService } from '../services/issueService';
 import { labelService } from '../services/labelService';
+import { moduleService } from '../services/moduleService';
 import { projectService } from '../services/projectService';
 import { stateService } from '../services/stateService';
 import { viewService } from '../services/viewService';
 import { workspaceService } from '../services/workspaceService';
 import type {
+  CycleApiResponse,
   IssueApiResponse,
   LabelApiResponse,
+  ModuleApiResponse,
   ProjectApiResponse,
   StateApiResponse,
   WorkspaceApiResponse,
@@ -86,14 +107,6 @@ const PRIORITY_ORDER: Record<string, number> = {
   none: 4,
 };
 
-const PRIORITY_BADGE: Record<Priority, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  urgent: 'destructive',
-  high: 'destructive',
-  medium: 'default',
-  low: 'secondary',
-  none: 'outline',
-};
-
 /** Columns the header can sort by; the rest are display-only. */
 const SORTABLE_BY_COLUMN: Partial<
   Record<DisplayPropertyKey | 'created_at' | 'updated_at', SortableColumn>
@@ -117,7 +130,20 @@ const COLUMN_ICONS: Partial<Record<DisplayPropertyKey | 'created_at' | 'updated_
   };
 
 /** Cells that open an editor rather than just rendering a value. */
-const EDITABLE_COLUMNS = ['priority', 'assignee', 'labels', 'start_date', 'due_date'];
+const EDITABLE_COLUMNS = ['state', 'priority', 'assignee', 'labels', 'start_date', 'due_date'];
+
+/** Compact list columns mirror the project work-items table's information order. */
+const LIST_COLUMN_ORDER: (DisplayPropertyKey | 'updated_at')[] = [
+  'state',
+  'priority',
+  'assignee',
+  'labels',
+  'cycle',
+  'module',
+  'start_date',
+  'due_date',
+  'updated_at',
+];
 
 function isCustomViewId(viewId: string | undefined): boolean {
   if (!viewId) return false;
@@ -148,6 +174,8 @@ export function WorkspaceViewsPageV2() {
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
   const [states, setStates] = useState<StateApiResponse[]>([]);
   const [labels, setLabels] = useState<LabelApiResponse[]>([]);
+  const [cycles, setCycles] = useState<CycleApiResponse[]>([]);
+  const [modules, setModules] = useState<ModuleApiResponse[]>([]);
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -157,33 +185,40 @@ export function WorkspaceViewsPageV2() {
   /* Only a saved view carries a name of its own; the static ones are named
      here so the page heading can label either kind. */
   const [savedViewName, setSavedViewName] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   /* Stable per-mount timestamp for the work-item layouts' date cells. */
   const [now] = useState(() => Date.now());
-  const viewAppliedRef = useRef(false);
-  const prevViewIdRef = useRef<string | undefined>(undefined);
   /* Per-issue serialization for kanban drag-to-column (see handleCardMove). */
   const cardMoveChains = useRef<Map<string, Promise<void>>>(new Map());
   const cardMoveSeq = useRef<Map<string, number>>(new Map());
 
   useDocumentTitle(t('views.documentTitle', 'Views'));
 
-  /* A saved view's filters and display settings are applied to the shared state
-     once per view id, rather than on every render of the URL. */
+  /* Apply a saved view once for the current route. The cancellation guard keeps
+     a slow previous request from overwriting a newer route's title or filters. */
   useEffect(() => {
-    if (prevViewIdRef.current !== viewId) {
-      prevViewIdRef.current = viewId;
-      viewAppliedRef.current = false;
-      /* The previous view's name would otherwise head this one until its own
-         fetch lands. */
-      queueMicrotask(() => setSavedViewName(null));
+    let cancelled = false;
+    const loadSavedView = Boolean(workspaceSlug && viewId && isCustomViewId(viewId));
+
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setSavedViewName(null);
+      setViewNotFound(false);
+      setViewLoading(loadSavedView);
+    });
+
+    if (!workspaceSlug || !viewId || !loadSavedView) {
+      return () => {
+        cancelled = true;
+      };
     }
-    if (!workspaceSlug || !viewId || !isCustomViewId(viewId) || viewAppliedRef.current) return;
-    viewAppliedRef.current = true;
-    queueMicrotask(() => setViewLoading(true));
+
     viewService
       .get(workspaceSlug, viewId)
       .then((view) => {
+        if (cancelled) return;
         setViewNotFound(false);
         setSavedViewName(view.name ?? null);
         const savedFilters = view.filters as Record<string, string> | undefined;
@@ -216,9 +251,14 @@ export function WorkspaceViewsPageV2() {
         setViewLoading(false);
       })
       .catch(() => {
+        if (cancelled) return;
         setViewLoading(false);
         setViewNotFound(true);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [workspaceSlug, viewId, setFilters, setDisplay]);
 
   /* Workspace views span every project, so states, labels and issues are
@@ -246,6 +286,8 @@ export function WorkspaceViewsPageV2() {
           setIssues([]);
           setStates([]);
           setLabels([]);
+          setCycles([]);
+          setModules([]);
           setMembers([]);
           return null;
         }
@@ -255,6 +297,12 @@ export function WorkspaceViewsPageV2() {
           ...projs.map((p) => issueService.list(workspaceSlug, p.id, { limit: 100 })),
           ...projs.map((p) => stateService.list(workspaceSlug, p.id)),
           ...projs.map((p) => labelService.list(workspaceSlug, p.id)),
+          ...projs.map((p) =>
+            cycleService.list(workspaceSlug, p.id).catch(() => [] as CycleApiResponse[]),
+          ),
+          ...projs.map((p) =>
+            moduleService.list(workspaceSlug, p.id).catch(() => [] as ModuleApiResponse[]),
+          ),
         ]).then((results) => ({ results, n }));
       })
       .then((payload) => {
@@ -264,7 +312,9 @@ export function WorkspaceViewsPageV2() {
         setMembers((memberList as WorkspaceMemberApiResponse[]) ?? []);
         setIssues((rest.slice(0, n) as IssueApiResponse[][]).flat());
         setStates((rest.slice(n, n * 2) as StateApiResponse[][]).flat());
-        setLabels((rest.slice(n * 2) as LabelApiResponse[][]).flat());
+        setLabels((rest.slice(n * 2, n * 3) as LabelApiResponse[][]).flat());
+        setCycles((rest.slice(n * 3, n * 4) as CycleApiResponse[][]).flat());
+        setModules((rest.slice(n * 4, n * 5) as ModuleApiResponse[][]).flat());
       })
       .catch(() => {
         if (cancelled) return;
@@ -273,6 +323,8 @@ export function WorkspaceViewsPageV2() {
         setIssues([]);
         setStates([]);
         setLabels([]);
+        setCycles([]);
+        setModules([]);
         setMembers([]);
         setLoadError(true);
       })
@@ -286,6 +338,8 @@ export function WorkspaceViewsPageV2() {
 
   const stateMap = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
   const labelMap = useMemo(() => new Map(labels.map((l) => [l.id, l])), [labels]);
+  const cycleMap = useMemo(() => new Map(cycles.map((cycle) => [cycle.id, cycle])), [cycles]);
+  const moduleMap = useMemo(() => new Map(modules.map((module) => [module.id, module])), [modules]);
   const memberMap = useMemo(() => new Map(members.map((m) => [m.member_id, m])), [members]);
   const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
 
@@ -341,8 +395,11 @@ export function WorkspaceViewsPageV2() {
      filters, so a shared link lands on the same narrowed list. */
   const searchQuery = searchParams.get('q')?.trim().toLowerCase() ?? '';
   const visibleIssues = useMemo(() => {
-    if (!searchQuery) return sortedIssues;
-    return sortedIssues.filter((issue) => {
+    const list = display.showSubWorkItems
+      ? sortedIssues
+      : sortedIssues.filter((issue) => !issue.parent_id?.trim());
+    if (!searchQuery) return list;
+    return list.filter((issue) => {
       const project = projectMap.get(issue.project_id);
       const identifier = project
         ? `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? ''}`.toLowerCase()
@@ -351,21 +408,13 @@ export function WorkspaceViewsPageV2() {
         (issue.name ?? '').toLowerCase().includes(searchQuery) || identifier.includes(searchQuery)
       );
     });
-  }, [sortedIssues, searchQuery, projectMap]);
+  }, [sortedIssues, display.showSubWorkItems, searchQuery, projectMap]);
 
   const groupOf = useCallback(
     (issue: IssueApiResponse) => stateMap.get(issue.state_id ?? '')?.group?.toLowerCase(),
     [stateMap],
   );
 
-  /* Segment counts read the unfiltered set, matching the Projects page: they
-     say how much each scope holds, not how much the current filters leave. */
-  const assignedCount = currentUser?.id
-    ? issues.filter((issue) => issue.assignee_ids?.includes(currentUser.id)).length
-    : 0;
-  const createdCount = currentUser?.id
-    ? issues.filter((issue) => issue.created_by_id === currentUser.id).length
-    : 0;
   const completedCount = visibleIssues.filter((issue) => groupOf(issue) === 'completed').length;
   const openCount = visibleIssues.filter((issue) => {
     const group = groupOf(issue);
@@ -382,6 +431,7 @@ export function WorkspaceViewsPageV2() {
     async (
       issue: IssueApiResponse,
       patch: Partial<{
+        state_id: string | null;
         priority: Priority;
         assignee_ids: string[];
         label_ids: string[];
@@ -435,6 +485,48 @@ export function WorkspaceViewsPageV2() {
     [workspaceSlug, issues],
   );
 
+  const handleCreateSave = async (data: CreateWorkItemDialogSubmit) => {
+    if (!workspaceSlug || !data.title.trim()) return;
+    setCreateError(null);
+    try {
+      const created = await issueService.create(workspaceSlug, data.projectId, {
+        name: data.title.trim(),
+        description: data.description || undefined,
+        state_id: data.stateId || undefined,
+        priority: data.priority || undefined,
+        assignee_ids: data.assigneeIds?.length ? data.assigneeIds : undefined,
+        label_ids: data.labelIds?.length ? data.labelIds : undefined,
+        start_date: data.startDate || undefined,
+        target_date: data.dueDate || undefined,
+        parent_id: data.parentId || undefined,
+      });
+      if (created?.id) {
+        const relationsAttached = await attachWorkItemRelations(
+          workspaceSlug,
+          data.projectId,
+          created.id,
+          { cycleId: data.cycleId, moduleIds: [data.moduleId] },
+        );
+        if (!relationsAttached) {
+          toast.warning(
+            t(
+              'workItem.create.relationWarning',
+              'Work item created, but one or more planning properties could not be attached.',
+            ),
+          );
+        }
+        setIssues((prev) => [created, ...prev.filter((issue) => issue.id !== created.id)]);
+      }
+    } catch (error) {
+      setCreateError(
+        error instanceof Error
+          ? error.message
+          : t('workItem.list.createFailed', 'Failed to create work item'),
+      );
+      throw error;
+    }
+  };
+
   const formatDate = (value: string | undefined | null) =>
     value
       ? new Date(value).toLocaleDateString('en-US', {
@@ -471,10 +563,14 @@ export function WorkspaceViewsPageV2() {
   /* The table is the densest layout, so the placeholder is shaped like it:
      heading, toolbar, then rows. */
   const contentSkeleton = (
-    <div className="space-y-2">
-      <Skeleton className="h-10 w-full rounded-xl" />
+    <div className="overflow-hidden rounded-xl border">
+      <Skeleton className="h-10 w-full rounded-none" />
       {Array.from({ length: 8 }).map((_, index) => (
-        <Skeleton key={index} className="h-11 w-full" />
+        <div key={index} className="flex h-12 items-center gap-3 border-t px-4">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 max-w-80 flex-1" />
+          <Skeleton className="hidden h-5 w-20 sm:block" />
+        </div>
       ))}
     </div>
   );
@@ -490,7 +586,7 @@ export function WorkspaceViewsPageV2() {
           <Skeleton className="h-8 w-40" />
           <Skeleton className="h-4 w-72 max-w-full" />
         </div>
-        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-16 w-full rounded-xl" />
         {contentSkeleton}
       </div>
     );
@@ -498,38 +594,37 @@ export function WorkspaceViewsPageV2() {
 
   if (loadError || !workspace) {
     return (
-      <div
-        className="flex min-h-80 flex-col items-center justify-center rounded-xl border border-dashed px-6 py-12 text-center"
-        role="alert"
-      >
-        <span className="bg-destructive/10 text-destructive flex size-12 items-center justify-center rounded-full">
-          <ListTodo aria-hidden="true" />
-        </span>
-        <h1 className="mt-4 text-xl font-semibold">
-          {t('views.loadErrorTitle', 'Work items could not be loaded')}
-        </h1>
-        <p className="text-muted-foreground mt-2 max-w-md text-sm">
-          {t(
-            'views.loadErrorDescription',
-            'Check your connection and try again. Your work items have not been changed.',
-          )}
-        </p>
-        <Button
-          type="button"
-          variant="outline"
-          className="mt-5"
-          onClick={() => setReloadToken((value) => value + 1)}
-        >
-          {t('common.retry', 'Try again')}
-        </Button>
-      </div>
+      <Empty className="min-h-80 rounded-xl border border-dashed" role="alert">
+        <EmptyHeader>
+          <EmptyMedia variant="icon" className="bg-destructive/10 text-destructive">
+            <CircleAlert aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle>{t('views.loadErrorTitle', 'Work items could not be loaded')}</EmptyTitle>
+          <EmptyDescription>
+            {t(
+              'views.loadErrorDescription',
+              'Check your connection and try again. Your work items have not been changed.',
+            )}
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setReloadToken((value) => value + 1)}
+          >
+            <RefreshCw aria-hidden="true" />
+            {t('common.retry', 'Try again')}
+          </Button>
+        </EmptyContent>
+      </Empty>
     );
   }
 
   const baseUrl = `/${workspace.slug}`;
   const issueHref = (issue: IssueApiResponse) => {
     const project = projectMap.get(issue.project_id);
-    return project ? `${baseUrl}/projects/${project.id}/issues/${issue.id}` : baseUrl;
+    return project ? `${baseUrl}/app-v2/projects/${project.id}/work-items/${issue.id}` : baseUrl;
   };
 
   const clearDiscoveryFilters = () => {
@@ -549,105 +644,71 @@ export function WorkspaceViewsPageV2() {
     filters.grouping !== 'all';
 
   const emptyState = (
-    <Card className="items-center gap-0 border-dashed px-6 py-14 text-center shadow-none">
-      <span className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-full">
-        {issues.length === 0 ? <ListTodo aria-hidden="true" /> : <SearchX aria-hidden="true" />}
-      </span>
-      <CardContent className="mt-4 max-w-md px-0">
-        <h2 className="font-semibold">
+    <Empty className="rounded-xl border border-dashed">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          {issues.length === 0 ? <ListTodo aria-hidden="true" /> : <SearchX aria-hidden="true" />}
+        </EmptyMedia>
+        <EmptyTitle>
           {issues.length === 0
             ? t('views.emptyWorkItemsTitle', 'No work items yet')
             : t('views.noFilterResultsTitle', 'No work items found')}
-        </h2>
-        <p className="text-muted-foreground mt-2 text-sm leading-6">
+        </EmptyTitle>
+        <EmptyDescription>
           {issues.length === 0
             ? t(
                 'views.emptyWorkItems',
-                "No work items yet. Create one from a project's Work items section or add a view to get started.",
+                'No work items yet. Create one to start tracking work across your workspace.',
               )
             : t('views.noFilterResults', 'No work items match the current search and filters.')}
-        </p>
-        {issues.length > 0 && hasDiscoveryFilters && (
-          <Button type="button" variant="outline" className="mt-5" onClick={clearDiscoveryFilters}>
+        </EmptyDescription>
+      </EmptyHeader>
+      {issues.length === 0 && projects.length > 0 && (
+        <EmptyContent>
+          <Button
+            type="button"
+            onClick={() => {
+              setCreateError(null);
+              setCreateOpen(true);
+            }}
+          >
+            {t('views.newWorkItem', 'New work item')}
+          </Button>
+        </EmptyContent>
+      )}
+      {issues.length > 0 && hasDiscoveryFilters && (
+        <EmptyContent>
+          <Button type="button" variant="outline" onClick={clearDiscoveryFilters}>
             <SearchX aria-hidden="true" />
             {t('common.clearFilters', 'Clear filters')}
           </Button>
-        )}
-      </CardContent>
-    </Card>
+        </EmptyContent>
+      )}
+    </Empty>
   );
 
   const notFoundState = (
-    <Card className="items-center gap-0 border-dashed px-6 py-14 text-center shadow-none">
-      <span className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-full">
-        <SearchX aria-hidden="true" />
-      </span>
-      <CardContent className="mt-4 max-w-md px-0">
-        <h2 className="font-semibold">{t('views.viewDoesNotExist', 'View does not exist')}</h2>
-        <p className="text-muted-foreground mt-2 text-sm leading-6">
+    <Empty className="rounded-xl border border-dashed">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <SearchX aria-hidden="true" />
+        </EmptyMedia>
+        <EmptyTitle>{t('views.viewDoesNotExist', 'View does not exist')}</EmptyTitle>
+        <EmptyDescription>
           {t(
             'views.viewNotFoundDescription',
             "The view you are looking for does not exist or you don't have permission to view it.",
           )}
-        </p>
-        <Button asChild variant="outline" className="mt-5">
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button asChild variant="outline">
           <Link to={`${baseUrl}/app-v2/views/all-issues`}>
             {t('views.allWorkItems', 'All work items')}
           </Link>
         </Button>
-      </CardContent>
-    </Card>
-  );
-
-  const scopeControl = (
-    <ToggleGroup
-      type="single"
-      value={isCustomViewId(currentViewId) ? '' : currentViewId}
-      onValueChange={(value) => {
-        if (value) navigate(`${baseUrl}/app-v2/views/${value}`);
-      }}
-      variant="default"
-      size="sm"
-      spacing={1}
-      className="bg-muted/60 w-fit max-w-full shrink-0 touch-pan-x overflow-x-auto rounded-lg p-1 sm:p-0.5"
-      aria-label={t('views.scope', 'View scope')}
-    >
-      <ToggleGroupItem
-        value="all-issues"
-        className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
-      >
-        {staticViewLabels['all-issues']}
-        <span className="text-muted-foreground min-w-3 text-center text-xs font-normal tabular-nums">
-          {issues.length}
-        </span>
-      </ToggleGroupItem>
-      <ToggleGroupItem
-        value="assigned"
-        className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
-      >
-        {staticViewLabels.assigned}
-        <span className="text-muted-foreground min-w-3 text-center text-xs font-normal tabular-nums">
-          {assignedCount}
-        </span>
-      </ToggleGroupItem>
-      <ToggleGroupItem
-        value="created"
-        className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
-      >
-        {staticViewLabels.created}
-        <span className="text-muted-foreground min-w-3 text-center text-xs font-normal tabular-nums">
-          {createdCount}
-        </span>
-      </ToggleGroupItem>
-      {/* Subscribed carries no count: the API does not expose issue
-          subscribers yet, so any number here would be the wrong one. */}
-      <ToggleGroupItem
-        value="subscribed"
-        className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
-      >
-        {staticViewLabels.subscribed}
-      </ToggleGroupItem>
-    </ToggleGroup>
+      </EmptyContent>
+    </Empty>
   );
 
   /* Spreadsheet: the name column is pinned, the rest scroll horizontally.
@@ -657,6 +718,9 @@ export function WorkspaceViewsPageV2() {
       key === 'created_at' ||
       key === 'updated_at' ||
       display.properties.includes(key as DisplayPropertyKey),
+  );
+  const listColumns = LIST_COLUMN_ORDER.filter(
+    (key) => key === 'updated_at' || display.properties.includes(key as DisplayPropertyKey),
   );
 
   const headerLabel = (key: (typeof scrollableColumns)[number]) => {
@@ -674,12 +738,78 @@ export function WorkspaceViewsPageV2() {
     );
   };
 
+  const sortAriaValue = (column: SortableColumn): 'none' | 'ascending' | 'descending' => {
+    if (display.sortBy !== column) return 'none';
+    return display.sortOrder === 'asc' ? 'ascending' : 'descending';
+  };
+
   const renderHeadCell = (key: (typeof scrollableColumns)[number]) => {
     const Icon = COLUMN_ICONS[key];
     const sortColumn = SORTABLE_BY_COLUMN[key];
     const label = headerLabel(key);
     return (
-      <TableHead key={key} className="border-l px-0">
+      <TableHead
+        key={key}
+        className="px-0"
+        aria-sort={sortColumn ? sortAriaValue(sortColumn) : undefined}
+      >
+        {sortColumn ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => handleSort(sortColumn)}
+            className="text-muted-foreground hover:text-foreground w-full justify-start rounded-none px-3 font-medium"
+          >
+            {Icon && <Icon className="opacity-70" />}
+            {label}
+            {sortIndicator(sortColumn)}
+          </Button>
+        ) : (
+          <span className="text-muted-foreground flex items-center gap-1.5 px-3 font-medium">
+            {Icon && <Icon className="size-4 opacity-70" />}
+            {label}
+          </span>
+        )}
+      </TableHead>
+    );
+  };
+
+  const listColumnClass = (key: (typeof listColumns)[number], cell = false) => {
+    const padding = cell ? 'p-0' : 'px-0';
+    switch (key) {
+      case 'state':
+        return `w-36 ${padding}`;
+      case 'priority':
+        return `w-28 ${padding}`;
+      case 'assignee':
+        return `hidden w-36 ${padding} md:table-cell`;
+      case 'labels':
+        return `hidden w-44 ${padding} xl:table-cell`;
+      case 'cycle':
+      case 'module':
+        return `hidden w-32 ${padding} xl:table-cell`;
+      case 'start_date':
+        return `hidden w-36 ${padding} lg:table-cell`;
+      case 'due_date':
+        return `hidden w-36 ${padding} md:table-cell`;
+      case 'updated_at':
+        return `hidden w-36 ${padding} lg:table-cell`;
+      default:
+        return `hidden w-32 ${padding} xl:table-cell`;
+    }
+  };
+
+  const renderListHeadCell = (key: (typeof listColumns)[number]) => {
+    const Icon = COLUMN_ICONS[key];
+    const sortColumn = SORTABLE_BY_COLUMN[key];
+    const label = headerLabel(key);
+    return (
+      <TableHead
+        key={key}
+        className={listColumnClass(key)}
+        aria-sort={sortColumn ? sortAriaValue(sortColumn) : undefined}
+      >
         {sortColumn ? (
           <Button
             type="button"
@@ -715,13 +845,19 @@ export function WorkspaceViewsPageV2() {
           ? `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? issue.id.slice(-4)}`
           : issue.id.slice(-4);
       }
-      case 'state':
+      case 'state': {
+        const state = stateMap.get(issue.state_id ?? '');
         return (
           <span className="flex items-center gap-2">
-            <span className="size-2.5 shrink-0 rounded-full border" />
-            {stateMap.get(issue.state_id ?? '')?.name ?? '—'}
+            <span
+              className="size-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: state?.color || 'var(--muted-foreground)' }}
+              aria-hidden="true"
+            />
+            {state?.name ?? '—'}
           </span>
         );
+      }
       case 'link':
         return t('views.zeroLinks', '0 links');
       case 'attachment_count':
@@ -729,11 +865,15 @@ export function WorkspaceViewsPageV2() {
       case 'sub_work_item_count':
         return t('views.zeroSubWorkItems', '0 sub-work items');
       case 'estimate':
-        return t('views.estimate', 'Estimate');
-      case 'module':
-        return t('views.selectModules', 'Select modules');
-      case 'cycle':
-        return t('views.selectCycle', 'Select cycle');
+        return issue.estimate_point_id ? t('views.estimateAssigned', 'Assigned') : '—';
+      case 'module': {
+        const names = (issue.module_ids ?? []).map((id) => moduleMap.get(id)?.name).filter(Boolean);
+        return names.length ? names.join(', ') : '—';
+      }
+      case 'cycle': {
+        const names = (issue.cycle_ids ?? []).map((id) => cycleMap.get(id)?.name).filter(Boolean);
+        return names.length ? names.join(', ') : '—';
+      }
       default:
         return '—';
     }
@@ -743,6 +883,44 @@ export function WorkspaceViewsPageV2() {
     'hover:bg-muted/50 flex h-11 w-full items-center gap-2 rounded-none px-3 text-left text-sm font-normal';
 
   const renderCell = (issue: IssueApiResponse, key: (typeof scrollableColumns)[number]) => {
+    if (key === 'state') {
+      const state = stateMap.get(issue.state_id ?? '');
+      const projectStates = states.filter((entry) => entry.project_id === issue.project_id);
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="ghost" className={cellTriggerClass}>
+              <span
+                className="size-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: state?.color || 'var(--muted-foreground)' }}
+                aria-hidden="true"
+              />
+              <span className={state ? 'truncate' : 'text-muted-foreground truncate'}>
+                {state?.name ?? t('views.selectState', 'Select state')}
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-72 w-52 overflow-y-auto">
+            <DropdownMenuRadioGroup
+              value={issue.state_id ?? ''}
+              onValueChange={(stateId) => updateIssue(issue, { state_id: stateId })}
+            >
+              {projectStates.map((option) => (
+                <DropdownMenuRadioItem key={option.id} value={option.id}>
+                  <span
+                    className="size-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: option.color || 'var(--muted-foreground)' }}
+                    aria-hidden="true"
+                  />
+                  {option.name}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
+
     if (key === 'priority') {
       const value = (issue.priority ?? 'none') as Priority;
       return (
@@ -826,6 +1004,9 @@ export function WorkspaceViewsPageV2() {
     if (key === 'labels') {
       const labelIds = issue.label_ids ?? [];
       const firstLabel = labelIds[0] ? labelMap.get(labelIds[0]) : undefined;
+      const projectLabels = labels.filter(
+        (label) => !label.project_id || label.project_id === issue.project_id,
+      );
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -854,12 +1035,12 @@ export function WorkspaceViewsPageV2() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
-            {labels.length === 0 ? (
+            {projectLabels.length === 0 ? (
               <DropdownMenuLabel className="text-muted-foreground font-normal">
                 {t('views.noLabels', 'No labels.')}
               </DropdownMenuLabel>
             ) : (
-              labels.map((label) => (
+              projectLabels.map((label) => (
                 <DropdownMenuCheckboxItem
                   key={label.id}
                   checked={labelIds.includes(label.id)}
@@ -901,6 +1082,11 @@ export function WorkspaceViewsPageV2() {
             <Input
               type="date"
               value={value}
+              aria-label={
+                isStart
+                  ? t('views.changeStartDate', 'Change start date')
+                  : t('views.changeDueDate', 'Change due date')
+              }
               onChange={(e) =>
                 updateIssue(
                   issue,
@@ -968,116 +1154,163 @@ export function WorkspaceViewsPageV2() {
     if (display.layout === 'list') {
       return (
         <section
-          className="divide-y overflow-hidden rounded-xl border"
-          aria-label={t('views.listLabel', 'Work items list')}
+          className="rounded-xl border"
+          aria-label={t('views.tableLabel', 'Work items table')}
         >
-          {visibleIssues.map((issue) => {
-            const project = projectMap.get(issue.project_id);
-            const assignee = issue.assignee_ids?.[0]
-              ? memberMap.get(issue.assignee_ids[0])
-              : undefined;
-            return (
-              <Link
-                key={issue.id}
-                to={issueHref(issue)}
-                className="hover:bg-muted/50 flex items-center gap-3 px-4 py-3 transition-colors"
-              >
-                {project && (
-                  <Badge variant="secondary" className="shrink-0 font-mono text-[10px]">
-                    {project.identifier ?? project.id.slice(0, 8)}-
-                    {issue.sequence_id ?? issue.id.slice(-4)}
-                  </Badge>
+          <ScrollArea className="w-full">
+            <Table>
+              <TableCaption className="sr-only">
+                {t(
+                  'views.tableCaption',
+                  'Work items across the workspace, with project, state, priority, assignees, labels, due date, and last update.',
                 )}
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">{issue.name}</span>
-                {issue.priority && issue.priority !== 'none' && (
-                  <Badge variant={PRIORITY_BADGE[issue.priority as Priority]} className="shrink-0">
-                    {issue.priority}
-                  </Badge>
-                )}
-                <span className="text-muted-foreground shrink-0 text-xs">
-                  {stateMap.get(issue.state_id ?? '')?.name ?? '—'}
-                </span>
-                {assignee && (
-                  <Avatar className="size-6 shrink-0">
-                    <AvatarImage
-                      src={getImageUrl(assignee.member_avatar) ?? ''}
-                      alt={assignee.member_display_name ?? ''}
-                    />
-                    <AvatarFallback className="text-[10px]">
-                      {memberInitial(assignee)}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-              </Link>
-            );
-          })}
+              </TableCaption>
+              <TableHeader className="bg-muted/50">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="min-w-72 px-0" aria-sort={sortAriaValue('name')}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSort('name')}
+                      className="text-muted-foreground hover:text-foreground w-full justify-start rounded-none px-3 font-medium"
+                    >
+                      {t('views.workItems', 'Work items')}
+                      {sortIndicator('name')}
+                    </Button>
+                  </TableHead>
+                  {listColumns.map(renderListHeadCell)}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleIssues.map((issue) => {
+                  const project = projectMap.get(issue.project_id);
+                  return (
+                    <TableRow
+                      key={issue.id}
+                      className="cursor-pointer"
+                      onClick={(event) => {
+                        const target = event.target as HTMLElement;
+                        if (
+                          target.closest(
+                            'a, button, input, select, textarea, [role="menuitem"], [role="checkbox"]',
+                          )
+                        ) {
+                          return;
+                        }
+                        navigate(issueHref(issue));
+                      }}
+                    >
+                      <TableCell className="min-w-72 px-3 py-2">
+                        <Link
+                          to={issueHref(issue)}
+                          className="focus-visible:ring-ring flex min-h-7 min-w-0 items-center gap-2 rounded-sm outline-none focus-visible:ring-2"
+                        >
+                          {display.properties.includes('id') && project && (
+                            <span className="text-muted-foreground shrink-0 font-mono text-xs">
+                              {project.identifier ?? project.id.slice(0, 8)}-
+                              {issue.sequence_id ?? issue.id.slice(-4)}
+                            </span>
+                          )}
+                          <span className="truncate font-medium">{issue.name}</span>
+                        </Link>
+                      </TableCell>
+                      {listColumns.map((key) => (
+                        <TableCell key={key} className={listColumnClass(key, true)}>
+                          {key === 'updated_at' ? (
+                            <time
+                              dateTime={issue.updated_at}
+                              title={formatDate(issue.updated_at)}
+                              className="text-muted-foreground block px-3 text-xs"
+                            >
+                              {formatTimeAgo(issue.updated_at)}
+                            </time>
+                          ) : (
+                            renderCell(issue, key)
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         </section>
       );
     }
 
     /* Spreadsheet: the name column is pinned, the rest scroll horizontally. */
     return (
-      <section
-        className="overflow-hidden rounded-xl border"
-        aria-label={t('views.tableLabel', 'Work items table')}
-      >
-        <Table className="min-w-max">
-          <TableHeader className="bg-muted/50">
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="bg-muted/50 sticky left-0 z-20 min-w-56 px-0">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleSort('name')}
-                  className="text-muted-foreground hover:text-foreground w-full justify-start rounded-none px-3 font-medium"
+      <section className="rounded-xl border" aria-label={t('views.tableLabel', 'Work items table')}>
+        <ScrollArea className="w-full">
+          <Table className="min-w-max">
+            <TableCaption className="sr-only">
+              {t(
+                'views.spreadsheetCaption',
+                'Editable workspace work-item properties in a horizontally scrollable table.',
+              )}
+            </TableCaption>
+            <TableHeader className="bg-muted/50">
+              <TableRow className="hover:bg-transparent">
+                <TableHead
+                  className="bg-muted/50 sticky left-0 z-20 min-w-56 px-0"
+                  aria-sort={sortAriaValue('name')}
                 >
-                  {t('views.workItems', 'Work items')}
-                  {sortIndicator('name')}
-                </Button>
-              </TableHead>
-              {scrollableColumns.map(renderHeadCell)}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {visibleIssues.map((issue) => {
-              const project = projectMap.get(issue.project_id);
-              return (
-                <TableRow key={issue.id}>
-                  {/* Pinned so the name stays readable while the properties
-                      scroll; its own background keeps the scrolled cells from
-                      showing through. */}
-                  <TableCell className="bg-background sticky left-0 z-10 min-w-56 p-0">
-                    <Link
-                      to={issueHref(issue)}
-                      className="hover:bg-muted/50 flex h-11 items-center gap-2 px-3 transition-colors"
-                    >
-                      {display.properties.includes('id') && project && (
-                        <span className="text-muted-foreground shrink-0 font-mono text-xs">
-                          {project.identifier ?? project.id.slice(0, 8)}-
-                          {issue.sequence_id ?? issue.id.slice(-4)}
-                        </span>
-                      )}
-                      <span className="truncate font-medium">{issue.name}</span>
-                    </Link>
-                  </TableCell>
-                  {scrollableColumns.map((key) => (
-                    <TableCell
-                      key={key}
-                      className={
-                        EDITABLE_COLUMNS.includes(key)
-                          ? 'border-l p-0'
-                          : 'text-muted-foreground border-l p-0 py-3'
-                      }
-                    >
-                      {renderCell(issue, key)}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('name')}
+                    className="text-muted-foreground hover:text-foreground w-full justify-start rounded-none px-3 font-medium"
+                  >
+                    {t('views.workItems', 'Work items')}
+                    {sortIndicator('name')}
+                  </Button>
+                </TableHead>
+                {scrollableColumns.map(renderHeadCell)}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visibleIssues.map((issue) => {
+                const project = projectMap.get(issue.project_id);
+                return (
+                  <TableRow key={issue.id}>
+                    {/* Pinned so the name stays readable while the properties
+                        scroll; its own background keeps the scrolled cells from
+                        showing through. */}
+                    <TableCell className="bg-background sticky left-0 z-10 min-w-56 p-0">
+                      <Link
+                        to={issueHref(issue)}
+                        className="hover:bg-muted/50 focus-visible:ring-ring flex h-11 items-center gap-2 px-3 outline-none transition-colors focus-visible:ring-2"
+                      >
+                        {display.properties.includes('id') && project && (
+                          <span className="text-muted-foreground shrink-0 font-mono text-xs">
+                            {project.identifier ?? project.id.slice(0, 8)}-
+                            {issue.sequence_id ?? issue.id.slice(-4)}
+                          </span>
+                        )}
+                        <span className="truncate font-medium">{issue.name}</span>
+                      </Link>
                     </TableCell>
-                  ))}
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                    {scrollableColumns.map((key) => (
+                      <TableCell
+                        key={key}
+                        className={
+                          EDITABLE_COLUMNS.includes(key) ? 'p-0' : 'text-muted-foreground p-0 py-3'
+                        }
+                      >
+                        {renderCell(issue, key)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
       </section>
     );
   };
@@ -1100,7 +1333,30 @@ export function WorkspaceViewsPageV2() {
         </p>
       </header>
 
-      <ViewsToolbar workspaceSlug={workspace.slug} scopeControl={scopeControl} />
+      <ViewsToolbar
+        workspaceSlug={workspace.slug}
+        onCreateWorkItem={
+          projects.length > 0
+            ? () => {
+                setCreateError(null);
+                setCreateOpen(true);
+              }
+            : undefined
+        }
+      />
+
+      <CreateWorkItemDialog
+        open={createOpen}
+        onClose={() => {
+          setCreateOpen(false);
+          setCreateError(null);
+        }}
+        workspaceSlug={workspace.slug}
+        projects={projects}
+        defaultProjectId={projects[0]?.id}
+        createError={createError}
+        onSave={handleCreateSave}
+      />
 
       {renderContent()}
 

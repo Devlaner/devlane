@@ -17,7 +17,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { CreateWorkItemModal } from '@/components/CreateWorkItemModal';
+import { CreateWorkItemDialog } from '@/components/shadcn/create-work-item-dialog';
 import { ImportCSVModal } from '@/components/work-item/ImportCSVModal';
 import { IssuePRBadge } from '@/components/work-item/IssuePRBadge';
 import {
@@ -527,7 +527,7 @@ export function ProjectWorkItemsPageV2() {
 
   return (
     <div className="space-y-6 pb-8">
-      <CreateWorkItemModal
+      <CreateWorkItemDialog
         open={createOpen}
         onClose={handleCloseCreate}
         workspaceSlug={workspace.slug}
