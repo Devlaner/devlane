@@ -243,8 +243,15 @@ export function WorkItemsFiltersMenu({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 p-0">
-        <div className="flex items-center justify-between border-b px-4 py-2.5">
+      {/* The popper reports how much room is left below the trigger; capping the
+          panel there keeps the bottom of the scroll area on screen instead of
+          letting a fixed 30rem run past the viewport on a short window. */}
+      <PopoverContent
+        align="start"
+        collisionPadding={8}
+        className="flex max-h-(--radix-popover-content-available-height) w-80 flex-col p-0"
+      >
+        <div className="flex shrink-0 items-center justify-between border-b px-4 py-2.5">
           <p className="text-sm font-medium">{t('common.filters', 'Filters')}</p>
           {activeCount > 0 && (
             <Button
@@ -258,9 +265,16 @@ export function WorkItemsFiltersMenu({
             </Button>
           )}
         </div>
-        <ScrollArea className="h-[min(70vh,30rem)]">
+        <ScrollArea className="h-[min(70vh,30rem)] min-h-0 flex-1">
           <div className="space-y-4 p-4">
             <Section title={t('filters.workItemGrouping', 'Work item Grouping')}>
+              {/* Stacked rather than side by side: the three labels are full
+                  sentences ("Backlog Work items"), and three of them never fit
+                  across a 20rem popover in any language. ToggleGroupItem is
+                  `shrink-0`, so a horizontal row does not truncate — it spills
+                  out of the panel. `spacing` keeps each option its own bordered
+                  row instead of the joined segments, whose rounding and
+                  collapsed borders are written for a horizontal group. */}
               <ToggleGroup
                 type="single"
                 value={filters.workItemGrouping}
@@ -268,16 +282,16 @@ export function WorkItemsFiltersMenu({
                   if (value) patch({ workItemGrouping: value as GroupingOption });
                 }}
                 variant="outline"
-                spacing={0}
-                className="w-full"
+                spacing={2}
+                className="w-full flex-col items-stretch"
               >
-                <ToggleGroupItem value="all" className="flex-1">
+                <ToggleGroupItem value="all" className="w-full justify-start">
                   {t('filters.allWorkItems', 'All Work items')}
                 </ToggleGroupItem>
-                <ToggleGroupItem value="active" className="flex-1">
+                <ToggleGroupItem value="active" className="w-full justify-start">
                   {t('filters.activeWorkItems', 'Active Work items')}
                 </ToggleGroupItem>
-                <ToggleGroupItem value="backlog" className="flex-1">
+                <ToggleGroupItem value="backlog" className="w-full justify-start">
                   {t('filters.backlogWorkItems', 'Backlog Work items')}
                 </ToggleGroupItem>
               </ToggleGroup>

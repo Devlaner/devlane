@@ -157,8 +157,14 @@ export function CyclesFiltersMenu({ filters, onChange }: CyclesFiltersMenuProps)
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 p-0">
-        <div className="flex items-center justify-between border-b px-4 py-2.5">
+      {/* Capped at the room the popper reports below the trigger, so the panel
+          ends on screen instead of running past the bottom of a short window. */}
+      <PopoverContent
+        align="start"
+        collisionPadding={8}
+        className="flex max-h-(--radix-popover-content-available-height) w-80 flex-col p-0"
+      >
+        <div className="flex shrink-0 items-center justify-between border-b px-4 py-2.5">
           <p className="text-sm font-medium">{t('common.filters', 'Filters')}</p>
           {activeCount > 0 && (
             <Button
@@ -177,7 +183,7 @@ export function CyclesFiltersMenu({ filters, onChange }: CyclesFiltersMenuProps)
             </Button>
           )}
         </div>
-        <ScrollArea className="h-[min(70vh,26rem)]">
+        <ScrollArea className="h-[min(70vh,26rem)] min-h-0 flex-1">
           <div className="space-y-4 p-4">
             <Section title={t('common.status', 'Status')}>
               {STATUS_KEYS.map((key) => (

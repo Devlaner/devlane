@@ -80,8 +80,14 @@ export function WorkItemsDisplayMenu({ display, onChange }: WorkItemsDisplayMenu
           {t('display.display', 'Display')}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-72 p-0">
-        <ScrollArea className="h-[min(70vh,28rem)]">
+      {/* Capped at the room the popper reports below the trigger, so the panel
+          ends on screen instead of running past the bottom of a short window. */}
+      <PopoverContent
+        align="end"
+        collisionPadding={8}
+        className="flex max-h-(--radix-popover-content-available-height) w-72 flex-col p-0"
+      >
+        <ScrollArea className="h-[min(70vh,28rem)] min-h-0 flex-1">
           <div className="space-y-4 p-4">
             <div className="space-y-2">
               <Label htmlFor="work-items-group-by">{t('display.groupBy', 'Group by')}</Label>
