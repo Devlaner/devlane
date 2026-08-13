@@ -19,6 +19,8 @@ import {
   CreateWorkItemDialog,
   type CreateWorkItemDialogSubmit,
 } from '@/components/shadcn/create-work-item-dialog';
+import { ListPageSkeleton } from '@/components/shadcn/list-page-skeleton';
+import { PageHeading } from '@/components/shadcn/page-heading';
 import { ViewsToolbar } from '@/components/shadcn/views-toolbar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/ui/avatar';
 import { Badge } from '@/components/shadcn/ui/badge';
@@ -576,20 +578,7 @@ export function WorkspaceViewsPageV2() {
   );
 
   if (loading) {
-    return (
-      <div
-        className="space-y-6 pb-8"
-        aria-busy="true"
-        aria-label={t('views.loading', 'Loading work items')}
-      >
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-40" />
-          <Skeleton className="h-4 w-72 max-w-full" />
-        </div>
-        <Skeleton className="h-16 w-full rounded-xl" />
-        {contentSkeleton}
-      </div>
-    );
+    return <ListPageSkeleton label={t('views.loading', 'Loading work items')} />;
   }
 
   if (loadError || !workspace) {
@@ -963,7 +952,7 @@ export function WorkspaceViewsPageV2() {
                       src={getImageUrl(assignee.member_avatar) ?? ''}
                       alt={assignee.member_display_name ?? ''}
                     />
-                    <AvatarFallback className="text-[10px]">
+                    <AvatarFallback className="text-[10px] text-foreground">
                       {memberInitial(assignee)}
                     </AvatarFallback>
                   </Avatar>
@@ -1317,21 +1306,22 @@ export function WorkspaceViewsPageV2() {
 
   return (
     <div className="space-y-6 pb-8">
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{pageTitle}</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {t('views.pageDescription', 'Track work items across every project in your workspace.')}
-          </p>
-        </div>
-        <p className="text-muted-foreground text-sm tabular-nums" aria-live="polite">
-          {t('views.summary', 'Work items {{items}} · Open {{open}} · Completed {{completed}}', {
+      <PageHeading
+        title={pageTitle}
+        description={t(
+          'views.pageDescription',
+          'Track work items across every project in your workspace.',
+        )}
+        summary={t(
+          'views.summary',
+          'Work items {{items}} · Open {{open}} · Completed {{completed}}',
+          {
             items: visibleIssues.length,
             open: openCount,
             completed: completedCount,
-          })}
-        </p>
-      </header>
+          },
+        )}
+      />
 
       <ViewsToolbar
         workspaceSlug={workspace.slug}

@@ -9,15 +9,20 @@ import {
   FolderPlus,
   MoreHorizontal,
   Pencil,
+  Plus,
+  SearchX,
   Send,
   Signal,
   Tag,
   Trash2,
   User,
 } from 'lucide-react';
+import { DraftsToolbar } from '@/components/shadcn/drafts-toolbar';
+import { PageHeading } from '@/components/shadcn/page-heading';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/ui/avatar';
 import { Badge } from '@/components/shadcn/ui/badge';
 import { Button } from '@/components/shadcn/ui/button';
+import { Card, CardContent } from '@/components/shadcn/ui/card';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -34,6 +39,7 @@ import { Skeleton } from '@/components/shadcn/ui/skeleton';
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -94,8 +100,8 @@ function draftDisplayId(proj: ProjectApiResponse | undefined, issue: IssueApiRes
  * Data loading, inline property editing, publish, duplicate and delete mirror
  * the shipped page — only the chrome differs: the row of ad-hoc property
  * buttons becomes a spreadsheet-style table, search, project filter and the
- * create action move into the shell's header (DraftsToolbar), and the composer
- * is the v2 CreateWorkItemDialog.
+ * create action live in the responsive page toolbar, and the composer is the
+ * v2 CreateWorkItemDialog.
  */
 export function DraftsPageV2() {
   const { t } = useTranslation();
@@ -129,6 +135,7 @@ export function DraftsPageV2() {
   const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
   const [modalInitialValues, setModalInitialValues] = useState<WorkItemInitialValues | undefined>();
   const [rowBusy, setRowBusy] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useDocumentTitle(t('drafts.documentTitle', 'Drafts'));
 
@@ -264,7 +271,7 @@ export function DraftsPageV2() {
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug, t]);
+  }, [workspaceSlug, t, reloadToken]);
 
   useEffect(() => {
     if (!workspaceSlug || !workspace) return;
@@ -498,6 +505,15 @@ export function DraftsPageV2() {
     });
   }, [drafts, query, projectFilter, projectById]);
 
+  const clearDiscoveryFilters = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('q');
+    next.delete('project');
+    setSearchParams(next, { replace: true });
+  };
+
+  const hasDiscoveryFilters = Boolean(query.trim()) || projectFilter.length > 0;
+
   const formatDate = (value: string | undefined | null) =>
     value
       ? new Date(value).toLocaleDateString('en-US', {
@@ -522,42 +538,59 @@ export function DraftsPageV2() {
 
   if (loading) {
     return (
-      <div className="space-y-2">
-        <Skeleton className="h-10 w-full" />
-        {Array.from({ length: 8 }).map((_, index) => (
-          <Skeleton key={index} className="h-11 w-full" />
-        ))}
+      <div
+        className="space-y-6 pb-8"
+        aria-busy="true"
+        aria-label={t('drafts.loadingPage', 'Loading drafts page')}
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-96 max-w-full" />
+          </div>
+          <Skeleton className="h-4 w-48 max-w-full" />
+        </div>
+        <Skeleton className="h-20 w-full rounded-xl" />
+        <Skeleton className="h-72 w-full rounded-xl" />
       </div>
     );
   }
 
   if (!workspaceSlug || !workspace) {
     return (
-      <p className="text-muted-foreground text-sm">
-        {t('common.workspaceNotFound', 'Workspace not found.')}
-      </p>
+      <div
+        className="flex min-h-80 flex-col items-center justify-center rounded-xl border border-dashed px-6 py-12 text-center"
+        role="alert"
+      >
+        <span className="bg-destructive/10 text-destructive flex size-12 items-center justify-center rounded-full">
+          <FileText aria-hidden="true" />
+        </span>
+        <h1 className="mt-4 text-xl font-semibold">
+          {error ?? t('common.workspaceNotFound', 'Workspace not found.')}
+        </h1>
+        {error && (
+          <p className="text-muted-foreground mt-2 max-w-md text-sm">
+            {t(
+              'drafts.loadWorkspaceErrorDescription',
+              'Check your connection and try again. Your draft data has not been changed.',
+            )}
+          </p>
+        )}
+        {workspaceSlug && (
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-5"
+            onClick={() => setReloadToken((value) => value + 1)}
+          >
+            {t('common.retry', 'Try again')}
+          </Button>
+        )}
+      </div>
     );
   }
 
   const base = `/${workspace.slug}`;
-
-  if (projects.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-12 text-center">
-        <FolderPlus className="text-muted-foreground size-10" strokeWidth={1.25} />
-        <p className="font-medium">{t('drafts.noProjects', 'No projects yet')}</p>
-        <p className="text-muted-foreground max-w-md text-sm">
-          {t(
-            'drafts.noProjectsHint',
-            'Create a project in this workspace before you can add draft work items.',
-          )}
-        </p>
-        <Button asChild>
-          <Link to={`${base}/app-v2/projects`}>{t('drafts.createProject', 'Create project')}</Link>
-        </Button>
-      </div>
-    );
-  }
 
   const cellTriggerClass =
     'hover:bg-muted/50 flex h-11 w-full items-center gap-2 rounded-none px-3 text-left text-sm font-normal';
@@ -826,187 +859,307 @@ export function DraftsPageV2() {
     );
   };
 
-  const emptyState =
-    drafts.length === 0 ? (
-      <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-12 text-center">
-        <FileText className="text-muted-foreground size-10" strokeWidth={1.25} />
-        <p className="font-medium">{t('drafts.empty', 'No draft work items')}</p>
-        <p className="text-muted-foreground max-w-md text-sm">
+  const noProjectsState = (
+    <Card className="items-center gap-0 border-dashed px-6 py-14 text-center shadow-none">
+      <span className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-full">
+        <FolderPlus aria-hidden="true" />
+      </span>
+      <CardContent className="mt-4 max-w-md px-0">
+        <h2 className="font-semibold">{t('drafts.noProjects', 'No projects yet')}</h2>
+        <p className="text-muted-foreground mt-2 text-sm leading-6">
           {t(
-            'drafts.emptyHint',
-            'Capture ideas as drafts and publish them into a project when you are ready.',
+            'drafts.noProjectsHint',
+            'Create a project in this workspace before you can add draft work items.',
           )}
         </p>
-        <Button type="button" onClick={() => setCreateOpen(true)}>
-          {t('drafts.draftWorkItem', 'Draft a work item')}
+        <Button asChild className="mt-5">
+          <Link to={`${base}/app-v2/projects`}>
+            <FolderPlus aria-hidden="true" />
+            {t('drafts.createProject', 'Create project')}
+          </Link>
         </Button>
-      </div>
+      </CardContent>
+    </Card>
+  );
+
+  const emptyState =
+    drafts.length === 0 ? (
+      <Card className="items-center gap-0 border-dashed px-6 py-14 text-center shadow-none">
+        <span className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-full">
+          <FileText aria-hidden="true" />
+        </span>
+        <CardContent className="mt-4 max-w-md px-0">
+          <h2 className="font-semibold">{t('drafts.empty', 'No draft work items')}</h2>
+          <p className="text-muted-foreground mt-2 text-sm leading-6">
+            {t(
+              'drafts.emptyHint',
+              'Capture ideas as drafts and publish them into a project when you are ready.',
+            )}
+          </p>
+          <Button type="button" className="mt-5" onClick={() => setCreateOpen(true)}>
+            <Plus aria-hidden="true" />
+            {t('drafts.draftWorkItem', 'Draft a work item')}
+          </Button>
+        </CardContent>
+      </Card>
     ) : (
       /* Drafts exist but the toolbar's search or project filter hid them all,
          so the call to action is to widen the filter, not to create. */
-      <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed py-12 text-center">
-        <p className="text-muted-foreground text-sm">
-          {t('drafts.noMatches', 'No drafts match the current search or filters.')}
-        </p>
-      </div>
+      <Card className="items-center gap-0 border-dashed px-6 py-14 text-center shadow-none">
+        <span className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-full">
+          <SearchX aria-hidden="true" />
+        </span>
+        <CardContent className="mt-4 max-w-md px-0">
+          <h2 className="font-semibold">{t('drafts.noMatchesTitle', 'No drafts found')}</h2>
+          <p className="text-muted-foreground mt-2 text-sm leading-6">
+            {t('drafts.noMatches', 'No drafts match the current search or filters.')}
+          </p>
+          <Button type="button" variant="outline" className="mt-5" onClick={clearDiscoveryFilters}>
+            <SearchX aria-hidden="true" />
+            {t('common.clearFilters', 'Clear filters')}
+          </Button>
+        </CardContent>
+      </Card>
     );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      {error && (
-        <p className="text-destructive text-sm" role="alert">
-          {error}
-        </p>
-      )}
+    <div className="space-y-6 pb-8">
+      <PageHeading
+        title={t('drafts.documentTitle', 'Drafts')}
+        description={t(
+          'drafts.pageDescription',
+          'Capture and refine work before publishing it to your projects.',
+        )}
+        summary={t('drafts.summary', '{{drafts}} shown · {{projects}} projects', {
+          drafts: listLoading ? '—' : visibleDrafts.length,
+          projects: projects.length,
+        })}
+      />
 
-      {listLoading && drafts.length === 0 ? (
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-full" />
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Skeleton key={index} className="h-11 w-full" />
-          ))}
-        </div>
-      ) : visibleDrafts.length === 0 ? (
-        emptyState
+      {projects.length > 0 && <DraftsToolbar projects={projects} />}
+
+      {projects.length === 0 ? (
+        noProjectsState
       ) : (
         <>
-          <div className="min-h-0 flex-1 overflow-auto rounded-xl border">
-            <Table className="min-w-max">
-              <TableHeader className="bg-muted/50">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="bg-muted/50 sticky left-0 z-20 min-w-64 px-3">
-                    {t('drafts.documentTitle', 'Drafts')}
-                  </TableHead>
-                  <TableHead className="border-l px-3">{t('common.project', 'Project')}</TableHead>
-                  <TableHead className="border-l px-3">{t('views.priority', 'Priority')}</TableHead>
-                  <TableHead className="border-l px-3">{t('views.state', 'State')}</TableHead>
-                  <TableHead className="border-l px-3">
-                    {t('views.assignees', 'Assignees')}
-                  </TableHead>
-                  <TableHead className="border-l px-3">{t('views.labels', 'Labels')}</TableHead>
-                  <TableHead className="border-l px-3">{t('views.module', 'Module')}</TableHead>
-                  <TableHead className="border-l px-3">{t('views.cycle', 'Cycle')}</TableHead>
-                  <TableHead className="border-l px-3">
-                    {t('views.startDate', 'Start date')}
-                  </TableHead>
-                  <TableHead className="border-l px-3">{t('views.dueDate', 'Due date')}</TableHead>
-                  <TableHead className="w-12 border-l px-3">
-                    <span className="sr-only">{t('common.actions', 'Actions')}</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleDrafts.map((issue) => {
-                  const proj = projectById.get(issue.project_id);
-                  const issueUrl = `${base}/app-v2/projects/${issue.project_id}/work-items/${issue.id}`;
-                  return (
-                    <TableRow key={issue.id} data-busy={rowBusy === issue.id || undefined}>
-                      {/* Pinned so the title stays readable while the
-                          properties scroll; its own background keeps the
-                          scrolled cells from showing through. */}
-                      <TableCell className="bg-background sticky left-0 z-10 min-w-64 p-0">
-                        <Link
-                          to={issueUrl}
-                          className="hover:bg-muted/50 flex h-11 items-center gap-2 px-3 transition-colors"
-                        >
-                          <span className="text-muted-foreground shrink-0 font-mono text-xs">
-                            {draftDisplayId(proj, issue)}
-                          </span>
-                          <span className="truncate font-medium">{issue.name}</span>
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground border-l px-3 text-sm">
-                        {proj?.name ?? '—'}
-                      </TableCell>
-                      <TableCell className="border-l p-0">{renderPriorityCell(issue)}</TableCell>
-                      <TableCell className="border-l p-0">{renderStateCell(issue)}</TableCell>
-                      <TableCell className="border-l p-0">{renderAssigneeCell(issue)}</TableCell>
-                      <TableCell className="border-l p-0">{renderLabelsCell(issue)}</TableCell>
-                      <TableCell className="border-l p-0">
-                        {renderMembershipCell(issue, 'module')}
-                      </TableCell>
-                      <TableCell className="border-l p-0">
-                        {renderMembershipCell(issue, 'cycle')}
-                      </TableCell>
-                      <TableCell className="border-l p-0">
-                        {renderDateCell(issue, 'start')}
-                      </TableCell>
-                      <TableCell className="border-l p-0">{renderDateCell(issue, 'due')}</TableCell>
-                      <TableCell className="border-l p-0 text-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild disabled={rowBusy === issue.id}>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              aria-label={t('drafts.rowActions', 'Draft actions')}
-                            >
-                              <MoreHorizontal />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-44">
-                            <DropdownMenuItem onSelect={() => handleEdit(issue)}>
-                              <Pencil />
-                              {t('common.edit', 'Edit')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleDuplicate(issue)}>
-                              <Copy />
-                              {t('common.duplicate', 'Duplicate')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => void handlePublish(issue)}>
-                              <Send />
-                              {t('drafts.moveToIssues', 'Move to work items')}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              variant="destructive"
-                              onSelect={() => void handleDelete(issue)}
-                            >
-                              <Trash2 />
-                              {t('common.delete', 'Delete')}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+          {error && drafts.length > 0 && (
+            <div
+              className="border-destructive/40 bg-destructive/5 rounded-lg border px-4 py-3 text-sm"
+              role="alert"
+            >
+              {error}
+            </div>
+          )}
 
-          {hasMore && (
-            <div className="flex justify-center">
+          {listLoading && drafts.length === 0 ? (
+            <div
+              className="space-y-2"
+              aria-busy="true"
+              aria-label={t('drafts.loadingDrafts', 'Loading drafts…')}
+            >
+              <Skeleton className="h-10 w-full" />
+              {Array.from({ length: 6 }).map((_, index) => (
+                <Skeleton key={index} className="h-11 w-full" />
+              ))}
+            </div>
+          ) : error && drafts.length === 0 ? (
+            <div
+              className="flex min-h-80 flex-col items-center justify-center rounded-xl border border-dashed px-6 py-12 text-center"
+              role="alert"
+            >
+              <span className="bg-destructive/10 text-destructive flex size-12 items-center justify-center rounded-full">
+                <FileText aria-hidden="true" />
+              </span>
+              <h2 className="mt-4 text-xl font-semibold">{error}</h2>
+              <p className="text-muted-foreground mt-2 max-w-md text-sm">
+                {t(
+                  'drafts.loadErrorDescription',
+                  'Check your connection and try again. Your draft data has not been changed.',
+                )}
+              </p>
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                onClick={() => void loadDrafts(false)}
+                className="mt-5"
+                onClick={() => void loadDrafts(true)}
               >
-                {t('common.loadMore', 'Load more')}
+                {t('common.retry', 'Try again')}
               </Button>
             </div>
+          ) : visibleDrafts.length === 0 ? (
+            emptyState
+          ) : (
+            <>
+              <section
+                className="overflow-hidden rounded-xl border"
+                aria-label={t('drafts.tableLabel', 'Draft work items table')}
+              >
+                <Table className="min-w-max">
+                  <TableCaption className="sr-only">
+                    {t(
+                      'drafts.tableCaption',
+                      'Workspace draft work items and their editable planning properties',
+                    )}
+                  </TableCaption>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="bg-muted/50 sticky left-0 z-20 min-w-64 px-3">
+                        {t('drafts.documentTitle', 'Drafts')}
+                      </TableHead>
+                      <TableHead className="border-l px-3">
+                        {t('common.project', 'Project')}
+                      </TableHead>
+                      <TableHead className="border-l px-3">
+                        {t('views.priority', 'Priority')}
+                      </TableHead>
+                      <TableHead className="border-l px-3">{t('views.state', 'State')}</TableHead>
+                      <TableHead className="border-l px-3">
+                        {t('views.assignees', 'Assignees')}
+                      </TableHead>
+                      <TableHead className="border-l px-3">{t('views.labels', 'Labels')}</TableHead>
+                      <TableHead className="border-l px-3">{t('views.module', 'Module')}</TableHead>
+                      <TableHead className="border-l px-3">{t('views.cycle', 'Cycle')}</TableHead>
+                      <TableHead className="border-l px-3">
+                        {t('views.startDate', 'Start date')}
+                      </TableHead>
+                      <TableHead className="border-l px-3">
+                        {t('views.dueDate', 'Due date')}
+                      </TableHead>
+                      <TableHead className="w-12 border-l px-3">
+                        <span className="sr-only">{t('common.actions', 'Actions')}</span>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visibleDrafts.map((issue) => {
+                      const proj = projectById.get(issue.project_id);
+                      const issueUrl = `${base}/app-v2/projects/${issue.project_id}/work-items/${issue.id}`;
+                      return (
+                        <TableRow key={issue.id} data-busy={rowBusy === issue.id || undefined}>
+                          {/* Pinned so the title stays readable while the
+                          properties scroll; its own background keeps the
+                          scrolled cells from showing through. */}
+                          <TableCell className="bg-background sticky left-0 z-10 min-w-64 p-0">
+                            <Link
+                              to={issueUrl}
+                              className="hover:bg-muted/50 flex h-11 items-center gap-2 px-3 transition-colors"
+                            >
+                              <span className="text-muted-foreground shrink-0 font-mono text-xs">
+                                {draftDisplayId(proj, issue)}
+                              </span>
+                              <span className="truncate font-medium">{issue.name}</span>
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground border-l px-3 text-sm">
+                            {proj?.name ?? '—'}
+                          </TableCell>
+                          <TableCell className="border-l p-0">
+                            {renderPriorityCell(issue)}
+                          </TableCell>
+                          <TableCell className="border-l p-0">{renderStateCell(issue)}</TableCell>
+                          <TableCell className="border-l p-0">
+                            {renderAssigneeCell(issue)}
+                          </TableCell>
+                          <TableCell className="border-l p-0">{renderLabelsCell(issue)}</TableCell>
+                          <TableCell className="border-l p-0">
+                            {renderMembershipCell(issue, 'module')}
+                          </TableCell>
+                          <TableCell className="border-l p-0">
+                            {renderMembershipCell(issue, 'cycle')}
+                          </TableCell>
+                          <TableCell className="border-l p-0">
+                            {renderDateCell(issue, 'start')}
+                          </TableCell>
+                          <TableCell className="border-l p-0">
+                            {renderDateCell(issue, 'due')}
+                          </TableCell>
+                          <TableCell className="border-l p-0 text-center">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild disabled={rowBusy === issue.id}>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={t('drafts.rowActions', 'Draft actions')}
+                                >
+                                  <MoreHorizontal />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-44">
+                                <DropdownMenuItem onSelect={() => handleEdit(issue)}>
+                                  <Pencil />
+                                  {t('common.edit', 'Edit')}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => handleDuplicate(issue)}>
+                                  <Copy />
+                                  {t('common.duplicate', 'Duplicate')}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => void handlePublish(issue)}>
+                                  <Send />
+                                  {t('drafts.moveToIssues', 'Move to work items')}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  onSelect={() => void handleDelete(issue)}
+                                >
+                                  <Trash2 />
+                                  {t('common.delete', 'Delete')}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </section>
+
+              {hasMore && (
+                <div className="flex justify-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void loadDrafts(false)}
+                  >
+                    {t('common.loadMore', 'Load more')}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+
+          {hasDiscoveryFilters && !listLoading && (
+            <p className="sr-only" aria-live="polite">
+              {t('drafts.visibleCount', '{{count}} drafts visible', {
+                count: visibleDrafts.length,
+              })}
+            </p>
           )}
         </>
       )}
 
-      <CreateWorkItemDialog
-        open={createOpen}
-        onClose={() => {
-          setCreateOpen(false);
-          setCreateError(null);
-          setEditingIssueId(null);
-          setModalInitialValues(undefined);
-          clearCreateParam();
-        }}
-        workspaceSlug={workspace.slug}
-        projects={projects}
-        defaultProjectId={projects[0]?.id}
-        initialValues={modalInitialValues}
-        draftOnly
-        createError={createError}
-        onSave={handleCreateSave}
-      />
+      {projects.length > 0 && (
+        <CreateWorkItemDialog
+          open={createOpen}
+          onClose={() => {
+            setCreateOpen(false);
+            setCreateError(null);
+            setEditingIssueId(null);
+            setModalInitialValues(undefined);
+            clearCreateParam();
+          }}
+          workspaceSlug={workspace.slug}
+          projects={projects}
+          defaultProjectId={projects[0]?.id}
+          initialValues={modalInitialValues}
+          draftOnly
+          createError={createError}
+          onSave={handleCreateSave}
+        />
+      )}
     </div>
   );
 }

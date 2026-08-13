@@ -11,14 +11,15 @@ import {
   Link2,
   MoreHorizontal,
   Pencil,
-  Search,
   Star,
   Trash2,
-  X,
 } from 'lucide-react';
 import { UpdateCycleModal } from '@/components/UpdateCycleModal';
 import { CycleBurndownChart } from '@/components/cycles/CycleBurndownChart';
 import { CyclesFiltersMenu } from '@/components/shadcn/cycles-filters-menu';
+import { ListPageSkeleton } from '@/components/shadcn/list-page-skeleton';
+import { PageHeading } from '@/components/shadcn/page-heading';
+import { ProjectListToolbar } from '@/components/shadcn/project-list-toolbar';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,9 +54,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/shadcn/ui/empty';
-import { Input } from '@/components/shadcn/ui/input';
 import { Progress } from '@/components/shadcn/ui/progress';
-import { Skeleton } from '@/components/shadcn/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/ui/tabs';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useProjectCyclesController } from '../hooks/useProjectCyclesController';
@@ -169,17 +168,7 @@ export function ProjectCyclesPageV2() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-6 pb-8" aria-busy="true">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-40" />
-          <Skeleton className="h-4 w-72 max-w-full" />
-        </div>
-        <Skeleton className="h-16 w-full rounded-xl" />
-        <Skeleton className="h-64 w-full rounded-xl" />
-        <Skeleton className="h-40 w-full rounded-xl" />
-      </div>
-    );
+    return <ListPageSkeleton label={t('cycles.loading', 'Loading cycles…')} rows={6} />;
   }
 
   if (!workspace || !project) {
@@ -390,58 +379,34 @@ export function ProjectCyclesPageV2() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{t('common.cycles', 'Cycles')}</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {t('cycles.pageDescription', 'Time-boxed delivery windows for {{project}}.', {
-              project: project.name,
-            })}
-          </p>
-        </div>
-        <p className="text-muted-foreground text-sm tabular-nums" aria-live="polite">
-          {t('cycles.summary', '{{visible}} of {{total}} cycles', {
-            visible: filteredCycles.length,
-            total: cycles.length,
-          })}
+      <PageHeading
+        title={t('common.cycles', 'Cycles')}
+        description={t('cycles.pageDescription', 'Time-boxed delivery windows for {{project}}.', {
+          project: project.name,
+        })}
+        summary={t('cycles.summary', '{{visible}} of {{total}} cycles', {
+          visible: filteredCycles.length,
+          total: cycles.length,
+        })}
+      />
+
+      {/* The search lives in the cycles controller rather than the URL, so the
+          shared toolbar is driven as a controlled field here. */}
+      <ProjectListToolbar
+        searchPlaceholder={t('cycles.searchPlaceholder', 'Search cycles')}
+        regionLabel={t('cycles.toolbar', 'Cycle controls')}
+        value={filters.searchQuery ?? ''}
+        onValueChange={(value) =>
+          setFilters((previous) => ({ ...previous, searchQuery: value || null }))
+        }
+        filters={<CyclesFiltersMenu filters={filters} onChange={setFilters} />}
+      />
+
+      {filteredCycles.length === 0 && cycles.length > 0 && (
+        <p className="sr-only" aria-live="polite">
+          {t('cycles.noMatches', 'No cycles match the current search and filters.')}
         </p>
-      </header>
-
-      <div
-        className="bg-card/50 flex flex-wrap items-center gap-2 rounded-xl border p-3 shadow-xs sm:p-4"
-        role="region"
-        aria-label={t('cycles.toolbar', 'Cycle controls')}
-      >
-        <div className="relative w-full min-w-0 sm:w-64 sm:flex-1">
-          <Search
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2"
-            aria-hidden="true"
-          />
-          <Input
-            value={filters.searchQuery ?? ''}
-            onChange={(event) =>
-              setFilters((previous) => ({ ...previous, searchQuery: event.target.value || null }))
-            }
-            placeholder={t('cycles.searchPlaceholder', 'Search cycles')}
-            aria-label={t('cycles.searchPlaceholder', 'Search cycles')}
-            className="h-11 pr-12 pl-10 sm:h-9"
-          />
-          {filters.searchQuery && (
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="ghost"
-              onClick={() => setFilters((previous) => ({ ...previous, searchQuery: null }))}
-              aria-label={t('common.clearSearch', 'Clear search')}
-              className="absolute top-1/2 right-1 size-10 -translate-y-1/2 sm:size-8"
-            >
-              <X aria-hidden="true" />
-            </Button>
-          )}
-        </div>
-
-        <CyclesFiltersMenu filters={filters} onChange={setFilters} />
-      </div>
+      )}
 
       {activeCycle ? (
         <Card className="gap-4">

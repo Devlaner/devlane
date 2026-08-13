@@ -13,6 +13,7 @@ import {
   Users,
 } from 'lucide-react';
 import { CreateProjectDialog } from '@/components/shadcn/create-project-dialog';
+import { PageHeading } from '@/components/shadcn/page-heading';
 import { ProjectsToolbar } from '@/components/shadcn/projects-toolbar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/ui/avatar';
 import { Badge } from '@/components/shadcn/ui/badge';
@@ -584,30 +585,22 @@ export function ProjectsListPageV2() {
         }}
       />
 
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {t('projects.documentTitle', 'Projects')}
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {t(
-              'projects.pageDescription',
-              'Organize work, people, and delivery across your workspace.',
-            )}
-          </p>
-        </div>
-        <p className="text-muted-foreground text-sm tabular-nums" aria-live="polite">
-          {t(
-            'projects.summary',
-            '{{projects}} projects · {{mine}} joined · {{favorites}} favorites',
-            {
-              projects: allProjects.length,
-              mine: memberCountsUnavailable ? '—' : myProjectCount,
-              favorites: favoriteCount,
-            },
-          )}
-        </p>
-      </header>
+      <PageHeading
+        title={t('projects.documentTitle', 'Projects')}
+        description={t(
+          'projects.pageDescription',
+          'Organize work, people, and delivery across your workspace.',
+        )}
+        summary={t(
+          'projects.summary',
+          '{{projects}} projects · {{mine}} joined · {{favorites}} favorites',
+          {
+            projects: allProjects.length,
+            mine: memberCountsUnavailable ? '—' : myProjectCount,
+            favorites: favoriteCount,
+          },
+        )}
+      />
 
       <ProjectsToolbar
         members={workspaceMembers}

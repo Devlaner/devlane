@@ -2,9 +2,6 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Outlet, useLocation, useMatch, useParams } from 'react-router-dom';
 import { AppSidebar } from '@/components/shadcn/app-sidebar';
-import { ArchivesToolbar } from '@/components/shadcn/archives-toolbar';
-import { DraftsToolbar } from '@/components/shadcn/drafts-toolbar';
-import { ProjectSearchToolbar } from '@/components/shadcn/project-search-toolbar';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -69,10 +66,6 @@ function AppShellV2Layout() {
      is read from the path instead. */
   const projectMatch = useMatch('/:workspaceSlug/app-v2/projects/:projectId/*');
   const projectId = projectMatch?.params.projectId;
-  /* A project route carrying an entity id — `…/projects/:id/epics/:epicId` and
-     friends. The list toolbars are named for the list they filter, so they have
-     nothing to act on here; the page supplies its own actions instead. */
-  const detailMatch = useMatch('/:workspaceSlug/app-v2/projects/:projectId/:section/:entityId');
   const slot = useV2Header();
 
   /* Named from the path rather than from the child, which would need a context
@@ -82,6 +75,7 @@ function AppShellV2Layout() {
   const isDraftsRoute = pathname.endsWith('/app-v2/drafts');
   const isArchivesRoute = pathname.endsWith('/app-v2/archives');
   const isAnalyticsRoute = pathname.includes('/app-v2/analytics');
+  const isProfileRoute = pathname.includes('/app-v2/profile/');
 
   /* The per-project pages share one route shape, so the trailing segment names
      the page rather than a condition per page. `projectId` is only bound on
@@ -113,7 +107,9 @@ function AppShellV2Layout() {
               ? t('archives.documentTitle', 'Archives')
               : isAnalyticsRoute
                 ? t('analytics.documentTitle', 'Analytics')
-                : t('appShellV2.documentTitle', 'App shell (v2)'));
+                : isProfileRoute
+                  ? t('profile.documentTitle', 'Profile')
+                  : t('appShellV2.documentTitle', 'App shell (v2)'));
 
   useDocumentTitle(pageTitle);
 
@@ -171,27 +167,16 @@ function AppShellV2Layout() {
               </BreadcrumbList>
             </Breadcrumb>
           </div>
-          {/* Projects and Views own their toolbars in the page body. Their
-              search, filters, view switcher and primary action need room to
-              wrap on small screens instead of competing with the breadcrumb in
-              this 64px shell header. */}
-          {isDraftsRoute && workspaceSlug && <DraftsToolbar workspaceSlug={workspaceSlug} />}
-          {isArchivesRoute && workspaceSlug && <ArchivesToolbar workspaceSlug={workspaceSlug} />}
-          {/* Work items owns its responsive controls in the page body, matching
-              the Projects page. The remaining project lists share this compact
-              header search field. */}
-          {projectId &&
-            !detailMatch &&
-            projectPage !== 'work-items' &&
-            PROJECT_PAGE_TITLES[projectPage] && (
-              <ProjectSearchToolbar placeholder={PROJECT_PAGE_TITLES[projectPage]} />
-            )}
+          {/* Every list page owns its toolbar in the page body: the controls
+              need room to wrap on small screens instead of competing with the
+              breadcrumb in this 64px shell header. Only a detail page's own
+              actions are hoisted up here. */}
           {slot.actions}
         </header>
         {/* Child routes render the v2 pages inside this shell; the index route
             is the workspace home. */}
         <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 pt-0">
-          <Outlet />
+          <Outlet key={workspaceSlug} />
         </div>
         {/* Scoped to the v2 shell: the shipped interface has its own feedback
             patterns, and mounting one toaster per tree keeps them separate. */}

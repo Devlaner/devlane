@@ -1,11 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { Archive, ArchiveRestore, Layers } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  Archive,
+  ArchiveRestore,
+  CircleAlert,
+  History,
+  Layers,
+  Link2,
+  ListTree,
+  MessageSquare,
+  Activity as ActivityIcon,
+} from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/ui/avatar';
 import { Badge } from '@/components/shadcn/ui/badge';
 import { Button } from '@/components/shadcn/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/ui/card';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/shadcn/ui/empty';
 import { Progress } from '@/components/shadcn/ui/progress';
 import {
   Select,
@@ -15,7 +34,26 @@ import {
   SelectValue,
 } from '@/components/shadcn/ui/select';
 import { Separator } from '@/components/shadcn/ui/separator';
-import { Skeleton } from '@/components/shadcn/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/shadcn/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/ui/tabs';
+import { DetailPageSkeleton } from '@/components/shadcn/detail-page-skeleton';
+import { PageHeading } from '@/components/shadcn/page-heading';
+import { WorkItemSubscribeButton } from '@/components/shadcn/work-item-subscribe-button';
+import {
+  InlineAssigneeCell,
+  InlineDateCell,
+  InlineLabelsCell,
+  InlinePriorityCell,
+  InlineStateCell,
+} from '@/components/shadcn/work-item-inline-cells';
 import { CommentEditor } from '../components/work-item';
 import { DescriptionEditor } from '../components/work-item/DescriptionEditor';
 import { DescriptionHistoryModal } from '../components/work-item/DescriptionHistoryModal';
@@ -25,12 +63,10 @@ import { IssueLinksPanel } from '../components/work-item/IssueLinksPanel';
 import { IssuePRSidebar } from '../components/work-item/IssuePRSidebar';
 import { IssueReactions } from '../components/work-item/IssueReactions';
 import { IssueRelationsPanel } from '../components/work-item/IssueRelationsPanel';
-import { SubscribeButton } from '../components/notifications/SubscribeButton';
+import type { IssueInlinePatch } from '../components/work-item/layouts/IssueLayoutTypes';
 import { useSetV2Header } from '../contexts/AppShellV2HeaderContext';
 import { useAuth } from '../contexts/AuthContext';
-import { membersFromAssigneeIds } from '../lib/issueRowHelpers';
 import {
-  PRIORITIES,
   PRIORITY_LABELS,
   formatDate,
   formatTimeAgo,
@@ -80,18 +116,27 @@ const NONE = '__none__';
  * alongside IssueDetailPage rather than replacing it, so the two can be
  * compared side by side.
  *
+ * The frame is the one the v2 list pages use, so a work item reads as the same
+ * kind of page as the list it came from: `PageHeading`, then a toolbar band
+ * carrying the controls and the page's actions, then the body. `ListPageSkeleton`
+ * has a detail-shaped sibling, `DetailPageSkeleton`, and the not-found case is
+ * an `Empty` rather than a bare sentence — the states the list pages already
+ * have, in the same shapes.
+ *
+ * Two structural changes follow from that frame:
+ *   - The properties that get changed most (state, priority, assignees, due
+ *     date) move out of the sidebar into the toolbar as the same inline cells
+ *     the list rows use, so a row and its detail page are edited identically.
+ *   - The main column no longer stacks description, sub-items and activity into
+ *     one long scroll. Description stays pinned; sub-items, comments and
+ *     activity become tabs, each labelled with its count.
+ *
  * The editors and the sidebar panels are the shipped components, imported
  * whole: the TipTap description and comment editors, the activity feed, the PR
- * / links / relations / attachments panels and the subscribe button. They carry
- * their own state, their own requests and — in the editors' case — a
- * substantial extension stack. Rebuilding them would be a rewrite of the work
- * item editor rather than a design preview.
- *
- * What is rewritten is everything around them, and one thing is deliberately
- * different: the shipped page drives every property through a bespoke
- * `Dropdown` sharing a single `openDropdown` id across a dozen rows. Here each
- * property is a `Select`, so the properties panel is a form rather than a
- * cluster of custom popovers, and keyboard behaviour comes from the primitive.
+ * / links / relations / attachments panels. They carry their own state, their
+ * own requests and — in the editors' case — a substantial extension stack.
+ * Rebuilding them would be a rewrite of the work item editor rather than a
+ * design preview.
  */
 export function IssueDetailPageV2() {
   const { t } = useTranslation();
@@ -319,6 +364,15 @@ export function IssueDetailPageV2() {
     }
   }, [workspaceSlug, projectId, issue, t]);
 
+  const copyLink = useCallback(() => {
+    void navigator.clipboard
+      ?.writeText(window.location.href)
+      .then(() => toast.success(t('common.linkCopied', 'Link copied')))
+      .catch(() => toast.error(t('common.copyLinkError', 'Could not copy that link.')));
+  }, [t]);
+
+  const listUrl = `/${workspaceSlug}/app-v2/projects/${projectId}/work-items`;
+
   const parent = useMemo(
     () => ({
       label: t('views.workItems', 'Work items'),
@@ -327,50 +381,40 @@ export function IssueDetailPageV2() {
     [workspaceSlug, projectId, t],
   );
 
-  const headerActions = useMemo(() => {
-    if (!issue || !workspaceSlug || !projectId) return null;
-    return (
-      <div className="ml-auto flex items-center gap-2 px-4">
-        <SubscribeButton workspaceSlug={workspaceSlug} projectId={projectId} issueId={issue.id} />
-        <Button size="sm" variant="outline" onClick={() => void toggleArchive()}>
-          {issue.archived_at ? <ArchiveRestore /> : <Archive />}
-          {issue.archived_at ? t('common.restore', 'Restore') : t('common.archive', 'Archive')}
-        </Button>
-      </div>
-    );
-  }, [issue, workspaceSlug, projectId, toggleArchive, t]);
-
-  useSetV2Header({
-    parent,
-    title: issue?.name ?? null,
-    actions: issue ? headerActions : null,
-  });
+  /* The actions live in the page's toolbar, next to the controls they act on,
+     the way the v2 list pages place theirs — the 64px shell header keeps the
+     breadcrumb alone. */
+  useSetV2Header({ parent, title: issue?.name ?? null, actions: null });
 
   if (loading) {
-    return (
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          <Skeleton className="h-56 w-full rounded-xl" />
-          <Skeleton className="h-72 w-full rounded-xl" />
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-40 w-full rounded-xl" />
-          <Skeleton className="h-64 w-full rounded-xl" />
-        </div>
-      </div>
-    );
+    return <DetailPageSkeleton label={t('workItem.detail.loading', 'Loading work item')} />;
   }
 
   if (notFound || !issue || !workspaceSlug || !projectId) {
     return (
-      <p className="text-muted-foreground text-sm">
-        {t('workItem.detail.issueNotFound', 'Issue not found.')}
-      </p>
+      <Empty className="min-h-80 rounded-xl border border-dashed" role="alert">
+        <EmptyHeader>
+          <EmptyMedia variant="icon" className="bg-destructive/10 text-destructive">
+            <CircleAlert aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle>{t('workItem.detail.issueNotFound', 'Issue not found.')}</EmptyTitle>
+          <EmptyDescription>
+            {t(
+              'workItem.detail.notFoundDescription',
+              'This work item may have been deleted, or it belongs to a project you cannot open.',
+            )}
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button asChild variant="outline">
+            <Link to={listUrl}>{t('workItem.detail.backToList', 'Back to work items')}</Link>
+          </Button>
+        </EmptyContent>
+      </Empty>
     );
   }
 
   const state = issue.state_id ? stateById.get(issue.state_id) : undefined;
-  const assignees = membersFromAssigneeIds(members, issue.assignee_ids ?? []);
   const issueLabels = (issue.label_ids ?? [])
     .map((id) => labels.find((l) => l.id === id))
     .filter((l): l is LabelApiResponse => Boolean(l));
@@ -382,9 +426,79 @@ export function IssueDetailPageV2() {
   ).length;
   const descriptionHtml = typeof issue.description_html === 'string' ? issue.description_html : '';
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
+  const childUrl = (childId: string) =>
+    `/${workspaceSlug}/app-v2/projects/${projectId}/work-items/${childId}`;
+  const inlineUpdate = (patch: IssueInlinePatch) => void updateIssue({ ...patch });
+
+  const tabCount = (value: number) => (
+    <span className="text-muted-foreground min-w-3 text-center text-xs font-normal tabular-nums">
+      {value}
+    </span>
+  );
 
   return (
-    <div className="space-y-4 pb-8">
+    <div className="space-y-6 pb-8">
+      <PageHeading
+        title={
+          <span className="flex flex-wrap items-baseline gap-2">
+            <span className="text-muted-foreground font-mono text-base">
+              {workItemDisplayId(issue, project ?? undefined)}
+            </span>
+            <span className="min-w-0">{issue.name}</span>
+            {issue.archived_at && (
+              <Badge variant="secondary">{t('common.archived', 'Archived')}</Badge>
+            )}
+          </span>
+        }
+        description={t(
+          'workItem.detail.pageDescription',
+          'Track the description, sub-work items, and discussion for this work item.',
+        )}
+        summary={t('workItem.detail.pageSummary', 'Updated {{updated}} · Created {{created}}', {
+          updated: formatTimeAgo(issue.updated_at),
+          created: formatDate(issue.created_at),
+        })}
+      />
+
+      <div
+        className="bg-card/50 flex flex-wrap items-center gap-2 rounded-xl border p-3 shadow-xs sm:p-4"
+        role="region"
+        aria-label={t('workItem.detail.toolbar', 'Work item controls')}
+      >
+        <InlineStateCell issue={issue} states={states} onUpdate={inlineUpdate} />
+        <InlinePriorityCell issue={issue} onUpdate={inlineUpdate} />
+        <InlineAssigneeCell issue={issue} members={members} onUpdate={inlineUpdate} />
+        <InlineDateCell issue={issue} field="target_date" onUpdate={inlineUpdate} />
+
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <WorkItemSubscribeButton
+            workspaceSlug={workspaceSlug}
+            projectId={projectId}
+            issueId={issue.id}
+            className="h-11 sm:h-9"
+          />
+          <Button type="button" variant="outline" className="h-11 sm:h-9" onClick={copyLink}>
+            <Link2 aria-hidden="true" />
+            <span className="hidden sm:inline">{t('common.copyLink', 'Copy link')}</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 sm:h-9"
+            onClick={() => void toggleArchive()}
+          >
+            {issue.archived_at ? (
+              <ArchiveRestore aria-hidden="true" />
+            ) : (
+              <Archive aria-hidden="true" />
+            )}
+            <span className="hidden sm:inline">
+              {issue.archived_at ? t('common.restore', 'Restore') : t('common.archive', 'Archive')}
+            </span>
+          </Button>
+        </div>
+      </div>
+
       {error && (
         <p className="text-destructive text-sm" role="alert">
           {error}
@@ -392,13 +506,14 @@ export function IssueDetailPageV2() {
       )}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
+        <div className="min-w-0 space-y-4 lg:col-span-2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm">
                 {t('workItem.detail.description', 'Description')}
               </CardTitle>
               <Button size="sm" variant="ghost" onClick={() => setHistoryOpen(true)}>
+                <History aria-hidden="true" />
                 {t('workItem.detail.history', 'History')}
               </Button>
             </CardHeader>
@@ -421,80 +536,57 @@ export function IssueDetailPageV2() {
             </CardContent>
           </Card>
 
-          {children.length > 0 && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <Layers className="size-4" aria-hidden />
-                  {t('workItem.detail.subWorkItems', 'Sub-work items')}
-                  <Badge variant="secondary">{children.length}</Badge>
-                </CardTitle>
-                <div className="flex w-40 items-center gap-2">
-                  <Progress
-                    value={Math.round((completedChildren / children.length) * 100)}
-                    className="h-2 flex-1"
-                  />
-                  <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                    {completedChildren}/{children.length}
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <ul className="divide-y">
-                  {children.map((child) => {
-                    const childState = child.state_id ? stateById.get(child.state_id) : undefined;
-                    return (
-                      <li key={child.id}>
-                        <Link
-                          to={`/${workspaceSlug}/app-v2/projects/${projectId}/work-items/${child.id}`}
-                          className="hover:bg-muted/50 flex items-center gap-2 px-6 py-2.5 transition-colors"
-                        >
-                          <span
-                            aria-hidden
-                            className="size-2 shrink-0 rounded-full"
-                            style={stateDotStyle(childState)}
-                          />
-                          <span className="text-muted-foreground shrink-0 font-mono text-xs">
-                            {workItemDisplayId(child, project ?? undefined)}
-                          </span>
-                          <span className="min-w-0 flex-1 truncate text-sm">{child.name}</span>
-                          {child.priority && child.priority !== 'none' && (
-                            <Badge variant={priorityVariant(child.priority)} className="shrink-0">
-                              {PRIORITY_LABELS[child.priority as Priority] ?? child.priority}
-                            </Badge>
-                          )}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </CardContent>
-            </Card>
-          )}
+          {/* One long scroll of description → sub-items → activity → comments
+              made the discussion the least reachable part of the page. The
+              three become tabs, each carrying its own count, mirroring the
+              scope tabs on the archive and cycle lists. */}
+          <Tabs defaultValue="comments" className="gap-4">
+            <TabsList
+              className="bg-muted/60 group-data-[orientation=horizontal]/tabs:h-auto w-fit max-w-full justify-start overflow-x-auto rounded-lg p-1 sm:p-0.5"
+              aria-label={t('workItem.detail.sections', 'Work item sections')}
+            >
+              <TabsTrigger
+                value="comments"
+                className="h-11 flex-none gap-1.5 px-3 data-[state=active]:shadow-xs sm:h-8 sm:px-2.5"
+              >
+                <MessageSquare aria-hidden="true" />
+                {t('workItem.detail.comments', 'Comments')}
+                {tabCount(comments.length)}
+              </TabsTrigger>
+              <TabsTrigger
+                value="sub-items"
+                className="h-11 flex-none gap-1.5 px-3 data-[state=active]:shadow-xs sm:h-8 sm:px-2.5"
+              >
+                <ListTree aria-hidden="true" />
+                {t('workItem.detail.subWorkItems', 'Sub-work items')}
+                {tabCount(children.length)}
+              </TabsTrigger>
+              <TabsTrigger
+                value="activity"
+                className="h-11 flex-none gap-1.5 px-3 data-[state=active]:shadow-xs sm:h-8 sm:px-2.5"
+              >
+                <ActivityIcon aria-hidden="true" />
+                {t('workItem.detail.activity', 'Activity')}
+                {tabCount(activities.length)}
+              </TabsTrigger>
+            </TabsList>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm">{t('workItem.detail.activity', 'Activity')}</CardTitle>
-              <span className="text-muted-foreground text-xs">
-                {t('workItem.detail.commentsCount', 'Comments {{count}}', {
-                  count: comments.length,
-                })}
-              </span>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <IssueActivityFeed
-                activities={activities}
-                members={members}
-                states={states}
-                labels={labels}
-              />
-
-              <Separator />
-
+            <TabsContent value="comments" className="space-y-4">
               {comments.length === 0 ? (
-                <p className="text-muted-foreground text-sm">
-                  {t('workItem.detail.noComments', 'No comments yet.')}
-                </p>
+                <Empty className="rounded-xl border border-dashed">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <MessageSquare aria-hidden="true" />
+                    </EmptyMedia>
+                    <EmptyTitle>{t('workItem.detail.noComments', 'No comments yet.')}</EmptyTitle>
+                    <EmptyDescription>
+                      {t(
+                        'workItem.detail.noCommentsDescription',
+                        'Start the discussion — comments are visible to everyone who can open this work item.',
+                      )}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               ) : (
                 <ul className="space-y-4">
                   {comments.map((comment) => {
@@ -548,11 +640,133 @@ export function IssueDetailPageV2() {
                 showAccessToggle
                 mentionMembers={mentionMembers}
               />
-            </CardContent>
-          </Card>
+            </TabsContent>
+
+            <TabsContent value="sub-items" className="space-y-4">
+              {children.length === 0 ? (
+                <Empty className="rounded-xl border border-dashed">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Layers aria-hidden="true" />
+                    </EmptyMedia>
+                    <EmptyTitle>
+                      {t('workItem.detail.noSubWorkItems', 'No sub-work items yet')}
+                    </EmptyTitle>
+                    <EmptyDescription>
+                      {t(
+                        'workItem.detail.noSubWorkItemsDescription',
+                        'Break this work item down by setting it as the parent of another work item.',
+                      )}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3">
+                    <Progress
+                      value={Math.round((completedChildren / children.length) * 100)}
+                      className="h-2 max-w-56 flex-1"
+                      aria-label={t('workItem.detail.subWorkItemsProgress', 'Sub-work progress')}
+                    />
+                    <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                      {completedChildren}/{children.length}
+                    </span>
+                  </div>
+
+                  {/* Shaped like a row on the work item list, so a sub-item
+                      reads the same here as it does there. */}
+                  <section
+                    className="overflow-hidden rounded-xl border"
+                    aria-label={t('workItem.detail.subWorkItems', 'Sub-work items')}
+                  >
+                    <Table>
+                      <TableCaption className="sr-only">
+                        {t(
+                          'workItem.detail.subItemsTableCaption',
+                          'Sub-work items of this work item, with state, priority, and due date.',
+                        )}
+                      </TableCaption>
+                      <TableHeader className="bg-muted/50">
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="min-w-56 px-3">
+                            {t('views.workItems', 'Work items')}
+                          </TableHead>
+                          <TableHead className="w-36 px-3">{t('views.state', 'State')}</TableHead>
+                          <TableHead className="hidden w-28 px-3 sm:table-cell">
+                            {t('views.priority', 'Priority')}
+                          </TableHead>
+                          <TableHead className="hidden w-32 px-3 md:table-cell">
+                            {t('issues.targetDate', 'Due')}
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {children.map((child) => {
+                          const childState = child.state_id
+                            ? stateById.get(child.state_id)
+                            : undefined;
+                          const childPriority = (child.priority ?? 'none') as Priority;
+                          return (
+                            <TableRow key={child.id}>
+                              <TableCell className="min-w-56 px-3 py-2">
+                                <Link
+                                  to={childUrl(child.id)}
+                                  className="focus-visible:ring-ring flex min-w-0 items-center gap-2 rounded-sm outline-none focus-visible:ring-2"
+                                >
+                                  <span className="text-muted-foreground shrink-0 font-mono text-xs">
+                                    {workItemDisplayId(child, project ?? undefined)}
+                                  </span>
+                                  <span className="truncate font-medium">{child.name}</span>
+                                </Link>
+                              </TableCell>
+                              <TableCell className="px-3">
+                                <span className="flex items-center gap-2 text-sm">
+                                  <span
+                                    aria-hidden="true"
+                                    className="size-2 shrink-0 rounded-full"
+                                    style={stateDotStyle(childState)}
+                                  />
+                                  <span className="truncate">
+                                    {childState?.name ?? t('common.noState', 'No state')}
+                                  </span>
+                                </span>
+                              </TableCell>
+                              <TableCell className="hidden px-3 sm:table-cell">
+                                {childPriority !== 'none' && (
+                                  <Badge variant={priorityVariant(childPriority)}>
+                                    {PRIORITY_LABELS[childPriority] ?? childPriority}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground hidden px-3 text-sm md:table-cell">
+                                {child.target_date ? formatDate(child.target_date) : '—'}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </section>
+                </>
+              )}
+            </TabsContent>
+
+            <TabsContent value="activity">
+              <Card>
+                <CardContent>
+                  <IssueActivityFeed
+                    activities={activities}
+                    members={members}
+                    states={states}
+                    labels={labels}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-sm">
@@ -560,51 +774,29 @@ export function IssueDetailPageV2() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <PropertyField label={t('workItem.detail.field.state', 'State')}>
-                <Select
-                  value={issue.state_id ?? NONE}
-                  onValueChange={(value) =>
-                    void updateIssue({ state_id: value === NONE ? null : value })
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE}>{t('common.noState', 'No state')}</SelectItem>
-                    {states.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        <span className="flex items-center gap-2">
-                          <span
-                            aria-hidden
-                            className="size-2 shrink-0 rounded-full"
-                            style={stateDotStyle(option)}
-                          />
-                          {option.name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* State and priority are edited from the toolbar, so the panel
+                  carries the rest — and the fields that used to be read-only
+                  here (assignees, labels, dates) now use the same inline cells
+                  the list rows do. */}
+              <PropertyField label={t('workItem.detail.field.assignees', 'Assignees')}>
+                <InlineAssigneeCell
+                  issue={issue}
+                  members={members}
+                  maxAvatars={5}
+                  onUpdate={inlineUpdate}
+                />
               </PropertyField>
 
-              <PropertyField label={t('workItem.detail.field.priority', 'Priority')}>
-                <Select
-                  value={issue.priority ?? 'none'}
-                  onValueChange={(value) => void updateIssue({ priority: value })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PRIORITIES.map((priority) => (
-                      <SelectItem key={priority} value={priority}>
-                        {PRIORITY_LABELS[priority]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <PropertyField label={t('workItem.detail.field.labels', 'Labels')}>
+                <InlineLabelsCell
+                  issue={issue}
+                  labels={labels}
+                  maxChips={4}
+                  onUpdate={inlineUpdate}
+                />
               </PropertyField>
+
+              <Separator />
 
               <PropertyField label={t('workItem.detail.field.cycle', 'Cycle')}>
                 <Select
@@ -646,70 +838,46 @@ export function IssueDetailPageV2() {
 
               <Separator />
 
-              <PropertyField label={t('workItem.detail.field.assignees', 'Assignees')}>
-                {assignees.length === 0 ? (
-                  <span className="text-muted-foreground text-sm">
-                    {t('common.unassigned', 'Unassigned')}
-                  </span>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {assignees.map((assignee) => (
-                      <span key={assignee.id} className="flex items-center gap-1.5 text-sm">
-                        <Avatar className="size-5">
-                          {assignee.avatarUrl && (
-                            <AvatarImage
-                              src={getImageUrl(assignee.avatarUrl) ?? undefined}
-                              alt=""
-                            />
-                          )}
-                          <AvatarFallback className="text-[10px]">
-                            {assignee.name.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="truncate">{assignee.name}</span>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </PropertyField>
-
-              <PropertyField label={t('workItem.detail.field.labels', 'Labels')}>
-                {issueLabels.length === 0 ? (
-                  <span className="text-muted-foreground text-sm">{t('common.none', 'None')}</span>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {issueLabels.map((label) => (
-                      <Badge key={label.id} variant="outline">
-                        <span
-                          aria-hidden
-                          className="mr-1 size-2 rounded-full"
-                          style={{ backgroundColor: label.color || 'var(--muted-foreground)' }}
-                        />
-                        {label.name}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </PropertyField>
-
               <PropertyField label={t('workItem.detail.field.startDate', 'Start date')}>
-                <span className="text-sm">{formatDate(issue.start_date)}</span>
+                <InlineDateCell issue={issue} field="start_date" onUpdate={inlineUpdate} />
               </PropertyField>
 
               <PropertyField label={t('issues.targetDate', 'Due')}>
-                <span className="text-sm">{formatDate(issue.target_date)}</span>
+                <InlineDateCell issue={issue} field="target_date" onUpdate={inlineUpdate} />
               </PropertyField>
 
-              <PropertyField label={t('workItem.detail.field.state', 'State')}>
-                <span className="flex items-center gap-2 text-sm">
-                  <span
-                    aria-hidden
-                    className="size-2 shrink-0 rounded-full"
-                    style={stateDotStyle(state)}
-                  />
-                  {state?.name ?? t('common.noState', 'No state')}
-                </span>
-              </PropertyField>
+              <Separator />
+
+              <dl className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <dt className="text-muted-foreground text-xs font-medium">
+                    {t('common.created', 'Created')}
+                  </dt>
+                  <dd className="text-sm">{formatDate(issue.created_at)}</dd>
+                </div>
+                <div className="space-y-1">
+                  <dt className="text-muted-foreground text-xs font-medium">
+                    {t('common.updated', 'Updated')}
+                  </dt>
+                  <dd className="text-sm">
+                    <time dateTime={issue.updated_at} title={formatDate(issue.updated_at)}>
+                      {formatTimeAgo(issue.updated_at)}
+                    </time>
+                  </dd>
+                </div>
+              </dl>
+
+              {/* The state also names the item's status at a glance, which the
+                  toolbar's control shows but a printed or narrated page does
+                  not, so it stays here as text. */}
+              <p className="sr-only">
+                {t('workItem.detail.field.state', 'State')}:{' '}
+                {state?.name ?? t('common.noState', 'No state')}
+                {issueLabels.length > 0 &&
+                  ` · ${t('common.labels', 'Labels')}: ${issueLabels
+                    .map((label) => label.name)
+                    .join(', ')}`}
+              </p>
             </CardContent>
           </Card>
 

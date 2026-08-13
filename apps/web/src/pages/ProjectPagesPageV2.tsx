@@ -1,7 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { Archive, ArchiveRestore, Lock, LockOpen, MoreHorizontal } from 'lucide-react';
+import {
+  Archive,
+  ArchiveRestore,
+  CircleAlert,
+  FileText,
+  Lock,
+  LockOpen,
+  MoreHorizontal,
+  RefreshCw,
+  SearchX,
+} from 'lucide-react';
+import { ListPageSkeleton } from '@/components/shadcn/list-page-skeleton';
+import { PageHeading } from '@/components/shadcn/page-heading';
+import { ProjectListToolbar } from '@/components/shadcn/project-list-toolbar';
 import { Badge } from '@/components/shadcn/ui/badge';
 import { Button } from '@/components/shadcn/ui/button';
 import {
@@ -11,10 +24,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/ui/dropdown-menu';
-import { Skeleton } from '@/components/shadcn/ui/skeleton';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/shadcn/ui/empty';
+import { ScrollArea, ScrollBar } from '@/components/shadcn/ui/scroll-area';
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -23,51 +45,65 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/ui/tabs';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { pageService } from '../services/pageService';
+import { projectService } from '../services/projectService';
 import { formatDate, matchesQuery } from '../lib/projectV2';
-import type { PageApiResponse } from '../api/types';
+import type { PageApiResponse, ProjectApiResponse } from '../api/types';
+
+type PagesScope = 'live' | 'archived';
 
 /**
  * Design preview of a project's pages, built from shadcn primitives. It stands
  * alongside PagesPage rather than replacing it, so the two can be compared side
  * by side.
  *
- * Two tabs — live pages and archived ones — replace the shipped page's filter
- * dropdown, because the archived list is a different list rather than a
- * narrowing of the first. Each is fetched separately, since the endpoint takes
- * `archived` as a mode rather than returning both.
+ * The page chrome — heading, body toolbar, table section, empty and error
+ * states — is the one the workspace views page established, so every v2 list
+ * reads the same way. Two scopes — live pages and archived ones — replace the
+ * shipped page's filter dropdown, because the archived list is a different list
+ * rather than a narrowing of the first. Each is fetched separately, since the
+ * endpoint takes `archived` as a mode rather than returning both. The scope
+ * sits in the toolbar next to search, as it does on the archives page.
  */
 export function ProjectPagesPageV2() {
   const { t } = useTranslation();
   const { workspaceSlug, projectId } = useParams<{ workspaceSlug: string; projectId: string }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   useDocumentTitle(t('common.pages', 'Pages'));
 
   const [pages, setPages] = useState<PageApiResponse[]>([]);
   const [archived, setArchived] = useState<PageApiResponse[]>([]);
+  const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  /* Only failed archive, restore and lock requests land here; a failed load
+     takes over the whole page instead. */
+  const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const query = searchParams.get('q') ?? '';
+  /* URL-backed like the search, so a shared link lands on the same scope. */
+  const scope: PagesScope = searchParams.get('scope') === 'archived' ? 'archived' : 'live';
 
   const load = useCallback(() => {
     if (!workspaceSlug || !projectId) return () => {};
     let cancelled = false;
     setLoading(true);
+    setLoadError(false);
     Promise.all([
       pageService.list(workspaceSlug, { projectId, archived: 'inbox' }),
       pageService
         .list(workspaceSlug, { projectId, archived: 'archived' })
         .catch(() => [] as PageApiResponse[]),
+      projectService.get(workspaceSlug, projectId).catch(() => null),
     ])
-      .then(([live, arch]) => {
+      .then(([live, arch, proj]) => {
         if (cancelled) return;
         setPages(live ?? []);
         setArchived(arch ?? []);
-        setError(null);
+        setProject(proj);
       })
       .catch(() => {
-        if (!cancelled) setError(t('pages.loadError', 'Could not load pages.'));
+        if (!cancelled) setLoadError(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -75,7 +111,7 @@ export function ProjectPagesPageV2() {
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug, projectId, t]);
+  }, [workspaceSlug, projectId]);
 
   useEffect(() => load(), [load]);
 
@@ -88,7 +124,21 @@ export function ProjectPagesPageV2() {
     [archived, query],
   );
 
-  /* Archiving moves a row between the two tabs, so both lists are updated in
+  const setScope = (next: string) => {
+    if (next !== 'live' && next !== 'archived') return;
+    const params = new URLSearchParams(searchParams);
+    if (next === 'archived') params.set('scope', next);
+    else params.delete('scope');
+    setSearchParams(params, { replace: true });
+  };
+
+  const clearSearch = () => {
+    const params = new URLSearchParams(searchParams);
+    params.delete('q');
+    setSearchParams(params, { replace: true });
+  };
+
+  /* Archiving moves a row between the two scopes, so both lists are updated in
      place rather than refetched. */
   const archivePage = async (page: PageApiResponse) => {
     if (!workspaceSlug || busyId) return;
@@ -97,8 +147,9 @@ export function ProjectPagesPageV2() {
       await pageService.archive(workspaceSlug, page.id);
       setPages((prev) => prev.filter((p) => p.id !== page.id));
       setArchived((prev) => [{ ...page, archived_at: new Date().toISOString() }, ...prev]);
+      setActionError(null);
     } catch {
-      setError(t('pages.archiveError', 'Could not archive that page.'));
+      setActionError(t('pages.archiveError', 'Could not archive that page.'));
     } finally {
       setBusyId(null);
     }
@@ -111,8 +162,9 @@ export function ProjectPagesPageV2() {
       await pageService.unarchive(workspaceSlug, page.id);
       setArchived((prev) => prev.filter((p) => p.id !== page.id));
       setPages((prev) => [{ ...page, archived_at: null }, ...prev]);
+      setActionError(null);
     } catch {
-      setError(t('pages.unarchiveError', 'Could not restore that page.'));
+      setActionError(t('pages.unarchiveError', 'Could not restore that page.'));
     } finally {
       setBusyId(null);
     }
@@ -126,52 +178,120 @@ export function ProjectPagesPageV2() {
       if (next) await pageService.lock(workspaceSlug, page.id);
       else await pageService.unlock(workspaceSlug, page.id);
       setPages((prev) => prev.map((p) => (p.id === page.id ? { ...p, is_locked: next } : p)));
+      setActionError(null);
     } catch {
-      setError(t('pages.lockError', 'Could not update that page.'));
+      setActionError(t('pages.lockError', 'Could not update that page.'));
     } finally {
       setBusyId(null);
     }
   };
 
   if (loading) {
+    return <ListPageSkeleton label={t('pages.loading', 'Loading pages…')} rows={6} />;
+  }
+
+  if (loadError) {
     return (
-      <div className="space-y-2">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <Skeleton key={index} className="h-12 w-full" />
-        ))}
-      </div>
+      <Empty className="min-h-80 rounded-xl border border-dashed" role="alert">
+        <EmptyHeader>
+          <EmptyMedia variant="icon" className="bg-destructive/10 text-destructive">
+            <CircleAlert aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle>{t('pages.loadErrorTitle', 'Pages could not be loaded')}</EmptyTitle>
+          <EmptyDescription>
+            {t(
+              'pages.loadErrorDescription',
+              'Check your connection and try again. Your pages have not been changed.',
+            )}
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button type="button" variant="outline" onClick={() => load()}>
+            <RefreshCw aria-hidden="true" />
+            {t('common.retry', 'Try again')}
+          </Button>
+        </EmptyContent>
+      </Empty>
     );
   }
 
-  const renderTable = (list: PageApiResponse[], isArchivedTab: boolean) => (
-    <div className="min-h-0 flex-1 overflow-auto rounded-xl border">
-      <Table>
-        <TableHeader className="bg-muted/50">
-          <TableRow className="hover:bg-transparent">
-            <TableHead className="px-3">{t('common.pages', 'Pages')}</TableHead>
-            <TableHead className="w-32 px-3">{t('pages.access', 'Access')}</TableHead>
-            <TableHead className="w-36 px-3">
-              {isArchivedTab ? t('archives.archived', 'Archived') : t('common.updated', 'Updated')}
-            </TableHead>
-            <TableHead className="w-16 px-3 text-right">
-              <span className="sr-only">{t('common.actions', 'Actions')}</span>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {list.length === 0 ? (
+  const emptyState = (isArchivedScope: boolean) => {
+    const total = isArchivedScope ? archived.length : pages.length;
+    const filtered = total > 0 && Boolean(query);
+    return (
+      <Empty className="rounded-xl border border-dashed">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            {filtered ? <SearchX aria-hidden="true" /> : <FileText aria-hidden="true" />}
+          </EmptyMedia>
+          <EmptyTitle>
+            {filtered
+              ? t('pages.noMatchesTitle', 'No pages found')
+              : isArchivedScope
+                ? t('pages.emptyArchivedTitle', 'No archived pages')
+                : t('pages.emptyTitle', 'No pages yet')}
+          </EmptyTitle>
+          <EmptyDescription>
+            {filtered
+              ? t('pages.noMatches', 'No pages match the current search.')
+              : isArchivedScope
+                ? t(
+                    'pages.emptyArchived',
+                    'Archived pages will land here. Archive a page from its detail view to declutter the active list.',
+                  )
+                : t(
+                    'pages.emptyDescription',
+                    'Pages hold the writing around the work — specs, notes and decisions that outlive a work item.',
+                  )}
+          </EmptyDescription>
+        </EmptyHeader>
+        {filtered && (
+          <EmptyContent>
+            <Button type="button" variant="outline" onClick={clearSearch}>
+              <SearchX aria-hidden="true" />
+              {t('common.clearSearch', 'Clear search')}
+            </Button>
+          </EmptyContent>
+        )}
+      </Empty>
+    );
+  };
+
+  const renderTable = (list: PageApiResponse[], isArchivedScope: boolean) => (
+    <section
+      className="rounded-xl border"
+      aria-label={
+        isArchivedScope
+          ? t('pages.archivedTableLabel', 'Archived pages table')
+          : t('pages.tableLabel', 'Pages table')
+      }
+    >
+      <ScrollArea className="w-full">
+        <Table className="min-w-[44rem]">
+          <TableCaption className="sr-only">
+            {t('pages.tableCaption', 'Pages in this project, with access, dates and actions.')}
+          </TableCaption>
+          <TableHeader className="bg-muted/50">
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={4} className="text-muted-foreground h-32 text-center">
-                {t('pages.empty', 'No pages yet')}
-              </TableCell>
+              <TableHead className="min-w-72 px-3">{t('common.pages', 'Pages')}</TableHead>
+              <TableHead className="w-32 px-3">{t('pages.access', 'Access')}</TableHead>
+              <TableHead className="w-36 px-3">
+                {isArchivedScope
+                  ? t('archives.archived', 'Archived')
+                  : t('common.updated', 'Updated')}
+              </TableHead>
+              <TableHead className="w-16 px-3 text-right">
+                <span className="sr-only">{t('common.actions', 'Actions')}</span>
+              </TableHead>
             </TableRow>
-          ) : (
-            list.map((page) => (
+          </TableHeader>
+          <TableBody>
+            {list.map((page) => (
               <TableRow key={page.id}>
-                <TableCell className="p-0">
+                <TableCell className="min-w-72 p-0">
                   <Link
                     to={`/${workspaceSlug}/app-v2/projects/${projectId}/pages/${page.id}`}
-                    className="hover:bg-muted/50 flex h-12 items-center gap-2 px-3 transition-colors"
+                    className="hover:bg-muted/50 focus-visible:ring-ring flex h-12 items-center gap-2 px-3 outline-none transition-colors focus-visible:ring-2"
                   >
                     <span className="truncate font-medium">
                       {page.title || page.name || t('pages.untitled', 'Untitled')}
@@ -192,7 +312,7 @@ export function ProjectPagesPageV2() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground px-3 text-sm">
-                  {formatDate(isArchivedTab ? page.archived_at : page.updated_at)}
+                  {formatDate(isArchivedScope ? page.archived_at : page.updated_at)}
                 </TableCell>
                 <TableCell className="px-3 text-right">
                   <DropdownMenu>
@@ -208,7 +328,7 @@ export function ProjectPagesPageV2() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-44">
-                      {isArchivedTab ? (
+                      {isArchivedScope ? (
                         <DropdownMenuItem onSelect={() => void unarchivePage(page)}>
                           <ArchiveRestore />
                           {t('common.restore', 'Restore')}
@@ -230,39 +350,82 @@ export function ProjectPagesPageV2() {
                   </DropdownMenu>
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+            ))}
+          </TableBody>
+        </Table>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
+    </section>
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      {error && (
+    <Tabs value={scope} onValueChange={setScope} className="gap-6 pb-8">
+      <PageHeading
+        title={t('common.pages', 'Pages')}
+        description={t(
+          'pages.pageDescription',
+          'Written knowledge that lives alongside {{project}}.',
+          {
+            project: project?.name ?? t('common.thisProject', 'this project'),
+          },
+        )}
+        summary={t('pages.summary', '{{live}} live · {{archived}} archived', {
+          live: pages.length,
+          archived: archived.length,
+        })}
+      />
+
+      <ProjectListToolbar
+        searchPlaceholder={t('pages.searchPlaceholder', 'Search pages')}
+        regionLabel={t('pages.toolbar', 'Page controls')}
+        scopeControl={
+          <TabsList
+            className="group-data-[orientation=horizontal]/tabs:h-auto bg-muted/60 w-fit max-w-full shrink-0 touch-pan-x justify-start overflow-x-auto rounded-lg p-1 sm:p-0.5"
+            aria-label={t('pages.scope', 'Page type')}
+          >
+            <TabsTrigger
+              value="live"
+              className="h-11 flex-none gap-1.5 px-3 data-[state=active]:shadow-xs sm:h-8 sm:px-2.5"
+            >
+              {t('common.pages', 'Pages')}
+              <span className="text-muted-foreground min-w-3 text-center text-xs font-normal tabular-nums">
+                {pages.length}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="archived"
+              className="h-11 flex-none gap-1.5 px-3 data-[state=active]:shadow-xs sm:h-8 sm:px-2.5"
+            >
+              {t('archives.documentTitle', 'Archives')}
+              <span className="text-muted-foreground min-w-3 text-center text-xs font-normal tabular-nums">
+                {archived.length}
+              </span>
+            </TabsTrigger>
+          </TabsList>
+        }
+      />
+
+      {actionError && (
         <p className="text-destructive text-sm" role="alert">
-          {error}
+          {actionError}
         </p>
       )}
 
-      <Tabs defaultValue="live" className="flex min-h-0 flex-1 flex-col gap-3">
-        <TabsList>
-          <TabsTrigger value="live">
-            {t('common.pages', 'Pages')}
-            <Badge variant="secondary">{visible.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="archived">
-            {t('archives.documentTitle', 'Archives')}
-            <Badge variant="secondary">{visibleArchived.length}</Badge>
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="live" className="min-h-0 flex-1 flex-col data-[state=active]:flex">
-          {renderTable(visible, false)}
-        </TabsContent>
-        <TabsContent value="archived" className="min-h-0 flex-1 flex-col data-[state=active]:flex">
-          {renderTable(visibleArchived, true)}
-        </TabsContent>
-      </Tabs>
-    </div>
+      <TabsContent value="live">
+        {visible.length === 0 ? emptyState(false) : renderTable(visible, false)}
+      </TabsContent>
+
+      <TabsContent value="archived">
+        {visibleArchived.length === 0 ? emptyState(true) : renderTable(visibleArchived, true)}
+      </TabsContent>
+
+      {query && (
+        <p className="sr-only" aria-live="polite">
+          {t('pages.visibleCount', '{{count}} pages visible', {
+            count: scope === 'archived' ? visibleArchived.length : visible.length,
+          })}
+        </p>
+      )}
+    </Tabs>
   );
 }

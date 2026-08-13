@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from 'recharts';
+import { BarChart3 } from 'lucide-react';
+import { PageHeading } from '@/components/shadcn/page-heading';
 import { Badge } from '@/components/shadcn/ui/badge';
 import { Button } from '@/components/shadcn/ui/button';
 import {
@@ -132,6 +134,7 @@ export function AnalyticsOverviewPageV2() {
   const [pageCount, setPageCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useDocumentTitle(t('analytics.documentTitle', 'Analytics'));
 
@@ -210,7 +213,7 @@ export function AnalyticsOverviewPageV2() {
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug]);
+  }, [workspaceSlug, reloadToken]);
 
   const stateGroupById = useMemo(
     () => new Map(states.map((s) => [s.id, normalizeStateGroup(s.group)])),
@@ -267,13 +270,24 @@ export function AnalyticsOverviewPageV2() {
 
   if (loading) {
     return (
-      <div className="space-y-6 pb-8">
+      <div
+        className="space-y-6 pb-8"
+        aria-busy="true"
+        aria-label={t('analytics.loadingOverview', 'Loading analytics overview')}
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-96 max-w-full" />
+          </div>
+          <Skeleton className="h-4 w-72 max-w-full" />
+        </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {Array.from({ length: 8 }).map((_, index) => (
             <Skeleton key={index} className="h-[88px] rounded-xl" />
           ))}
         </div>
-        <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
+        <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
           <Skeleton className="h-[360px] rounded-xl" />
           <Skeleton className="h-[360px] rounded-xl" />
         </div>
@@ -283,17 +297,55 @@ export function AnalyticsOverviewPageV2() {
 
   if (!workspace) {
     return (
-      <p className="text-muted-foreground text-sm">
-        {t('common.workspaceNotFound', 'Workspace not found.')}
-      </p>
+      <div
+        className="flex min-h-80 flex-col items-center justify-center rounded-xl border border-dashed px-6 py-12 text-center"
+        role="alert"
+      >
+        <span className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-full">
+          <BarChart3 aria-hidden="true" />
+        </span>
+        <h1 className="mt-4 text-xl font-semibold">
+          {t('common.workspaceNotFound', 'Workspace not found.')}
+        </h1>
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-5"
+          onClick={() => setReloadToken((value) => value + 1)}
+        >
+          {t('common.retry', 'Try again')}
+        </Button>
+      </div>
     );
   }
 
   if (loadError) {
     return (
-      <p role="alert" className="text-destructive text-sm">
-        {t('analytics.loadError', 'Could not load analytics data.')}
-      </p>
+      <div
+        className="flex min-h-80 flex-col items-center justify-center rounded-xl border border-dashed px-6 py-12 text-center"
+        role="alert"
+      >
+        <span className="bg-destructive/10 text-destructive flex size-12 items-center justify-center rounded-full">
+          <BarChart3 aria-hidden="true" />
+        </span>
+        <h1 className="mt-4 text-xl font-semibold">
+          {t('analytics.loadError', 'Could not load analytics data.')}
+        </h1>
+        <p className="text-muted-foreground mt-2 max-w-md text-sm">
+          {t(
+            'analytics.loadErrorDescription',
+            'Check your connection and try again. Your workspace data has not been changed.',
+          )}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-5"
+          onClick={() => setReloadToken((value) => value + 1)}
+        >
+          {t('common.retry', 'Try again')}
+        </Button>
+      </div>
     );
   }
 
@@ -348,16 +400,28 @@ export function AnalyticsOverviewPageV2() {
 
   return (
     <div className="space-y-6 pb-8">
-      {/* No tab strip: the sidebar's Analytics group already lists Overview and
-          Work items, and a second copy of the same two links inside the page
-          just repeats it. The heading names the page in its place. */}
-      <h2 className="text-lg font-semibold">{t('analytics.overview', 'Overview')}</h2>
+      <PageHeading
+        title={t('analytics.overview', 'Overview')}
+        description={t(
+          'analytics.overviewDescription',
+          'Monitor workspace activity, delivery, and team progress at a glance.',
+        )}
+        summary={t(
+          'analytics.overviewSummary',
+          'Projects {{projects}} · Work items {{workItems}} · Members {{members}}',
+          {
+            projects: projects.length,
+            workItems: totalWorkItems,
+            members: members.length,
+          },
+        )}
+      />
 
       {/* Stat tiles. Proportional figures, not tabular: these do not align in a
           column, and tabular digits read loose at this size. */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {statTiles.map(({ label, value }) => (
-          <Card key={label} className="gap-0 py-4">
+          <Card key={label} className="gap-0 py-4 shadow-none">
             <CardContent className="px-4">
               <p className="text-muted-foreground text-xs font-medium">{label}</p>
               <p className="mt-1 text-2xl font-semibold">{value.toLocaleString()}</p>
@@ -366,8 +430,8 @@ export function AnalyticsOverviewPageV2() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
-        <Card className="min-w-0">
+      <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
+        <Card className="min-w-0 shadow-none">
           <CardHeader>
             <CardTitle>{t('analytics.workItemsByState', 'Work items by state')}</CardTitle>
             <CardDescription>
@@ -471,7 +535,7 @@ export function AnalyticsOverviewPageV2() {
           </CardContent>
         </Card>
 
-        <Card className="min-w-0">
+        <Card className="min-w-0 shadow-none">
           <CardHeader>
             <CardTitle>{t('analytics.projectProgress', 'Project progress')}</CardTitle>
             <CardDescription>
@@ -499,7 +563,17 @@ export function AnalyticsOverviewPageV2() {
                         {project.percent}%
                       </span>
                     </div>
-                    <Progress value={project.percent} />
+                    <Progress
+                      value={project.percent}
+                      aria-label={t(
+                        'analytics.projectCompletion',
+                        '{{project}} completion: {{percent}}%',
+                        {
+                          project: project.name,
+                          percent: project.percent,
+                        },
+                      )}
+                    />
                     <p className="text-muted-foreground text-xs tabular-nums">
                       {t('analytics.completedOfTotal', '{{completed}} of {{total}} done', {
                         completed: project.completed,
@@ -525,7 +599,7 @@ export function AnalyticsOverviewPageV2() {
       </div>
 
       {totalWorkItems > 0 && (
-        <Card>
+        <Card className="shadow-none">
           <CardHeader>
             <CardTitle>{t('analytics.projectBreakdown', 'Project breakdown')}</CardTitle>
             <CardDescription>
@@ -536,7 +610,11 @@ export function AnalyticsOverviewPageV2() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
+            <Table
+              tabIndex={0}
+              aria-label={t('analytics.projectBreakdown', 'Project breakdown')}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead>{t('analytics.project', 'Project')}</TableHead>

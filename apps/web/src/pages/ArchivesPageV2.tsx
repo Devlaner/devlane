@@ -1,31 +1,36 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArchiveRestore } from 'lucide-react';
-import { Badge } from '@/components/shadcn/ui/badge';
+import { Archive, ArchiveRestore, SearchX } from 'lucide-react';
+import { ArchivesToolbar } from '@/components/shadcn/archives-toolbar';
+import { PageHeading } from '@/components/shadcn/page-heading';
 import { Button } from '@/components/shadcn/ui/button';
+import { Card, CardContent } from '@/components/shadcn/ui/card';
 import { Skeleton } from '@/components/shadcn/ui/skeleton';
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from '@/components/shadcn/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/ui/tabs';
+import { ToggleGroup, ToggleGroupItem } from '@/components/shadcn/ui/toggle-group';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { formatDate } from '../i18n/format';
 import { issueService } from '../services/issueService';
 import { projectService } from '../services/projectService';
 import type { IssueApiResponse, ProjectApiResponse } from '../api/types';
 
 const ARCHIVES_PAGE_SIZE = 50;
+type ArchiveScope = 'work-items' | 'projects';
 
 function formatArchivedAt(iso: string | null | undefined): string {
   if (!iso) return '—';
   const parsed = Date.parse(iso);
   if (Number.isNaN(parsed)) return '—';
-  return new Date(parsed).toLocaleDateString('en-US', {
+  return formatDate(parsed, {
     month: 'short',
     day: '2-digit',
     year: 'numeric',
@@ -33,25 +38,23 @@ function formatArchivedAt(iso: string | null | undefined): string {
 }
 
 /**
- * Design preview of the archives page, built from shadcn primitives. It stands
- * alongside ArchivesPage rather than replacing it, so the two can be compared
- * side by side.
- *
- * Loading, paging and restore mirror the shipped page — only the chrome
- * differs: archived work items and archived projects, which the shipped page
- * stacks as two lists, become two tabs of one table, and search and the project
- * filter move into the shell's header (ArchivesToolbar).
+ * Workspace archives rendered with the same page hierarchy and responsive
+ * control surface as the v2 Projects page. Archive-specific behavior remains
+ * intact: work items and projects have separate scopes, filters are URL-backed,
+ * and work-item pagination keeps its own server offset after restores.
  */
 export function ArchivesPageV2() {
   const { t } = useTranslation();
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   useDocumentTitle(t('archives.documentTitle', 'Archives'));
 
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [archivedProjects, setArchivedProjects] = useState<ProjectApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   /* Server-side fetch position, tracked separately from issues.length so that
@@ -63,33 +66,37 @@ export function ArchivesPageV2() {
   const [restoringProjectId, setRestoringProjectId] = useState<string | null>(null);
 
   const query = searchParams.get('q') ?? '';
+  const activeScope: ArchiveScope =
+    searchParams.get('scope') === 'projects' ? 'projects' : 'work-items';
   const projectFilter = useMemo(
     () => (searchParams.get('project') ?? '').split(',').filter(Boolean),
     [searchParams],
   );
+  const hasDiscoveryFilters = Boolean(query.trim() || projectFilter.length);
 
   useEffect(() => {
     if (!workspaceSlug) return;
     let cancelled = false;
     setLoading(true);
+    setLoadError(false);
+    setError(null);
     Promise.all([
       /* One extra row tells us whether another page exists. */
       issueService.listWorkspaceArchived(workspaceSlug, { limit: ARCHIVES_PAGE_SIZE + 1 }),
-      projectService.list(workspaceSlug).catch(() => [] as ProjectApiResponse[]),
-      projectService.listArchived(workspaceSlug).catch(() => [] as ProjectApiResponse[]),
+      projectService.list(workspaceSlug),
+      projectService.listArchived(workspaceSlug),
     ])
-      .then(([archived, projs, archProjs]) => {
+      .then(([archived, activeProjects, archivedProjectList]) => {
         if (cancelled) return;
         const page = archived.slice(0, ARCHIVES_PAGE_SIZE);
         setHasMore(archived.length > ARCHIVES_PAGE_SIZE);
         setIssues(page);
         setFetchedCount(page.length);
-        setProjects(projs ?? []);
-        setArchivedProjects(archProjs ?? []);
-        setError(null);
+        setProjects(activeProjects ?? []);
+        setArchivedProjects(archivedProjectList ?? []);
       })
       .catch(() => {
-        if (!cancelled) setError(t('archives.loadError', 'Could not load archived work items.'));
+        if (!cancelled) setLoadError(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -97,10 +104,10 @@ export function ArchivesPageV2() {
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug, t]);
+  }, [workspaceSlug, reloadToken]);
 
   const loadMore = async () => {
-    if (!workspaceSlug || loadingMore) return;
+    if (!workspaceSlug || loadingMore || restoringId) return;
     setLoadingMore(true);
     try {
       const next = await issueService.listWorkspaceArchived(workspaceSlug, {
@@ -109,12 +116,13 @@ export function ArchivesPageV2() {
       });
       const page = next.slice(0, ARCHIVES_PAGE_SIZE);
       setHasMore(next.length > ARCHIVES_PAGE_SIZE);
-      setFetchedCount((c) => c + page.length);
+      setFetchedCount((count) => count + page.length);
       /* De-duplicated by id in case a restore shifted the server-side window. */
-      setIssues((prev) => {
-        const seen = new Set(prev.map((i) => i.id));
-        return [...prev, ...page.filter((i) => !seen.has(i.id))];
+      setIssues((previous) => {
+        const seen = new Set(previous.map((issue) => issue.id));
+        return [...previous, ...page.filter((issue) => !seen.has(issue.id))];
       });
+      setError(null);
     } catch {
       setError(t('archives.loadMoreError', 'Could not load more archived work items.'));
     } finally {
@@ -122,14 +130,27 @@ export function ArchivesPageV2() {
     }
   };
 
-  const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
+  const projectOptions = useMemo(() => {
+    const byId = new Map<string, ProjectApiResponse>();
+    [...projects, ...archivedProjects].forEach((project) => byId.set(project.id, project));
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [archivedProjects, projects]);
+
+  const projectById = useMemo(
+    () => new Map(projectOptions.map((project) => [project.id, project])),
+    [projectOptions],
+  );
 
   const restore = async (issue: IssueApiResponse) => {
-    if (!workspaceSlug || restoringId) return;
+    if (!workspaceSlug || restoringId || loadingMore) return;
     setRestoringId(issue.id);
     try {
       await issueService.restore(workspaceSlug, issue.project_id, issue.id);
-      setIssues((prev) => prev.filter((i) => i.id !== issue.id));
+      setIssues((previous) => previous.filter((item) => item.id !== issue.id));
+      /* Restoring removes the row from the server-side OFFSET window too. Keep
+         the next page aligned so the first unseen item is not skipped. */
+      setFetchedCount((count) => Math.max(0, count - 1));
+      setError(null);
     } catch {
       setError(t('archives.restoreItemError', 'Could not restore that work item.'));
     } finally {
@@ -142,7 +163,12 @@ export function ArchivesPageV2() {
     setRestoringProjectId(project.id);
     try {
       await projectService.restore(workspaceSlug, project.id);
-      setArchivedProjects((prev) => prev.filter((p) => p.id !== project.id));
+      setProjects((previous) => [
+        ...previous.filter((item) => item.id !== project.id),
+        { ...project, archived_at: null },
+      ]);
+      setArchivedProjects((previous) => previous.filter((item) => item.id !== project.id));
+      setError(null);
     } catch {
       setError(t('archives.restoreProjectError', 'Could not restore that project.'));
     } finally {
@@ -151,8 +177,8 @@ export function ArchivesPageV2() {
   };
 
   const displayId = (issue: IssueApiResponse) => {
-    const p = projectById.get(issue.project_id);
-    const prefix = p?.identifier ?? p?.id.slice(0, 8) ?? issue.project_id.slice(0, 8);
+    const project = projectById.get(issue.project_id);
+    const prefix = project?.identifier ?? project?.id.slice(0, 8) ?? issue.project_id.slice(0, 8);
     return `${prefix}-${issue.sequence_id ?? issue.id.slice(-4)}`;
   };
 
@@ -171,7 +197,7 @@ export function ArchivesPageV2() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- displayId is derived from projectById
   }, [issues, query, projectFilter, projectById]);
 
-  /* The project filter names projects; on the projects tab it selects rows
+  /* The project filter names projects; on the projects scope it selects rows
      directly rather than filtering by a foreign key. */
   const visibleArchivedProjects = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -182,89 +208,227 @@ export function ArchivesPageV2() {
     });
   }, [archivedProjects, query, projectFilter]);
 
+  const clearDiscoveryFilters = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('q');
+    next.delete('project');
+    setSearchParams(next, { replace: true });
+  };
+
+  const setActiveScope = (scope: string) => {
+    if (scope !== 'work-items' && scope !== 'projects') return;
+    const next = new URLSearchParams(searchParams);
+    if (scope === 'projects') next.set('scope', scope);
+    else next.delete('scope');
+    setSearchParams(next, { replace: true });
+  };
+
   if (loading) {
     return (
-      <div className="space-y-2">
-        <Skeleton className="h-10 w-64" />
-        {Array.from({ length: 8 }).map((_, index) => (
-          <Skeleton key={index} className="h-11 w-full" />
-        ))}
+      <div
+        className="space-y-6 pb-8"
+        aria-busy="true"
+        aria-label={t('archives.loading', 'Loading archives…')}
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-96 max-w-full" />
+          </div>
+          <Skeleton className="h-4 w-64 max-w-full" />
+        </div>
+        <Skeleton className="h-20 w-full rounded-xl" />
+        <Skeleton className="h-72 w-full rounded-xl" />
       </div>
     );
   }
 
-  const emptyRow = (colSpan: number, message: string) => (
-    <TableRow className="hover:bg-transparent">
-      <TableCell colSpan={colSpan} className="text-muted-foreground h-32 text-center">
-        {message}
-      </TableCell>
-    </TableRow>
-  );
+  if (loadError) {
+    return (
+      <div
+        className="flex min-h-80 flex-col items-center justify-center rounded-xl border border-dashed px-6 py-12 text-center"
+        role="alert"
+      >
+        <span className="bg-destructive/10 text-destructive flex size-12 items-center justify-center rounded-full">
+          <Archive aria-hidden="true" />
+        </span>
+        <h1 className="mt-4 text-xl font-semibold">
+          {t('archives.loadErrorTitle', 'Archives could not be loaded')}
+        </h1>
+        <p className="text-muted-foreground mt-2 max-w-md text-sm">
+          {t(
+            'archives.loadErrorDescription',
+            'Check your connection and try again. Your archived data has not been changed.',
+          )}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-5"
+          onClick={() => setReloadToken((value) => value + 1)}
+        >
+          {t('common.retry', 'Try again')}
+        </Button>
+      </div>
+    );
+  }
+
+  const emptyState = (scope: ArchiveScope) => {
+    const isFiltered = hasDiscoveryFilters;
+    const canLoadMore = scope === 'work-items' && hasMore;
+    const title = canLoadMore
+      ? t('archives.noMatchesYetTitle', 'No matches yet')
+      : isFiltered
+        ? t('archives.noMatchesTitle', 'No archives found')
+        : scope === 'work-items'
+          ? t('archives.empty', 'No archived work items')
+          : t('archives.noArchivedProjects', 'No archived projects');
+    const description = canLoadMore
+      ? t(
+          'archives.noMatchesYet',
+          'No loaded archives match this view. Load more to continue searching.',
+        )
+      : isFiltered
+        ? t('archives.noMatches', 'No archives match the current search or filters.')
+        : scope === 'work-items'
+          ? t('archives.emptyHint', 'Archive a work item from its menu and it will show up here.')
+          : t(
+              'archives.noArchivedProjectsHint',
+              'Archived projects will appear here until they are restored.',
+            );
+
+    return (
+      <Card className="items-center gap-0 border-dashed px-6 py-14 text-center shadow-none">
+        <span className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-full">
+          {isFiltered ? <SearchX aria-hidden="true" /> : <Archive aria-hidden="true" />}
+        </span>
+        <CardContent className="mt-4 max-w-md px-0">
+          <h2 className="font-semibold">{title}</h2>
+          <p className="text-muted-foreground mt-2 text-sm leading-6">{description}</p>
+          {isFiltered && !canLoadMore && (
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-5"
+              onClick={clearDiscoveryFilters}
+            >
+              <SearchX aria-hidden="true" />
+              {t('common.clearFilters', 'Clear filters')}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const workItemCount = hasMore ? `${issues.length}+` : issues.length;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
+    <div className="flex flex-col gap-6 pb-8">
+      <PageHeading
+        title={t('archives.title', 'Archives')}
+        description={t(
+          'archives.pageDescription',
+          'Review and restore archived work items and projects across your workspace.',
+        )}
+        summary={t('archives.summary', 'Work items {{workItems}} · Projects {{projects}}', {
+          workItems: workItemCount,
+          projects: archivedProjects.length,
+        })}
+      />
+
+      <ArchivesToolbar
+        projects={projectOptions}
+        scopeControl={
+          /* The same segmented control the projects list uses for its scope —
+             same component, spacing and sizes — so the two discovery toolbars
+             are one pattern rather than two lookalikes. */
+          <ToggleGroup
+            type="single"
+            value={activeScope}
+            onValueChange={setActiveScope}
+            variant="default"
+            size="sm"
+            spacing={1}
+            className="bg-muted/60 w-fit max-w-full shrink-0 touch-pan-x overflow-x-auto rounded-lg p-1 sm:p-0.5"
+            aria-label={t('archives.scope', 'Archive type')}
+          >
+            <ToggleGroupItem
+              value="work-items"
+              className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
+            >
+              {t('views.workItems', 'Work items')}
+              <span className="text-muted-foreground min-w-3 text-center text-xs font-normal tabular-nums">
+                {workItemCount}
+              </span>
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="projects"
+              className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
+            >
+              {t('common.projects', 'Projects')}
+              <span className="text-muted-foreground min-w-3 text-center text-xs font-normal tabular-nums">
+                {archivedProjects.length}
+              </span>
+            </ToggleGroupItem>
+          </ToggleGroup>
+        }
+      />
+
       {error && (
         <p className="text-destructive text-sm" role="alert">
           {error}
         </p>
       )}
 
-      {/* Two tabs rather than the shipped page's stacked lists: work items and
-          projects are restored the same way but are otherwise unrelated, and
-          an archive is browsed one kind at a time. */}
-      <Tabs defaultValue="work-items" className="flex min-h-0 flex-1 flex-col gap-3">
-        <TabsList>
-          <TabsTrigger value="work-items">
-            {t('views.workItems', 'Work items')}
-            <Badge variant="secondary">{visibleIssues.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="projects">
-            {t('common.projects', 'Projects')}
-            <Badge variant="secondary">{visibleArchivedProjects.length}</Badge>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent
-          value="work-items"
-          className="min-h-0 flex-1 flex-col gap-3 data-[state=active]:flex"
-        >
-          <div className="min-h-0 flex-1 overflow-auto rounded-xl border">
-            <Table>
-              <TableHeader className="bg-muted/50">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="px-3">{t('views.workItems', 'Work items')}</TableHead>
-                  <TableHead className="px-3">{t('common.project', 'Project')}</TableHead>
-                  <TableHead className="px-3">{t('archives.archived', 'Archived')}</TableHead>
-                  <TableHead className="w-28 px-3 text-right">
-                    <span className="sr-only">{t('common.actions', 'Actions')}</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleIssues.length === 0
-                  ? emptyRow(
-                      4,
-                      issues.length === 0
-                        ? t('archives.empty', 'No archived work items')
-                        : t(
-                            'archives.noMatches',
-                            'No archives match the current search or filters.',
-                          ),
-                    )
-                  : visibleIssues.map((issue) => (
+      {activeScope === 'work-items' && (
+        <div>
+          {visibleIssues.length === 0 ? (
+            emptyState('work-items')
+          ) : (
+            <>
+              <section
+                className="overflow-hidden rounded-xl border"
+                aria-label={t('archives.workItemsTableLabel', 'Archived work items table')}
+              >
+                <Table className="min-w-[44rem]">
+                  <TableCaption className="sr-only">
+                    {t(
+                      'archives.workItemsTableCaption',
+                      'Archived work items, their projects, archive dates, and restore actions',
+                    )}
+                  </TableCaption>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="min-w-72 px-4">
+                        {t('views.workItems', 'Work items')}
+                      </TableHead>
+                      <TableHead className="min-w-48 px-3">
+                        {t('common.project', 'Project')}
+                      </TableHead>
+                      <TableHead className="w-40 px-3">
+                        {t('archives.archived', 'Archived')}
+                      </TableHead>
+                      <TableHead className="w-36 px-3 text-right">
+                        <span className="sr-only">{t('common.actions', 'Actions')}</span>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visibleIssues.map((issue) => (
                       <TableRow key={issue.id}>
-                        <TableCell className="p-0">
+                        <TableCell className="px-4 py-3">
                           <Link
                             to={`/${workspaceSlug}/app-v2/projects/${issue.project_id}/work-items/${issue.id}`}
-                            className="hover:bg-muted/50 flex h-11 items-center gap-2 px-3 transition-colors"
+                            className="block max-w-96 truncate rounded-sm font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
-                            <span className="text-muted-foreground shrink-0 font-mono text-xs">
-                              {displayId(issue)}
-                            </span>
-                            <span className="truncate font-medium">{issue.name}</span>
+                            {issue.name}
                           </Link>
+                          <span className="text-muted-foreground mt-0.5 block font-mono text-xs">
+                            {displayId(issue)}
+                          </span>
                         </TableCell>
-                        <TableCell className="text-muted-foreground px-3 text-sm">
+                        <TableCell className="text-muted-foreground max-w-64 truncate px-3 text-sm">
                           {projectById.get(issue.project_id)?.name ?? '—'}
                         </TableCell>
                         <TableCell className="text-muted-foreground px-3 text-sm">
@@ -275,10 +439,15 @@ export function ArchivesPageV2() {
                             type="button"
                             variant="outline"
                             size="sm"
+                            className="h-11 sm:h-8"
                             onClick={() => void restore(issue)}
-                            disabled={restoringId === issue.id}
+                            disabled={restoringId !== null || loadingMore}
+                            aria-busy={restoringId === issue.id || undefined}
+                            aria-label={t('archives.restoreWorkItem', 'Restore {{item}}', {
+                              item: issue.name,
+                            })}
                           >
-                            <ArchiveRestore />
+                            <ArchiveRestore aria-hidden="true" />
                             {restoringId === issue.id
                               ? t('archives.restoring', 'Restoring…')
                               : t('common.restore', 'Restore')}
@@ -286,75 +455,110 @@ export function ArchivesPageV2() {
                         </TableCell>
                       </TableRow>
                     ))}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableBody>
+                </Table>
+              </section>
+            </>
+          )}
 
           {hasMore && (
-            <div className="flex justify-center">
+            <div className="mt-3 flex justify-center">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
+                className="h-11 sm:h-8"
                 onClick={() => void loadMore()}
-                disabled={loadingMore}
+                disabled={loadingMore || restoringId !== null}
+                aria-busy={loadingMore || undefined}
               >
                 {loadingMore ? t('common.loading', 'Loading…') : t('common.loadMore', 'Load more')}
               </Button>
             </div>
           )}
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="projects" className="min-h-0 flex-1">
-          <div className="min-h-0 flex-1 overflow-auto rounded-xl border">
-            <Table>
-              <TableHeader className="bg-muted/50">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="px-3">{t('common.project', 'Project')}</TableHead>
-                  <TableHead className="px-3">{t('archives.archived', 'Archived')}</TableHead>
-                  <TableHead className="w-28 px-3 text-right">
-                    <span className="sr-only">{t('common.actions', 'Actions')}</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleArchivedProjects.length === 0
-                  ? emptyRow(
-                      3,
-                      archivedProjects.length === 0
-                        ? t('archives.noArchivedProjects', 'No archived projects')
-                        : t(
-                            'archives.noMatches',
-                            'No archives match the current search or filters.',
-                          ),
-                    )
-                  : visibleArchivedProjects.map((project) => (
-                      <TableRow key={project.id}>
-                        <TableCell className="px-3 font-medium">{project.name}</TableCell>
-                        <TableCell className="text-muted-foreground px-3 text-sm">
-                          {formatArchivedAt(project.archived_at)}
-                        </TableCell>
-                        <TableCell className="px-3 text-right">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => void restoreProject(project)}
-                            disabled={restoringProjectId === project.id}
-                          >
-                            <ArchiveRestore />
-                            {restoringProjectId === project.id
-                              ? t('archives.restoring', 'Restoring…')
-                              : t('common.restore', 'Restore')}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-              </TableBody>
-            </Table>
-          </div>
-        </TabsContent>
-      </Tabs>
+      {activeScope === 'projects' && (
+        <div>
+          {visibleArchivedProjects.length === 0 ? (
+            emptyState('projects')
+          ) : (
+            <section
+              className="overflow-hidden rounded-xl border"
+              aria-label={t('archives.projectsTableLabel', 'Archived projects table')}
+            >
+              <Table className="min-w-[36rem]">
+                <TableCaption className="sr-only">
+                  {t(
+                    'archives.projectsTableCaption',
+                    'Archived projects, archive dates, and restore actions',
+                  )}
+                </TableCaption>
+                <TableHeader className="bg-muted/50">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="min-w-72 px-4">
+                      {t('common.project', 'Project')}
+                    </TableHead>
+                    <TableHead className="w-40 px-3">
+                      {t('archives.archived', 'Archived')}
+                    </TableHead>
+                    <TableHead className="w-36 px-3 text-right">
+                      <span className="sr-only">{t('common.actions', 'Actions')}</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visibleArchivedProjects.map((project) => (
+                    <TableRow key={project.id}>
+                      <TableCell className="px-4 py-3">
+                        <span className="block max-w-96 truncate font-medium">{project.name}</span>
+                        <span className="text-muted-foreground mt-0.5 block font-mono text-xs">
+                          {project.identifier ?? project.id.slice(0, 8)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground px-3 text-sm">
+                        {formatArchivedAt(project.archived_at)}
+                      </TableCell>
+                      <TableCell className="px-3 text-right">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-11 sm:h-8"
+                          onClick={() => void restoreProject(project)}
+                          disabled={restoringProjectId !== null}
+                          aria-busy={restoringProjectId === project.id || undefined}
+                          aria-label={t('archives.restoreProject', 'Restore {{project}}', {
+                            project: project.name,
+                          })}
+                        >
+                          <ArchiveRestore aria-hidden="true" />
+                          {restoringProjectId === project.id
+                            ? t('archives.restoring', 'Restoring…')
+                            : t('common.restore', 'Restore')}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </section>
+          )}
+        </div>
+      )}
+
+      {hasDiscoveryFilters && (
+        <p className="sr-only" aria-live="polite">
+          {activeScope === 'work-items'
+            ? t('archives.visibleWorkItemCount', '{{count}} archived work items visible', {
+                count: visibleIssues.length,
+              })
+            : t('archives.visibleProjectCount', '{{count}} archived projects visible', {
+                count: visibleArchivedProjects.length,
+              })}
+        </p>
+      )}
     </div>
   );
 }
