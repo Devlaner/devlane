@@ -39,12 +39,10 @@ export function NavUser({
   const [signingOut, setSigningOut] = useState(false);
 
   const base = workspaceSlug ? `/${workspaceSlug}` : '';
-  /* Profile and notifications have v2 pages, so they stay inside this shell.
-     Account settings has no v2 page yet; it points at the shipped one, which
-     brings its own layout. */
+  /* All three have v2 pages, so every item stays inside this shell. */
   const profileHref = currentUser ? `${base}/app-v2/profile/${currentUser.id}` : null;
   const notificationsHref = `${base}/app-v2/notifications`;
-  const accountHref = workspaceSlug ? `${base}/settings/account` : null;
+  const accountHref = workspaceSlug ? `${base}/app-v2/settings/account` : null;
 
   /* The session is cleared either way — signOut failing server-side still drops
      the local user — so the redirect runs even on a rejected request. It goes to

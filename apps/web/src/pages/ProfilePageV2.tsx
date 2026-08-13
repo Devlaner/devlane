@@ -38,7 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/ui/tabs';
+import { ToggleGroup, ToggleGroupItem } from '@/components/shadcn/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shadcn/ui/tooltip';
 import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl } from '../lib/utils';
@@ -64,7 +64,21 @@ import type {
   WorkspaceMemberApiResponse,
 } from '../api/types';
 
-type TabId = 'summary' | 'assigned' | 'created' | 'subscribed' | 'activity';
+const TAB_IDS = ['summary', 'assigned', 'created', 'subscribed', 'activity'] as const;
+type TabId = (typeof TAB_IDS)[number];
+
+/** Fallback labels, used when a locale has no string for the tab. */
+const TAB_LABELS: Record<TabId, string> = {
+  summary: 'Summary',
+  assigned: 'Assigned',
+  created: 'Created',
+  subscribed: 'Subscribed',
+  activity: 'Activity',
+};
+
+function isTabId(value: string): value is TabId {
+  return (TAB_IDS as readonly string[]).includes(value);
+}
 
 /* One hue per state group, matching the ramp AnalyticsOverviewPageV2 uses so a
    reader moving between the two pages reads the same colour the same way. */
@@ -671,302 +685,330 @@ export function ProfilePageV2() {
         </div>
       </section>
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabId)}>
-        <TabsList
-          className="h-11 max-w-full justify-start overflow-x-auto sm:h-9"
+      <div className="flex flex-col gap-6">
+        {/* The segmented control the v2 projects and archives lists use for
+            their scopes, so switching sections reads the same everywhere. */}
+        <ToggleGroup
+          type="single"
+          value={activeTab}
+          onValueChange={(value) => {
+            if (isTabId(value)) setActiveTab(value);
+          }}
+          variant="default"
+          size="sm"
+          spacing={1}
+          className="bg-muted/60 w-fit max-w-full shrink-0 touch-pan-x overflow-x-auto rounded-lg p-1 sm:p-0.5"
           aria-label={t('profile.documentTitle', 'Profile')}
         >
-          <TabsTrigger value="summary">{t('profile.tab.summary', 'Summary')}</TabsTrigger>
-          <TabsTrigger value="assigned">{t('profile.tab.assigned', 'Assigned')}</TabsTrigger>
-          <TabsTrigger value="created">{t('profile.tab.created', 'Created')}</TabsTrigger>
-          <TabsTrigger value="subscribed">{t('profile.tab.subscribed', 'Subscribed')}</TabsTrigger>
-          <TabsTrigger value="activity">{t('profile.tab.activity', 'Activity')}</TabsTrigger>
-        </TabsList>
+          {TAB_IDS.map((tab) => (
+            <ToggleGroupItem
+              key={tab}
+              value={tab}
+              className="data-[state=on]:bg-background h-11 min-w-0 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
+            >
+              {t(`profile.tab.${tab}`, TAB_LABELS[tab])}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
 
-        <TabsContent value="summary" className="space-y-6">
-          <section aria-label={t('profile.workload.title', 'Workload')}>
-            <h2 className="mb-3 text-sm font-semibold">
-              {t('profile.workload.title', 'Workload')}
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {workload.map((entry) => (
-                <Card key={entry.group} className="gap-0 py-4 shadow-none">
-                  <CardContent className="flex items-center gap-3 px-4">
-                    <span
-                      aria-hidden
-                      className="size-3 shrink-0 rounded-sm"
-                      style={{ backgroundColor: entry.color }}
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-2xl font-semibold tabular-nums">
-                        {entry.count}
+        {activeTab === 'summary' && (
+          <div className="space-y-6">
+            <section aria-label={t('profile.workload.title', 'Workload')}>
+              <h2 className="mb-3 text-sm font-semibold">
+                {t('profile.workload.title', 'Workload')}
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                {workload.map((entry) => (
+                  <Card key={entry.group} className="gap-0 py-4 shadow-none">
+                    <CardContent className="flex items-center gap-3 px-4">
+                      <span
+                        aria-hidden
+                        className="size-3 shrink-0 rounded-sm"
+                        style={{ backgroundColor: entry.color }}
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-2xl font-semibold tabular-nums">
+                          {entry.count}
+                        </span>
+                        <span className="text-muted-foreground block truncate text-sm">
+                          {entry.label}
+                        </span>
                       </span>
-                      <span className="text-muted-foreground block truncate text-sm">
-                        {entry.label}
-                      </span>
-                    </span>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card className="shadow-none">
+                <CardHeader>
+                  <CardTitle>{t('profile.workItemsByState', 'Work items by state')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {workloadTotal === 0 ? (
+                    <p className="text-muted-foreground text-sm">
+                      {t('profile.noAssigned', 'Nothing assigned yet.')}
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-6">
+                      <ChartContainer config={chartConfig} className="aspect-square h-44">
+                        <PieChart>
+                          <ChartTooltip content={<ChartTooltipContent nameKey="label" />} />
+                          <Pie data={workload} dataKey="count" nameKey="label" innerRadius={45}>
+                            {workload.map((entry) => (
+                              <Cell key={entry.group} fill={entry.color} />
+                            ))}
+                          </Pie>
+                        </PieChart>
+                      </ChartContainer>
+                      <ul className="min-w-40 space-y-2">
+                        {workload.map((entry) => (
+                          <li key={entry.group} className="flex items-center gap-2 text-sm">
+                            <span
+                              aria-hidden
+                              className="size-2 shrink-0 rounded-full"
+                              style={{ backgroundColor: entry.color }}
+                            />
+                            <span className="flex-1 truncate">{entry.label}</span>
+                            <span className="text-muted-foreground tabular-nums">
+                              {entry.count}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-none">
+                <CardHeader>
+                  <CardTitle>
+                    {t('profile.workItemsByPriority', 'Work items by Priority')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {PRIORITIES.map((priority) => {
+                    const count = priorityCounts.get(priority) ?? 0;
+                    const percent =
+                      workloadTotal === 0 ? 0 : Math.round((count / workloadTotal) * 100);
+                    const priorityLabel = t(
+                      `profile.priority.${priority}`,
+                      PRIORITY_LABELS[priority],
+                    );
+                    return (
+                      <div key={priority} className="flex items-center gap-3">
+                        <span className="w-16 shrink-0 text-sm">{priorityLabel}</span>
+                        <Progress
+                          value={percent}
+                          className="h-2 flex-1"
+                          aria-label={t(
+                            'profile.priorityProgress',
+                            '{{priority}}: {{count}} of {{total}} assigned work items',
+                            { priority: priorityLabel, count, total: workloadTotal },
+                          )}
+                        />
+                        <span className="text-muted-foreground w-8 shrink-0 text-right text-xs tabular-nums">
+                          {count}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
             </div>
-          </section>
 
-          <div className="grid gap-4 lg:grid-cols-2">
             <Card className="shadow-none">
               <CardHeader>
-                <CardTitle>{t('profile.workItemsByState', 'Work items by state')}</CardTitle>
+                <CardTitle>{t('profile.projects', 'Projects')}</CardTitle>
               </CardHeader>
-              <CardContent>
-                {workloadTotal === 0 ? (
-                  <p className="text-muted-foreground text-sm">
-                    {t('profile.noAssigned', 'Nothing assigned yet.')}
+              <CardContent className="p-0">
+                {projectBreakdown.length === 0 ? (
+                  <p className="text-muted-foreground px-6 pb-6 text-sm">
+                    {t('profile.noProjects', 'No projects yet.')}
                   </p>
                 ) : (
-                  <div className="flex flex-wrap items-center gap-6">
-                    <ChartContainer config={chartConfig} className="aspect-square h-44">
-                      <PieChart>
-                        <ChartTooltip content={<ChartTooltipContent nameKey="label" />} />
-                        <Pie data={workload} dataKey="count" nameKey="label" innerRadius={45}>
-                          {workload.map((entry) => (
-                            <Cell key={entry.group} fill={entry.color} />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                    </ChartContainer>
-                    <ul className="min-w-40 space-y-2">
-                      {workload.map((entry) => (
-                        <li key={entry.group} className="flex items-center gap-2 text-sm">
-                          <span
-                            aria-hidden
-                            className="size-2 shrink-0 rounded-full"
-                            style={{ backgroundColor: entry.color }}
-                          />
-                          <span className="flex-1 truncate">{entry.label}</span>
-                          <span className="text-muted-foreground tabular-nums">{entry.count}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  <ul className="divide-y border-t">
+                    {projectBreakdown.map(({ project, states: projectStates, total, progress }) => (
+                      <li key={project.id}>
+                        <Collapsible>
+                          <div className="flex items-center gap-2 px-4">
+                            <Folder
+                              className="text-muted-foreground size-4 shrink-0"
+                              aria-hidden="true"
+                            />
+                            <Link
+                              to={`/${workspaceSlug}/app-v2/projects/${project.id}/work-items`}
+                              className="min-w-0 flex-1 truncate py-3 text-sm font-medium hover:underline"
+                            >
+                              {project.name}
+                            </Link>
+                            <Badge variant={progress > 0 ? 'secondary' : 'outline'}>
+                              {t('profile.projectProgress', '{{percent}}%', { percent: progress })}
+                            </Badge>
+                            <CollapsibleTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-8 shrink-0 [&[data-state=open]>svg]:rotate-0"
+                                aria-label={t(
+                                  'profile.toggleProjectStates',
+                                  'Show state breakdown for {{project}}',
+                                  { project: project.name },
+                                )}
+                              >
+                                <ChevronDown
+                                  className="size-4 -rotate-90 transition-transform"
+                                  aria-hidden="true"
+                                />
+                              </Button>
+                            </CollapsibleTrigger>
+                          </div>
+                          <CollapsibleContent className="px-4 pb-4 pl-10">
+                            <div className="bg-muted mb-3 flex h-2 w-full overflow-hidden rounded-full">
+                              {total > 0 ? (
+                                projectStates.map((state) => (
+                                  <Tooltip key={state.id}>
+                                    <TooltipTrigger asChild>
+                                      <span
+                                        className="h-full"
+                                        style={{
+                                          width: `${(state.count / total) * 100}%`,
+                                          minWidth: state.count > 0 ? 4 : 0,
+                                          backgroundColor: state.color || 'var(--muted-foreground)',
+                                        }}
+                                      />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {state.name}: {state.count}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ))
+                              ) : (
+                                <span className="bg-muted h-full w-full" />
+                              )}
+                            </div>
+                            <ul className="space-y-1">
+                              {projectStates.map((state) => (
+                                <li key={state.id} className="flex items-center gap-2 text-xs">
+                                  <span
+                                    aria-hidden
+                                    className="size-3 shrink-0 rounded-sm"
+                                    style={{
+                                      backgroundColor: state.color || 'var(--muted-foreground)',
+                                    }}
+                                  />
+                                  <span className="text-muted-foreground">{state.name}</span>
+                                  <span>
+                                    —{' '}
+                                    {t('profile.workItemCount', '{{count}} Work items', {
+                                      count: state.count,
+                                    })}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </CardContent>
             </Card>
 
             <Card className="shadow-none">
               <CardHeader>
-                <CardTitle>{t('profile.workItemsByPriority', 'Work items by Priority')}</CardTitle>
+                <CardTitle>{t('profile.recentActivity', 'Recent activity')}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {PRIORITIES.map((priority) => {
-                  const count = priorityCounts.get(priority) ?? 0;
-                  const percent =
-                    workloadTotal === 0 ? 0 : Math.round((count / workloadTotal) * 100);
-                  const priorityLabel = t(
-                    `profile.priority.${priority}`,
-                    PRIORITY_LABELS[priority],
-                  );
-                  return (
-                    <div key={priority} className="flex items-center gap-3">
-                      <span className="w-16 shrink-0 text-sm">{priorityLabel}</span>
-                      <Progress
-                        value={percent}
-                        className="h-2 flex-1"
-                        aria-label={t(
-                          'profile.priorityProgress',
-                          '{{priority}}: {{count}} of {{total}} assigned work items',
-                          { priority: priorityLabel, count, total: workloadTotal },
-                        )}
-                      />
-                      <span className="text-muted-foreground w-8 shrink-0 text-right text-xs tabular-nums">
-                        {count}
-                      </span>
-                    </div>
-                  );
-                })}
+              <CardContent className="p-0">
+                {recentActivity.length === 0 ? (
+                  <p className="text-muted-foreground px-6 pb-6 text-sm">
+                    {t('profile.noRecentActivity', 'No recent activity')}
+                  </p>
+                ) : (
+                  <ul className="divide-y border-t">
+                    {recentActivity.slice(0, 8).map((issue) => (
+                      <li key={issue.id} className="flex gap-3 px-4 py-3">
+                        <Avatar className="size-6 shrink-0">
+                          {avatarUrl && (
+                            <AvatarImage src={avatarUrl} alt={profileUser?.name ?? ''} />
+                          )}
+                          <AvatarFallback className="text-foreground text-[10px]">
+                            {initials(profileUser?.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <p className="text-muted-foreground min-w-0 text-sm">
+                          {activityText(issue)}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </CardContent>
             </Card>
           </div>
+        )}
 
-          <Card className="shadow-none">
-            <CardHeader>
-              <CardTitle>{t('profile.projects', 'Projects')}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {projectBreakdown.length === 0 ? (
-                <p className="text-muted-foreground px-6 pb-6 text-sm">
-                  {t('profile.noProjects', 'No projects yet.')}
-                </p>
-              ) : (
-                <ul className="divide-y border-t">
-                  {projectBreakdown.map(({ project, states: projectStates, total, progress }) => (
-                    <li key={project.id}>
-                      <Collapsible>
-                        <div className="flex items-center gap-2 px-4">
-                          <Folder
-                            className="text-muted-foreground size-4 shrink-0"
-                            aria-hidden="true"
-                          />
-                          <Link
-                            to={`/${workspaceSlug}/app-v2/projects/${project.id}/work-items`}
-                            className="min-w-0 flex-1 truncate py-3 text-sm font-medium hover:underline"
-                          >
-                            {project.name}
-                          </Link>
-                          <Badge variant={progress > 0 ? 'secondary' : 'outline'}>
-                            {t('profile.projectProgress', '{{percent}}%', { percent: progress })}
-                          </Badge>
-                          <CollapsibleTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="size-8 shrink-0 [&[data-state=open]>svg]:rotate-0"
-                              aria-label={t(
-                                'profile.toggleProjectStates',
-                                'Show state breakdown for {{project}}',
-                                { project: project.name },
-                              )}
-                            >
-                              <ChevronDown
-                                className="size-4 -rotate-90 transition-transform"
-                                aria-hidden="true"
-                              />
-                            </Button>
-                          </CollapsibleTrigger>
-                        </div>
-                        <CollapsibleContent className="px-4 pb-4 pl-10">
-                          <div className="bg-muted mb-3 flex h-2 w-full overflow-hidden rounded-full">
-                            {total > 0 ? (
-                              projectStates.map((state) => (
-                                <Tooltip key={state.id}>
-                                  <TooltipTrigger asChild>
-                                    <span
-                                      className="h-full"
-                                      style={{
-                                        width: `${(state.count / total) * 100}%`,
-                                        minWidth: state.count > 0 ? 4 : 0,
-                                        backgroundColor: state.color || 'var(--muted-foreground)',
-                                      }}
-                                    />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {state.name}: {state.count}
-                                  </TooltipContent>
-                                </Tooltip>
-                              ))
-                            ) : (
-                              <span className="bg-muted h-full w-full" />
-                            )}
-                          </div>
-                          <ul className="space-y-1">
-                            {projectStates.map((state) => (
-                              <li key={state.id} className="flex items-center gap-2 text-xs">
-                                <span
-                                  aria-hidden
-                                  className="size-3 shrink-0 rounded-sm"
-                                  style={{
-                                    backgroundColor: state.color || 'var(--muted-foreground)',
-                                  }}
-                                />
-                                <span className="text-muted-foreground">{state.name}</span>
-                                <span>
-                                  —{' '}
-                                  {t('profile.workItemCount', '{{count}} Work items', {
-                                    count: state.count,
-                                  })}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+        {activeTab === 'assigned' && (
+          <div>
+            {workItemsTable(issuesAssigned, t('profile.noAssigned', 'Nothing assigned yet.'))}
+          </div>
+        )}
 
-          <Card className="shadow-none">
-            <CardHeader>
-              <CardTitle>{t('profile.recentActivity', 'Recent activity')}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
+        {activeTab === 'created' && (
+          <div>{workItemsTable(issuesCreated, t('profile.noCreated', 'Nothing created yet.'))}</div>
+        )}
+
+        {activeTab === 'subscribed' && (
+          <div>{workItemsTable(issuesSubscribed, t('profile.noWorkItems', 'No work items'))}</div>
+        )}
+
+        {activeTab === 'activity' && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold">
+                {t('profile.recentActivity', 'Recent activity')}
+              </h2>
+              <Button
+                type="button"
+                onClick={downloadTodaysActivity}
+                disabled={todaysActivity.length === 0}
+              >
+                <Download aria-hidden="true" />
+                {t('profile.downloadTodaysActivity', "Download today's activity")}
+              </Button>
+            </div>
+            <div className="overflow-auto rounded-xl border">
               {recentActivity.length === 0 ? (
-                <p className="text-muted-foreground px-6 pb-6 text-sm">
+                <p className="text-muted-foreground px-4 py-12 text-center text-sm">
                   {t('profile.noRecentActivity', 'No recent activity')}
                 </p>
               ) : (
-                <ul className="divide-y border-t">
-                  {recentActivity.slice(0, 8).map((issue) => (
-                    <li key={issue.id} className="flex gap-3 px-4 py-3">
-                      <Avatar className="size-6 shrink-0">
-                        {avatarUrl && <AvatarImage src={avatarUrl} alt={profileUser?.name ?? ''} />}
-                        <AvatarFallback className="text-foreground text-[10px]">
-                          {initials(profileUser?.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <p className="text-muted-foreground min-w-0 text-sm">{activityText(issue)}</p>
+                <ul className="divide-y">
+                  {recentActivity.map((issue) => (
+                    <li key={issue.id}>
+                      <Link
+                        to={`/${workspaceSlug}/app-v2/projects/${issue.project_id}/work-items/${issue.id}`}
+                        className="hover:bg-muted/50 flex items-center gap-3 px-4 py-3 transition-colors"
+                      >
+                        <span className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-full">
+                          <FileText className="size-4" aria-hidden="true" />
+                        </span>
+                        <p className="text-muted-foreground min-w-0 flex-1 text-sm">
+                          {activityText(issue)}
+                        </p>
+                      </Link>
                     </li>
                   ))}
                 </ul>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="assigned">
-          {workItemsTable(issuesAssigned, t('profile.noAssigned', 'Nothing assigned yet.'))}
-        </TabsContent>
-
-        <TabsContent value="created">
-          {workItemsTable(issuesCreated, t('profile.noCreated', 'Nothing created yet.'))}
-        </TabsContent>
-
-        <TabsContent value="subscribed">
-          {workItemsTable(issuesSubscribed, t('profile.noWorkItems', 'No work items'))}
-        </TabsContent>
-
-        <TabsContent value="activity" className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold">
-              {t('profile.recentActivity', 'Recent activity')}
-            </h2>
-            <Button
-              type="button"
-              onClick={downloadTodaysActivity}
-              disabled={todaysActivity.length === 0}
-            >
-              <Download aria-hidden="true" />
-              {t('profile.downloadTodaysActivity', "Download today's activity")}
-            </Button>
+            </div>
           </div>
-          <div className="overflow-auto rounded-xl border">
-            {recentActivity.length === 0 ? (
-              <p className="text-muted-foreground px-4 py-12 text-center text-sm">
-                {t('profile.noRecentActivity', 'No recent activity')}
-              </p>
-            ) : (
-              <ul className="divide-y">
-                {recentActivity.map((issue) => (
-                  <li key={issue.id}>
-                    <Link
-                      to={`/${workspaceSlug}/app-v2/projects/${issue.project_id}/work-items/${issue.id}`}
-                      className="hover:bg-muted/50 flex items-center gap-3 px-4 py-3 transition-colors"
-                    >
-                      <span className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-full">
-                        <FileText className="size-4" aria-hidden="true" />
-                      </span>
-                      <p className="text-muted-foreground min-w-0 flex-1 text-sm">
-                        {activityText(issue)}
-                      </p>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
     </div>
   );
 }

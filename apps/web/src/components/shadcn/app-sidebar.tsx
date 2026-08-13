@@ -11,6 +11,7 @@ import {
   Layers,
   LayoutGrid,
   Pencil,
+  Settings,
   UserRound,
 } from 'lucide-react';
 
@@ -94,6 +95,12 @@ function buildData(
         title: 'Archives',
         url: `${base}/app-v2/archives`,
         icon: Archive,
+      },
+      {
+        /* Inside the preview shell, so navigating here keeps this sidebar. */
+        title: 'Settings',
+        url: `${base}/app-v2/settings`,
+        icon: Settings,
       },
     ],
   };

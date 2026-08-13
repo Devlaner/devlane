@@ -11,6 +11,7 @@ import {
   Layers,
   LayoutGrid,
   RefreshCw,
+  Settings,
   SquareKanban,
   type LucideIcon,
 } from 'lucide-react';
@@ -91,6 +92,7 @@ const PROJECT_PAGES: {
     icon: Inbox,
     flag: 'intake_view',
   },
+  { segment: 'settings', labelKey: 'settings.documentTitle', fallback: 'Settings', icon: Settings },
 ];
 
 /** A project's first letter, standing in for the icon the shipped app renders. */
@@ -102,9 +104,8 @@ function projectInitial(project: ProjectApiResponse): string {
  * The v2 shell's project group: the workspace's real projects, each expanding
  * to its own pages, mirroring the shipped sidebar's project tree.
  *
- * Links point at the v2 routes under `/app-v2/projects/:projectId/…` so
- * navigating keeps this preview shell; the project settings item is the one
- * exception, since there is no v2 settings page to land on.
+ * Links point at the v2 routes under `/app-v2/projects/:projectId/…`, so
+ * navigating keeps this preview shell.
  */
 export function NavProjects() {
   const { t } = useTranslation();

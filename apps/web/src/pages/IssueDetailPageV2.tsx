@@ -43,7 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/ui/tabs';
+import { ToggleGroup, ToggleGroupItem } from '@/components/shadcn/ui/toggle-group';
 import { DetailPageSkeleton } from '@/components/shadcn/detail-page-skeleton';
 import { PageHeading } from '@/components/shadcn/page-heading';
 import { WorkItemSubscribeButton } from '@/components/shadcn/work-item-subscribe-button';
@@ -111,6 +111,13 @@ const EMPTY_RELATIONS: IssueRelationApiResponse = {
 /** Placeholder value for the "no selection" option in a Select. */
 const NONE = '__none__';
 
+const DETAIL_SECTIONS = ['comments', 'sub-items', 'activity'] as const;
+type DetailSection = (typeof DETAIL_SECTIONS)[number];
+
+function isDetailSection(value: string): value is DetailSection {
+  return (DETAIL_SECTIONS as readonly string[]).includes(value);
+}
+
 /**
  * Design preview of a work item, built from shadcn primitives. It stands
  * alongside IssueDetailPage rather than replacing it, so the two can be
@@ -165,6 +172,7 @@ export function IssueDetailPageV2() {
   const [error, setError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [postingComment, setPostingComment] = useState(false);
+  const [detailSection, setDetailSection] = useState<DetailSection>('comments');
 
   useEffect(() => {
     if (!workspaceSlug || !projectId || !issueId) return;
@@ -540,230 +548,246 @@ export function IssueDetailPageV2() {
               made the discussion the least reachable part of the page. The
               three become tabs, each carrying its own count, mirroring the
               scope tabs on the archive and cycle lists. */}
-          <Tabs defaultValue="comments" className="gap-4">
-            <TabsList
-              className="bg-muted/60 group-data-[orientation=horizontal]/tabs:h-auto w-fit max-w-full justify-start overflow-x-auto rounded-lg p-1 sm:p-0.5"
+          <div className="flex flex-col gap-4">
+            <ToggleGroup
+              type="single"
+              value={detailSection}
+              onValueChange={(value) => {
+                if (isDetailSection(value)) setDetailSection(value);
+              }}
+              variant="default"
+              size="sm"
+              spacing={1}
+              className="bg-muted/60 w-fit max-w-full shrink-0 touch-pan-x overflow-x-auto rounded-lg p-1 sm:p-0.5"
               aria-label={t('workItem.detail.sections', 'Work item sections')}
             >
-              <TabsTrigger
+              <ToggleGroupItem
                 value="comments"
-                className="h-11 flex-none gap-1.5 px-3 data-[state=active]:shadow-xs sm:h-8 sm:px-2.5"
+                className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
               >
                 <MessageSquare aria-hidden="true" />
                 {t('workItem.detail.comments', 'Comments')}
                 {tabCount(comments.length)}
-              </TabsTrigger>
-              <TabsTrigger
+              </ToggleGroupItem>
+              <ToggleGroupItem
                 value="sub-items"
-                className="h-11 flex-none gap-1.5 px-3 data-[state=active]:shadow-xs sm:h-8 sm:px-2.5"
+                className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
               >
                 <ListTree aria-hidden="true" />
                 {t('workItem.detail.subWorkItems', 'Sub-work items')}
                 {tabCount(children.length)}
-              </TabsTrigger>
-              <TabsTrigger
+              </ToggleGroupItem>
+              <ToggleGroupItem
                 value="activity"
-                className="h-11 flex-none gap-1.5 px-3 data-[state=active]:shadow-xs sm:h-8 sm:px-2.5"
+                className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
               >
                 <ActivityIcon aria-hidden="true" />
                 {t('workItem.detail.activity', 'Activity')}
                 {tabCount(activities.length)}
-              </TabsTrigger>
-            </TabsList>
+              </ToggleGroupItem>
+            </ToggleGroup>
 
-            <TabsContent value="comments" className="space-y-4">
-              {comments.length === 0 ? (
-                <Empty className="rounded-xl border border-dashed">
-                  <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <MessageSquare aria-hidden="true" />
-                    </EmptyMedia>
-                    <EmptyTitle>{t('workItem.detail.noComments', 'No comments yet.')}</EmptyTitle>
-                    <EmptyDescription>
-                      {t(
-                        'workItem.detail.noCommentsDescription',
-                        'Start the discussion — comments are visible to everyone who can open this work item.',
-                      )}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              ) : (
-                <ul className="space-y-4">
-                  {comments.map((comment) => {
-                    const isBot = !comment.created_by_id;
-                    const authorName = isBot ? 'GitHub' : memberLabel(comment.created_by_id);
-                    const avatar = comment.created_by_id
-                      ? memberById.get(comment.created_by_id)?.member_avatar
-                      : null;
-                    return (
-                      <li key={comment.id} className="flex items-start gap-3">
-                        <Avatar className="mt-0.5 size-7 shrink-0">
-                          {avatar && <AvatarImage src={getImageUrl(avatar) ?? undefined} alt="" />}
-                          <AvatarFallback className="text-[10px]">
-                            {authorName.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="bg-muted/40 min-w-0 flex-1 rounded-lg border p-3">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-xs font-medium">{authorName}</span>
-                            {isBot && (
-                              <Badge variant="secondary">{t('workItem.detail.bot', 'Bot')}</Badge>
-                            )}
-                            {comment.access === 'EXTERNAL' && (
-                              <Badge variant="outline">
-                                {t('workItem.detail.external', 'External')}
-                              </Badge>
-                            )}
-                            <span className="text-muted-foreground text-xs">
-                              {formatTimeAgo(comment.created_at)}
-                            </span>
-                          </div>
-                          <div
-                            className="prose prose-sm dark:prose-invert mt-2 max-w-none text-sm"
-                            /* Server-authored HTML, sanitized before render — the
-                               same treatment the shipped page gives it. */
-                            dangerouslySetInnerHTML={{
-                              __html: sanitizeHtml(comment.comment ?? ''),
-                            }}
-                          />
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-
-              <CommentEditor
-                onSubmit={postComment}
-                isSubmitting={postingComment}
-                showShortcutHint
-                showAccessToggle
-                mentionMembers={mentionMembers}
-              />
-            </TabsContent>
-
-            <TabsContent value="sub-items" className="space-y-4">
-              {children.length === 0 ? (
-                <Empty className="rounded-xl border border-dashed">
-                  <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <Layers aria-hidden="true" />
-                    </EmptyMedia>
-                    <EmptyTitle>
-                      {t('workItem.detail.noSubWorkItems', 'No sub-work items yet')}
-                    </EmptyTitle>
-                    <EmptyDescription>
-                      {t(
-                        'workItem.detail.noSubWorkItemsDescription',
-                        'Break this work item down by setting it as the parent of another work item.',
-                      )}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              ) : (
-                <>
-                  <div className="flex items-center gap-3">
-                    <Progress
-                      value={Math.round((completedChildren / children.length) * 100)}
-                      className="h-2 max-w-56 flex-1"
-                      aria-label={t('workItem.detail.subWorkItemsProgress', 'Sub-work progress')}
-                    />
-                    <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                      {completedChildren}/{children.length}
-                    </span>
-                  </div>
-
-                  {/* Shaped like a row on the work item list, so a sub-item
-                      reads the same here as it does there. */}
-                  <section
-                    className="overflow-hidden rounded-xl border"
-                    aria-label={t('workItem.detail.subWorkItems', 'Sub-work items')}
-                  >
-                    <Table>
-                      <TableCaption className="sr-only">
+            {detailSection === 'comments' && (
+              <div className="space-y-4">
+                {comments.length === 0 ? (
+                  <Empty className="rounded-xl border border-dashed">
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <MessageSquare aria-hidden="true" />
+                      </EmptyMedia>
+                      <EmptyTitle>{t('workItem.detail.noComments', 'No comments yet.')}</EmptyTitle>
+                      <EmptyDescription>
                         {t(
-                          'workItem.detail.subItemsTableCaption',
-                          'Sub-work items of this work item, with state, priority, and due date.',
+                          'workItem.detail.noCommentsDescription',
+                          'Start the discussion — comments are visible to everyone who can open this work item.',
                         )}
-                      </TableCaption>
-                      <TableHeader className="bg-muted/50">
-                        <TableRow className="hover:bg-transparent">
-                          <TableHead className="min-w-56 px-3">
-                            {t('views.workItems', 'Work items')}
-                          </TableHead>
-                          <TableHead className="w-36 px-3">{t('views.state', 'State')}</TableHead>
-                          <TableHead className="hidden w-28 px-3 sm:table-cell">
-                            {t('views.priority', 'Priority')}
-                          </TableHead>
-                          <TableHead className="hidden w-32 px-3 md:table-cell">
-                            {t('issues.targetDate', 'Due')}
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {children.map((child) => {
-                          const childState = child.state_id
-                            ? stateById.get(child.state_id)
-                            : undefined;
-                          const childPriority = (child.priority ?? 'none') as Priority;
-                          return (
-                            <TableRow key={child.id}>
-                              <TableCell className="min-w-56 px-3 py-2">
-                                <Link
-                                  to={childUrl(child.id)}
-                                  className="focus-visible:ring-ring flex min-w-0 items-center gap-2 rounded-sm outline-none focus-visible:ring-2"
-                                >
-                                  <span className="text-muted-foreground shrink-0 font-mono text-xs">
-                                    {workItemDisplayId(child, project ?? undefined)}
-                                  </span>
-                                  <span className="truncate font-medium">{child.name}</span>
-                                </Link>
-                              </TableCell>
-                              <TableCell className="px-3">
-                                <span className="flex items-center gap-2 text-sm">
-                                  <span
-                                    aria-hidden="true"
-                                    className="size-2 shrink-0 rounded-full"
-                                    style={stateDotStyle(childState)}
-                                  />
-                                  <span className="truncate">
-                                    {childState?.name ?? t('common.noState', 'No state')}
-                                  </span>
-                                </span>
-                              </TableCell>
-                              <TableCell className="hidden px-3 sm:table-cell">
-                                {childPriority !== 'none' && (
-                                  <Badge variant={priorityVariant(childPriority)}>
-                                    {PRIORITY_LABELS[childPriority] ?? childPriority}
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground hidden px-3 text-sm md:table-cell">
-                                {child.target_date ? formatDate(child.target_date) : '—'}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </section>
-                </>
-              )}
-            </TabsContent>
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                ) : (
+                  <ul className="space-y-4">
+                    {comments.map((comment) => {
+                      const isBot = !comment.created_by_id;
+                      const authorName = isBot ? 'GitHub' : memberLabel(comment.created_by_id);
+                      const avatar = comment.created_by_id
+                        ? memberById.get(comment.created_by_id)?.member_avatar
+                        : null;
+                      return (
+                        <li key={comment.id} className="flex items-start gap-3">
+                          <Avatar className="mt-0.5 size-7 shrink-0">
+                            {avatar && (
+                              <AvatarImage src={getImageUrl(avatar) ?? undefined} alt="" />
+                            )}
+                            <AvatarFallback className="text-[10px]">
+                              {authorName.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="bg-muted/40 min-w-0 flex-1 rounded-lg border p-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-medium">{authorName}</span>
+                              {isBot && (
+                                <Badge variant="secondary">{t('workItem.detail.bot', 'Bot')}</Badge>
+                              )}
+                              {comment.access === 'EXTERNAL' && (
+                                <Badge variant="outline">
+                                  {t('workItem.detail.external', 'External')}
+                                </Badge>
+                              )}
+                              <span className="text-muted-foreground text-xs">
+                                {formatTimeAgo(comment.created_at)}
+                              </span>
+                            </div>
+                            <div
+                              className="prose prose-sm dark:prose-invert mt-2 max-w-none text-sm"
+                              /* Server-authored HTML, sanitized before render — the
+                               same treatment the shipped page gives it. */
+                              dangerouslySetInnerHTML={{
+                                __html: sanitizeHtml(comment.comment ?? ''),
+                              }}
+                            />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
 
-            <TabsContent value="activity">
-              <Card>
-                <CardContent>
-                  <IssueActivityFeed
-                    activities={activities}
-                    members={members}
-                    states={states}
-                    labels={labels}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                <CommentEditor
+                  onSubmit={postComment}
+                  isSubmitting={postingComment}
+                  showShortcutHint
+                  showAccessToggle
+                  mentionMembers={mentionMembers}
+                />
+              </div>
+            )}
+
+            {detailSection === 'sub-items' && (
+              <div className="space-y-4">
+                {children.length === 0 ? (
+                  <Empty className="rounded-xl border border-dashed">
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <Layers aria-hidden="true" />
+                      </EmptyMedia>
+                      <EmptyTitle>
+                        {t('workItem.detail.noSubWorkItems', 'No sub-work items yet')}
+                      </EmptyTitle>
+                      <EmptyDescription>
+                        {t(
+                          'workItem.detail.noSubWorkItemsDescription',
+                          'Break this work item down by setting it as the parent of another work item.',
+                        )}
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <Progress
+                        value={Math.round((completedChildren / children.length) * 100)}
+                        className="h-2 max-w-56 flex-1"
+                        aria-label={t('workItem.detail.subWorkItemsProgress', 'Sub-work progress')}
+                      />
+                      <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                        {completedChildren}/{children.length}
+                      </span>
+                    </div>
+
+                    {/* Shaped like a row on the work item list, so a sub-item
+                      reads the same here as it does there. */}
+                    <section
+                      className="overflow-hidden rounded-xl border"
+                      aria-label={t('workItem.detail.subWorkItems', 'Sub-work items')}
+                    >
+                      <Table>
+                        <TableCaption className="sr-only">
+                          {t(
+                            'workItem.detail.subItemsTableCaption',
+                            'Sub-work items of this work item, with state, priority, and due date.',
+                          )}
+                        </TableCaption>
+                        <TableHeader className="bg-muted/50">
+                          <TableRow className="hover:bg-transparent">
+                            <TableHead className="min-w-56 px-3">
+                              {t('views.workItems', 'Work items')}
+                            </TableHead>
+                            <TableHead className="w-36 px-3">{t('views.state', 'State')}</TableHead>
+                            <TableHead className="hidden w-28 px-3 sm:table-cell">
+                              {t('views.priority', 'Priority')}
+                            </TableHead>
+                            <TableHead className="hidden w-32 px-3 md:table-cell">
+                              {t('issues.targetDate', 'Due')}
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {children.map((child) => {
+                            const childState = child.state_id
+                              ? stateById.get(child.state_id)
+                              : undefined;
+                            const childPriority = (child.priority ?? 'none') as Priority;
+                            return (
+                              <TableRow key={child.id}>
+                                <TableCell className="min-w-56 px-3 py-2">
+                                  <Link
+                                    to={childUrl(child.id)}
+                                    className="focus-visible:ring-ring flex min-w-0 items-center gap-2 rounded-sm outline-none focus-visible:ring-2"
+                                  >
+                                    <span className="text-muted-foreground shrink-0 font-mono text-xs">
+                                      {workItemDisplayId(child, project ?? undefined)}
+                                    </span>
+                                    <span className="truncate font-medium">{child.name}</span>
+                                  </Link>
+                                </TableCell>
+                                <TableCell className="px-3">
+                                  <span className="flex items-center gap-2 text-sm">
+                                    <span
+                                      aria-hidden="true"
+                                      className="size-2 shrink-0 rounded-full"
+                                      style={stateDotStyle(childState)}
+                                    />
+                                    <span className="truncate">
+                                      {childState?.name ?? t('common.noState', 'No state')}
+                                    </span>
+                                  </span>
+                                </TableCell>
+                                <TableCell className="hidden px-3 sm:table-cell">
+                                  {childPriority !== 'none' && (
+                                    <Badge variant={priorityVariant(childPriority)}>
+                                      {PRIORITY_LABELS[childPriority] ?? childPriority}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground hidden px-3 text-sm md:table-cell">
+                                  {child.target_date ? formatDate(child.target_date) : '—'}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </section>
+                  </>
+                )}
+              </div>
+            )}
+
+            {detailSection === 'activity' && (
+              <div>
+                <Card>
+                  <CardContent>
+                    <IssueActivityFeed
+                      activities={activities}
+                      members={members}
+                      states={states}
+                      labels={labels}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="min-w-0 space-y-4">

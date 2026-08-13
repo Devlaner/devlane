@@ -42,7 +42,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/ui/tabs';
+import { ToggleGroup, ToggleGroupItem } from '@/components/shadcn/ui/toggle-group';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { pageService } from '../services/pageService';
 import { projectService } from '../services/projectService';
@@ -359,7 +359,7 @@ export function ProjectPagesPageV2() {
   );
 
   return (
-    <Tabs value={scope} onValueChange={setScope} className="gap-6 pb-8">
+    <div className="flex flex-col gap-6 pb-8">
       <PageHeading
         title={t('common.pages', 'Pages')}
         description={t(
@@ -379,29 +379,37 @@ export function ProjectPagesPageV2() {
         searchPlaceholder={t('pages.searchPlaceholder', 'Search pages')}
         regionLabel={t('pages.toolbar', 'Page controls')}
         scopeControl={
-          <TabsList
-            className="group-data-[orientation=horizontal]/tabs:h-auto bg-muted/60 w-fit max-w-full shrink-0 touch-pan-x justify-start overflow-x-auto rounded-lg p-1 sm:p-0.5"
+          /* The segmented control the v2 projects and archives lists use for
+             their scopes, so every scope switch reads the same. */
+          <ToggleGroup
+            type="single"
+            value={scope}
+            onValueChange={setScope}
+            variant="default"
+            size="sm"
+            spacing={1}
+            className="bg-muted/60 w-fit max-w-full shrink-0 touch-pan-x overflow-x-auto rounded-lg p-1 sm:p-0.5"
             aria-label={t('pages.scope', 'Page type')}
           >
-            <TabsTrigger
+            <ToggleGroupItem
               value="live"
-              className="h-11 flex-none gap-1.5 px-3 data-[state=active]:shadow-xs sm:h-8 sm:px-2.5"
+              className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
             >
               {t('common.pages', 'Pages')}
               <span className="text-muted-foreground min-w-3 text-center text-xs font-normal tabular-nums">
                 {pages.length}
               </span>
-            </TabsTrigger>
-            <TabsTrigger
+            </ToggleGroupItem>
+            <ToggleGroupItem
               value="archived"
-              className="h-11 flex-none gap-1.5 px-3 data-[state=active]:shadow-xs sm:h-8 sm:px-2.5"
+              className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
             >
               {t('archives.documentTitle', 'Archives')}
               <span className="text-muted-foreground min-w-3 text-center text-xs font-normal tabular-nums">
                 {archived.length}
               </span>
-            </TabsTrigger>
-          </TabsList>
+            </ToggleGroupItem>
+          </ToggleGroup>
         }
       />
 
@@ -411,13 +419,15 @@ export function ProjectPagesPageV2() {
         </p>
       )}
 
-      <TabsContent value="live">
-        {visible.length === 0 ? emptyState(false) : renderTable(visible, false)}
-      </TabsContent>
+      {scope === 'live' && (
+        <div>{visible.length === 0 ? emptyState(false) : renderTable(visible, false)}</div>
+      )}
 
-      <TabsContent value="archived">
-        {visibleArchived.length === 0 ? emptyState(true) : renderTable(visibleArchived, true)}
-      </TabsContent>
+      {scope === 'archived' && (
+        <div>
+          {visibleArchived.length === 0 ? emptyState(true) : renderTable(visibleArchived, true)}
+        </div>
+      )}
 
       {query && (
         <p className="sr-only" aria-live="polite">
@@ -426,6 +436,6 @@ export function ProjectPagesPageV2() {
           })}
         </p>
       )}
-    </Tabs>
+    </div>
   );
 }

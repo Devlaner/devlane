@@ -147,6 +147,11 @@ const WorkspaceHomePageV2 = lazy(() =>
     page({ WorkspaceHomePageV2: m.WorkspaceHomePageV2 }),
   ),
 );
+/* Not routed through `page()`: this one takes a `scope` prop, which that
+   helper's prop-less ComponentType would erase. */
+const SettingsPageV2 = lazy(() =>
+  import('../pages/SettingsPageV2').then((m) => ({ default: m.SettingsPageV2 })),
+);
 const AnalyticsWorkItemsPageV2 = lazy(() =>
   import('../pages/AnalyticsWorkItemsPageV2').then((m) =>
     page({ AnalyticsWorkItemsPageV2: m.AnalyticsWorkItemsPageV2 }),
@@ -735,6 +740,14 @@ const router = createBrowserRouter([
                 ),
               },
               {
+                path: 'settings',
+                element: (
+                  <Suspense fallback={<PageFallback />}>
+                    <SettingsPageV2 scope="project" />
+                  </Suspense>
+                ),
+              },
+              {
                 /* The shipped BoardPage is a redirect and nothing else; nested
                    here its slug/id guard is structurally satisfied, so the whole
                    page collapses into this route entry. */
@@ -783,6 +796,41 @@ const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageFallback />}>
                 <ProfilePageV2 />
+              </Suspense>
+            ),
+          },
+          /* Settings keeps the shipped tree's shape — workspace at the root,
+             account and per-project settings below it — so a `?section=` link
+             works the same in both interfaces. */
+          {
+            path: 'settings',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <SettingsPageV2 scope="workspace" />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'settings/account',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <SettingsPageV2 scope="account" />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'settings/projects',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <SettingsPageV2 scope="projects" />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'settings/projects/:projectId',
+            element: (
+              <Suspense fallback={<PageFallback />}>
+                <SettingsPageV2 scope="projects" />
               </Suspense>
             ),
           },

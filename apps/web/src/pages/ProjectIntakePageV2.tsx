@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/ui/tabs';
+import { ToggleGroup, ToggleGroupItem } from '@/components/shadcn/ui/toggle-group';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { intakeService } from '../services/intakeService';
 import { projectService } from '../services/projectService';
@@ -221,7 +221,7 @@ export function ProjectIntakePageV2() {
   );
 
   return (
-    <Tabs value={tab} onValueChange={setTab} className="gap-6 pb-8">
+    <div className="flex flex-col gap-6 pb-8">
       <PageHeading
         title={t('common.intake', 'Intake')}
         description={t('intake.pageDescription', 'Triage requests coming into {{project}}.', {
@@ -237,15 +237,23 @@ export function ProjectIntakePageV2() {
         searchPlaceholder={t('intake.searchPlaceholder', 'Search requests')}
         regionLabel={t('intake.toolbar', 'Intake controls')}
         scopeControl={
-          <TabsList
-            className="group-data-[orientation=horizontal]/tabs:h-auto bg-muted/60 w-fit max-w-full shrink-0 touch-pan-x justify-start overflow-x-auto rounded-lg p-1 sm:p-0.5"
+          /* The segmented control the v2 projects and archives lists use for
+             their scopes, so every scope switch reads the same. */
+          <ToggleGroup
+            type="single"
+            value={tab}
+            onValueChange={setTab}
+            variant="default"
+            size="sm"
+            spacing={1}
+            className="bg-muted/60 w-fit max-w-full shrink-0 touch-pan-x overflow-x-auto rounded-lg p-1 sm:p-0.5"
             aria-label={t('intake.scope', 'Triage status')}
           >
             {TABS.map((name) => (
-              <TabsTrigger
+              <ToggleGroupItem
                 key={name}
                 value={name}
-                className="h-11 flex-none gap-1.5 px-3 data-[state=active]:shadow-xs sm:h-8 sm:px-2.5"
+                className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
               >
                 {t(`intake.${name}`, TAB_LABELS[name])}
                 {name === 'pending' && pendingCount > 0 && (
@@ -253,9 +261,9 @@ export function ProjectIntakePageV2() {
                     {pendingCount}
                   </span>
                 )}
-              </TabsTrigger>
+              </ToggleGroupItem>
             ))}
-          </TabsList>
+          </ToggleGroup>
         }
       />
 
@@ -265,7 +273,7 @@ export function ProjectIntakePageV2() {
         </p>
       )}
 
-      <TabsContent value={tab}>
+      <div>
         {visible.length === 0 ? (
           emptyState
         ) : (
@@ -368,13 +376,13 @@ export function ProjectIntakePageV2() {
             </ScrollArea>
           </section>
         )}
-      </TabsContent>
+      </div>
 
       {query && (
         <p className="sr-only" aria-live="polite">
           {t('intake.visibleCount', '{{count}} requests visible', { count: visible.length })}
         </p>
       )}
-    </Tabs>
+    </div>
   );
 }
