@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import {
@@ -39,6 +40,7 @@ import {
 function buildData(
   base: string,
   user: { name: string; email: string; avatar: string; id: string } | null,
+  t: TFunction,
 ) {
   return {
     user: {
@@ -49,18 +51,18 @@ function buildData(
     primaryNav: [
       {
         /* Inside the preview shell, so navigating here keeps this sidebar. */
-        title: 'Home',
+        title: t('nav.home', 'Home'),
         url: base ? `${base}/app-v2` : '/',
         icon: House,
       },
       {
         /* Inside the preview shell, so navigating here keeps this sidebar. */
-        title: 'Inbox',
+        title: t('nav.inbox', 'Inbox'),
         url: `${base}/app-v2/notifications`,
         icon: Inbox,
       },
       {
-        title: 'Your work',
+        title: t('nav.yourWork', 'Your work'),
         url: user ? `${base}/app-v2/profile/${user.id}` : `${base}/app-v2`,
         icon: UserRound,
       },
@@ -68,37 +70,37 @@ function buildData(
     workspaceNav: [
       {
         /* Inside the preview shell, so navigating here keeps this sidebar. */
-        title: 'Projects',
+        title: t('nav.projects', 'Projects'),
         url: `${base}/app-v2/projects`,
         icon: LayoutGrid,
       },
       {
         /* Inside the preview shell, so navigating here keeps this sidebar. */
-        title: 'Views',
+        title: t('nav.views', 'Views'),
         url: `${base}/app-v2/views/all-issues`,
         icon: Layers,
       },
       {
         /* Inside the preview shell, so navigating here keeps this sidebar. */
-        title: 'Analytics',
+        title: t('nav.analytics', 'Analytics'),
         url: `${base}/app-v2/analytics/overview`,
         icon: BarChart3,
       },
       {
         /* Inside the preview shell, so navigating here keeps this sidebar. */
-        title: 'Drafts',
+        title: t('nav.drafts', 'Drafts'),
         url: `${base}/app-v2/drafts`,
         icon: Pencil,
       },
       {
         /* Inside the preview shell, so navigating here keeps this sidebar. */
-        title: 'Archives',
+        title: t('nav.archives', 'Archives'),
         url: `${base}/app-v2/archives`,
         icon: Archive,
       },
       {
         /* Inside the preview shell, so navigating here keeps this sidebar. */
-        title: 'Settings',
+        title: t('nav.settings', 'Settings'),
         url: `${base}/app-v2/settings`,
         icon: Settings,
       },
@@ -115,6 +117,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const data = buildData(
     base,
     user ? { id: user.id, name: user.name, email: user.email, avatar: user.avatarUrl ?? '' } : null,
+    t,
   );
 
   return (

@@ -12,16 +12,18 @@
  * block matches its demo pixel for pixel.
  *
  * This is a preview aid, not a second design system. Do not use it for shipped
- * Devlane UI; that keeps the bridge and the Devlane palette.
+ * Devlane UI; that keeps the bridge and the Devlane palette. Note the literals
+ * below cover light and dark only — a subtree carrying this class ignores the
+ * pink theme entirely, which is another reason not to ship it.
  *
  * Distinct from shadcn-reference-theme.css, which is a pure greyscale used to
  * compare form layouts without hue. Imported after shadcn-bridge.css.
  *
  * Radix renders dropdowns and tooltips through a portal onto document.body,
  * outside the subtree carrying this class, so they would fall back to the
- * bridge's Devlane tokens. The page opts those in by marking the portalled
- * content itself — see AppShellV2Page — rather than this file widening its
- * reach to every popper on the site.
+ * bridge's Devlane tokens. A page previewing a block with poppers has to mark
+ * the portalled content itself rather than this file widening its reach to
+ * every popper on the site.
  */
 
 .shadcn-v4 {

@@ -33,10 +33,12 @@ const V2_WORKSPACE_VIEW_DISPLAY: WorkspaceViewDisplay = {
  * pages rendered inside it. It stands alongside the app's own AppShell rather
  * than replacing it, so the two can be compared side by side.
  *
- * `shadcn-v4` swaps the bridge's Devlane palette for the stock new-york-v4
- * tokens the block is designed against. Without it the hues, the separation
- * between sidebar and content, and the corner radius all differ from the
- * upstream demo.
+ * `shadcn-app` opts the tree into the shadcn border-colour default while
+ * leaving the token bridge in place, so the shell renders in the Devlane
+ * palette and follows the theme the user picks in account preferences — light,
+ * dark and pink alike. The `.shadcn-v4` palette this used to carry is a
+ * design-comparison aid: it hard-codes the upstream demo's values, which pins
+ * the tree to stock greyscale and has no pink variant at all.
  *
  * The providers are split out from the layout because the layout reads what
  * they hold: a component cannot consume a context it renders itself.
@@ -114,18 +116,17 @@ function AppShellV2Layout() {
   useDocumentTitle(pageTitle);
 
   /* The sidebar's dropdowns are portalled onto document.body, outside the
-     element carrying the palette class, so they would render with the app's
-     own tokens — a visibly brighter border than the demo's. Marking the body
-     for as long as this preview is mounted brings the portalled content into
-     the same palette, and removing it on unmount keeps the rest of the app on
-     the Devlane one. */
+     element carrying the class, so their bare `border` utilities would fall
+     back to currentColor. Marking the body for as long as this tree is mounted
+     gives the portalled content the same border default, and removing it on
+     unmount keeps it off the pages that set their borders explicitly. */
   useEffect(() => {
-    document.body.classList.add('shadcn-v4');
-    return () => document.body.classList.remove('shadcn-v4');
+    document.body.classList.add('shadcn-app');
+    return () => document.body.classList.remove('shadcn-app');
   }, []);
 
   return (
-    <SidebarProvider className="shadcn-v4">
+    <SidebarProvider className="shadcn-app">
       <AppSidebar />
       <SidebarInset className="min-w-0">
         <header className="flex h-16 shrink-0 items-center gap-2">

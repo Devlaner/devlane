@@ -4,7 +4,7 @@ import type { TFunction } from 'i18next';
  * Some strings are looked up with a computed (template-literal) key, e.g.
  * `t(`module.status.${id}`, label)`. i18next-parser can't see those keys
  * statically, so they're registered here with their English defaults to keep the
- * `en` and `az` catalogs complete. This function is never called — it exists so
+ * `en`, `az`, and `tr` catalogs complete. This function is never called — it exists so
  * the parser (and translators) have every key. Keep it in sync with the enum
  * sources it mirrors.
  */

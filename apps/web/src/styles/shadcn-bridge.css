@@ -127,3 +127,31 @@
     --destructive-foreground: var(--neutral-white);
   }
 }
+
+/**
+ * Border-colour default for shadcn-built subtrees.
+ *
+ * Tailwind's bare `border` utility sets a width, not a colour, so it falls back
+ * to currentColor — light text then gives light borders. shadcn's own setup
+ * fixes this with a global `* { @apply border-border }`; scoping it to a class
+ * keeps that default off the pages that predate the bridge and set their border
+ * colours explicitly.
+ *
+ * Unlike `.shadcn-v4` and `.shadcn-reference`, this class redefines no tokens:
+ * the subtree keeps the Devlane palette above, so every theme — light, dark and
+ * pink — applies to it with no per-theme values here.
+ */
+.shadcn-app {
+  /* Devlane paints the sidebar and the canvas the same colour on purpose, so
+     the `inset` sidebar variant — which paints the wrapper --sidebar and the
+     content card --background — would render the card seamlessly into its own
+     rail. Stepping the rail down one layer restores that separation. It is an
+     alias, not a literal, so it still resolves per theme. */
+  --sidebar: var(--bg-layer-1);
+}
+
+:where(.shadcn-app, .shadcn-app *),
+:where(.shadcn-app *)::before,
+:where(.shadcn-app *)::after {
+  border-color: var(--border);
+}
