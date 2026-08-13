@@ -150,8 +150,13 @@
   --sidebar: var(--bg-layer-1);
 }
 
-:where(.shadcn-app, .shadcn-app *),
-:where(.shadcn-app *)::before,
-:where(.shadcn-app *)::after {
-  border-color: var(--border);
+/* Written into the base layer on purpose: outside a layer it would outrank
+   every `border-*` colour utility, and a tab underline asking for
+   `border-primary` or `border-transparent` would silently render --border. */
+@layer base {
+  :where(.shadcn-app, .shadcn-app *),
+  :where(.shadcn-app *)::before,
+  :where(.shadcn-app *)::after {
+    border-color: var(--border);
+  }
 }

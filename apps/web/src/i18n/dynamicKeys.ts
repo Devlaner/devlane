@@ -89,6 +89,45 @@ export function registerDynamicKeys(t: TFunction) {
   t('settings.section.exports', 'Exports');
   t('settings.section.webhooks', 'Webhooks');
 
+  // notification preference rows (NotificationPreferencesPanel ROWS)
+  t('settings.notifications.row.property.label', 'Property changes');
+  t(
+    'settings.notifications.row.property.desc',
+    "Notify me when work items' properties like assignees, priority, or estimates change.",
+  );
+  t('settings.notifications.row.state.label', 'State change');
+  t(
+    'settings.notifications.row.state.desc',
+    'Notify me when a work item moves to a different state.',
+  );
+  t('settings.notifications.row.completed.label', 'Work item completed');
+  t('settings.notifications.row.completed.desc', 'Notify me when a work item is completed.');
+  t('settings.notifications.row.comments.label', 'Comments');
+  t('settings.notifications.row.comments.desc', 'Notify me when someone comments on a work item.');
+  t('settings.notifications.row.mentions.label', 'Mentions');
+  t(
+    'settings.notifications.row.mentions.desc',
+    'Notify me when someone mentions me in a comment or description.',
+  );
+
+  // activity-feed field labels (src/lib/activityDescription.ts FIELD_LABELS)
+  t('activity.field.name', 'name');
+  t('activity.field.description', 'description');
+  t('activity.field.priority', 'priority');
+  t('activity.field.state', 'state');
+  t('activity.field.start_date', 'start date');
+  t('activity.field.target_date', 'due date');
+  t('activity.field.estimate_point', 'estimate');
+  t('activity.field.parent', 'parent');
+  t('activity.field.project_id', 'project');
+  t('activity.field.is_epic', 'epic');
+  t('activity.field.assignees', 'assignee');
+  t('activity.field.labels', 'label');
+  t('activity.field.relation', 'relation');
+  t('activity.field.link', 'link');
+  t('activity.field.attachment', 'attachment');
+  t('activity.field.comment', 'comment');
+
   // webhook event labels + hints (WebhooksSettings EVENTS)
   t('settings.webhooks.event.issue.label', 'Issues');
   t('settings.webhooks.event.issue.hint', 'Created, updated, or deleted issues');

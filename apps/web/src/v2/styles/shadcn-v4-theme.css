@@ -74,11 +74,15 @@
 /* Tailwind's bare `border` utility sets a width, not a colour, so it falls
    back to currentColor — white text gives white borders. shadcn's own setup
    fixes this with a global `* { @apply border-border }`; scoping it to the
-   class keeps that default off the rest of the app. */
-:where(.shadcn-v4, .shadcn-v4 *),
-:where(.shadcn-v4 *)::before,
-:where(.shadcn-v4 *)::after {
-  border-color: var(--border);
+   class keeps that default off the rest of the app.
+   It has to sit in the base layer: unlayered it would outrank every
+   `border-*` colour utility inside the subtree. */
+@layer base {
+  :where(.shadcn-v4, .shadcn-v4 *),
+  :where(.shadcn-v4 *)::before,
+  :where(.shadcn-v4 *)::after {
+    border-color: var(--border);
+  }
 }
 
 [data-theme='dark'] .shadcn-v4,

@@ -7,6 +7,7 @@ import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from '@/v2/components/ui/e
 import { Separator } from '@/v2/components/ui/separator';
 import { Skeleton } from '@/v2/components/ui/skeleton';
 import { SettingsPanel } from '@/v2/components/settings/settings-panel';
+import { describeActivity } from '../../../../lib/activityDescription';
 import { formatRelativeTime } from '../../../../lib/settingsHelpers';
 import { userService } from '../../../../services/userService';
 import type { UserActivityItem } from '../../../../api/types';
@@ -90,7 +91,7 @@ export function AccountActivityPanel({ workspaceSlug }: AccountActivityPanelProp
                           })}
                     </p>
                     {item.description && (
-                      <p className="mt-1 text-sm font-medium">{item.description}</p>
+                      <p className="mt-1 text-sm font-medium">{describeActivity(item)}</p>
                     )}
                     {item.issue_id && item.issue_name && workspaceSlug && item.project_id && (
                       <Link
