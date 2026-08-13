@@ -4,9 +4,13 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  /** Where to send an unauthenticated visitor. Defaults to the v1 login page;
+   * v2 routes pass '/login-v2' so an expired session doesn't drop the user
+   * back into v1 chrome mid-flow. */
+  signInPath?: string;
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, signInPath = '/login' }: ProtectedRouteProps) {
   const { t } = useTranslation();
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
@@ -20,7 +24,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to={signInPath} state={{ from: location }} replace />;
   }
 
   return <>{children}</>;

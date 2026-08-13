@@ -64,7 +64,7 @@ export function LoginForm({
             <FieldLabel htmlFor="password">{t('auth.login.passwordLabel', 'Password')}</FieldLabel>
             {canResetPassword && (
               <Link
-                to="/forgot-password"
+                to="/forgot-password-v2"
                 className="ml-auto text-sm underline-offset-4 hover:underline"
               >
                 {t('auth.login.forgotPassword', 'Forgot your password?')}

@@ -30,9 +30,19 @@ const ForgotPasswordPage = lazy(() =>
     page({ ForgotPasswordPage: m.ForgotPasswordPage }),
   ),
 );
+const ForgotPasswordPageV2 = lazy(() =>
+  import('../pages/ForgotPasswordPageV2').then((m) =>
+    page({ ForgotPasswordPageV2: m.ForgotPasswordPageV2 }),
+  ),
+);
 const ResetPasswordPage = lazy(() =>
   import('../pages/ResetPasswordPage').then((m) =>
     page({ ResetPasswordPage: m.ResetPasswordPage }),
+  ),
+);
+const ResetPasswordPageV2 = lazy(() =>
+  import('../pages/ResetPasswordPageV2').then((m) =>
+    page({ ResetPasswordPageV2: m.ResetPasswordPageV2 }),
   ),
 );
 const SignUpPage = lazy(() =>
@@ -40,6 +50,11 @@ const SignUpPage = lazy(() =>
 );
 const SetPasswordPage = lazy(() =>
   import('../pages/SetPasswordPage').then((m) => page({ SetPasswordPage: m.SetPasswordPage })),
+);
+const SetPasswordPageV2 = lazy(() =>
+  import('../pages/SetPasswordPageV2').then((m) =>
+    page({ SetPasswordPageV2: m.SetPasswordPageV2 }),
+  ),
 );
 const WorkspaceHomePage = lazy(() =>
   import('../pages/WorkspaceHomePage').then((m) =>
@@ -317,11 +332,26 @@ const CreateWorkspacePage = lazy(() =>
     page({ CreateWorkspacePage: m.CreateWorkspacePage }),
   ),
 );
+const CreateWorkspacePageV2 = lazy(() =>
+  import('../pages/CreateWorkspacePageV2').then((m) =>
+    page({ CreateWorkspacePageV2: m.CreateWorkspacePageV2 }),
+  ),
+);
 const InviteAcceptPage = lazy(() =>
   import('../pages/InviteAcceptPage').then((m) => page({ InviteAcceptPage: m.InviteAcceptPage })),
 );
+const InviteAcceptPageV2 = lazy(() =>
+  import('../pages/InviteAcceptPageV2').then((m) =>
+    page({ InviteAcceptPageV2: m.InviteAcceptPageV2 }),
+  ),
+);
 const InviteSignUpPage = lazy(() =>
   import('../pages/InviteSignUpPage').then((m) => page({ InviteSignUpPage: m.InviteSignUpPage })),
+);
+const InviteSignUpPageV2 = lazy(() =>
+  import('../pages/InviteSignUpPageV2').then((m) =>
+    page({ InviteSignUpPageV2: m.InviteSignUpPageV2 }),
+  ),
 );
 
 const PageFallback = () => {
@@ -538,10 +568,26 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: 'forgot-password-v2',
+        element: (
+          <Suspense fallback={<PageFallback />}>
+            <ForgotPasswordPageV2 />
+          </Suspense>
+        ),
+      },
+      {
         path: 'reset-password',
         element: (
           <Suspense fallback={<PageFallback />}>
             <ResetPasswordPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'reset-password-v2',
+        element: (
+          <Suspense fallback={<PageFallback />}>
+            <ResetPasswordPageV2 />
           </Suspense>
         ),
       },
@@ -572,6 +618,16 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: 'accounts/set-password-v2',
+        element: (
+          <ProtectedRoute signInPath="/login-v2">
+            <Suspense fallback={<PageFallback />}>
+              <SetPasswordPageV2 />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'invite',
         element: (
           <Suspense fallback={<PageFallback />}>
@@ -587,11 +643,36 @@ const router = createBrowserRouter([
         ],
       },
       {
+        path: 'invite-v2',
+        element: (
+          <Suspense fallback={<PageFallback />}>
+            <Outlet />
+          </Suspense>
+        ),
+        children: [
+          { index: true, element: <InviteAcceptPageV2 /> },
+          {
+            path: 'sign-up',
+            element: <InviteSignUpPageV2 />,
+          },
+        ],
+      },
+      {
         path: 'create-workspace',
         element: (
           <ProtectedRoute>
             <Suspense fallback={<PageFallback />}>
               <CreateWorkspacePage />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'create-workspace-v2',
+        element: (
+          <ProtectedRoute signInPath="/login-v2">
+            <Suspense fallback={<PageFallback />}>
+              <CreateWorkspacePageV2 />
             </Suspense>
           </ProtectedRoute>
         ),
