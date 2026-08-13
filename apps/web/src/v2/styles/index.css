@@ -15,6 +15,13 @@
 @import 'tailwindcss' source(none);
 @source '../../v2';
 
+/* shadcn components are written against the `animate-in` / `animate-out`
+   utilities (`fade-in-0`, `zoom-in-95`, `slide-in-from-top-2`, …). Tailwind v4
+   does not ship them; without this import every one of those classes is a
+   no-op and the dialogs, popovers, dropdowns, selects, sheets and tooltips
+   appear and disappear with no transition at all. */
+@import 'tw-animate-css';
+
 @import './shadcn-bridge.css';
 @import './shadcn-reference-theme.css';
 @import './shadcn-v4-theme.css';

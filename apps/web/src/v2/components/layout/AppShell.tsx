@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Outlet, useLocation, useMatch, useParams } from 'react-router-dom';
 import { AppSidebar } from '@/v2/components/app-sidebar';
+import { PageTransition } from '@/v2/components/page-transition';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -183,7 +184,9 @@ function AppShellLayout() {
         {/* Child routes render the v2 pages inside this shell; the index route
             is the workspace home. */}
         <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 pt-0">
-          <Outlet key={workspaceSlug} />
+          <PageTransition>
+            <Outlet key={workspaceSlug} />
+          </PageTransition>
         </div>
         {/* Scoped to the v2 shell: the shipped interface has its own feedback
             patterns, and mounting one toaster per tree keeps them separate. */}

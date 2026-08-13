@@ -1,4 +1,5 @@
 import { Suspense, type ReactNode } from 'react';
+import { PageFallback as PageFallbackV2 } from '../v2/components/page-fallback';
 import { useInterfaceVersion } from '../v2/contexts/InterfaceContext';
 import { PageFallback } from './PageFallback';
 
@@ -18,9 +19,14 @@ interface VariantProps {
  * Both elements are constructed on every render, but constructing an element is
  * just an object — the lazy component behind it is only imported when React
  * actually renders it, so a v1 user never downloads a v2 chunk (and vice versa).
- * The Suspense boundary lives here so each route entry stays a one-liner.
+ * The Suspense boundary lives here so each route entry stays a one-liner. Its
+ * fallback follows the preference too: each interface holds the page's shape in
+ * its own idiom while the chunk loads.
  */
 export function Variant({ v1, v2 }: VariantProps) {
   const { interfaceVersion } = useInterfaceVersion();
-  return <Suspense fallback={<PageFallback />}>{interfaceVersion === 'v2' ? v2 : v1}</Suspense>;
+  const isV2 = interfaceVersion === 'v2';
+  return (
+    <Suspense fallback={isV2 ? <PageFallbackV2 /> : <PageFallback />}>{isV2 ? v2 : v1}</Suspense>
+  );
 }
