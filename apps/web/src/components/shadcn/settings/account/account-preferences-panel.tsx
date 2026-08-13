@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/shadcn/ui/button';
@@ -19,6 +20,8 @@ import {
   type LanguageCode,
 } from '../../../../i18n';
 import { useTheme, type ThemePreference } from '../../../../contexts/ThemeContext';
+import { useInterfaceVersion, type InterfaceVersion } from '../../../../contexts/InterfaceContext';
+import { mapPathToV1, mapPathToV2 } from '../../../../lib/interfaceRedirect';
 import { authService } from '../../../../services/authService';
 import { userService } from '../../../../services/userService';
 
@@ -47,9 +50,21 @@ const THEME_SWATCHES: {
 export function AccountPreferencesPanel() {
   const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
+  const { interfaceVersion, setInterfaceVersion } = useInterfaceVersion();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [firstDayOfWeek, setFirstDayOfWeek] = useState('monday');
   const [timezone, setTimezone] = useState('UTC');
   const [saving, setSaving] = useState(false);
+
+  const handleInterfaceVersionChange = (value: InterfaceVersion) => {
+    setInterfaceVersion(value);
+    const target =
+      value === 'v2'
+        ? mapPathToV2(location.pathname, location.search)
+        : mapPathToV1(location.pathname, location.search);
+    if (target) navigate(target, { replace: true });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -145,6 +160,37 @@ export function AccountPreferencesPanel() {
               </button>
             );
           })}
+        </div>
+      </fieldset>
+
+      <fieldset className="space-y-3">
+        <legend className="text-sm font-medium">
+          {t('settings.preferences.interfaceVersion.title', 'Interface')}
+        </legend>
+        <p className="text-muted-foreground text-sm">
+          {t(
+            'settings.preferences.interfaceVersion.help',
+            'Choose which Devlane interface you want to use. Some admin-only pages still open in the classic interface either way.',
+          )}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ['v1', t('settings.preferences.interfaceVersion.v1', 'Classic')],
+              ['v2', t('settings.preferences.interfaceVersion.v2', 'New (Beta)')],
+            ] as [InterfaceVersion, string][]
+          ).map(([value, label]) => (
+            <Button
+              key={value}
+              type="button"
+              variant={interfaceVersion === value ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleInterfaceVersionChange(value)}
+              aria-pressed={interfaceVersion === value}
+            >
+              {label}
+            </Button>
+          ))}
         </div>
       </fieldset>
 

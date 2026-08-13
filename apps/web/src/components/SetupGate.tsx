@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { InterfaceGate } from './InterfaceGate';
 import { instanceService } from '../services/instanceService';
 
 const PageFallback = () => {
@@ -56,5 +57,5 @@ export function SetupGate() {
     return <Navigate to="/setup" replace />;
   }
 
-  return <Outlet />;
+  return <InterfaceGate />;
 }
