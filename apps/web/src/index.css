@@ -1,8 +1,5 @@
 @import './styles/tokens.css';
 @import 'tailwindcss';
-@import './styles/shadcn-bridge.css';
-@import './styles/shadcn-reference-theme.css';
-@import './styles/shadcn-v4-theme.css';
 
 /* Devlane base: Inter, antialiased, placeholder, custom scrollbar */
 * {

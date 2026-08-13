@@ -34,7 +34,6 @@ export const DISPLAY_PROPERTY_LABELS: Record<DisplayPropertyKey, string> = {
 
 /** Column order for spreadsheet view: Work items (sticky) then these (horizontal scroll). */
 export const SPREADSHEET_COLUMN_ORDER: (DisplayPropertyKey | 'created_at' | 'updated_at')[] = [
-  'state',
   'priority',
   'assignee',
   'labels',

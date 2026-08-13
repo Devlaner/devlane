@@ -6,12 +6,17 @@ v2 web interface.
 
 ## V2 web design direction
 
-These rules apply to v2 pages and their shared UI, especially:
+These rules apply to everything under `apps/web/src/v2/**` — the whole v2
+interface lives there and nothing else does:
 
-- `apps/web/src/pages/*V2.tsx`
-- routes below `/:workspaceSlug/app-v2`
-- `apps/web/src/components/shadcn/**`
-- v2-related styles in `apps/web/src/styles/**`
+- `apps/web/src/v2/pages/**` — one file per v1 page, same filename
+- `apps/web/src/v2/components/**` — shadcn primitives in `ui/`, the v2 shell in `layout/`
+- `apps/web/src/v2/{contexts,hooks,lib,styles}/**`
+
+Nothing outside `src/v2/` may import from it (enforced by `no-restricted-imports`
+in `apps/web/eslint.config.js`); `src/routes/` is the one exception, since it
+mounts both interfaces. The reverse is allowed: v2 reuses v1's services, api
+types and domain components.
 
 Use these references when designing or implementing the v2 interface:
 

@@ -1,0 +1,20 @@
+/**
+ * v2 stylesheet entry.
+ *
+ * Imported from the two v2 components every v2 page renders inside — the v2
+ * AppShell and the auth page shell — rather than from the app's global
+ * `index.css`. Both are lazily loaded, so a reader on v1 never downloads any
+ * of this.
+ *
+ * It is its own Tailwind entry because `shadcn-bridge.css` carries the
+ * `@theme inline` block that names the shadcn tokens: utilities like
+ * `bg-primary` or `text-muted-foreground` only exist in the stylesheet whose
+ * entry can see that block. `source(none)` plus an explicit `@source` keeps
+ * the scan to `src/v2`, so this sheet holds the v2 utilities and nothing else.
+ */
+@import 'tailwindcss' source(none);
+@source '../../v2';
+
+@import './shadcn-bridge.css';
+@import './shadcn-reference-theme.css';
+@import './shadcn-v4-theme.css';

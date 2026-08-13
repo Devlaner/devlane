@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   LineChart,
   Line,
@@ -128,11 +128,6 @@ const IconDownload = () => (
 export function AnalyticsWorkItemsPage() {
   const { t } = useTranslation();
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
-  const { pathname } = useLocation();
-  /* The v2 preview shell carries its own navigation, and its tab strip would
-     link back out of the preview — so the strip is dropped there. Outside the
-     preview it stays: it is the only way to reach this page from Overview. */
-  const inPreviewShell = pathname.includes('/app-v2/');
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
 
@@ -272,22 +267,20 @@ export function AnalyticsWorkItemsPage() {
   return (
     <div className="space-y-6 pb-8">
       {/* Tabs */}
-      {!inPreviewShell && (
-        <div className="flex gap-1 border-b border-(--border-subtle)">
-          <Link
-            to={`${baseUrl}/overview`}
-            className="border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-(--txt-secondary) no-underline hover:text-(--txt-primary)"
-          >
-            {t('common.overview', 'Overview')}
-          </Link>
-          <Link
-            to={`${baseUrl}/work-items`}
-            className="border-b-2 border-(--brand-default) px-4 py-2.5 text-sm font-medium text-(--txt-primary) no-underline"
-          >
-            {t('common.workItems', 'Work items')}
-          </Link>
-        </div>
-      )}
+      <div className="flex gap-1 border-b border-(--border-subtle)">
+        <Link
+          to={`${baseUrl}/overview`}
+          className="border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-(--txt-secondary) no-underline hover:text-(--txt-primary)"
+        >
+          {t('common.overview', 'Overview')}
+        </Link>
+        <Link
+          to={`${baseUrl}/work-items`}
+          className="border-b-2 border-(--brand-default) px-4 py-2.5 text-sm font-medium text-(--txt-primary) no-underline"
+        >
+          {t('common.workItems', 'Work items')}
+        </Link>
+      </div>
 
       <h2 className="text-lg font-semibold text-(--txt-primary)">
         {t('analytics.workItems', 'Work items')}

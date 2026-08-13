@@ -10,7 +10,7 @@ import {
   type ReactNode,
   type SetStateAction,
 } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import {
   type SavedViewDisplaySettings,
   cloneDefaultSettings,
@@ -28,28 +28,19 @@ const ProjectSavedViewDisplayContext = createContext<ProjectSavedViewDisplayCont
   null,
 );
 
-/**
- * Matches a project saved-view detail path in either tree, returning the slug
- * and view id it names.
- *
- * The two trees are `/:slug/projects/:id/views/:viewId` (shipped) and the same
- * shape under `/:slug/app-v2/…` (the design preview). Both are read here rather
- * than from `useParams`: in the preview this provider is mounted on the shell
- * layout, whose own route stops short of the child's `:viewId`.
- *
- * Both trees resolve to the same storage key, so a saved view's grouping and
- * columns follow the reader between them — which is the point of a preview you
- * compare side by side.
- */
-const SAVED_VIEW_PATH = /^\/([^/]+)\/(?:app-v2\/)?projects\/([^/]+)\/views\/([^/]+)$/;
-
 export function ProjectSavedViewDisplayProvider({ children }: { children: ReactNode }) {
+  const { workspaceSlug, projectId, viewId } = useParams<{
+    workspaceSlug?: string;
+    projectId?: string;
+    viewId?: string;
+  }>();
   const { pathname } = useLocation();
   const normalized = pathname.replace(/\/+$/, '');
-  const match = SAVED_VIEW_PATH.exec(normalized);
-  const workspaceSlug = match?.[1];
-  const viewId = match?.[3];
-  const active = Boolean(match);
+  const expectedPath =
+    workspaceSlug && projectId && viewId
+      ? `/${workspaceSlug}/projects/${projectId}/views/${viewId}`
+      : '';
+  const active = Boolean(expectedPath && normalized === expectedPath);
 
   const storageKey =
     active && workspaceSlug && viewId
