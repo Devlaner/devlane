@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type Dispatch,
   type ReactNode,
@@ -53,23 +54,34 @@ export function ProjectSavedViewDisplayProvider({ children }: { children: ReactN
       : null;
 
   const [settings, setSettings] = useState<SavedViewDisplaySettings>(() => cloneDefaultSettings());
+  /* Storage key whose stored settings have already been read back into state;
+     null while a view's restore is still pending. The restore is deferred, so
+     without this the write effect below would save the defaults over the stored
+     settings before they land. */
+  const restoredFor = useRef<string | null>(null);
 
   useEffect(() => {
     if (!storageKey) {
       queueMicrotask(() => setSettings(cloneDefaultSettings()));
       return;
     }
+    let parsed: SavedViewDisplaySettings | null = null;
     try {
-      const raw = localStorage.getItem(storageKey);
-      const parsed = parsePersistedSavedViewDisplay(raw);
-      queueMicrotask(() => setSettings(parsed ?? cloneDefaultSettings()));
+      parsed = parsePersistedSavedViewDisplay(localStorage.getItem(storageKey));
     } catch {
-      queueMicrotask(() => setSettings(cloneDefaultSettings()));
+      parsed = null;
     }
+    queueMicrotask(() => {
+      setSettings(parsed ?? cloneDefaultSettings());
+      restoredFor.current = storageKey;
+    });
+    return () => {
+      if (restoredFor.current === storageKey) restoredFor.current = null;
+    };
   }, [storageKey]);
 
   useEffect(() => {
-    if (!storageKey) return;
+    if (!storageKey || restoredFor.current !== storageKey) return;
     try {
       localStorage.setItem(storageKey, serializeSettings(settings));
     } catch {

@@ -122,6 +122,8 @@ export function useProjectIssuesController(workspaceSlug?: string, projectId?: s
   /* Storage key whose stored filters have already been read back into state;
      null while a project's restore is still pending. */
   const filtersRestoredFor = useRef<string | null>(null);
+  /* Same, for the display settings below. */
+  const displayRestoredFor = useRef<string | null>(null);
   /* Free-text narrowing over the loaded page. The shipped header has no search
      field for this list, so it stays empty there; the v2 toolbar drives it. */
   const [searchQuery, setSearchQuery] = useState('');
@@ -334,20 +336,31 @@ export function useProjectIssuesController(workspaceSlug?: string, projectId?: s
      each keeping its own. */
   useEffect(() => {
     if (!workspaceSlug || !projectId) return;
+    const key = projectIssuesDisplayStorageKey(workspaceSlug, projectId);
     let stored: ProjectIssuesDisplayState | null = null;
     try {
-      stored = parseProjectIssuesDisplay(
-        localStorage.getItem(projectIssuesDisplayStorageKey(workspaceSlug, projectId)),
-      );
+      stored = parseProjectIssuesDisplay(localStorage.getItem(key));
     } catch {
       stored = null;
     }
     /* Deferred so the state lands after this effect rather than during it. */
-    queueMicrotask(() => setListDisplay(stored ?? cloneDefaultProjectIssuesDisplay()));
+    queueMicrotask(() => {
+      setListDisplay(stored ?? cloneDefaultProjectIssuesDisplay());
+      displayRestoredFor.current = key;
+    });
+    return () => {
+      if (displayRestoredFor.current === key) displayRestoredFor.current = null;
+    };
   }, [workspaceSlug, projectId]);
 
   useEffect(() => {
     if (!workspaceSlug || !projectId) return;
+    /* Same guard as the filters above: until the restore has landed,
+       `listDisplay` is still the default (or the previous project's state), and
+       writing it would erase the settings we are about to read back. */
+    if (displayRestoredFor.current !== projectIssuesDisplayStorageKey(workspaceSlug, projectId)) {
+      return;
+    }
     try {
       localStorage.setItem(
         projectIssuesDisplayStorageKey(workspaceSlug, projectId),

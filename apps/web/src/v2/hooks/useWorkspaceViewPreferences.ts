@@ -71,15 +71,28 @@ export function useWorkspaceViewPreferences(
     hasUrlParams.current = urlSerialized !== '';
   }, [urlSerialized]);
 
+  /** State a URL read is replacing, until the state setters take effect. */
+  const stateBeforeUrlRead = useRef<string | null>(null);
+
   useEffect(() => {
     if (urlSerialized !== lastUrl.current) {
       lastUrl.current = urlSerialized;
       lastState.current = urlSerialized;
       if (urlSerialized === stateSerialized) return;
+      stateBeforeUrlRead.current = stateSerialized;
       const params = new URLSearchParams(urlSerialized);
       setFilters(parseWorkspaceViewFiltersFromSearchParams(params));
       setDisplay(parseWorkspaceViewDisplayFromParams(params, V2_WORKSPACE_VIEW_DISPLAY));
       return;
+    }
+
+    /* The read above is asynchronous: this effect can run again — under
+       StrictMode it always does — while the state is still the value the URL is
+       replacing. Writing it back out would erase the params the reader arrived
+       with, so wait until the state has actually moved. */
+    if (stateBeforeUrlRead.current !== null) {
+      if (stateSerialized === stateBeforeUrlRead.current) return;
+      stateBeforeUrlRead.current = null;
     }
 
     if (stateSerialized === lastState.current) return;

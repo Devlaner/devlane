@@ -39,6 +39,17 @@ import '../../styles/index.css';
  * The providers are split out from the layout because the layout reads what
  * they hold: a component cannot consume a context it renders itself.
  */
+/**
+ * The sidebar primitive records collapsing in a `sidebar_state` cookie for a
+ * server render to read back into `defaultOpen`. Devlane's web app has no
+ * server render, so the shell reads the cookie itself — otherwise the sidebar
+ * writes the choice and reopens on the next load anyway.
+ */
+function storedSidebarOpen(): boolean {
+  const match = /(?:^|;\s*)sidebar_state=(true|false)(?:;|$)/.exec(document.cookie);
+  return match ? match[1] === 'true' : true;
+}
+
 export function AppShell() {
   return (
     /* The views page and its toolbar both read this filter and display state,
@@ -125,7 +136,7 @@ function AppShellLayout() {
   }, []);
 
   return (
-    <SidebarProvider className="shadcn-v4">
+    <SidebarProvider className="shadcn-v4" defaultOpen={storedSidebarOpen()}>
       <AppSidebar />
       <SidebarInset className="min-w-0">
         <header className="flex h-16 shrink-0 items-center gap-2">
