@@ -16,6 +16,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/v2/components/u
 import { Skeleton } from '@/v2/components/ui/skeleton';
 import { Toaster } from '@/v2/components/ui/sonner';
 import { useAppShellHeader, AppShellHeaderProvider } from '../../contexts/AppShellHeaderContext';
+import { AccentColorProvider, useAccentColor } from '../../contexts/AccentColorContext';
 import { ProjectSavedViewDisplayProvider } from '../../contexts/ProjectSavedViewDisplayContext';
 import { WorkspaceViewsStateProvider } from '../../contexts/WorkspaceViewsStateProvider';
 import { useDocumentTitle } from '../../../hooks/useDocumentTitle';
@@ -52,18 +53,22 @@ function storedSidebarOpen(): boolean {
 
 export function AppShell() {
   return (
-    /* The views page and its toolbar both read this filter and display state,
-       so it is held above the routes that render them. */
-    <WorkspaceViewsStateProvider initialDisplay={V2_WORKSPACE_VIEW_DISPLAY}>
-      {/* The saved-view pages read this; the shipped tree mounts it in AppShell,
-          which the v2 tree sits outside of. */}
-      <ProjectSavedViewDisplayProvider>
-        {/* Detail pages push their breadcrumb tail and header actions up here. */}
-        <AppShellHeaderProvider>
-          <AppShellLayout />
-        </AppShellHeaderProvider>
-      </ProjectSavedViewDisplayProvider>
-    </WorkspaceViewsStateProvider>
+    /* The accent preset repaints the shadcn palette this tree renders in, so it
+       sits above the layout that carries the class the presets key off. */
+    <AccentColorProvider>
+      {/* The views page and its toolbar both read this filter and display state,
+          so it is held above the routes that render them. */}
+      <WorkspaceViewsStateProvider initialDisplay={V2_WORKSPACE_VIEW_DISPLAY}>
+        {/* The saved-view pages read this; the shipped tree mounts it in AppShell,
+            which the v2 tree sits outside of. */}
+        <ProjectSavedViewDisplayProvider>
+          {/* Detail pages push their breadcrumb tail and header actions up here. */}
+          <AppShellHeaderProvider>
+            <AppShellLayout />
+          </AppShellHeaderProvider>
+        </ProjectSavedViewDisplayProvider>
+      </WorkspaceViewsStateProvider>
+    </AccentColorProvider>
   );
 }
 
@@ -76,6 +81,7 @@ function AppShellLayout() {
   const projectMatch = useMatch('/:workspaceSlug/projects/:projectId/*');
   const projectId = projectMatch?.params.projectId;
   const slot = useAppShellHeader();
+  const { accentColor } = useAccentColor();
 
   /* Named from the path rather than from the child, which would need a context
      just to pass a string up one level. Anchored on the workspace base so a
@@ -136,7 +142,13 @@ function AppShellLayout() {
   }, []);
 
   return (
-    <SidebarProvider className="shadcn-v4" defaultOpen={storedSidebarOpen()}>
+    <SidebarProvider
+      className="shadcn-v4"
+      /* The presets resolve from the element that defines the variables, so the
+         attribute rides on the same node as the class. */
+      data-v2-accent={accentColor}
+      defaultOpen={storedSidebarOpen()}
+    >
       <AppSidebar />
       <SidebarInset className="min-w-0">
         <header className="flex h-16 shrink-0 items-center gap-2">

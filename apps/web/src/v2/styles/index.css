@@ -25,3 +25,6 @@
 @import './shadcn-bridge.css';
 @import './shadcn-reference-theme.css';
 @import './shadcn-v4-theme.css';
+/* Imported last: its presets override the palette above for the subtree that
+   carries the matching `data-v2-theme` value. */
+@import './v2-color-themes.css';
