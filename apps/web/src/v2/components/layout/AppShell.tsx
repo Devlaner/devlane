@@ -19,18 +19,10 @@ import { useAppShellHeader, AppShellHeaderProvider } from '../../contexts/AppShe
 import { ProjectSavedViewDisplayProvider } from '../../contexts/ProjectSavedViewDisplayContext';
 import { WorkspaceViewsStateProvider } from '../../contexts/WorkspaceViewsStateProvider';
 import { useDocumentTitle } from '../../../hooks/useDocumentTitle';
-import type { WorkspaceViewDisplay } from '../../../types/workspaceViewDisplay';
+import { V2_WORKSPACE_VIEW_DISPLAY } from '../../lib/workspaceViewParams';
 /* Every signed-in v2 page renders inside this shell, so the v2 stylesheet
    rides along with its chunk instead of the app's global index.css. */
 import '../../styles/index.css';
-
-const V2_WORKSPACE_VIEW_DISPLAY: WorkspaceViewDisplay = {
-  properties: ['id', 'state', 'priority', 'assignee', 'labels', 'due_date'],
-  showSubWorkItems: true,
-  layout: 'list',
-  sortBy: 'created_at',
-  sortOrder: 'desc',
-};
 
 /**
  * The v2 chrome: the shadcn `sidebar-08` shell with the v2 pages rendered

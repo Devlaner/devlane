@@ -3,7 +3,7 @@
 import * as React from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import {
   Archive,
   BarChart3,
@@ -21,6 +21,8 @@ import { WorkspaceFavoritesTree } from '@/components/layout/WorkspaceFavoritesTr
 import { NavMain } from '@/v2/components/nav-main';
 import { NavProjects } from '@/v2/components/nav-projects';
 import { NavUser } from '@/v2/components/nav-user';
+import { DitheredLogo } from '@/v2/components/ui/dithered-logo';
+import { readLastWorkspaceView } from '../lib/lastWorkspaceView';
 import {
   Sidebar,
   SidebarContent,
@@ -41,6 +43,7 @@ function buildData(
   base: string,
   user: { name: string; email: string; avatar: string; id: string } | null,
   t: TFunction,
+  lastViewId: string,
 ) {
   return {
     user: {
@@ -76,8 +79,10 @@ function buildData(
       },
       {
         /* Inside the v2 shell, so navigating here keeps this sidebar. */
+        /* Leads back to the view last opened in this workspace, whose table and
+           filters are remembered with it. */
         title: t('nav.views', 'Views'),
-        url: `${base}/views/all-issues`,
+        url: `${base}/views/${lastViewId}`,
         icon: Layers,
       },
       {
@@ -111,13 +116,22 @@ function buildData(
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { t } = useTranslation();
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
+  const { pathname } = useLocation();
   const { user } = useAuth();
 
   const base = workspaceSlug ? `/${workspaceSlug}` : '';
+  /* Re-read on every navigation: the views page writes this as the reader moves
+     between views, and the entry should point at the latest one. */
+  const lastViewId = React.useMemo(
+    () => readLastWorkspaceView(workspaceSlug),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the path is what changes the stored value, not an input to reading it
+    [workspaceSlug, pathname],
+  );
   const data = buildData(
     base,
     user ? { id: user.id, name: user.name, email: user.email, avatar: user.avatarUrl ?? '' } : null,
     t,
+    lastViewId,
   );
 
   return (
@@ -128,19 +142,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton size="lg" asChild>
               <a href={base || '/'}>
                 {/* No tile behind the mark: bg-sidebar-primary resolves to blue
-                    in dark mode, which would tint the logo's surround. Two
-                    files rather than one, because each is a flat silhouette
-                    that only reads against the opposite background. */}
+                    in dark mode, which would tint the logo's surround. The
+                    white-on-transparent file is used as a mask only — the
+                    dither samples its alpha and paints particles in
+                    currentColor, so one file covers both themes. */}
                 <div className="flex aspect-square size-8 items-center justify-center">
-                  <img
-                    src="/devlane-2-light-no-bg.png"
-                    alt=""
-                    className="size-6 object-contain dark:hidden"
-                  />
-                  <img
-                    src="/devlane-2-dark-no-bg.png"
-                    alt=""
-                    className="hidden size-6 object-contain dark:block"
+                  <DitheredLogo
+                    imageSrc="/devlane-2-dark-no-bg.png"
+                    className="size-8 text-sidebar-foreground"
+                    gridSize={96}
+                    scale={0.95}
+                    blur={1.6}
+                    threshold={128}
+                    invert={false}
                   />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">

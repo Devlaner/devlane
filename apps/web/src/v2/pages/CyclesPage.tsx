@@ -11,11 +11,13 @@ import {
   Link2,
   MoreHorizontal,
   Pencil,
+  Plus,
   Star,
   Trash2,
 } from 'lucide-react';
 import { UpdateCycleModal } from '@/components/UpdateCycleModal';
 import { CycleBurndownChart } from '@/components/cycles/CycleBurndownChart';
+import { CreateCycleDialog } from '@/v2/components/create-cycle-dialog';
 import { CyclesFiltersMenu } from '@/v2/components/cycles-filters-menu';
 import { ListPageSkeleton } from '@/v2/components/list-page-skeleton';
 import { PageHeading } from '@/v2/components/page-heading';
@@ -117,11 +119,13 @@ export function CyclesPage() {
     toggleFavorite,
     deleteCycle,
     applyCycleUpdate,
+    refresh,
   } = useProjectCyclesController(workspaceSlug, projectId);
 
   const [editCycle, setEditCycle] = useState<CycleApiResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CycleApiResponse | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const memberName = (memberId: string | null) => {
     if (!memberId) return t('cycles.unassigned', 'Unassigned');
@@ -395,7 +399,33 @@ export function CyclesPage() {
           setFilters((previous) => ({ ...previous, searchQuery: value || null }))
         }
         filters={<CyclesFiltersMenu filters={filters} onChange={setFilters} />}
+        actions={
+          <Button
+            type="button"
+            className="h-11 sm:h-9"
+            onClick={() => setCreateOpen(true)}
+            disabled={!workspaceSlug || !projectId}
+          >
+            <Plus aria-hidden="true" />
+            {t('cycles.newCycle', 'New cycle')}
+          </Button>
+        }
       />
+
+      {workspaceSlug && projectId && (
+        <CreateCycleDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
+          onCreated={(cycle) => {
+            /* The controller buckets cycles by date, so the new one is placed by
+               a refetch rather than pushed onto a list it may not belong to. */
+            refresh();
+            toast.success(t('cycles.createSuccess', '{{cycle}} created', { cycle: cycle.name }));
+          }}
+        />
+      )}
 
       {filteredCycles.length === 0 && cycles.length > 0 && (
         <p className="sr-only" aria-live="polite">
@@ -596,7 +626,12 @@ export function CyclesPage() {
               )}
             </EmptyDescription>
           </EmptyHeader>
-          <EmptyContent />
+          <EmptyContent>
+            <Button type="button" onClick={() => setCreateOpen(true)}>
+              <Plus aria-hidden="true" />
+              {t('cycles.newCycle', 'New cycle')}
+            </Button>
+          </EmptyContent>
         </Empty>
       ) : (
         <div className="space-y-4">

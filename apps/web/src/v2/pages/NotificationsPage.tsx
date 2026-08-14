@@ -34,6 +34,7 @@ import { useSetV2Header } from '../contexts/AppShellHeaderContext';
 import { formatTimeAgo } from '../lib/project';
 import { notificationService } from '../../services/notificationService';
 import { workspaceService } from '../../services/workspaceService';
+import { usePersistedChoice } from '../hooks/usePersistedChoice';
 import type { NotificationApiResponse, WorkspaceApiResponse } from '../../api/types';
 
 type InboxTab = 'all' | 'unread' | 'mentions' | 'archived';
@@ -44,6 +45,11 @@ const TABS: { id: InboxTab; label: string }[] = [
   { id: 'mentions', label: 'Mentions' },
   { id: 'archived', label: 'Archived' },
 ];
+
+/* Which tab the inbox reopens on. "Archived" is deliberately absent: it is the
+   one tab that hides everything arriving, so remembering it would present an
+   empty inbox as if nothing had happened. */
+const PERSISTED_INBOX_TABS = ['all', 'unread', 'mentions'] as const satisfies readonly InboxTab[];
 
 function listOptions(tab: InboxTab) {
   return {
@@ -263,7 +269,11 @@ function NotificationsInboxV2({ workspaceSlug }: NotificationsInboxV2Props) {
   const inboxRootRef = useRef<HTMLElement>(null);
   const lastSelectionButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  const [inboxTab, setInboxTab] = useState<InboxTab>('all');
+  const [inboxTab, setInboxTab] = usePersistedChoice<InboxTab>(
+    workspaceSlug ? `devlane-v2-inbox-tab:${workspaceSlug}` : null,
+    PERSISTED_INBOX_TABS,
+    'all',
+  );
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);

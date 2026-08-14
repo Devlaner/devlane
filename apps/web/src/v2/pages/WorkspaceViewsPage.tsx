@@ -60,6 +60,8 @@ import { IssueLayoutGantt } from '../../components/work-item/layouts/IssueLayout
 import { useAuth } from '../../contexts/AuthContext';
 import { useWorkspaceViewsState } from '../../contexts/WorkspaceViewsStateContext';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { useWorkspaceViewPreferences } from '../hooks/useWorkspaceViewPreferences';
+import { DEFAULT_WORKSPACE_VIEW_ID, writeLastWorkspaceView } from '../lib/lastWorkspaceView';
 import { formatTimeAgo } from '../lib/project';
 import { getImageUrl } from '../../lib/utils';
 import { applyWorkspaceViewFilters } from '../lib/workspaceViewFiltersApply';
@@ -171,6 +173,14 @@ export function WorkspaceViewsPage() {
   const { filters, setFilters, display, setDisplay } = useWorkspaceViewsState();
   const { user: currentUser } = useAuth();
 
+  const currentViewId = viewId ?? 'all-issues';
+  const isSavedView = isCustomViewId(currentViewId);
+  /* Layout, columns, sorting and filters are mirrored into the URL and
+     remembered per view, so a reload — or a return through the sidebar — opens
+     the table the reader left. A saved view keeps its definition on the server,
+     so only the static views are remembered locally. */
+  const hasUrlViewParams = useWorkspaceViewPreferences(workspaceSlug, currentViewId, !isSavedView);
+
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
@@ -223,6 +233,12 @@ export function WorkspaceViewsPage() {
         if (cancelled) return;
         setViewNotFound(false);
         setSavedViewName(view.name ?? null);
+        /* A link that already describes a table wins over the view's own
+           definition; without one the saved view still sets the page up. */
+        if (hasUrlViewParams()) {
+          setViewLoading(false);
+          return;
+        }
         const savedFilters = view.filters as Record<string, string> | undefined;
         if (savedFilters && typeof savedFilters === 'object') {
           setFilters(parseWorkspaceViewFiltersFromSearchParams(new URLSearchParams(savedFilters)));
@@ -261,7 +277,14 @@ export function WorkspaceViewsPage() {
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug, viewId, setFilters, setDisplay]);
+  }, [workspaceSlug, viewId, setFilters, setDisplay, hasUrlViewParams]);
+
+  /* The sidebar's Views entry leads back here, so it follows the view the
+     reader last opened. A view that no longer resolves is dropped rather than
+     remembered, so the entry cannot point at a page that does not exist. */
+  useEffect(() => {
+    writeLastWorkspaceView(workspaceSlug, viewNotFound ? DEFAULT_WORKSPACE_VIEW_ID : currentViewId);
+  }, [workspaceSlug, currentViewId, viewNotFound]);
 
   /* Workspace views span every project, so states, labels and issues are
      gathered per project and flattened into one set. */
@@ -551,14 +574,13 @@ export function WorkspaceViewsPage() {
   const memberInitial = (member: WorkspaceMemberApiResponse) =>
     (member.member_display_name ?? member.member_email ?? '?').charAt(0).toUpperCase();
 
-  const currentViewId = viewId ?? 'all-issues';
   const staticViewLabels: Record<string, string> = {
     'all-issues': t('views.allWorkItems', 'All work items'),
     assigned: t('views.assigned', 'Assigned'),
     created: t('views.created', 'Created'),
     subscribed: t('views.subscribed', 'Subscribed'),
   };
-  const pageTitle = isCustomViewId(currentViewId)
+  const pageTitle = isSavedView
     ? (savedViewName ?? t('views.documentTitleFallback', 'View'))
     : (staticViewLabels[currentViewId] ?? staticViewLabels['all-issues']);
 

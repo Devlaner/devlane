@@ -36,6 +36,7 @@ import { WorkItemsCalendarLayout } from '@/v2/components/work-item-layouts/work-
 import { WorkItemsGanttLayout } from '@/v2/components/work-item-layouts/work-items-gantt-layout';
 import { WorkItemsSpreadsheetLayout } from '@/v2/components/work-item-layouts/work-items-spreadsheet-layout';
 import { parseIssueLayout } from '@/components/work-item/layouts/IssueLayoutTypes';
+import { usePersistedSearchParams } from '../hooks/usePersistedSearchParams';
 import { Badge } from '@/v2/components/ui/badge';
 import { Button } from '@/v2/components/ui/button';
 import { Checkbox } from '@/v2/components/ui/checkbox';
@@ -73,6 +74,10 @@ import { cn } from '../../lib/utils';
 import { issueService } from '../../services/issueService';
 import type { IssueApiResponse } from '../../api/types';
 
+/* Only the layout is remembered here; grouping and visible properties already
+   persist through the controller's display settings. */
+const ISSUE_LAYOUT_PARAM_KEYS = ['layout'] as const;
+
 function validTimestamp(value: string | null | undefined): value is string {
   return Boolean(value && Number.isFinite(Date.parse(value)));
 }
@@ -90,6 +95,14 @@ export function IssueListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
   useDocumentTitle(t('views.workItems', 'Work items'));
+  /* The layout lives in the URL so it can be linked, and in storage so it is
+     still there when the project is opened again from the sidebar. */
+  usePersistedSearchParams(
+    workspaceSlug && projectId
+      ? `devlane-v2-project-issues-layout:${workspaceSlug}:${projectId}`
+      : null,
+    ISSUE_LAYOUT_PARAM_KEYS,
+  );
 
   const {
     workspace,

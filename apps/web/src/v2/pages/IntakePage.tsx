@@ -2,7 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Check, CircleAlert, Clock, Inbox, RefreshCw, SearchX, X } from 'lucide-react';
+import { ListFilterChips } from '@/v2/components/list-filter-chips';
+import { ListFiltersMenu, type ListFilterGroup } from '@/v2/components/list-filters-menu';
 import { ListPageSkeleton } from '@/v2/components/list-page-skeleton';
+import { ListSortMenu } from '@/v2/components/list-sort-menu';
 import { PageHeading } from '@/v2/components/page-heading';
 import { ProjectListToolbar } from '@/v2/components/project-list-toolbar';
 import { Badge } from '@/v2/components/ui/badge';
@@ -30,6 +33,19 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { intakeService } from '../../services/intakeService';
 import { projectService } from '../../services/projectService';
 import {
+  compareDates,
+  compareNumbers,
+  compareText,
+  readListParam,
+  readSortState,
+  toggleListParam,
+  withOrder,
+  writeSortState,
+  type SortState,
+} from '../lib/listControls';
+import { useIntakeListPreferences } from '../hooks/useListViewPreferences';
+import {
+  PRIORITIES,
   PRIORITY_LABELS,
   formatDate,
   matchesQuery,
@@ -37,6 +53,19 @@ import {
   type Priority,
 } from '../lib/project';
 import type { IntakeItemApiResponse, ProjectApiResponse } from '../../api/types';
+
+/** The columns a triage queue is worth reordering by. */
+const SORT_FIELDS = ['created_at', 'priority', 'name'] as const;
+type IntakeSortField = (typeof SORT_FIELDS)[number];
+
+/** Urgent first when descending, which is the order the reader expects. */
+const PRIORITY_RANK: Record<string, number> = {
+  urgent: 4,
+  high: 3,
+  medium: 2,
+  low: 1,
+  none: 0,
+};
 
 /** The statuses the triage inbox is browsed by, in the order they are worked. */
 const TABS = ['pending', 'snoozed', 'accepted', 'declined'] as const;
@@ -72,6 +101,7 @@ export function IntakePage() {
   const { workspaceSlug, projectId } = useParams<{ workspaceSlug: string; projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   useDocumentTitle(t('common.intake', 'Intake'));
+  useIntakeListPreferences(workspaceSlug, projectId);
 
   const [items, setItems] = useState<IntakeItemApiResponse[]>([]);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
@@ -89,6 +119,13 @@ export function IntakePage() {
   const tab: IntakeTab = (TABS as readonly string[]).includes(rawTab)
     ? (rawTab as IntakeTab)
     : 'pending';
+  /* Memoised so the sorted list below is not rebuilt on every render — reading
+     a param allocates a fresh array each time. */
+  const priorityFilter = useMemo(() => readListParam(searchParams, 'priority'), [searchParams]);
+  const sort = useMemo(
+    () => readSortState<IntakeSortField>(searchParams, SORT_FIELDS, 'created_at'),
+    [searchParams],
+  );
 
   const load = useCallback(
     (status: IntakeTab) => {
@@ -115,10 +152,29 @@ export function IntakePage() {
 
   useEffect(() => load(tab), [load, tab]);
 
-  const visible = useMemo(
-    () => items.filter((item) => matchesQuery(query, item.issue?.name, item.source_email)),
-    [items, query],
-  );
+  const visible = useMemo(() => {
+    const filtered = items.filter((item) => {
+      if (!matchesQuery(query, item.issue?.name, item.source_email)) return false;
+      if (priorityFilter.length === 0) return true;
+      return priorityFilter.includes(item.issue?.priority ?? 'none');
+    });
+    return filtered.sort((a, b) => {
+      switch (sort.sortBy) {
+        case 'name':
+          return withOrder(compareText(a.issue?.name, b.issue?.name), sort.sortOrder);
+        case 'priority':
+          return withOrder(
+            compareNumbers(
+              PRIORITY_RANK[a.issue?.priority ?? 'none'] ?? 0,
+              PRIORITY_RANK[b.issue?.priority ?? 'none'] ?? 0,
+            ),
+            sort.sortOrder,
+          );
+        default:
+          return withOrder(compareDates(a.created_at, b.created_at), sort.sortOrder);
+      }
+    });
+  }, [items, query, priorityFilter, sort]);
 
   const setTab = (next: string) => {
     if (!(TABS as readonly string[]).includes(next)) return;
@@ -133,6 +189,32 @@ export function IntakePage() {
     params.delete('q');
     setSearchParams(params, { replace: true });
   };
+
+  /* Shared by the filter popover and the active-filter chips under it, so the
+     labels in both always come from the same config. */
+  const filterGroups: ListFilterGroup[] = [
+    {
+      key: 'priority',
+      label: t('views.priority', 'Priority'),
+      options: PRIORITIES.map((value) => ({
+        value,
+        label: t(`priority.${value}`, PRIORITY_LABELS[value]),
+      })),
+    },
+  ];
+  const selectedFilters = { priority: priorityFilter };
+
+  const toggleFilter = (key: string, value: string) =>
+    setSearchParams(toggleListParam(searchParams, key, value), { replace: true });
+
+  const resetFilters = () => {
+    const params = new URLSearchParams(searchParams);
+    params.delete('priority');
+    setSearchParams(params, { replace: true });
+  };
+
+  const changeSort = (next: SortState<IntakeSortField>) =>
+    setSearchParams(writeSortState(searchParams, next, 'created_at'), { replace: true });
 
   /** Runs a triage action, then reloads the tab the item just left. */
   const triage = async (item: IntakeItemApiResponse, action: 'accept' | 'decline' | 'snooze') => {
@@ -236,6 +318,14 @@ export function IntakePage() {
       <ProjectListToolbar
         searchPlaceholder={t('intake.searchPlaceholder', 'Search requests')}
         regionLabel={t('intake.toolbar', 'Intake controls')}
+        chips={
+          <ListFilterChips
+            groups={filterGroups}
+            selected={selectedFilters}
+            onToggle={toggleFilter}
+            onReset={resetFilters}
+          />
+        }
         scopeControl={
           /* The segmented control the v2 projects and archives lists use for
              their scopes, so every scope switch reads the same. */
@@ -246,14 +336,14 @@ export function IntakePage() {
             variant="default"
             size="sm"
             spacing={1}
-            className="bg-muted/60 w-fit max-w-full shrink-0 touch-pan-x overflow-x-auto rounded-lg p-1 sm:p-0.5"
+            className="bg-muted/60 w-fit max-w-full shrink-0 touch-pan-x overflow-x-auto rounded-lg p-0.5"
             aria-label={t('intake.scope', 'Triage status')}
           >
             {TABS.map((name) => (
               <ToggleGroupItem
                 key={name}
                 value={name}
-                className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
+                className="data-[state=on]:bg-background h-10 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
               >
                 {t(`intake.${name}`, TAB_LABELS[name])}
                 {name === 'pending' && pendingCount > 0 && (
@@ -264,6 +354,25 @@ export function IntakePage() {
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
+        }
+        filters={
+          <>
+            <ListFiltersMenu
+              groups={filterGroups}
+              selected={selectedFilters}
+              onToggle={toggleFilter}
+              onReset={resetFilters}
+            />
+            <ListSortMenu
+              options={[
+                { value: 'created_at', label: t('common.created', 'Created') },
+                { value: 'priority', label: t('views.priority', 'Priority') },
+                { value: 'name', label: t('intake.request', 'Request') },
+              ]}
+              value={sort}
+              onChange={changeSort}
+            />
+          </>
         }
       />
 

@@ -27,6 +27,12 @@ import {
   type ProjectIssuesDisplayPayload,
   type ProjectIssuesFiltersState,
 } from '../../lib/projectIssuesEvents';
+import {
+  isDefaultProjectIssuesFilters,
+  parseProjectIssuesFilters,
+  projectIssuesFiltersStorageKey,
+  serializeProjectIssuesFilters,
+} from '../lib/projectIssuesFiltersStorage';
 import { normalizeUuidKey } from '../../lib/utils';
 import type { IssueInlinePatch } from '../../components/work-item/layouts/IssueLayoutTypes';
 import type { SavedViewDisplayPropertyId } from '../../lib/projectSavedViewDisplay';
@@ -113,6 +119,9 @@ export function useProjectIssuesController(workspaceSlug?: string, projectId?: s
   const [listFilters, setListFilters] = useState<ProjectIssuesFiltersState>(() => ({
     ...DEFAULT_PROJECT_ISSUES_FILTERS,
   }));
+  /* Storage key whose stored filters have already been read back into state;
+     null while a project's restore is still pending. */
+  const filtersRestoredFor = useRef<string | null>(null);
   /* Free-text narrowing over the loaded page. The shipped header has no search
      field for this list, so it stays empty there; the v2 toolbar drives it. */
   const [searchQuery, setSearchQuery] = useState('');
@@ -282,10 +291,47 @@ export function useProjectIssuesController(workspaceSlug?: string, projectId?: s
     return () => window.removeEventListener(PROJECT_ISSUES_FILTER_EVENT, handler);
   }, [workspaceSlug, projectId]);
 
+  /* Filters are per project and survive a reload, under a v2-only key. A filter
+     here is a standing choice about how this project is read, not a one-off
+     query, so losing it on every sidebar navigation reads as a bug; the free
+     text search above is the one that stays per visit. */
+  useEffect(() => {
+    if (!workspaceSlug || !projectId) return;
+    const key = projectIssuesFiltersStorageKey(workspaceSlug, projectId);
+    let stored: ProjectIssuesFiltersState | null = null;
+    try {
+      stored = parseProjectIssuesFilters(localStorage.getItem(key));
+    } catch {
+      stored = null;
+    }
+    /* Deferred so the state lands after this effect rather than during it. */
+    queueMicrotask(() => {
+      setListFilters(stored ?? { ...DEFAULT_PROJECT_ISSUES_FILTERS });
+      filtersRestoredFor.current = key;
+    });
+    return () => {
+      if (filtersRestoredFor.current === key) filtersRestoredFor.current = null;
+    };
+  }, [workspaceSlug, projectId]);
+
+  useEffect(() => {
+    if (!workspaceSlug || !projectId) return;
+    const key = projectIssuesFiltersStorageKey(workspaceSlug, projectId);
+    /* Until the restore has landed, `listFilters` is still the previous
+       project's state or the default — writing it would erase what we are
+       about to read back. */
+    if (filtersRestoredFor.current !== key) return;
+    try {
+      if (isDefaultProjectIssuesFilters(listFilters)) localStorage.removeItem(key);
+      else localStorage.setItem(key, serializeProjectIssuesFilters(listFilters));
+    } catch {
+      /* quota or private mode: the session keeps working, it just won't persist */
+    }
+  }, [workspaceSlug, projectId, listFilters]);
+
   /* Display settings are per project and survive a reload. The shipped header
      writes the same key, so the two surfaces read each other's choice instead of
-     each keeping its own. Filters deliberately stay in memory — the shipped list
-     resets them on reload too. */
+     each keeping its own. */
   useEffect(() => {
     if (!workspaceSlug || !projectId) return;
     let stored: ProjectIssuesDisplayState | null = null;

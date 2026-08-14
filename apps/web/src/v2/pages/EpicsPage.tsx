@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { CircleAlert, Layers, RefreshCw, SearchX } from 'lucide-react';
+import { CircleAlert, Layers, Plus, RefreshCw, SearchX } from 'lucide-react';
+import { CreateEpicDialog } from '@/v2/components/create-epic-dialog';
+import { ListFilterChips } from '@/v2/components/list-filter-chips';
+import { ListFiltersMenu, type ListFilterGroup } from '@/v2/components/list-filters-menu';
 import { ListPageSkeleton } from '@/v2/components/list-page-skeleton';
+import { ListSortMenu } from '@/v2/components/list-sort-menu';
 import { PageHeading } from '@/v2/components/page-heading';
 import { ProjectListToolbar } from '@/v2/components/project-list-toolbar';
 import { Badge } from '@/v2/components/ui/badge';
@@ -31,7 +35,21 @@ import { epicService, type EpicProgress } from '../../services/epicService';
 import { projectService } from '../../services/projectService';
 import { stateService } from '../../services/stateService';
 import {
+  compareDates,
+  compareNumbers,
+  compareText,
+  passesFilter,
+  readListParam,
+  readSortState,
+  toggleListParam,
+  withOrder,
+  writeSortState,
+  type SortState,
+} from '../lib/listControls';
+import { useEpicsListPreferences } from '../hooks/useListViewPreferences';
+import {
   EMPTY_PROGRESS,
+  PRIORITIES,
   PRIORITY_LABELS,
   completionPercent,
   formatDate,
@@ -42,6 +60,26 @@ import {
   type Priority,
 } from '../lib/project';
 import type { IssueApiResponse, ProjectApiResponse, StateApiResponse } from '../../api/types';
+
+/** The columns an epic list is worth reordering by. */
+const SORT_FIELDS = [
+  'name',
+  'created_at',
+  'updated_at',
+  'target_date',
+  'priority',
+  'progress',
+] as const;
+type EpicSortField = (typeof SORT_FIELDS)[number];
+
+/** Urgent first when descending, which is the order the reader expects. */
+const PRIORITY_RANK: Record<string, number> = {
+  urgent: 4,
+  high: 3,
+  medium: 2,
+  low: 1,
+  none: 0,
+};
 
 /**
  * The v2 view of a project's epics, built from shadcn primitives. It renders
@@ -59,6 +97,7 @@ export function EpicsPage() {
   const { workspaceSlug, projectId } = useParams<{ workspaceSlug: string; projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   useDocumentTitle(t('common.epics', 'Epics'));
+  useEpicsListPreferences(workspaceSlug, projectId);
 
   const [epics, setEpics] = useState<IssueApiResponse[]>([]);
   const [progress, setProgress] = useState<Record<string, EpicProgress>>({});
@@ -67,8 +106,17 @@ export function EpicsPage() {
   const [loading, setLoading] = useState(Boolean(workspaceSlug && projectId));
   const [loadError, setLoadError] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const query = searchParams.get('q') ?? '';
+  /* Memoised so the sorted list below is not rebuilt on every render — reading
+     a param allocates a fresh array each time. */
+  const stateFilter = useMemo(() => readListParam(searchParams, 'state'), [searchParams]);
+  const priorityFilter = useMemo(() => readListParam(searchParams, 'priority'), [searchParams]);
+  const sort = useMemo(
+    () => readSortState<EpicSortField>(searchParams, SORT_FIELDS, 'created_at'),
+    [searchParams],
+  );
 
   useEffect(() => {
     if (!workspaceSlug || !projectId) return;
@@ -104,19 +152,86 @@ export function EpicsPage() {
 
   const stateById = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
 
-  const visible = useMemo(
-    () =>
-      epics.filter((epic) =>
-        matchesQuery(query, epic.name, workItemDisplayId(epic, project ?? undefined)),
-      ),
-    [epics, query, project],
-  );
+  const visible = useMemo(() => {
+    const filtered = epics.filter(
+      (epic) =>
+        matchesQuery(query, epic.name, workItemDisplayId(epic, project ?? undefined)) &&
+        passesFilter(stateFilter, epic.state_id) &&
+        passesFilter(priorityFilter, epic.priority ?? 'none'),
+    );
+    return filtered.sort((a, b) => {
+      switch (sort.sortBy) {
+        case 'name':
+          return withOrder(compareText(a.name, b.name), sort.sortOrder);
+        case 'updated_at':
+          return withOrder(compareDates(a.updated_at, b.updated_at), sort.sortOrder);
+        case 'target_date':
+          return withOrder(compareDates(a.target_date, b.target_date), sort.sortOrder);
+        case 'priority':
+          return withOrder(
+            compareNumbers(
+              PRIORITY_RANK[a.priority ?? 'none'] ?? 0,
+              PRIORITY_RANK[b.priority ?? 'none'] ?? 0,
+            ),
+            sort.sortOrder,
+          );
+        case 'progress':
+          return withOrder(
+            compareNumbers(
+              completionPercent(progress[a.id] ?? EMPTY_PROGRESS),
+              completionPercent(progress[b.id] ?? EMPTY_PROGRESS),
+            ),
+            sort.sortOrder,
+          );
+        default:
+          return withOrder(compareDates(a.created_at, b.created_at), sort.sortOrder);
+      }
+    });
+  }, [epics, query, project, stateFilter, priorityFilter, sort, progress]);
 
   const clearSearch = () => {
     const next = new URLSearchParams(searchParams);
     next.delete('q');
     setSearchParams(next, { replace: true });
   };
+
+  /* Shared by the filter popover and the active-filter chips under it, so the
+     labels in both always come from the same config. */
+  const filterGroups: ListFilterGroup[] = [
+    {
+      key: 'state',
+      label: t('views.state', 'State'),
+      options: states.map((state) => ({
+        value: state.id,
+        label: state.name,
+        color: state.color || undefined,
+      })),
+    },
+    {
+      key: 'priority',
+      label: t('views.priority', 'Priority'),
+      options: PRIORITIES.map((value) => ({
+        value,
+        label: t(`priority.${value}`, PRIORITY_LABELS[value]),
+      })),
+    },
+  ];
+  const selectedFilters = { state: stateFilter, priority: priorityFilter };
+
+  const toggleFilter = (key: string, value: string) =>
+    setSearchParams(toggleListParam(searchParams, key, value), { replace: true });
+
+  const resetFilters = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('state');
+    next.delete('priority');
+    setSearchParams(next, { replace: true });
+  };
+
+  const changeSort = (next: SortState<EpicSortField>) =>
+    setSearchParams(writeSortState(searchParams, next, 'created_at'), { replace: true });
+
+  const filtersActive = stateFilter.length > 0 || priorityFilter.length > 0;
 
   if (loading) {
     return <ListPageSkeleton label={t('epics.loading', 'Loading epics…')} rows={6} />;
@@ -168,17 +283,31 @@ export function EpicsPage() {
                 'epics.emptyDescription',
                 'Epics group related work items so a long-running effort can be tracked as one thing.',
               )
-            : t('epics.noMatches', 'No epics match the current search.')}
+            : t('epics.noMatchesFiltered', 'No epics match the current search and filters.')}
         </EmptyDescription>
       </EmptyHeader>
-      {epics.length > 0 && query && (
-        <EmptyContent>
-          <Button type="button" variant="outline" onClick={clearSearch}>
-            <SearchX aria-hidden="true" />
-            {t('common.clearSearch', 'Clear search')}
+      <EmptyContent>
+        {epics.length === 0 ? (
+          <Button type="button" onClick={() => setCreateOpen(true)}>
+            <Plus aria-hidden="true" />
+            {t('epics.newEpic', 'New epic')}
           </Button>
-        </EmptyContent>
-      )}
+        ) : (
+          <>
+            {query && (
+              <Button type="button" variant="outline" onClick={clearSearch}>
+                <SearchX aria-hidden="true" />
+                {t('common.clearSearch', 'Clear search')}
+              </Button>
+            )}
+            {filtersActive && (
+              <Button type="button" variant="outline" onClick={resetFilters}>
+                {t('common.resetFilters', 'Reset filters')}
+              </Button>
+            )}
+          </>
+        )}
+      </EmptyContent>
     </Empty>
   );
 
@@ -202,7 +331,58 @@ export function EpicsPage() {
       <ProjectListToolbar
         searchPlaceholder={t('epics.searchPlaceholder', 'Search epics')}
         regionLabel={t('epics.toolbar', 'Epic controls')}
+        chips={
+          <ListFilterChips
+            groups={filterGroups}
+            selected={selectedFilters}
+            onToggle={toggleFilter}
+            onReset={resetFilters}
+          />
+        }
+        filters={
+          <>
+            <ListFiltersMenu
+              groups={filterGroups}
+              selected={selectedFilters}
+              onToggle={toggleFilter}
+              onReset={resetFilters}
+            />
+            <ListSortMenu
+              options={[
+                { value: 'created_at', label: t('common.createdAt', 'Created at') },
+                { value: 'updated_at', label: t('common.updatedAt', 'Updated at') },
+                { value: 'name', label: t('common.name', 'Name') },
+                { value: 'priority', label: t('views.priority', 'Priority') },
+                { value: 'progress', label: t('common.progress', 'Progress') },
+                { value: 'target_date', label: t('issues.targetDate', 'Due') },
+              ]}
+              value={sort}
+              onChange={changeSort}
+            />
+          </>
+        }
+        actions={
+          <Button
+            type="button"
+            className="h-11 sm:h-9"
+            onClick={() => setCreateOpen(true)}
+            disabled={!workspaceSlug || !projectId}
+          >
+            <Plus aria-hidden="true" />
+            {t('epics.newEpic', 'New epic')}
+          </Button>
+        }
       />
+
+      {workspaceSlug && projectId && (
+        <CreateEpicDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
+          onCreated={(epic) => setEpics((previous) => [epic, ...previous])}
+        />
+      )}
 
       {visible.length === 0 ? (
         emptyState

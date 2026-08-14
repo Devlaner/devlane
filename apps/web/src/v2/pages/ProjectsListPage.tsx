@@ -41,11 +41,12 @@ import { ProjectIconDisplay } from '../../components/ProjectIconModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import { formatDate as formatAbsoluteDate } from '../../i18n/format';
+import { useProjectsListPreferences } from '../hooks/useProjectsListPreferences';
 import { filterProjectsList } from '../lib/filterProjectsList';
 import { PROJECTS_REFRESH_EVENT } from '../lib/projectListEvents';
 import { parseProjectsListSearchParams } from '../../lib/projectsListSearchParams';
 import { formatRelativeTime } from '../../lib/settingsHelpers';
-import { getImageUrl } from '../../lib/utils';
+import { cn, getImageUrl } from '../../lib/utils';
 import { favoriteService } from '../../services/favoriteService';
 import { projectService } from '../../services/projectService';
 import { workspaceService } from '../../services/workspaceService';
@@ -156,19 +157,36 @@ function ProjectActions({
   );
 }
 
-function getCoverGradient(projectId: string): string {
-  const n = projectId.split('').reduce((acc, character) => acc + character.charCodeAt(0), 0);
-  const hues = ['220', '260', '160', '30', '340'];
-  const hue = hues[n % hues.length];
-  return `linear-gradient(135deg, hsl(${hue}, 45%, 35%) 0%, hsl(${hue}, 55%, 25%) 100%)`;
+// Icon colors that vanish on the mark's neutral surface fall back to the text token.
+const UNUSABLE_MARK_ICON_COLORS = new Set(['#fff', '#ffffff', 'white']);
+
+function markIconProp(
+  iconProp: ProjectApiResponse['icon_prop'],
+): { name?: string; color?: string } | null | undefined {
+  if (!iconProp?.name) return iconProp;
+  const color = iconProp.color?.trim().toLowerCase();
+  if (color && UNUSABLE_MARK_ICON_COLORS.has(color)) return { name: iconProp.name };
+  return iconProp;
 }
 
-function ProjectMark({ project, className }: { project: ProjectApiResponse; className?: string }) {
+function ProjectMark({
+  project,
+  className,
+  size = 22,
+}: {
+  project: ProjectApiResponse;
+  className?: string;
+  size?: number;
+}) {
   const coverUrl = getImageUrl(project.cover_image);
   return (
     <span
       aria-hidden="true"
-      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl ${className ?? 'size-11'}`}
+      className={cn(
+        'relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg border',
+        coverUrl ? 'border-transparent' : 'border-border/60 bg-muted text-foreground',
+        className ?? 'size-11',
+      )}
       style={
         coverUrl
           ? {
@@ -176,10 +194,19 @@ function ProjectMark({ project, className }: { project: ProjectApiResponse; clas
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }
-          : { background: getCoverGradient(project.id) }
+          : undefined
       }
     >
-      <ProjectIconDisplay emoji={project.emoji} icon_prop={project.icon_prop} size={22} />
+      {coverUrl ? <span className="absolute inset-0 bg-black/45" /> : null}
+      <ProjectIconDisplay
+        className={cn(
+          'relative flex items-center justify-center leading-none',
+          coverUrl && 'text-white',
+        )}
+        emoji={project.emoji}
+        icon_prop={coverUrl ? { name: project.icon_prop?.name } : markIconProp(project.icon_prop)}
+        size={size}
+      />
     </span>
   );
 }
@@ -204,6 +231,7 @@ export function ProjectsListPage() {
   const { favoriteProjectIds, setFavoriteProjectIds } = useFavorites();
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  useProjectsListPreferences(workspaceSlug);
 
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [allProjects, setAllProjects] = useState<ProjectApiResponse[]>([]);
@@ -884,7 +912,7 @@ export function ProjectsListPage() {
                   >
                     <TableCell className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <ProjectMark project={project} className="size-10" />
+                        <ProjectMark project={project} className="size-8 rounded-md" size={16} />
                         <div className="min-w-0">
                           <Link
                             to={projectUrl}

@@ -48,6 +48,7 @@ import { projectService } from '../../services/projectService';
 import { stateService } from '../../services/stateService';
 import { workspaceService } from '../../services/workspaceService';
 import { attachWorkItemRelations } from '../lib/workItemRelations';
+import { useWorkItemLayoutPreference } from '../hooks/useListViewPreferences';
 import type {
   CycleApiResponse,
   IssueApiResponse,
@@ -85,6 +86,7 @@ export function ModuleDetailPage() {
     moduleId: string;
   }>();
   const [searchParams, setSearchParams] = useSearchParams();
+  useWorkItemLayoutPreference('module-layout', workspaceSlug, projectId);
 
   const [module, setModule] = useState<ModuleApiResponse | null>(null);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);

@@ -39,6 +39,7 @@ import { cycleMatchesPathSegment } from '../../lib/cycle';
 import { buildGroupedIssues } from '../../lib/issueListGroupAndSort';
 import { cloneDefaultProjectIssuesDisplay } from '../../lib/projectIssuesDisplay';
 import { formatDate } from '../lib/project';
+import { useWorkItemLayoutPreference } from '../hooks/useListViewPreferences';
 import type { SavedViewDisplayPropertyId } from '../../lib/projectSavedViewDisplay';
 import { cycleService, type CycleProgressResponse } from '../../services/cycleService';
 import { integrationService } from '../../services/integrationService';
@@ -95,6 +96,7 @@ export function CycleDetailPage() {
     cycleId: string;
   }>();
   const [searchParams, setSearchParams] = useSearchParams();
+  useWorkItemLayoutPreference('cycle-layout', workspaceSlug, projectId);
 
   const [cycle, setCycle] = useState<CycleApiResponse | null>(null);
   const [allCycles, setAllCycles] = useState<CycleApiResponse[]>([]);

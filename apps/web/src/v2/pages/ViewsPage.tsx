@@ -5,12 +5,17 @@ import {
   CircleAlert,
   LayoutList,
   MoreHorizontal,
+  Plus,
   RefreshCw,
   SearchX,
   Star,
   Trash2,
 } from 'lucide-react';
+import { CreateProjectViewDialog } from '@/v2/components/create-project-view-dialog';
+import { ListFilterChips } from '@/v2/components/list-filter-chips';
+import { ListFiltersMenu, type ListFilterGroup } from '@/v2/components/list-filters-menu';
 import { ListPageSkeleton } from '@/v2/components/list-page-skeleton';
+import { ListSortMenu } from '@/v2/components/list-sort-menu';
 import { PageHeading } from '@/v2/components/page-heading';
 import { ProjectListToolbar } from '@/v2/components/project-list-toolbar';
 import { Badge } from '@/v2/components/ui/badge';
@@ -44,9 +49,24 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { projectService } from '../../services/projectService';
 import { viewService } from '../../services/viewService';
 import { getViewAccessMeta } from '../../lib/viewAccess';
+import {
+  compareDates,
+  compareText,
+  readListParam,
+  readSortState,
+  toggleListParam,
+  withOrder,
+  writeSortState,
+  type SortState,
+} from '../lib/listControls';
+import { useViewsListPreferences } from '../hooks/useListViewPreferences';
 import { formatDate, matchesQuery } from '../lib/project';
 import { cn } from '../../lib/utils';
 import type { IssueViewApiResponse, ProjectApiResponse } from '../../api/types';
+
+/** The columns a saved-view list is worth reordering by. */
+const SORT_FIELDS = ['name', 'created_at', 'updated_at'] as const;
+type ViewSortField = (typeof SORT_FIELDS)[number];
 
 /**
  * The v2 view of a project's saved views, built from shadcn primitives. It
@@ -64,6 +84,7 @@ export function ViewsPage() {
   const { workspaceSlug, projectId } = useParams<{ workspaceSlug: string; projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   useDocumentTitle(t('common.views', 'Views'));
+  useViewsListPreferences(workspaceSlug, projectId);
 
   const [views, setViews] = useState<IssueViewApiResponse[]>([]);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
@@ -74,8 +95,17 @@ export function ViewsPage() {
      over the whole page instead. */
   const [actionError, setActionError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const query = searchParams.get('q') ?? '';
+  /* Memoised so the sorted list below is not rebuilt on every render — reading
+     a param allocates a fresh array each time. */
+  const accessFilter = useMemo(() => readListParam(searchParams, 'access'), [searchParams]);
+  const flagFilter = useMemo(() => readListParam(searchParams, 'flag'), [searchParams]);
+  const sort = useMemo(
+    () => readSortState<ViewSortField>(searchParams, SORT_FIELDS, 'updated_at'),
+    [searchParams],
+  );
 
   useEffect(() => {
     if (!workspaceSlug || !projectId) return;
@@ -102,16 +132,68 @@ export function ViewsPage() {
     };
   }, [workspaceSlug, projectId, reloadToken]);
 
-  const visible = useMemo(
-    () => views.filter((view) => matchesQuery(query, view.name, view.description)),
-    [views, query],
-  );
+  const visible = useMemo(() => {
+    const filtered = views.filter((view) => {
+      if (!matchesQuery(query, view.name, view.description)) return false;
+      /* Access is stored as a string on some endpoints and an int on others, so
+         it is matched through the same normaliser the badge renders from. */
+      if (accessFilter.length > 0) {
+        const tone = getViewAccessMeta(view)?.tone;
+        if (!tone || !accessFilter.includes(tone)) return false;
+      }
+      if (flagFilter.includes('favorite') && !view.is_favorite) return false;
+      return true;
+    });
+    return filtered.sort((a, b) => {
+      switch (sort.sortBy) {
+        case 'name':
+          return withOrder(compareText(a.name, b.name), sort.sortOrder);
+        case 'created_at':
+          return withOrder(compareDates(a.created_at, b.created_at), sort.sortOrder);
+        default:
+          return withOrder(compareDates(a.updated_at, b.updated_at), sort.sortOrder);
+      }
+    });
+  }, [views, query, accessFilter, flagFilter, sort]);
 
   const clearSearch = () => {
     const next = new URLSearchParams(searchParams);
     next.delete('q');
     setSearchParams(next, { replace: true });
   };
+
+  /* Shared by the filter popover and the active-filter chips under it, so the
+     labels in both always come from the same config. */
+  const filterGroups: ListFilterGroup[] = [
+    {
+      key: 'access',
+      label: t('views.access', 'Access'),
+      options: [
+        { value: 'public', label: t('views.accessPublic', 'Public') },
+        { value: 'private', label: t('views.accessPrivate', 'Private') },
+        { value: 'restricted', label: t('views.accessRestricted', 'Restricted') },
+      ],
+    },
+    {
+      key: 'flag',
+      label: t('common.other', 'Other'),
+      options: [{ value: 'favorite', label: t('views.favoritesOnly', 'Favorites only') }],
+    },
+  ];
+  const selectedFilters = { access: accessFilter, flag: flagFilter };
+
+  const toggleFilter = (key: string, value: string) =>
+    setSearchParams(toggleListParam(searchParams, key, value), { replace: true });
+
+  const resetFilters = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('access');
+    next.delete('flag');
+    setSearchParams(next, { replace: true });
+  };
+
+  const changeSort = (next: SortState<ViewSortField>) =>
+    setSearchParams(writeSortState(searchParams, next, 'updated_at'), { replace: true });
 
   const toggleFavorite = async (view: IssueViewApiResponse) => {
     if (!workspaceSlug) return;
@@ -192,17 +274,31 @@ export function ViewsPage() {
                 'views.projectEmptyDescription',
                 'A view saves a set of filters so the work you look at every day is one click away.',
               )
-            : t('views.projectNoMatches', 'No views match the current search.')}
+            : t('views.projectNoMatchesFiltered', 'No views match the current search and filters.')}
         </EmptyDescription>
       </EmptyHeader>
-      {views.length > 0 && query && (
-        <EmptyContent>
-          <Button type="button" variant="outline" onClick={clearSearch}>
-            <SearchX aria-hidden="true" />
-            {t('common.clearSearch', 'Clear search')}
+      <EmptyContent>
+        {views.length === 0 ? (
+          <Button type="button" onClick={() => setCreateOpen(true)}>
+            <Plus aria-hidden="true" />
+            {t('views.newView', 'New view')}
           </Button>
-        </EmptyContent>
-      )}
+        ) : (
+          <>
+            {query && (
+              <Button type="button" variant="outline" onClick={clearSearch}>
+                <SearchX aria-hidden="true" />
+                {t('common.clearSearch', 'Clear search')}
+              </Button>
+            )}
+            {(accessFilter.length > 0 || flagFilter.length > 0) && (
+              <Button type="button" variant="outline" onClick={resetFilters}>
+                {t('common.resetFilters', 'Reset filters')}
+              </Button>
+            )}
+          </>
+        )}
+      </EmptyContent>
     </Empty>
   );
 
@@ -226,7 +322,55 @@ export function ViewsPage() {
       <ProjectListToolbar
         searchPlaceholder={t('views.searchProjectViews', 'Search views')}
         regionLabel={t('views.toolbar', 'View controls')}
+        chips={
+          <ListFilterChips
+            groups={filterGroups}
+            selected={selectedFilters}
+            onToggle={toggleFilter}
+            onReset={resetFilters}
+          />
+        }
+        filters={
+          <>
+            <ListFiltersMenu
+              groups={filterGroups}
+              selected={selectedFilters}
+              onToggle={toggleFilter}
+              onReset={resetFilters}
+            />
+            <ListSortMenu
+              options={[
+                { value: 'updated_at', label: t('common.updatedAt', 'Updated at') },
+                { value: 'created_at', label: t('common.createdAt', 'Created at') },
+                { value: 'name', label: t('common.name', 'Name') },
+              ]}
+              value={sort}
+              onChange={changeSort}
+            />
+          </>
+        }
+        actions={
+          <Button
+            type="button"
+            className="h-11 sm:h-9"
+            onClick={() => setCreateOpen(true)}
+            disabled={!workspaceSlug || !projectId}
+          >
+            <Plus aria-hidden="true" />
+            {t('views.newView', 'New view')}
+          </Button>
+        }
       />
+
+      {workspaceSlug && projectId && (
+        <CreateProjectViewDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
+          onCreated={(view) => setViews((previous) => [view, ...previous])}
+        />
+      )}
 
       {actionError && (
         <p className="text-destructive text-sm" role="alert">

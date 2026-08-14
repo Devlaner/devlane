@@ -21,6 +21,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { formatDate } from '../../i18n/format';
 import { issueService } from '../../services/issueService';
 import { projectService } from '../../services/projectService';
+import { useArchivesPreferences } from '../hooks/useListViewPreferences';
 import type { IssueApiResponse, ProjectApiResponse } from '../../api/types';
 
 const ARCHIVES_PAGE_SIZE = 50;
@@ -48,6 +49,7 @@ export function ArchivesPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   useDocumentTitle(t('archives.documentTitle', 'Archives'));
+  useArchivesPreferences(workspaceSlug);
 
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);

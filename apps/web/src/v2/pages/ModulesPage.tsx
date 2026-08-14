@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { Boxes, CircleAlert, RefreshCw, SearchX } from 'lucide-react';
+import { Boxes, CircleAlert, Plus, RefreshCw, SearchX } from 'lucide-react';
+import { CreateModuleDialog } from '@/v2/components/create-module-dialog';
+import { ListFilterChips } from '@/v2/components/list-filter-chips';
+import { ListFiltersMenu, type ListFilterGroup } from '@/v2/components/list-filters-menu';
 import { ListPageSkeleton } from '@/v2/components/list-page-skeleton';
+import { ListSortMenu } from '@/v2/components/list-sort-menu';
 import { PageHeading } from '@/v2/components/page-heading';
 import { ProjectListToolbar } from '@/v2/components/project-list-toolbar';
 import { Badge } from '@/v2/components/ui/badge';
@@ -30,12 +34,36 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { moduleService, type ModuleProgress } from '../../services/moduleService';
 import { projectService } from '../../services/projectService';
 import { MODULE_STATUSES } from '../../lib/moduleStatuses';
+import {
+  compareDates,
+  compareNumbers,
+  compareText,
+  passesFilter,
+  readListParam,
+  readSortState,
+  toggleListParam,
+  withOrder,
+  writeSortState,
+  type SortState,
+} from '../lib/listControls';
+import { useModulesListPreferences } from '../hooks/useListViewPreferences';
 import { EMPTY_PROGRESS, completionPercent, formatDate, matchesQuery } from '../lib/project';
 import type { ModuleApiResponse, ProjectApiResponse } from '../../api/types';
 
 const STATUS_LABELS: Record<string, string> = Object.fromEntries(
   MODULE_STATUSES.map((status) => [status.id, status.label]),
 );
+
+/** The columns a module list is worth reordering by. */
+const SORT_FIELDS = [
+  'name',
+  'created_at',
+  'updated_at',
+  'start_date',
+  'target_date',
+  'progress',
+] as const;
+type ModuleSortField = (typeof SORT_FIELDS)[number];
 
 /**
  * The v2 view of a project's modules, built from shadcn primitives. It renders
@@ -53,6 +81,7 @@ export function ModulesPage() {
   const { workspaceSlug, projectId } = useParams<{ workspaceSlug: string; projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   useDocumentTitle(t('common.modules', 'Modules'));
+  useModulesListPreferences(workspaceSlug, projectId);
 
   const [modules, setModules] = useState<ModuleApiResponse[]>([]);
   const [progress, setProgress] = useState<Record<string, ModuleProgress>>({});
@@ -60,8 +89,16 @@ export function ModulesPage() {
   const [loading, setLoading] = useState(Boolean(workspaceSlug && projectId));
   const [loadError, setLoadError] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const query = searchParams.get('q') ?? '';
+  /* Memoised so the sorted list below is not rebuilt on every render — reading
+     a param allocates a fresh array each time. */
+  const statusFilter = useMemo(() => readListParam(searchParams, 'status'), [searchParams]);
+  const sort = useMemo(
+    () => readSortState<ModuleSortField>(searchParams, SORT_FIELDS, 'created_at'),
+    [searchParams],
+  );
 
   useEffect(() => {
     if (!workspaceSlug || !projectId) return;
@@ -93,16 +130,67 @@ export function ModulesPage() {
     };
   }, [workspaceSlug, projectId, reloadToken]);
 
-  const visible = useMemo(
-    () => modules.filter((module) => matchesQuery(query, module.name, module.description)),
-    [modules, query],
-  );
+  const visible = useMemo(() => {
+    const filtered = modules.filter(
+      (module) =>
+        matchesQuery(query, module.name, module.description) &&
+        passesFilter(statusFilter, module.status),
+    );
+    return filtered.sort((a, b) => {
+      switch (sort.sortBy) {
+        case 'name':
+          return withOrder(compareText(a.name, b.name), sort.sortOrder);
+        case 'updated_at':
+          return withOrder(compareDates(a.updated_at, b.updated_at), sort.sortOrder);
+        case 'start_date':
+          return withOrder(compareDates(a.start_date, b.start_date), sort.sortOrder);
+        case 'target_date':
+          return withOrder(compareDates(a.target_date, b.target_date), sort.sortOrder);
+        case 'progress':
+          return withOrder(
+            compareNumbers(
+              completionPercent(progress[a.id] ?? EMPTY_PROGRESS),
+              completionPercent(progress[b.id] ?? EMPTY_PROGRESS),
+            ),
+            sort.sortOrder,
+          );
+        default:
+          return withOrder(compareDates(a.created_at, b.created_at), sort.sortOrder);
+      }
+    });
+  }, [modules, query, statusFilter, sort, progress]);
 
   const clearSearch = () => {
     const next = new URLSearchParams(searchParams);
     next.delete('q');
     setSearchParams(next, { replace: true });
   };
+
+  /* Shared by the filter popover and the active-filter chips under it, so the
+     labels in both always come from the same config. */
+  const filterGroups: ListFilterGroup[] = [
+    {
+      key: 'status',
+      label: t('common.status', 'Status'),
+      options: MODULE_STATUSES.map((status) => ({
+        value: status.id,
+        label: t(`moduleStatus.${status.id}`, status.label),
+      })),
+    },
+  ];
+  const selectedFilters = { status: statusFilter };
+
+  const toggleFilter = (key: string, value: string) =>
+    setSearchParams(toggleListParam(searchParams, key, value), { replace: true });
+
+  const resetFilters = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('status');
+    setSearchParams(next, { replace: true });
+  };
+
+  const changeSort = (next: SortState<ModuleSortField>) =>
+    setSearchParams(writeSortState(searchParams, next, 'created_at'), { replace: true });
 
   if (loading) {
     return <ListPageSkeleton label={t('modules.loading', 'Loading modules…')} rows={6} />;
@@ -154,17 +242,31 @@ export function ModulesPage() {
                 'modules.emptyDescription',
                 'Modules split a project into bodies of work that are planned and tracked on their own.',
               )
-            : t('modules.noMatches', 'No modules match the current search.')}
+            : t('modules.noMatchesFiltered', 'No modules match the current search and filters.')}
         </EmptyDescription>
       </EmptyHeader>
-      {modules.length > 0 && query && (
-        <EmptyContent>
-          <Button type="button" variant="outline" onClick={clearSearch}>
-            <SearchX aria-hidden="true" />
-            {t('common.clearSearch', 'Clear search')}
+      <EmptyContent>
+        {modules.length === 0 ? (
+          <Button type="button" onClick={() => setCreateOpen(true)}>
+            <Plus aria-hidden="true" />
+            {t('modules.newModule', 'New module')}
           </Button>
-        </EmptyContent>
-      )}
+        ) : (
+          <>
+            {query && (
+              <Button type="button" variant="outline" onClick={clearSearch}>
+                <SearchX aria-hidden="true" />
+                {t('common.clearSearch', 'Clear search')}
+              </Button>
+            )}
+            {statusFilter.length > 0 && (
+              <Button type="button" variant="outline" onClick={resetFilters}>
+                {t('common.resetFilters', 'Reset filters')}
+              </Button>
+            )}
+          </>
+        )}
+      </EmptyContent>
     </Empty>
   );
 
@@ -188,7 +290,58 @@ export function ModulesPage() {
       <ProjectListToolbar
         searchPlaceholder={t('modules.searchPlaceholder', 'Search modules')}
         regionLabel={t('modules.toolbar', 'Module controls')}
+        chips={
+          <ListFilterChips
+            groups={filterGroups}
+            selected={selectedFilters}
+            onToggle={toggleFilter}
+            onReset={resetFilters}
+          />
+        }
+        filters={
+          <>
+            <ListFiltersMenu
+              groups={filterGroups}
+              selected={selectedFilters}
+              onToggle={toggleFilter}
+              onReset={resetFilters}
+            />
+            <ListSortMenu
+              options={[
+                { value: 'created_at', label: t('common.createdAt', 'Created at') },
+                { value: 'updated_at', label: t('common.updatedAt', 'Updated at') },
+                { value: 'name', label: t('common.name', 'Name') },
+                { value: 'progress', label: t('common.progress', 'Progress') },
+                { value: 'start_date', label: t('modules.startDate', 'Start') },
+                { value: 'target_date', label: t('modules.targetDate', 'Target') },
+              ]}
+              value={sort}
+              onChange={changeSort}
+            />
+          </>
+        }
+        actions={
+          <Button
+            type="button"
+            className="h-11 sm:h-9"
+            onClick={() => setCreateOpen(true)}
+            disabled={!workspaceSlug || !projectId}
+          >
+            <Plus aria-hidden="true" />
+            {t('modules.newModule', 'New module')}
+          </Button>
+        }
       />
+
+      {workspaceSlug && projectId && (
+        <CreateModuleDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
+          onCreated={(module) => setModules((previous) => [module, ...previous])}
+        />
+      )}
 
       {visible.length === 0 ? (
         emptyState

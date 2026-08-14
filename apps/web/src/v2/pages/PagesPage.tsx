@@ -9,10 +9,15 @@ import {
   Lock,
   LockOpen,
   MoreHorizontal,
+  Plus,
   RefreshCw,
   SearchX,
 } from 'lucide-react';
+import { CreatePageDialog } from '@/v2/components/create-page-dialog';
+import { ListFilterChips } from '@/v2/components/list-filter-chips';
+import { ListFiltersMenu, type ListFilterGroup } from '@/v2/components/list-filters-menu';
 import { ListPageSkeleton } from '@/v2/components/list-page-skeleton';
+import { ListSortMenu } from '@/v2/components/list-sort-menu';
 import { PageHeading } from '@/v2/components/page-heading';
 import { ProjectListToolbar } from '@/v2/components/project-list-toolbar';
 import { Badge } from '@/v2/components/ui/badge';
@@ -46,10 +51,25 @@ import { ToggleGroup, ToggleGroupItem } from '@/v2/components/ui/toggle-group';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { pageService } from '../../services/pageService';
 import { projectService } from '../../services/projectService';
+import {
+  compareDates,
+  compareText,
+  readListParam,
+  readSortState,
+  toggleListParam,
+  withOrder,
+  writeSortState,
+  type SortState,
+} from '../lib/listControls';
+import { usePagesListPreferences } from '../hooks/useListViewPreferences';
 import { formatDate, matchesQuery } from '../lib/project';
 import type { PageApiResponse, ProjectApiResponse } from '../../api/types';
 
 type PagesScope = 'live' | 'archived';
+
+/** The columns a page list is worth reordering by. */
+const SORT_FIELDS = ['name', 'created_at', 'updated_at'] as const;
+type PageSortField = (typeof SORT_FIELDS)[number];
 
 /**
  * The v2 view of a project's pages, built from shadcn primitives. It renders
@@ -69,6 +89,7 @@ export function PagesPage() {
   const { workspaceSlug, projectId } = useParams<{ workspaceSlug: string; projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   useDocumentTitle(t('common.pages', 'Pages'));
+  usePagesListPreferences(workspaceSlug, projectId);
 
   const [pages, setPages] = useState<PageApiResponse[]>([]);
   const [archived, setArchived] = useState<PageApiResponse[]>([]);
@@ -79,10 +100,19 @@ export function PagesPage() {
      takes over the whole page instead. */
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const query = searchParams.get('q') ?? '';
   /* URL-backed like the search, so a shared link lands on the same scope. */
   const scope: PagesScope = searchParams.get('scope') === 'archived' ? 'archived' : 'live';
+  /* Memoised so the sorted lists below are not rebuilt on every render —
+     reading a param allocates a fresh array each time. */
+  const accessFilter = useMemo(() => readListParam(searchParams, 'access'), [searchParams]);
+  const flagFilter = useMemo(() => readListParam(searchParams, 'flag'), [searchParams]);
+  const sort = useMemo(
+    () => readSortState<PageSortField>(searchParams, SORT_FIELDS, 'updated_at'),
+    [searchParams],
+  );
 
   const load = useCallback(() => {
     if (!workspaceSlug || !projectId) return () => {};
@@ -115,14 +145,35 @@ export function PagesPage() {
 
   useEffect(() => load(), [load]);
 
-  const visible = useMemo(
-    () => pages.filter((page) => matchesQuery(query, page.title ?? page.name)),
-    [pages, query],
+  /* One narrowing rule for both scopes: the archived list is the same list,
+     read at a different point in a page's life. */
+  const narrow = useCallback(
+    (list: PageApiResponse[]) => {
+      const filtered = list.filter((page) => {
+        if (!matchesQuery(query, page.title ?? page.name)) return false;
+        if (accessFilter.length > 0) {
+          const access = page.access === 1 ? 'private' : 'public';
+          if (!accessFilter.includes(access)) return false;
+        }
+        if (flagFilter.includes('locked') && !page.is_locked) return false;
+        return true;
+      });
+      return filtered.sort((a, b) => {
+        switch (sort.sortBy) {
+          case 'name':
+            return withOrder(compareText(a.title ?? a.name, b.title ?? b.name), sort.sortOrder);
+          case 'created_at':
+            return withOrder(compareDates(a.created_at, b.created_at), sort.sortOrder);
+          default:
+            return withOrder(compareDates(a.updated_at, b.updated_at), sort.sortOrder);
+        }
+      });
+    },
+    [query, accessFilter, flagFilter, sort],
   );
-  const visibleArchived = useMemo(
-    () => archived.filter((page) => matchesQuery(query, page.title ?? page.name)),
-    [archived, query],
-  );
+
+  const visible = useMemo(() => narrow(pages), [narrow, pages]);
+  const visibleArchived = useMemo(() => narrow(archived), [narrow, archived]);
 
   const setScope = (next: string) => {
     if (next !== 'live' && next !== 'archived') return;
@@ -137,6 +188,38 @@ export function PagesPage() {
     params.delete('q');
     setSearchParams(params, { replace: true });
   };
+
+  /* Shared by the filter popover and the active-filter chips under it, so the
+     labels in both always come from the same config. */
+  const filterGroups: ListFilterGroup[] = [
+    {
+      key: 'access',
+      label: t('pages.access', 'Access'),
+      options: [
+        { value: 'public', label: t('pages.public', 'Public') },
+        { value: 'private', label: t('pages.private', 'Private') },
+      ],
+    },
+    {
+      key: 'flag',
+      label: t('common.other', 'Other'),
+      options: [{ value: 'locked', label: t('pages.lockedOnly', 'Locked only') }],
+    },
+  ];
+  const selectedFilters = { access: accessFilter, flag: flagFilter };
+
+  const toggleFilter = (key: string, value: string) =>
+    setSearchParams(toggleListParam(searchParams, key, value), { replace: true });
+
+  const resetFilters = () => {
+    const params = new URLSearchParams(searchParams);
+    params.delete('access');
+    params.delete('flag');
+    setSearchParams(params, { replace: true });
+  };
+
+  const changeSort = (next: SortState<PageSortField>) =>
+    setSearchParams(writeSortState(searchParams, next, 'updated_at'), { replace: true });
 
   /* Archiving moves a row between the two scopes, so both lists are updated in
      place rather than refetched. */
@@ -215,9 +298,11 @@ export function PagesPage() {
     );
   }
 
+  const narrowingActive = Boolean(query) || accessFilter.length > 0 || flagFilter.length > 0;
+
   const emptyState = (isArchivedScope: boolean) => {
     const total = isArchivedScope ? archived.length : pages.length;
-    const filtered = total > 0 && Boolean(query);
+    const filtered = total > 0 && narrowingActive;
     return (
       <Empty className="rounded-xl border border-dashed">
         <EmptyHeader>
@@ -245,14 +330,32 @@ export function PagesPage() {
                   )}
           </EmptyDescription>
         </EmptyHeader>
-        {filtered && (
-          <EmptyContent>
-            <Button type="button" variant="outline" onClick={clearSearch}>
-              <SearchX aria-hidden="true" />
-              {t('common.clearSearch', 'Clear search')}
-            </Button>
-          </EmptyContent>
-        )}
+        <EmptyContent>
+          {filtered ? (
+            <>
+              {query && (
+                <Button type="button" variant="outline" onClick={clearSearch}>
+                  <SearchX aria-hidden="true" />
+                  {t('common.clearSearch', 'Clear search')}
+                </Button>
+              )}
+              {(accessFilter.length > 0 || flagFilter.length > 0) && (
+                <Button type="button" variant="outline" onClick={resetFilters}>
+                  {t('common.resetFilters', 'Reset filters')}
+                </Button>
+              )}
+            </>
+          ) : (
+            /* Nothing to restore in the archive, so only the live scope offers
+               the create action. */
+            !isArchivedScope && (
+              <Button type="button" onClick={() => setCreateOpen(true)}>
+                <Plus aria-hidden="true" />
+                {t('pages.newPage', 'New page')}
+              </Button>
+            )
+          )}
+        </EmptyContent>
       </Empty>
     );
   };
@@ -378,6 +481,14 @@ export function PagesPage() {
       <ProjectListToolbar
         searchPlaceholder={t('pages.searchPlaceholder', 'Search pages')}
         regionLabel={t('pages.toolbar', 'Page controls')}
+        chips={
+          <ListFilterChips
+            groups={filterGroups}
+            selected={selectedFilters}
+            onToggle={toggleFilter}
+            onReset={resetFilters}
+          />
+        }
         scopeControl={
           /* The segmented control the v2 projects and archives lists use for
              their scopes, so every scope switch reads the same. */
@@ -388,12 +499,12 @@ export function PagesPage() {
             variant="default"
             size="sm"
             spacing={1}
-            className="bg-muted/60 w-fit max-w-full shrink-0 touch-pan-x overflow-x-auto rounded-lg p-1 sm:p-0.5"
+            className="bg-muted/60 w-fit max-w-full shrink-0 touch-pan-x overflow-x-auto rounded-lg p-0.5"
             aria-label={t('pages.scope', 'Page type')}
           >
             <ToggleGroupItem
               value="live"
-              className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
+              className="data-[state=on]:bg-background h-10 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
             >
               {t('common.pages', 'Pages')}
               <span className="text-muted-foreground min-w-3 text-center text-xs font-normal tabular-nums">
@@ -402,7 +513,7 @@ export function PagesPage() {
             </ToggleGroupItem>
             <ToggleGroupItem
               value="archived"
-              className="data-[state=on]:bg-background h-11 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
+              className="data-[state=on]:bg-background h-10 min-w-0 gap-1.5 px-3 data-[state=on]:shadow-xs sm:h-8 sm:px-2.5"
             >
               {t('archives.documentTitle', 'Archives')}
               <span className="text-muted-foreground min-w-3 text-center text-xs font-normal tabular-nums">
@@ -411,7 +522,46 @@ export function PagesPage() {
             </ToggleGroupItem>
           </ToggleGroup>
         }
+        filters={
+          <>
+            <ListFiltersMenu
+              groups={filterGroups}
+              selected={selectedFilters}
+              onToggle={toggleFilter}
+              onReset={resetFilters}
+            />
+            <ListSortMenu
+              options={[
+                { value: 'updated_at', label: t('common.updatedAt', 'Updated at') },
+                { value: 'created_at', label: t('common.createdAt', 'Created at') },
+                { value: 'name', label: t('common.title', 'Title') },
+              ]}
+              value={sort}
+              onChange={changeSort}
+            />
+          </>
+        }
+        actions={
+          <Button
+            type="button"
+            className="h-11 sm:h-9"
+            onClick={() => setCreateOpen(true)}
+            disabled={!workspaceSlug || !projectId}
+          >
+            <Plus aria-hidden="true" />
+            {t('pages.newPage', 'New page')}
+          </Button>
+        }
       />
+
+      {workspaceSlug && projectId && (
+        <CreatePageDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
+        />
+      )}
 
       {actionError && (
         <p className="text-destructive text-sm" role="alert">

@@ -58,6 +58,7 @@ import { projectService } from '../../services/projectService';
 import { stateService } from '../../services/stateService';
 import { workspaceService } from '../../services/workspaceService';
 import { attachWorkItemRelations } from '../lib/workItemRelations';
+import { useDraftsPreferences } from '../hooks/useListViewPreferences';
 import type {
   CycleApiResponse,
   IssueApiResponse,
@@ -108,6 +109,7 @@ export function DraftsPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user: currentUser } = useAuth();
+  useDraftsPreferences(workspaceSlug);
 
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
