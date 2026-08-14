@@ -162,9 +162,9 @@ export function CyclesFiltersMenu({ filters, onChange }: CyclesFiltersMenuProps)
       <PopoverContent
         align="start"
         collisionPadding={8}
-        className="flex max-h-(--radix-popover-content-available-height) w-80 flex-col p-0"
+        className="max-h-(--radix-popover-content-available-height) w-80 overflow-hidden p-0"
       >
-        <div className="flex shrink-0 items-center justify-between border-b px-4 py-2.5">
+        <div className="flex h-11 items-center justify-between border-b px-4">
           <p className="text-sm font-medium">{t('common.filters', 'Filters')}</p>
           {activeCount > 0 && (
             <Button
@@ -183,7 +183,10 @@ export function CyclesFiltersMenu({ filters, onChange }: CyclesFiltersMenuProps)
             </Button>
           )}
         </div>
-        <ScrollArea className="h-[min(70vh,26rem)] min-h-0 flex-1">
+        {/* Sized rather than flexed — see WorkItemsFiltersMenu: the viewport's
+            `height: 100%` cannot resolve against a `flex-basis: 0` parent.
+            2.875rem is the 44px header plus the panel's two 1px borders. */}
+        <ScrollArea className="h-[min(70vh,26rem,calc(var(--radix-popover-content-available-height)-2.875rem))]">
           <div className="space-y-4 p-4">
             <Section title={t('common.status', 'Status')}>
               {STATUS_KEYS.map((key) => (

@@ -249,9 +249,9 @@ export function WorkItemsFiltersMenu({
       <PopoverContent
         align="start"
         collisionPadding={8}
-        className="flex max-h-(--radix-popover-content-available-height) w-80 flex-col p-0"
+        className="max-h-(--radix-popover-content-available-height) w-80 overflow-hidden p-0"
       >
-        <div className="flex shrink-0 items-center justify-between border-b px-4 py-2.5">
+        <div className="flex h-11 items-center justify-between border-b px-4">
           <p className="text-sm font-medium">{t('common.filters', 'Filters')}</p>
           {activeCount > 0 && (
             <Button
@@ -265,7 +265,11 @@ export function WorkItemsFiltersMenu({
             </Button>
           )}
         </div>
-        <ScrollArea className="h-[min(70vh,30rem)] min-h-0 flex-1">
+        {/* Sized rather than flexed: ScrollArea's viewport is `height: 100%`,
+            which resolves to `auto` against a `flex-basis: 0` parent — the
+            panel would then render at full content height and never scroll.
+            2.875rem is the 44px header plus the panel's two 1px borders. */}
+        <ScrollArea className="h-[min(70vh,30rem,calc(var(--radix-popover-content-available-height)-2.875rem))]">
           <div className="space-y-4 p-4">
             <Section title={t('filters.workItemGrouping', 'Work item Grouping')}>
               {/* Stacked rather than side by side: the three labels are full

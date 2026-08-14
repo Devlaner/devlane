@@ -85,9 +85,12 @@ export function WorkItemsDisplayMenu({ display, onChange }: WorkItemsDisplayMenu
       <PopoverContent
         align="end"
         collisionPadding={8}
-        className="flex max-h-(--radix-popover-content-available-height) w-72 flex-col p-0"
+        className="max-h-(--radix-popover-content-available-height) w-72 overflow-hidden p-0"
       >
-        <ScrollArea className="h-[min(70vh,28rem)] min-h-0 flex-1">
+        {/* Sized rather than flexed — see WorkItemsFiltersMenu: the viewport's
+            `height: 100%` cannot resolve against a `flex-basis: 0` parent.
+            This panel has no header, so only the two 1px borders come off. */}
+        <ScrollArea className="h-[min(70vh,28rem,calc(var(--radix-popover-content-available-height)-2px))]">
           <div className="space-y-4 p-4">
             <div className="space-y-2">
               <Label htmlFor="work-items-group-by">{t('display.groupBy', 'Group by')}</Label>
