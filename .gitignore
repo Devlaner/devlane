@@ -13,3 +13,6 @@ main.exe
 .playwright-mcp/
 .claude/
 graphify-out/
+# Local dev launch scripts (machine-specific, not part of the repo)
+run.sh
+run.ps1
