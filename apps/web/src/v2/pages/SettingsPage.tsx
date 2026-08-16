@@ -38,16 +38,13 @@ import { ProjectFeaturesPanel } from '@/v2/components/settings/project/project-f
 import { ProjectGeneralPanel } from '@/v2/components/settings/project/project-general-panel';
 import { ProjectLabelsPanel } from '@/v2/components/settings/project/project-labels-panel';
 import { ProjectMembersPanel } from '@/v2/components/settings/project/project-members-panel';
+import { ProjectEstimatesPanel } from '@/v2/components/settings/project/project-estimates-panel';
 import { ProjectStatesPanel } from '@/v2/components/settings/project/project-states-panel';
 import { WorkspaceExportsPanel } from '@/v2/components/settings/workspace/workspace-exports-panel';
 import { WorkspaceGeneralPanel } from '@/v2/components/settings/workspace/workspace-general-panel';
+import { WorkspaceIntegrationsPanel } from '@/v2/components/settings/workspace/workspace-integrations-panel';
 import { WorkspaceMembersPanel } from '@/v2/components/settings/workspace/workspace-members-panel';
-/* The heavy domain panels are shared with the shipped interface rather than
-   re-implemented: they own their own API flows, and v2 pages already reuse the
-   app's domain components this way (see IssueDetailPage). */
-import { IntegrationsSection } from '../../components/integrations/IntegrationsSection';
-import { ProjectEstimatesSettings } from '../../components/settings/ProjectEstimatesSettings';
-import { WebhooksSettings } from '../../components/settings/WebhooksSettings';
+import { WorkspaceWebhooksPanel } from '@/v2/components/settings/workspace/workspace-webhooks-panel';
 import { useSetV2Header } from '../contexts/AppShellHeaderContext';
 import { notificationPreferenceService } from '../../services/notificationPreferenceService';
 import { projectService } from '../../services/projectService';
@@ -401,12 +398,12 @@ export function SettingsPage({ scope }: SettingsPageV2Props) {
           />
         )}
         {section === 'integrations' && (
-          <IntegrationsSection workspaceSlug={workspaceSlug} projects={projects} />
+          <WorkspaceIntegrationsPanel workspaceSlug={workspaceSlug} projects={projects} />
         )}
         {section === 'exports' && (
           <WorkspaceExportsPanel workspaceSlug={workspaceSlug} projects={projects} />
         )}
-        {section === 'webhooks' && <WebhooksSettings workspaceSlug={workspaceSlug} />}
+        {section === 'webhooks' && <WorkspaceWebhooksPanel workspaceSlug={workspaceSlug} />}
         {section === 'api-tokens' && (
           <ApiTokensPanel
             title={t('settings.apiTokens.title', 'API Tokens')}
@@ -564,7 +561,7 @@ export function SettingsPage({ scope }: SettingsPageV2Props) {
             />
           )}
           {section === 'estimates' && (
-            <ProjectEstimatesSettings
+            <ProjectEstimatesPanel
               key={selectedProject.id}
               workspaceSlug={workspaceSlug}
               projectId={selectedProject.id}
