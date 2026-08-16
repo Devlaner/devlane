@@ -667,6 +667,7 @@
   "cycles.progress.started_other": "Started {{count}} Work item{{plural}}",
   "cycles.progress.title": "Progress",
   "cycles.progress.workItemClosed": "{{completed}}/{{total}} Work item closed",
+  "cycles.progressLabel": "{{percent}}% complete",
   "cycles.searchPlaceholder": "Search cycles",
   "cycles.startDate": "Start date",
   "cycles.summary": "{{visible}} of {{total}} cycles",

@@ -367,46 +367,52 @@ export function CycleDetailPage() {
     now,
   };
 
+  /* The shipped page prefixes each count with a glyph (✓, ▷, ○, ◻, ⊘). Here the
+     same five read as coloured dots, matching the cycles list's legend. */
   const stats = progress
     ? [
         {
           key: 'completed',
           label: t('cycle.legendCompleted', 'Completed'),
           value: progress.completed_issues,
+          color: 'bg-emerald-500',
         },
         {
           key: 'started',
           label: t('cycle.legendStarted', 'Started'),
           value: progress.started_issues,
+          color: 'bg-amber-500',
         },
         {
           key: 'unstarted',
           label: t('cycle.legendUnstarted', 'Unstarted'),
           value: progress.unstarted_issues,
+          color: 'bg-muted-foreground/60',
         },
         {
           key: 'backlog',
           label: t('cycle.legendBacklog', 'Backlog'),
           value: progress.backlog_issues,
+          color: 'bg-muted-foreground/30',
         },
         {
           key: 'cancelled',
           label: t('cycle.legendCancelled', 'Cancelled'),
           value: progress.cancelled_issues,
+          color: 'bg-destructive',
         },
       ]
     : [];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <Card>
-        <CardContent className="text-muted-foreground flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-          <span>
-            {formatDate(cycle.start_date)} — {formatDate(cycle.end_date)}
-          </span>
-          <span>{t('cycle.workItemsCount', '{{count}} work items', { count: total })}</span>
-        </CardContent>
-      </Card>
+      {/* The shipped page's subtitle line. The name and the completion action
+          live in the v2 shell header, so only the meta is left here — a card
+          around two facts would read as an empty panel. */}
+      <p className="text-muted-foreground text-sm">
+        {formatDate(cycle.start_date)} — {formatDate(cycle.end_date)} ·{' '}
+        {t('cycle.workItemsCount', '{{count}} work items', { count: total })}
+      </p>
 
       {progress && (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -420,14 +426,18 @@ export function CycleDetailPage() {
             <CardContent className="space-y-3">
               <Progress value={completionPct} className="h-2" />
               {/* Counts read against the total rather than in isolation. */}
-              <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
+              <ul className="grid grid-cols-2 gap-x-6 gap-y-1.5">
                 {stats.map((stat) => (
                   <li
                     key={stat.key}
-                    className="text-muted-foreground flex items-center justify-between text-xs"
+                    className="text-muted-foreground flex items-center gap-2 text-xs"
                   >
-                    <span>{stat.label}</span>
-                    <span className="tabular-nums">{stat.value}</span>
+                    <span
+                      aria-hidden="true"
+                      className={`size-2 shrink-0 rounded-full ${stat.color}`}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{stat.label}</span>
+                    <span className="text-foreground tabular-nums">{stat.value}</span>
                   </li>
                 ))}
               </ul>
@@ -451,8 +461,8 @@ export function CycleDetailPage() {
       )}
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border">
-        <div className="bg-muted/50 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-          <h2 className="text-sm font-semibold">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+          <h2 className="text-base font-semibold">
             {t('cycle.workItems', 'Work items')}{' '}
             <span className="text-muted-foreground tabular-nums">{cycleIssues.length}</span>
           </h2>

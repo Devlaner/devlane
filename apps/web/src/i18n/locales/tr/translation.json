@@ -667,6 +667,7 @@
   "cycles.progress.started_other": "Başlatıldı {{count}} iş öğesi",
   "cycles.progress.title": "İlerleme",
   "cycles.progress.workItemClosed": "{{completed}}/{{total}} iş öğesi kapatıldı",
+  "cycles.progressLabel": "%{{percent}} tamamlandı",
   "cycles.searchPlaceholder": "Döngülerde ara",
   "cycles.startDate": "Başlangıç tarihi",
   "cycles.summary": "{{total}} döngüden {{visible}} tanesi",

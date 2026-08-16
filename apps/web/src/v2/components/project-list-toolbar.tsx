@@ -29,10 +29,10 @@ interface ProjectListToolbarProps {
  * some of them add a scope control or a filter menu on top.
  *
  * The chrome is the work items toolbar's, to the pixel — same padding, gap,
- * control heights and growing search field — so moving between work items,
- * epics, cycles, modules, views, pages and intake never resizes the bar. It
- * lives in the page body rather than the 64px shell header, where the controls
- * would compete with the breadcrumb.
+ * control heights and search field — so moving between work items, epics,
+ * cycles, modules, views, pages and intake never resizes the bar. It lives in
+ * the page body rather than the 64px shell header, where the controls would
+ * compete with the breadcrumb.
  *
  * Search is URL-backed by default (`?q=`), so a narrowed list survives a reload
  * and can be shared. Pages whose search already lives in a controller pass
@@ -68,16 +68,18 @@ export function ProjectListToolbar({
 
   return (
     /* One wrapping row of controls, matching the work items toolbar exactly:
-       same padding, same 8px gap, same search field that grows into whatever
-       space the controls leave. Every v2 list then measures the same. */
+       same padding, same 8px gap, same control heights. Every v2 list then
+       measures the same. */
     <div
       className="bg-card/50 flex flex-wrap items-center gap-2 rounded-xl border p-3 shadow-xs sm:p-4"
       role="region"
       aria-label={regionLabel}
     >
       {/* Last on a phone, where a full-width field under the controls beats a
-          squeezed one beside them; first again from `sm` up. */}
-      <div className="relative order-last w-full min-w-0 sm:order-none sm:w-64 sm:flex-1">
+          squeezed one beside them; first again from `sm` up. It stops growing
+          at 20rem — a field that spans the page reads as an empty bar, and the
+          menus belong at the edge the eye returns to. */}
+      <div className="relative order-last w-full min-w-0 sm:order-none sm:w-80 sm:max-w-full sm:flex-none">
         <Search
           className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2"
           aria-hidden="true"
@@ -108,10 +110,14 @@ export function ProjectListToolbar({
       </div>
 
       {/* The scope switch sits where the work items layout toggle does — after
-          the search, before the menus. */}
-      {scopeControl}
-      {filters}
-      {actions}
+          the search, before the menus. From `sm` up the group is pushed to the
+          trailing edge, so the gap left by a narrow list falls in the middle
+          rather than after the create button. */}
+      <div className="flex flex-1 flex-wrap items-center gap-2 sm:ml-auto sm:flex-none sm:justify-end">
+        {scopeControl}
+        {filters}
+        {actions}
+      </div>
 
       {/* `empty:hidden` so a chips row that renders nothing — no filter is set —
           does not leave the row's 8px gap behind it. */}

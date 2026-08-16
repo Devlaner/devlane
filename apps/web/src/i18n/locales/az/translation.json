@@ -584,6 +584,7 @@
   "cycles.progress.started_other": "Başlanmış {{count}} iş elementi{{plural}}",
   "cycles.progress.title": "İrəliləyiş",
   "cycles.progress.workItemClosed": "{{completed}}/{{total}} iş elementi bağlandı",
+  "cycles.progressLabel": "{{percent}}% tamamlandı",
   "cycles.searchPlaceholder": "Dövrlərdə axtar",
   "cycles.startDate": "Başlanğıc tarixi",
   "cycles.summary": "{{total}} dövrdən {{visible}}",
