@@ -17,7 +17,6 @@ import { NotificationSnoozeMenu } from '@/v2/components/notification-snooze-menu
 import { Avatar, AvatarFallback } from '@/v2/components/ui/avatar';
 import { Badge } from '@/v2/components/ui/badge';
 import { Button } from '@/v2/components/ui/button';
-import { Card } from '@/v2/components/ui/card';
 import { Input } from '@/v2/components/ui/input';
 import { Separator } from '@/v2/components/ui/separator';
 import {
@@ -232,7 +231,7 @@ function InboxLoadingState() {
       </div>
 
       <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(20rem,26rem)_minmax(0,1fr)]">
-        <Card className="gap-0 overflow-hidden py-0 lg:min-h-0">
+        <div className="flex min-w-0 flex-col overflow-hidden rounded-xl border lg:min-h-0">
           <div className="space-y-3 p-3 sm:p-4">
             <Skeleton className="h-11 w-full lg:h-9" />
             <Skeleton className="h-11 w-full lg:h-9" />
@@ -243,12 +242,12 @@ function InboxLoadingState() {
               <Skeleton key={index} className="h-16 w-full" />
             ))}
           </div>
-        </Card>
-        <Card className="hidden min-h-0 gap-0 overflow-hidden py-0 lg:flex">
+        </div>
+        <div className="hidden min-h-0 flex-col overflow-hidden rounded-xl border lg:flex">
           <div className="flex h-full items-center justify-center p-8">
             <Skeleton className="h-24 w-64 max-w-full" />
           </div>
-        </Card>
+        </div>
       </div>
     </div>
   );
@@ -528,7 +527,7 @@ function NotificationsInboxV2({ workspaceSlug }: NotificationsInboxV2Props) {
 
   if (loadError && !workspace) {
     return (
-      <div className="flex min-h-[calc(100svh-5rem)] items-center justify-center rounded-xl border bg-card p-6">
+      <div className="flex min-h-[calc(100svh-5rem)] items-center justify-center rounded-xl border p-6">
         <div className="max-w-sm text-center">
           <Inbox className="text-muted-foreground mx-auto size-8" aria-hidden />
           <h1 className="mt-4 text-lg font-semibold">{inboxTitle}</h1>
@@ -607,10 +606,10 @@ function NotificationsInboxV2({ workspaceSlug }: NotificationsInboxV2Props) {
       </header>
 
       <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(20rem,26rem)_minmax(0,1fr)]">
-        <Card
+        <div
           role="region"
           aria-label={t('notifications.listLabel', 'Notifications')}
-          className="min-w-0 gap-0 overflow-hidden py-0 lg:min-h-0"
+          className="flex min-w-0 flex-col overflow-hidden rounded-xl border lg:min-h-0"
         >
           <div className="flex shrink-0 flex-col gap-3 p-3 sm:p-4">
             <Tabs
@@ -803,16 +802,16 @@ function NotificationsInboxV2({ workspaceSlug }: NotificationsInboxV2Props) {
               </ul>
             )}
           </div>
-        </Card>
+        </div>
 
-        <Card
+        <div
           role="region"
           aria-label={
             selected
               ? selected.title
               : t('notifications.detailDescription', 'Notification details and actions.')
           }
-          className="hidden min-h-0 min-w-0 gap-0 overflow-hidden py-0 lg:flex"
+          className="hidden min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border lg:flex"
         >
           {!selected ? (
             <div className="text-muted-foreground flex h-full min-h-80 flex-col items-center justify-center p-8 text-center">
@@ -835,7 +834,7 @@ function NotificationsInboxV2({ workspaceSlug }: NotificationsInboxV2Props) {
               onOpenIssue={onOpenIssue}
             />
           )}
-        </Card>
+        </div>
       </div>
 
       <Sheet open={mobileDetailOpen && Boolean(selected)} onOpenChange={setMobileDetailOpen}>

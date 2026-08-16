@@ -28,7 +28,7 @@ import {
   apiErrorMessage,
 } from '@/v2/components/settings/settings-panel';
 import { TimezoneCombobox } from '@/v2/components/settings/timezone-combobox';
-import { CoverImageModal } from '../../../../components/CoverImageModal';
+import { CoverImageDialog } from '@/v2/components/cover-image-dialog';
 import { ProjectIconDisplay, ProjectIconModal } from '../../../../components/ProjectIconModal';
 import { getImageUrl } from '../../../../lib/utils';
 import { projectService } from '../../../../services/projectService';
@@ -267,16 +267,16 @@ export function ProjectGeneralPanel({
         </AlertDialogContent>
       </AlertDialog>
 
-      <CoverImageModal
+      <CoverImageDialog
         open={coverOpen}
-        onClose={() => setCoverOpen(false)}
+        onOpenChange={setCoverOpen}
         onSelect={async (url) => {
           try {
             onProjectUpdated(
               await projectService.update(workspaceSlug, project.id, { cover_image: url }),
             );
           } catch {
-            /* The modal surfaces upload failures itself. */
+            /* The dialog surfaces upload failures itself. */
           }
         }}
         title={t('settings.project.selectCover', 'Select project cover')}

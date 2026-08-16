@@ -38,10 +38,19 @@ interface SlackChannelDialogProps {
 
 type EventKey = 'created' | 'state_changed' | 'commented';
 
-const EVENTS: { key: EventKey; label: string }[] = [
-  { key: 'created', label: 'New work items are created' },
-  { key: 'state_changed', label: 'Work item states change' },
-  { key: 'commented', label: 'New comments are added' },
+/** `i18nKey` reuses the shipped interface's wording so both stay translated. */
+const EVENTS: { key: EventKey; i18nKey: string; label: string }[] = [
+  { key: 'created', i18nKey: 'integrations.slack.eventCreated', label: 'New issues are created' },
+  {
+    key: 'state_changed',
+    i18nKey: 'integrations.slack.eventState',
+    label: 'Issue states change (e.g. In Progress → Done)',
+  },
+  {
+    key: 'commented',
+    i18nKey: 'integrations.slack.eventCommented',
+    label: 'New comments are added',
+  },
 ];
 
 /** Links a project to a Slack channel and picks which events post to it. */
@@ -191,7 +200,7 @@ export function SlackChannelDialog({
                         setEvents((prev) => ({ ...prev, [event.key]: checked === true }))
                       }
                     />
-                    {t(`integrations.slack.event.${event.key}`, event.label)}
+                    {t(event.i18nKey, event.label)}
                   </Label>
                 ))}
               </div>

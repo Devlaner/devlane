@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import { CameraIcon, ImageIcon, MailIcon } from 'lucide-react';
+import { CameraIcon, MailIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/v2/components/ui/button';
 import {
@@ -27,8 +27,7 @@ import {
 import { Field, FieldGroup, FieldLabel } from '@/v2/components/ui/field';
 import { Input } from '@/v2/components/ui/input';
 import { SettingsPanel, apiErrorMessage } from '@/v2/components/settings/settings-panel';
-import { CoverImageModal } from '../../../../components/CoverImageModal';
-import { UploadImageModal } from '../../../../components/UploadImageModal';
+import { UploadImageDialog } from '@/v2/components/upload-image-dialog';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { getImageUrl } from '../../../../lib/utils';
 import { accountService } from '../../../../services/accountService';
@@ -46,7 +45,6 @@ export function AccountProfilePanel() {
   const [profileEmail, setProfileEmail] = useState(user?.email ?? '');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [coverModalOpen, setCoverModalOpen] = useState(false);
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
 
   /* Email-change flow: 'idle' (show Change), 'request' (enter new email),
@@ -170,7 +168,6 @@ export function AccountProfilePanel() {
     }
   };
 
-  const coverUrl = getImageUrl(user?.coverImageUrl);
   const avatarUrl = getImageUrl(user?.avatarUrl);
   const initials =
     (user?.name ?? '')
@@ -188,49 +185,32 @@ export function AccountProfilePanel() {
         'How you appear to everyone else in Devlane.',
       )}
     >
-      <Card className="gap-0 overflow-hidden pt-0">
-        <div className="relative">
-          <div
-            className="bg-muted h-32 w-full bg-cover bg-center sm:h-40"
-            style={coverUrl ? { backgroundImage: `url(${coverUrl})` } : undefined}
-            aria-hidden
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            className="absolute top-3 right-3 shadow-sm"
-            onClick={() => setCoverModalOpen(true)}
-          >
-            <ImageIcon />
-            {t('settings.cover.change', 'Change cover')}
-          </Button>
-        </div>
-
-        <CardHeader className="-mt-10 grid-cols-[auto_1fr] items-end gap-x-4 gap-y-0">
+      <Card>
+        <CardHeader className="grid-cols-[auto_1fr] items-center gap-x-4 gap-y-0">
           <button
             type="button"
             onClick={() => setAvatarModalOpen(true)}
             className="focus-visible:ring-ring group relative row-span-2 rounded-full focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             aria-label={t('settings.account.changeProfilePicture', 'Change profile picture')}
           >
-            <Avatar className="ring-background size-20 ring-4">
+            <Avatar className="size-16">
               {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
-              <AvatarFallback className="text-xl">{initials}</AvatarFallback>
+              <AvatarFallback className="text-lg">{initials}</AvatarFallback>
             </Avatar>
             <span
-              className="bg-background text-muted-foreground group-hover:text-foreground absolute right-0 bottom-0 flex size-7 items-center justify-center rounded-full border shadow-sm"
+              className="bg-background text-muted-foreground group-hover:text-foreground absolute right-0 bottom-0 flex size-6 items-center justify-center rounded-full border shadow-sm"
               aria-hidden
             >
-              <CameraIcon className="size-3.5" />
+              <CameraIcon className="size-3" />
             </span>
           </button>
-          <CardTitle className="truncate pb-1 text-base">
+          <CardTitle className="truncate text-base">
             {[firstName, lastName].filter(Boolean).join(' ') || (user?.name ?? '')}
           </CardTitle>
           <CardDescription className="truncate">{profileEmail}</CardDescription>
         </CardHeader>
 
-        <CardContent className="pt-6">
+        <CardContent>
           <FieldGroup className="gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field>
@@ -276,7 +256,7 @@ export function AccountProfilePanel() {
           )}
         </CardContent>
 
-        <CardFooter className="mt-6 justify-end border-t pt-6">
+        <CardFooter className="justify-end border-t">
           <Button disabled={saving} onClick={() => void saveProfile()}>
             {saving
               ? t('common.saving', 'Saving…')
@@ -476,26 +456,15 @@ export function AccountProfilePanel() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <CoverImageModal
-        open={coverModalOpen}
-        onClose={() => setCoverModalOpen(false)}
-        onSelect={async (url) => {
-          try {
-            setUserFromApi(await userService.updateMe({ cover_image: url }));
-          } catch {
-            /* The modal surfaces upload failures itself. */
-          }
-        }}
-        title={t('settings.account.selectCoverImage', 'Select cover image')}
-      />
-      <UploadImageModal
+      <UploadImageDialog
         open={avatarModalOpen}
-        onClose={() => setAvatarModalOpen(false)}
+        onOpenChange={setAvatarModalOpen}
+        circular
         onSave={async (url) => {
           try {
             setUserFromApi(await userService.updateMe({ avatar: url }));
           } catch {
-            /* The modal surfaces upload failures itself. */
+            /* The dialog surfaces upload failures itself. */
           }
         }}
         title={t('settings.account.uploadProfilePicture', 'Upload profile picture')}

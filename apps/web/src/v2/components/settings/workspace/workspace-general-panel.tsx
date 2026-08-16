@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/v2/
 import { Input } from '@/v2/components/ui/input';
 import { Label } from '@/v2/components/ui/label';
 import { SettingsPanel, apiErrorMessage } from '@/v2/components/settings/settings-panel';
-import { UploadImageModal } from '../../../../components/UploadImageModal';
+import { UploadImageDialog } from '@/v2/components/upload-image-dialog';
 import { getImageUrl } from '../../../../lib/utils';
 import { workspaceService } from '../../../../services/workspaceService';
 import type { WorkspaceApiResponse } from '../../../../api/types';
@@ -127,14 +127,15 @@ export function WorkspaceGeneralPanel({
         </CardContent>
       </Card>
 
-      <UploadImageModal
+      <UploadImageDialog
         open={logoModalOpen}
-        onClose={() => setLogoModalOpen(false)}
+        onOpenChange={setLogoModalOpen}
+        circular
         onSave={async (url) => {
           try {
             onWorkspaceUpdated(await workspaceService.update(workspace.slug, { logo: url }));
           } catch {
-            /* The modal surfaces upload failures itself. */
+            /* The dialog surfaces upload failures itself. */
           }
         }}
         title={t('settings.workspace.uploadLogo', 'Upload workspace logo')}
