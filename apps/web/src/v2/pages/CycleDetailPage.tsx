@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { CalendarDays, ChartGantt, Columns3, List, Table2 } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import { Badge } from '@/v2/components/ui/badge';
 import { Button } from '@/v2/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/v2/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +13,6 @@ import {
   DialogTitle,
 } from '@/v2/components/ui/dialog';
 import { Label } from '@/v2/components/ui/label';
-import { Progress } from '@/v2/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -23,70 +21,27 @@ import {
   SelectValue,
 } from '@/v2/components/ui/select';
 import { Skeleton } from '@/v2/components/ui/skeleton';
-import { ToggleGroup, ToggleGroupItem } from '@/v2/components/ui/toggle-group';
-import { CycleBurndownChart } from '../../components/cycles/CycleBurndownChart';
-import { IssueLayoutBoard } from '../../components/work-item/layouts/IssueLayoutBoard';
-import { IssueLayoutCalendar } from '../../components/work-item/layouts/IssueLayoutCalendar';
-import { IssueLayoutGantt } from '../../components/work-item/layouts/IssueLayoutGantt';
-import { IssueLayoutList } from '../../components/work-item/layouts/IssueLayoutList';
-import { IssueLayoutSpreadsheet } from '../../components/work-item/layouts/IssueLayoutSpreadsheet';
-import {
-  parseIssueLayout,
-  type IssueLayout,
-} from '../../components/work-item/layouts/IssueLayoutTypes';
+import { CycleStatsSheet } from '@/v2/components/cycle-stats-sheet';
+import { ProjectWorkItemsSection } from '@/v2/components/project-work-items-section';
+import { parseIssueLayout } from '@/components/work-item/layouts/IssueLayoutTypes';
 import { useSetV2Header } from '../contexts/AppShellHeaderContext';
-import { cycleMatchesPathSegment } from '../../lib/cycle';
-import { buildGroupedIssues } from '../../lib/issueListGroupAndSort';
-import { cloneDefaultProjectIssuesDisplay } from '../../lib/projectIssuesDisplay';
-import { formatDate } from '../lib/project';
+import { useProjectIssuesController } from '../hooks/useProjectIssuesController';
 import { useWorkItemLayoutPreference } from '../hooks/useListViewPreferences';
-import type { SavedViewDisplayPropertyId } from '../../lib/projectSavedViewDisplay';
+import { cycleMatchesPathSegment } from '../../lib/cycle';
+import { formatDate } from '../lib/project';
 import { cycleService, type CycleProgressResponse } from '../../services/cycleService';
-import { integrationService } from '../../services/integrationService';
-import { issueService } from '../../services/issueService';
-import { labelService } from '../../services/labelService';
-import { moduleService } from '../../services/moduleService';
-import { projectService } from '../../services/projectService';
-import { stateService } from '../../services/stateService';
-import { workspaceService } from '../../services/workspaceService';
-import type {
-  CycleApiResponse,
-  GitHubIssueSummaryEntry,
-  IssueApiResponse,
-  LabelApiResponse,
-  ModuleApiResponse,
-  ProjectApiResponse,
-  StateApiResponse,
-  WorkspaceMemberApiResponse,
-} from '../../api/types';
-
-const LAYOUT_OPTIONS = [
-  { key: 'list', label: 'List', Icon: List },
-  { key: 'board', label: 'Board', Icon: Columns3 },
-  { key: 'calendar', label: 'Calendar', Icon: CalendarDays },
-  { key: 'spreadsheet', label: 'Spreadsheet', Icon: Table2 },
-  { key: 'gantt', label: 'Timeline', Icon: ChartGantt },
-] as const satisfies readonly {
-  key: IssueLayout;
-  label: string;
-  Icon: React.ComponentType<{ className?: string }>;
-}[];
+import type { CycleApiResponse } from '../../api/types';
 
 /**
- * The v2 view of a single cycle, built from shadcn primitives. It renders at
- * the same URL as CycleDetailPage; the stored interface preference picks
- * between them.
+ * The v2 view of a single cycle. It renders at the same URL as the shipped
+ * CycleDetailPage; the stored interface preference picks between them.
  *
- * The work item layouts are the shipped renderers, imported whole. They carry
- * native drag handling and five distinct rendering strategies; rebuilding them
- * on shadcn primitives would be a rewrite of the list engine rather than a
- * design preview, and would regress the shipped pages that share them. What is
- * rewritten here is the chrome around them: the progress card, the burndown
- * frame, the layout switcher and the completion dialog.
- *
- * The shipped page shows five raw state counts as a glyph-prefixed grid. Those
- * numbers only mean something relative to the total, so they render as a
- * proportional bar with the counts alongside.
+ * A cycle is the project's work item list narrowed to one cycle, so that is
+ * literally what this page is: the same controller with the cycle set, and the
+ * same ProjectWorkItemsSection the work items page renders — same toolbar,
+ * grouping, inline editing, selection and bulk actions, and the same remembered
+ * display settings. What the page adds is the cycle's own material: its dates,
+ * the statistics drawer and completing the cycle.
  */
 export function CycleDetailPage() {
   const { t } = useTranslation();
@@ -96,156 +51,82 @@ export function CycleDetailPage() {
     cycleId: string;
   }>();
   const [searchParams, setSearchParams] = useSearchParams();
+  /* Scoped to the project rather than the cycle: picking "board" is a habit
+     about how someone works, not a statement about one cycle. */
   useWorkItemLayoutPreference('cycle-layout', workspaceSlug, projectId);
 
   const [cycle, setCycle] = useState<CycleApiResponse | null>(null);
-  const [allCycles, setAllCycles] = useState<CycleApiResponse[]>([]);
-  const [project, setProject] = useState<ProjectApiResponse | null>(null);
-  const [issues, setIssues] = useState<IssueApiResponse[]>([]);
-  const [states, setStates] = useState<StateApiResponse[]>([]);
-  const [labels, setLabels] = useState<LabelApiResponse[]>([]);
-  const [modules, setModules] = useState<ModuleApiResponse[]>([]);
-  const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
-  const [prSummary, setPrSummary] = useState<Record<string, GitHubIssueSummaryEntry>>({});
-  const [progress, setProgress] = useState<CycleProgressResponse | null>(null);
-  const [loading, setLoading] = useState(Boolean(workspaceSlug && projectId && cycleId));
+  const [cyclesLoading, setCyclesLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [progress, setProgress] = useState<CycleProgressResponse | null>(null);
 
   const [completeOpen, setCompleteOpen] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [completeError, setCompleteError] = useState<string | null>(null);
   const [transferTargetId, setTransferTargetId] = useState('');
-  const [now] = useState(() => Date.now());
 
+  /* The route segment is a name slug, not an id — see lib/cycle.ts — so the
+     cycle has to be resolved before the list can be scoped to it. */
   useEffect(() => {
     if (!workspaceSlug || !projectId || !cycleId) return;
     let cancelled = false;
-    setLoading(true);
-    Promise.all([
-      cycleService.list(workspaceSlug, projectId),
-      issueService.list(workspaceSlug, projectId, { limit: 1000 }),
-      stateService.list(workspaceSlug, projectId).catch(() => [] as StateApiResponse[]),
-      labelService.list(workspaceSlug, projectId).catch(() => [] as LabelApiResponse[]),
-      moduleService.list(workspaceSlug, projectId).catch(() => [] as ModuleApiResponse[]),
-      workspaceService.listMembers(workspaceSlug).catch(() => [] as WorkspaceMemberApiResponse[]),
-      projectService.get(workspaceSlug, projectId).catch(() => null),
-    ])
-      .then(([cycles, allIssues, stateList, labelList, moduleList, memberList, proj]) => {
+    setCyclesLoading(true);
+    cycleService
+      .list(workspaceSlug, projectId)
+      .then((list) => {
         if (cancelled) return;
-        /* The route segment is a name slug, not an id — see lib/cycle.ts. */
-        const found = (cycles ?? []).find((c) => cycleMatchesPathSegment(c, cycleId)) ?? null;
+        const found = (list ?? []).find((entry) => cycleMatchesPathSegment(entry, cycleId)) ?? null;
         setCycle(found);
-        setAllCycles(cycles ?? []);
-        setIssues(allIssues ?? []);
-        setStates(stateList ?? []);
-        setLabels(labelList ?? []);
-        setModules(moduleList ?? []);
-        setMembers(memberList ?? []);
-        setProject(proj);
         setNotFound(!found);
-        /* Progress lands separately so the work item list isn't held back by it. */
-        if (found) {
-          cycleService
-            .getProgress(workspaceSlug, projectId, found.id)
-            .then((snapshot) => {
-              if (!cancelled) setProgress(snapshot);
-            })
-            .catch(() => {});
-        }
       })
       .catch(() => {
         if (!cancelled) setNotFound(true);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setCyclesLoading(false);
       });
     return () => {
       cancelled = true;
     };
   }, [workspaceSlug, projectId, cycleId]);
 
-  const cycleIssues = useMemo(
-    () => (cycle ? issues.filter((i) => i.cycle_ids?.includes(cycle.id)) : []),
-    [issues, cycle],
-  );
-
-  const cycleIssueIDsKey = useMemo(
-    () =>
-      cycleIssues
-        .map((i) => i.id)
-        .sort()
-        .join(','),
-    [cycleIssues],
-  );
-
+  /* Progress lands separately so the work item list isn't held back by it. */
   useEffect(() => {
-    if (!workspaceSlug || !projectId) return;
+    if (!workspaceSlug || !projectId || !cycle) return;
     let cancelled = false;
-    const ids = cycleIssueIDsKey ? cycleIssueIDsKey.split(',') : [];
-    if (ids.length === 0) {
-      /* Clears the previous cycle's summaries. */
-      setPrSummary({});
-      return () => {
-        cancelled = true;
-      };
-    }
-    integrationService
-      .githubIssueSummary(workspaceSlug, projectId, ids)
-      .then((map) => {
-        if (!cancelled) setPrSummary(map);
+    cycleService
+      .getProgress(workspaceSlug, projectId, cycle.id)
+      .then((snapshot) => {
+        if (!cancelled) setProgress(snapshot);
       })
-      .catch(() => {
-        /* PR badges are decoration; the list renders without them. */
-        if (!cancelled) setPrSummary({});
-      });
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug, projectId, cycleIssueIDsKey]);
+  }, [workspaceSlug, projectId, cycle]);
 
-  const cycleDisplay = useMemo(() => {
-    const display = cloneDefaultProjectIssuesDisplay();
-    /* Every row belongs to this cycle, so the column would repeat one value. */
-    display.displayProperties.delete('cycle');
-    display.groupBy = 'none';
-    display.orderBy = 'last_created';
-    return display;
-  }, []);
+  const controller = useProjectIssuesController(workspaceSlug, projectId, {
+    cycleId: cycle?.id ?? null,
+  });
+  const { workspace, project, issues, filteredIssues, loading, cycles } = controller;
 
-  const subWorkCountByParentId = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const issue of issues) {
-      const parentId = issue.parent_id?.trim();
-      if (parentId) counts.set(parentId, (counts.get(parentId) ?? 0) + 1);
-    }
-    return counts;
-  }, [issues]);
+  const layout = parseIssueLayout(searchParams.get('layout'));
+  const setLayout = (next: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === 'list') params.delete('layout');
+    else params.set('layout', next);
+    setSearchParams(params, { replace: true });
+  };
 
-  const groupedIssues = useMemo(
-    () =>
-      buildGroupedIssues({
-        baseForGrouping: cycleIssues,
-        groupBy: cycleDisplay.groupBy,
-        orderBy: cycleDisplay.orderBy,
-        showEmptyGroups: cycleDisplay.showEmptyGroups,
-        states,
-        cycles: cycle ? [cycle] : [],
-        modules,
-        labels,
-        members,
-      }),
-    [
-      cycleIssues,
-      cycleDisplay.groupBy,
-      cycleDisplay.orderBy,
-      cycleDisplay.showEmptyGroups,
-      states,
-      cycle,
-      modules,
-      labels,
-      members,
-    ],
-  );
+  /* The drawer's open state is in the URL: "look at this cycle's burndown" is
+     a link someone sends. */
+  const statsOpen = searchParams.get('stats') === '1';
+  const setStatsOpen = (open: boolean) => {
+    const next = new URLSearchParams(searchParams);
+    if (open) next.set('stats', '1');
+    else next.delete('stats');
+    setSearchParams(next, { replace: true });
+  };
 
   const parent = useMemo(
     () => ({
@@ -280,38 +161,48 @@ export function CycleDetailPage() {
 
   useSetV2Header({ parent, title: cycle?.name ?? null, actions: headerActions });
 
-  if (loading) {
+  if (cyclesLoading || loading) {
     return (
-      <div className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Skeleton className="h-44 rounded-xl" />
-          <Skeleton className="h-44 rounded-xl" />
+      <div
+        className="space-y-6 pb-8"
+        aria-busy="true"
+        aria-label={t('issues.loading', 'Loading work items')}
+      >
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-44" />
+          <Skeleton className="h-4 w-80 max-w-full" />
         </div>
-        <Skeleton className="h-96 w-full rounded-xl" />
+        <Skeleton className="h-16 w-full rounded-xl" />
+        <div className="overflow-hidden rounded-xl border">
+          <Skeleton className="h-10 w-full rounded-none" />
+          {Array.from({ length: 9 }).map((_, index) => (
+            <div key={index} className="flex h-12 items-center gap-3 border-t px-4">
+              <Skeleton className="size-4" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 max-w-80 flex-1" />
+              <Skeleton className="hidden h-5 w-20 sm:block" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
-  if (notFound || !cycle) {
+  if (notFound || !cycle || !workspace || !project) {
     return (
       <p className="text-muted-foreground text-sm">{t('cycle.notFound', 'Cycle not found.')}</p>
     );
   }
 
-  const layout = parseIssueLayout(searchParams.get('layout'));
-  const setLayout = (next: IssueLayout) => {
-    const params = new URLSearchParams(searchParams);
-    if (next === 'list') params.delete('layout');
-    else params.set('layout', next);
-    setSearchParams(params, { replace: true });
-  };
-
-  const total = progress?.total_issues ?? cycleIssues.length;
-  const completed = progress?.completed_issues ?? 0;
-  const completionPct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const completionPct =
+    progress && progress.total_issues > 0
+      ? Math.round((progress.completed_issues / progress.total_issues) * 100)
+      : 0;
 
   /* Other cycles this one's incomplete work can be moved into on completion. */
-  const transferTargets = allCycles.filter((c) => c.id !== cycle.id && c.status !== 'completed');
+  const transferTargets = cycles.filter(
+    (entry) => entry.id !== cycle.id && entry.status !== 'completed',
+  );
 
   const handleComplete = async () => {
     if (!workspaceSlug || !projectId) return;
@@ -326,11 +217,8 @@ export function CycleDetailPage() {
       );
       setCycle(res.cycle);
       /* Work items may have moved out; refresh the list and the snapshot. */
-      const [refreshed, snapshot] = await Promise.all([
-        issueService.list(workspaceSlug, projectId, { limit: 500 }),
-        cycleService.getProgress(workspaceSlug, projectId, cycle.id),
-      ]);
-      setIssues(refreshed ?? []);
+      controller.refetchIssues();
+      const snapshot = await cycleService.getProgress(workspaceSlug, projectId, cycle.id);
       setProgress(snapshot);
       setCompleteOpen(false);
       setTransferTargetId('');
@@ -341,172 +229,59 @@ export function CycleDetailPage() {
     }
   };
 
-  /* The shipped project base — the layout renderers build their own hrefs from
-     it, and rewriting them to the v2 tree would mean forking the renderers. */
-  const projectBase = `/${workspaceSlug}/projects/${projectId}`;
-  const hasCol = (id: SavedViewDisplayPropertyId) => cycleDisplay.displayProperties.has(id);
-  const cycleName = (issue: IssueApiResponse) =>
-    issue.cycle_ids?.[0] === cycle.id ? cycle.name : '—';
-  const moduleName = (issue: IssueApiResponse) => {
-    const id = issue.module_ids?.[0];
-    return id ? (modules.find((m) => m.id === id)?.name ?? '—') : '—';
-  };
-  const layoutIssues = groupedIssues.isFlat
-    ? (groupedIssues.groups.get(groupedIssues.order[0]) ?? [])
-    : cycleIssues;
-  const layoutProps = {
-    workspaceSlug: workspaceSlug ?? '',
-    project: project as ProjectApiResponse,
-    issues: layoutIssues,
-    states,
-    labels,
-    members,
-    prSummary,
-    baseUrl: projectBase,
-    issueHref: (id: string) => `${projectBase}/issues/${id}`,
-    now,
-  };
-
-  /* The shipped page prefixes each count with a glyph (✓, ▷, ○, ◻, ⊘). Here the
-     same five read as coloured dots, matching the cycles list's legend. */
-  const stats = progress
-    ? [
-        {
-          key: 'completed',
-          label: t('cycle.legendCompleted', 'Completed'),
-          value: progress.completed_issues,
-          color: 'bg-emerald-500',
-        },
-        {
-          key: 'started',
-          label: t('cycle.legendStarted', 'Started'),
-          value: progress.started_issues,
-          color: 'bg-amber-500',
-        },
-        {
-          key: 'unstarted',
-          label: t('cycle.legendUnstarted', 'Unstarted'),
-          value: progress.unstarted_issues,
-          color: 'bg-muted-foreground/60',
-        },
-        {
-          key: 'backlog',
-          label: t('cycle.legendBacklog', 'Backlog'),
-          value: progress.backlog_issues,
-          color: 'bg-muted-foreground/30',
-        },
-        {
-          key: 'cancelled',
-          label: t('cycle.legendCancelled', 'Cancelled'),
-          value: progress.cancelled_issues,
-          color: 'bg-destructive',
-        },
-      ]
-    : [];
-
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4">
-      {/* The shipped page's subtitle line. The name and the completion action
-          live in the v2 shell header, so only the meta is left here — a card
-          around two facts would read as an empty panel. */}
-      <p className="text-muted-foreground text-sm">
-        {formatDate(cycle.start_date)} — {formatDate(cycle.end_date)} ·{' '}
-        {t('cycle.workItemsCount', '{{count}} work items', { count: total })}
-      </p>
-
-      {progress && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm">
-                {t('cycle.overallProgress', 'Overall Progress')}
-              </CardTitle>
-              <span className="text-2xl font-semibold tabular-nums">{completionPct}%</span>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Progress value={completionPct} className="h-2" />
-              {/* Counts read against the total rather than in isolation. */}
-              <ul className="grid grid-cols-2 gap-x-6 gap-y-1.5">
-                {stats.map((stat) => (
-                  <li
-                    key={stat.key}
-                    className="text-muted-foreground flex items-center gap-2 text-xs"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={`size-2 shrink-0 rounded-full ${stat.color}`}
-                    />
-                    <span className="min-w-0 flex-1 truncate">{stat.label}</span>
-                    <span className="text-foreground tabular-nums">{stat.value}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">{t('cycle.burndown', 'Burndown')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CycleBurndownChart
-                completionChart={progress.distribution?.completion_chart ?? {}}
-                total={progress.total_issues}
-                startDate={cycle.start_date}
-                endDate={cycle.end_date}
-              />
-            </CardContent>
-          </Card>
+    <div className="space-y-6 pb-8">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{cycle.name}</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {formatDate(cycle.start_date)} — {formatDate(cycle.end_date)}
+          </p>
         </div>
-      )}
+        <p className="text-muted-foreground text-sm tabular-nums" aria-live="polite">
+          {t('issues.pageSummary', '{{visible}} of {{loaded}} on page {{page}}', {
+            visible: filteredIssues.length,
+            loaded: issues.length,
+            page: 1,
+          })}
+        </p>
+      </header>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-          <h2 className="text-base font-semibold">
-            {t('cycle.workItems', 'Work items')}{' '}
-            <span className="text-muted-foreground tabular-nums">{cycleIssues.length}</span>
-          </h2>
-          <ToggleGroup
-            type="single"
-            value={layout}
-            onValueChange={(value) => value && setLayout(value as IssueLayout)}
+      <ProjectWorkItemsSection
+        workspaceSlug={workspaceSlug ?? ''}
+        projectId={projectId ?? ''}
+        workspace={workspace}
+        project={project}
+        controller={controller}
+        layout={layout}
+        onLayoutChange={setLayout}
+        /* New work items created here belong to this cycle by default. */
+        createInitialValues={{ projectId, cycleId: cycle.id }}
+        toolbarExtras={
+          <Button
+            type="button"
             variant="outline"
-            size="sm"
+            className="h-11 sm:h-9"
+            onClick={() => setStatsOpen(true)}
           >
-            {LAYOUT_OPTIONS.map(({ key, label, Icon }) => (
-              <ToggleGroupItem key={key} value={key} aria-label={label} title={label}>
-                <Icon className="size-4" />
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
+            <BarChart3 aria-hidden="true" />
+            <span className="hidden lg:inline">{t('cycle.statistics', 'Statistics')}</span>
+            {progress && <span className="tabular-nums">{completionPct}%</span>}
+          </Button>
+        }
+        emptyTitle={t('cycle.noWorkItems', 'No work items in this cycle.')}
+        emptyDescription={t(
+          'cycle.emptyDescription',
+          'Add work items to this cycle to plan and track the sprint.',
+        )}
+      />
 
-        <div className="min-h-0 flex-1 overflow-auto">
-          {cycleIssues.length === 0 ? (
-            <p className="text-muted-foreground px-4 py-12 text-center text-sm">
-              {t('cycle.noWorkItems', 'No work items in this cycle.')}
-            </p>
-          ) : (
-            <>
-              {layout === 'list' && (
-                <IssueLayoutList
-                  {...layoutProps}
-                  groupedIssues={groupedIssues}
-                  hasCol={hasCol}
-                  showEmptyGroups={cycleDisplay.showEmptyGroups}
-                  subWorkCountByParentId={subWorkCountByParentId}
-                  cycleName={cycleName}
-                  moduleName={moduleName}
-                />
-              )}
-              {layout === 'board' && <IssueLayoutBoard {...layoutProps} />}
-              {layout === 'spreadsheet' && <IssueLayoutSpreadsheet {...layoutProps} />}
-              {layout === 'calendar' && <IssueLayoutCalendar {...layoutProps} />}
-              {layout === 'gantt' && <IssueLayoutGantt {...layoutProps} />}
-            </>
-          )}
-        </div>
-      </div>
+      <CycleStatsSheet
+        open={statsOpen}
+        onOpenChange={setStatsOpen}
+        cycle={cycle}
+        progress={progress}
+      />
 
       <Dialog open={completeOpen} onOpenChange={(open) => !completing && setCompleteOpen(open)}>
         <DialogContent>

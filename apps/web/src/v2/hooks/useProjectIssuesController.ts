@@ -33,11 +33,10 @@ import {
   projectIssuesFiltersStorageKey,
   serializeProjectIssuesFilters,
 } from '../lib/projectIssuesFiltersStorage';
-import { normalizeUuidKey } from '../../lib/utils';
+import { applyProjectIssuesFilters } from '../lib/projectIssuesFiltersApply';
 import type { IssueInlinePatch } from '../../components/work-item/layouts/IssueLayoutTypes';
 import type { SavedViewDisplayPropertyId } from '../../lib/projectSavedViewDisplay';
 import type { Priority } from '../../types';
-import type { StateGroup } from '../../types/workspaceViewFilters';
 import type {
   CycleApiResponse,
   GitHubIssueSummaryEntry,
@@ -49,30 +48,6 @@ import type {
   WorkspaceApiResponse,
   WorkspaceMemberApiResponse,
 } from '../../api/types';
-
-function issueMentionSearchBlob(issue: IssueApiResponse): string {
-  const parts: string[] = [];
-  if (issue.name) parts.push(issue.name);
-  if (issue.description_html) parts.push(issue.description_html);
-  if (issue.description && typeof issue.description === 'object') {
-    try {
-      parts.push(JSON.stringify(issue.description));
-    } catch {
-      /* non-serializable rich text */
-    }
-  }
-  return parts.join('\n').toLowerCase();
-}
-
-/** Best-effort: match user id (or @-prefixed) in title / description HTML / JSON description. */
-function issueMentionsUserId(issue: IssueApiResponse, userId: string): boolean {
-  const blob = issueMentionSearchBlob(issue);
-  if (!blob) return false;
-  const u = userId.toLowerCase().trim();
-  if (!u) return false;
-  if (blob.includes(`@${u}`)) return true;
-  return blob.includes(u);
-}
 
 export interface CreateWorkItemPayload {
   title: string;
@@ -90,6 +65,17 @@ export interface CreateWorkItemPayload {
   isDraft?: boolean;
 }
 
+export interface ProjectIssuesControllerOptions {
+  /**
+   * Restricts the list to one cycle's work items.
+   *
+   * The cycle page is the project list narrowed to a cycle — same toolbar,
+   * same rows, same filters — so it runs this controller with the cycle set
+   * rather than reimplementing the list around a different data path.
+   */
+  cycleId?: string | null;
+}
+
 /**
  * Everything a project's work item list does apart from drawing it: loading the
  * project's data, applying the filter and display state the toolbars broadcast,
@@ -100,7 +86,12 @@ export interface CreateWorkItemPayload {
  * (IssueListPage) behave identically — the v2 work is a redesign, not a
  * reimplementation, and two copies of this logic would drift within a release.
  */
-export function useProjectIssuesController(workspaceSlug?: string, projectId?: string) {
+export function useProjectIssuesController(
+  workspaceSlug?: string,
+  projectId?: string,
+  options: ProjectIssuesControllerOptions = {},
+) {
+  const { cycleId } = options;
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [createOpen, setCreateOpen] = useState(false);
@@ -386,149 +377,23 @@ export function useProjectIssuesController(workspaceSlug?: string, projectId?: s
     return () => window.removeEventListener(PROJECT_ISSUES_DISPLAY_EVENT, handler);
   }, [workspaceSlug, projectId]);
 
-  const filteredIssues = useMemo(() => {
-    const stateGroupMap: Record<string, StateGroup> = {
-      backlog: 'backlog',
-      unstarted: 'unstarted',
-      started: 'started',
-      completed: 'completed',
-      canceled: 'canceled',
-      cancelled: 'canceled',
-    };
-    const getStateGroup = (stateId: string | null | undefined): StateGroup | undefined => {
-      if (!stateId) return undefined;
-      const s = states.find((x) => x.id === stateId);
-      const g = s?.group?.toLowerCase();
-      return g ? stateGroupMap[g] : undefined;
-    };
+  /* Everything below reads the scoped list; `issues` itself stays whole so
+     sub-work counts can see children that live outside the cycle. */
+  const scopedIssues = useMemo(
+    () => (cycleId ? issues.filter((issue) => issue.cycle_ids?.includes(cycleId)) : issues),
+    [issues, cycleId],
+  );
 
-    let list = issues;
-    if (listFilters.priorities.length) {
-      list = list.filter((i) => {
-        const p = (i.priority as Priority) ?? 'none';
-        return listFilters.priorities.includes(p);
-      });
-    }
-    if (listFilters.stateGroups.length) {
-      list = list.filter((i) => {
-        const g = getStateGroup(i.state_id ?? undefined);
-        return g && listFilters.stateGroups.includes(g);
-      });
-    }
-    if (listFilters.assigneeIds.length) {
-      list = list.filter((i) =>
-        i.assignee_ids?.some((aid) =>
-          listFilters.assigneeIds.some((fid) => normalizeUuidKey(fid) === normalizeUuidKey(aid)),
-        ),
-      );
-    }
-    if (listFilters.createdByIds.length) {
-      list = list.filter((i) =>
-        listFilters.createdByIds.some(
-          (fid) => normalizeUuidKey(fid) === normalizeUuidKey(i.created_by_id),
-        ),
-      );
-    }
-    if (listFilters.cycleIds.length) {
-      list = list.filter((i) =>
-        i.cycle_ids?.some((cid) =>
-          listFilters.cycleIds.some((fid) => normalizeUuidKey(fid) === normalizeUuidKey(cid)),
-        ),
-      );
-    }
-    if (listFilters.labelIds.length) {
-      list = list.filter((i) =>
-        i.label_ids?.some((lid) =>
-          listFilters.labelIds.some((fid) => normalizeUuidKey(fid) === normalizeUuidKey(lid)),
-        ),
-      );
-    }
-    if (listFilters.mentionedUserIds.length) {
-      list = list.filter((i) =>
-        listFilters.mentionedUserIds.some((uid) => issueMentionsUserId(i, uid)),
-      );
-    }
-    if (listFilters.workItemGrouping === 'active') {
-      list = list.filter((i) => {
-        const g = getStateGroup(i.state_id ?? undefined);
-        return g === 'unstarted' || g === 'started';
-      });
-    } else if (listFilters.workItemGrouping === 'backlog') {
-      list = list.filter((i) => getStateGroup(i.state_id ?? undefined) === 'backlog');
-    }
-    const now = new Date();
-    const addDays = (d: number) => new Date(now.getTime() + d * 24 * 60 * 60 * 1000);
-    const startDateEffective =
-      listFilters.startDate.length &&
-      !(
-        listFilters.startDate.includes('custom') &&
-        (!listFilters.startAfter || !listFilters.startBefore)
-      );
-    if (startDateEffective) {
-      list = list.filter((i) => {
-        const sd = i.start_date ? new Date(i.start_date) : null;
-        if (!sd) return false;
-        return listFilters.startDate.some((preset) => {
-          if (preset === 'custom' && listFilters.startAfter && listFilters.startBefore) {
-            const after = new Date(listFilters.startAfter);
-            const before = new Date(listFilters.startBefore);
-            return sd >= after && sd <= before;
-          }
-          if (preset === 'custom') return false;
-          const end =
-            preset === '1_week'
-              ? addDays(7)
-              : preset === '2_weeks'
-                ? addDays(14)
-                : preset === '1_month'
-                  ? addDays(30)
-                  : preset === '2_months'
-                    ? addDays(60)
-                    : null;
-          return Boolean(end && sd >= now && sd <= end);
-        });
-      });
-    }
-    const dueDateEffective =
-      listFilters.dueDate.length &&
-      !(
-        listFilters.dueDate.includes('custom') &&
-        (!listFilters.dueAfter || !listFilters.dueBefore)
-      );
-    if (dueDateEffective) {
-      list = list.filter((i) => {
-        const td = i.target_date ? new Date(i.target_date) : null;
-        if (!td) return false;
-        return listFilters.dueDate.some((preset) => {
-          if (preset === 'custom' && listFilters.dueAfter && listFilters.dueBefore) {
-            const after = new Date(listFilters.dueAfter);
-            const before = new Date(listFilters.dueBefore);
-            return td >= after && td <= before;
-          }
-          if (preset === 'custom') return false;
-          const end =
-            preset === '1_week'
-              ? addDays(7)
-              : preset === '2_weeks'
-                ? addDays(14)
-                : preset === '1_month'
-                  ? addDays(30)
-                  : preset === '2_months'
-                    ? addDays(60)
-                    : null;
-          return Boolean(end && td >= now && td <= end);
-        });
-      });
-    }
-    const needle = searchQuery.trim().toLowerCase();
-    if (needle) {
-      list = list.filter((i) => {
-        const sequence = i.sequence_id != null ? String(i.sequence_id) : '';
-        return i.name.toLowerCase().includes(needle) || sequence.includes(needle);
-      });
-    }
-    return list;
-  }, [issues, states, listFilters, searchQuery]);
+  const filteredIssues = useMemo(
+    () =>
+      applyProjectIssuesFilters({
+        issues: scopedIssues,
+        states,
+        filters: listFilters,
+        searchQuery,
+      }),
+    [scopedIssues, states, listFilters, searchQuery],
+  );
 
   // Effective selection = selected ids still visible under the current filters.
   // Deriving this (instead of syncing state in an effect) keeps bulk actions
@@ -795,7 +660,9 @@ export function useProjectIssuesController(workspaceSlug?: string, projectId?: s
     workspace,
     project,
     projects,
-    issues,
+    /* The cycle's work items when scoped, the project's otherwise — what the
+       page's own empty state should count. */
+    issues: scopedIssues,
     states,
     labels,
     cycles,

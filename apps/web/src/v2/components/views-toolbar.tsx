@@ -12,7 +12,6 @@ import {
   List,
   Plus,
   Search,
-  Settings2,
   X,
 } from 'lucide-react';
 import { Badge } from '@/v2/components/ui/badge';
@@ -30,6 +29,7 @@ import {
 } from '@/v2/components/ui/dropdown-menu';
 import { Input } from '@/v2/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/v2/components/ui/popover';
+import { WorkItemsPropertiesMenu } from '@/v2/components/work-items-properties-menu';
 import { ToggleGroup, ToggleGroupItem } from '@/v2/components/ui/toggle-group';
 import { CreateViewDialog } from '@/v2/components/create-view-dialog';
 import { useWorkspaceViewsState } from '../../contexts/WorkspaceViewsStateContext';
@@ -37,11 +37,8 @@ import { viewService } from '../../services/viewService';
 import { workspaceService } from '../../services/workspaceService';
 import { projectService } from '../../services/projectService';
 import {
-  DISPLAY_PROPERTY_KEYS,
-  DISPLAY_PROPERTY_LABELS,
   VIEW_LAYOUTS,
   VIEW_LAYOUT_LABELS,
-  type DisplayPropertyKey,
   type ViewLayout,
 } from '../../types/workspaceViewDisplay';
 import {
@@ -91,18 +88,6 @@ const GROUPING_LABELS: Record<GroupingOption, string> = {
   active: 'Active',
   backlog: 'Backlog',
 };
-
-const LIST_DISPLAY_PROPERTY_KEYS: DisplayPropertyKey[] = [
-  'id',
-  'state',
-  'priority',
-  'assignee',
-  'labels',
-  'cycle',
-  'module',
-  'start_date',
-  'due_date',
-];
 
 interface ViewsToolbarProps {
   workspaceSlug: string;
@@ -208,9 +193,6 @@ export function ViewsToolbar({ workspaceSlug, onCreateWorkItem }: ViewsToolbarPr
   const filteredViews = allViews.filter((v) =>
     v.name.toLowerCase().includes(viewSearch.trim().toLowerCase()),
   );
-  const visibleDisplayPropertyKeys =
-    display.layout === 'list' ? LIST_DISPLAY_PROPERTY_KEYS : DISPLAY_PROPERTY_KEYS;
-
   const activeFilterCount =
     filters.priority.length +
     filters.stateGroup.length +
@@ -243,15 +225,6 @@ export function ViewsToolbar({ workspaceSlug, onCreateWorkItem }: ViewsToolbarPr
       const current = prev[key] as string[];
       return { ...prev, [key]: current.filter((entry) => entry !== value) } as typeof prev;
     });
-  };
-
-  const toggleDisplayProperty = (key: DisplayPropertyKey) => {
-    setDisplay((prev) => ({
-      ...prev,
-      properties: prev.properties.includes(key)
-        ? prev.properties.filter((k) => k !== key)
-        : [...prev.properties, key],
-    }));
   };
 
   const peopleLabel = (member: WorkspaceMemberApiResponse) =>
@@ -548,41 +521,15 @@ export function ViewsToolbar({ workspaceSlug, onCreateWorkItem }: ViewsToolbarPr
             </PopoverContent>
           </Popover>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11 shrink-0 justify-between sm:h-9"
-              >
-                <Settings2 aria-hidden="true" />
-                {t('common.display', 'Display')}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="max-h-[70vh] w-56 overflow-y-auto">
-              <DropdownMenuLabel>
-                {t('views.displayProperties', 'Display Properties')}
-              </DropdownMenuLabel>
-              {visibleDisplayPropertyKeys.map((key) => (
-                <DropdownMenuCheckboxItem
-                  key={key}
-                  checked={display.properties.includes(key)}
-                  onCheckedChange={() => toggleDisplayProperty(key)}
-                >
-                  {t(`display.property.${key}`, DISPLAY_PROPERTY_LABELS[key])}
-                </DropdownMenuCheckboxItem>
-              ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem
-                checked={display.showSubWorkItems}
-                onCheckedChange={(checked) =>
-                  setDisplay((prev) => ({ ...prev, showSubWorkItems: checked }))
-                }
-              >
-                {t('views.showSubWorkItems', 'Show sub-work items')}
-              </DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <WorkItemsPropertiesMenu
+            properties={display.properties}
+            onChange={(properties) => setDisplay((prev) => ({ ...prev, properties }))}
+            showSubWorkItems={display.showSubWorkItems}
+            onShowSubWorkItemsChange={(showSubWorkItems) =>
+              setDisplay((prev) => ({ ...prev, showSubWorkItems }))
+            }
+            variant={display.layout === 'list' ? 'list' : 'full'}
+          />
 
           {/* Layout selector. A single-select toggle group keeps the current
               layout visible without opening anything, as the shipped selector
