@@ -1,0 +1,134 @@
+/**
+ * v2 accent presets (opt-in, colour only).
+ *
+ * The v2 shell renders on the stock shadcn new-york-v4 palette defined in
+ * shadcn-v4-theme.css. These presets recolour the filled action without leaving
+ * that palette: every block below redefines shadcn's own variable names and
+ * nothing else — no new token names, no radius, spacing, font or layout values —
+ * so the components keep resolving exactly the variables they ship against and
+ * the interface is identical apart from its accent.
+ *
+ * Surfaces, borders and text stay on the neutral base. Only what shadcn fills
+ * with the action colour moves: `--primary` (buttons, active states), the focus
+ * `--ring`, and the sidebar's own copies of both.
+ *
+ * Steps follow the mode, the way the stock palette does — dark fill with light
+ * text in light mode, light fill with dark text in dark mode:
+ *
+ *   light: Tailwind 700 on a 50 foreground   (measured 4.72:1 – 6.65:1)
+ *   dark:  Tailwind 400 on a 950 foreground  (measured 5.34:1 – 8.40:1)
+ *
+ * Every pair clears WCAG AA for body text. Do not brighten a light-mode fill or
+ * darken a dark-mode one without re-checking the pair: the 500 and 600 steps sit
+ * at 3.3:1 – 4.3:1 against both foregrounds, which is where the label starts to
+ * disappear into the button.
+ *
+ * `default` has no block: it is what shadcn-v4-theme.css already sets.
+ *
+ * Selectors match the element carrying `.shadcn-v4` (AppShell puts the class and
+ * the `data-v2-accent` attribute on the same two nodes: document.body, so the
+ * portalled poppers are covered, and the shell root). Light is written as
+ * `:root:not([data-theme='dark'])` rather than a bare class so the light and
+ * dark blocks are mutually exclusive — a preset that sets a variable in one mode
+ * only can then never leak into the other.
+ */
+
+/* ---------------------------------------------------------------- blue ---- */
+
+:root:not([data-theme='dark']) .shadcn-v4[data-v2-accent='blue'] {
+  --primary: oklch(0.488 0.243 264.376);
+  --primary-foreground: oklch(0.97 0.014 254.604);
+  --ring: oklch(0.488 0.243 264.376);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
+  --sidebar-ring: oklch(0.488 0.243 264.376);
+}
+
+[data-theme='dark'] .shadcn-v4[data-v2-accent='blue'] {
+  --primary: oklch(0.707 0.165 254.624);
+  --primary-foreground: oklch(0.282 0.091 267.935);
+  --ring: oklch(0.707 0.165 254.624);
+  --sidebar-primary: oklch(0.707 0.165 254.624);
+  --sidebar-primary-foreground: oklch(0.282 0.091 267.935);
+  --sidebar-ring: oklch(0.707 0.165 254.624);
+}
+
+/* -------------------------------------------------------------- violet ---- */
+
+:root:not([data-theme='dark']) .shadcn-v4[data-v2-accent='violet'] {
+  --primary: oklch(0.491 0.27 292.581);
+  --primary-foreground: oklch(0.969 0.016 293.756);
+  --ring: oklch(0.491 0.27 292.581);
+  --sidebar-primary: oklch(0.491 0.27 292.581);
+  --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
+  --sidebar-ring: oklch(0.491 0.27 292.581);
+}
+
+[data-theme='dark'] .shadcn-v4[data-v2-accent='violet'] {
+  --primary: oklch(0.702 0.183 293.541);
+  --primary-foreground: oklch(0.283 0.141 291.089);
+  --ring: oklch(0.702 0.183 293.541);
+  --sidebar-primary: oklch(0.702 0.183 293.541);
+  --sidebar-primary-foreground: oklch(0.283 0.141 291.089);
+  --sidebar-ring: oklch(0.702 0.183 293.541);
+}
+
+/* --------------------------------------------------------------- green ---- */
+
+:root:not([data-theme='dark']) .shadcn-v4[data-v2-accent='green'] {
+  --primary: oklch(0.527 0.154 150.069);
+  --primary-foreground: oklch(0.982 0.018 155.826);
+  --ring: oklch(0.527 0.154 150.069);
+  --sidebar-primary: oklch(0.527 0.154 150.069);
+  --sidebar-primary-foreground: oklch(0.982 0.018 155.826);
+  --sidebar-ring: oklch(0.527 0.154 150.069);
+}
+
+[data-theme='dark'] .shadcn-v4[data-v2-accent='green'] {
+  --primary: oklch(0.792 0.209 151.711);
+  --primary-foreground: oklch(0.266 0.065 152.934);
+  --ring: oklch(0.792 0.209 151.711);
+  --sidebar-primary: oklch(0.792 0.209 151.711);
+  --sidebar-primary-foreground: oklch(0.266 0.065 152.934);
+  --sidebar-ring: oklch(0.792 0.209 151.711);
+}
+
+/* -------------------------------------------------------------- orange ---- */
+
+:root:not([data-theme='dark']) .shadcn-v4[data-v2-accent='orange'] {
+  --primary: oklch(0.553 0.195 38.402);
+  --primary-foreground: oklch(0.98 0.016 73.684);
+  --ring: oklch(0.553 0.195 38.402);
+  --sidebar-primary: oklch(0.553 0.195 38.402);
+  --sidebar-primary-foreground: oklch(0.98 0.016 73.684);
+  --sidebar-ring: oklch(0.553 0.195 38.402);
+}
+
+[data-theme='dark'] .shadcn-v4[data-v2-accent='orange'] {
+  --primary: oklch(0.75 0.183 55.934);
+  --primary-foreground: oklch(0.266 0.079 36.259);
+  --ring: oklch(0.75 0.183 55.934);
+  --sidebar-primary: oklch(0.75 0.183 55.934);
+  --sidebar-primary-foreground: oklch(0.266 0.079 36.259);
+  --sidebar-ring: oklch(0.75 0.183 55.934);
+}
+
+/* ---------------------------------------------------------------- rose ---- */
+
+:root:not([data-theme='dark']) .shadcn-v4[data-v2-accent='rose'] {
+  --primary: oklch(0.514 0.222 16.935);
+  --primary-foreground: oklch(0.969 0.015 12.422);
+  --ring: oklch(0.514 0.222 16.935);
+  --sidebar-primary: oklch(0.514 0.222 16.935);
+  --sidebar-primary-foreground: oklch(0.969 0.015 12.422);
+  --sidebar-ring: oklch(0.514 0.222 16.935);
+}
+
+[data-theme='dark'] .shadcn-v4[data-v2-accent='rose'] {
+  --primary: oklch(0.712 0.194 13.428);
+  --primary-foreground: oklch(0.271 0.105 12.094);
+  --ring: oklch(0.712 0.194 13.428);
+  --sidebar-primary: oklch(0.712 0.194 13.428);
+  --sidebar-primary-foreground: oklch(0.271 0.105 12.094);
+  --sidebar-ring: oklch(0.712 0.194 13.428);
+}

@@ -29,11 +29,50 @@ export default defineConfig([
     },
   },
   {
+    // Vendored shadcn/ui primitives (`npx shadcn add …`). These are upstream
+    // files we re-pull rather than hand-author, so the rules that assume our
+    // own authoring conventions are relaxed here — keeping the directory
+    // diff-clean against upstream. Anything we write ourselves lives outside
+    // this path and is still fully linted.
+    files: ['src/v2/components/**/*.{ts,tsx}'],
+    rules: {
+      // Upstream co-locates cva variant objects with the component.
+      'react-refresh/only-export-components': 'off',
+      // Upstream ships English a11y labels ("Close", "Previous"); those get
+      // translated at the call site or by wrapping the primitive, not by
+      // editing the vendored file.
+      'i18next/no-literal-string': 'off',
+    },
+  },
+  {
+    // The v2 interface is self-contained: everything it owns lives under
+    // `src/v2/`, and nothing outside may reach into it. `src/routes/` is the
+    // one exception — it is the composition root that mounts both interfaces
+    // on the same paths via <Variant>. The reverse direction stays open: v2
+    // reuses v1's services, contexts and domain components deliberately.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/v2/**', 'src/routes/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/v2/**', '@/v2/*'],
+              message:
+                'v1 code must not import from src/v2. The v2 interface is isolated; it is mounted from src/routes/index.tsx with <Variant>.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Guard against new hardcoded user-facing strings: flag literal JSX text so
     // every visible string goes through t()/<Trans>. The i18n setup itself and
     // tests are exempt.
     files: ['src/**/*.tsx'],
-    ignores: ['src/i18n/**', '**/*.test.tsx'],
+    ignores: ['src/i18n/**', '**/*.test.tsx', 'src/v2/components/**'],
     rules: {
       'i18next/no-literal-string': [
         'error',

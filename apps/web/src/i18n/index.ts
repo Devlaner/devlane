@@ -4,6 +4,7 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 
 import en from './locales/en/translation.json';
 import az from './locales/az/translation.json';
+import tr from './locales/tr/translation.json';
 import './dynamicKeys'; // registers template-literal keys for the parser
 
 /**
@@ -16,6 +17,7 @@ export const LANGUAGE_STORAGE_KEY = 'devlane-language';
 export const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English', dir: 'ltr' },
   { code: 'az', label: 'Azərbaycanca', dir: 'ltr' },
+  { code: 'tr', label: 'Türkçe', dir: 'ltr' },
 ] as const;
 
 export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
@@ -23,6 +25,7 @@ export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 const resources = {
   en: { translation: en },
   az: { translation: az },
+  tr: { translation: tr },
 } as const;
 
 void i18n

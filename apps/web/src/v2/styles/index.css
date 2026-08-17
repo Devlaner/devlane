@@ -1,0 +1,30 @@
+/**
+ * v2 stylesheet entry.
+ *
+ * Imported from the two v2 components every v2 page renders inside — the v2
+ * AppShell and the auth page shell — rather than from the app's global
+ * `index.css`. Both are lazily loaded, so a reader on v1 never downloads any
+ * of this.
+ *
+ * It is its own Tailwind entry because `shadcn-bridge.css` carries the
+ * `@theme inline` block that names the shadcn tokens: utilities like
+ * `bg-primary` or `text-muted-foreground` only exist in the stylesheet whose
+ * entry can see that block. `source(none)` plus an explicit `@source` keeps
+ * the scan to `src/v2`, so this sheet holds the v2 utilities and nothing else.
+ */
+@import 'tailwindcss' source(none);
+@source '../../v2';
+
+/* shadcn components are written against the `animate-in` / `animate-out`
+   utilities (`fade-in-0`, `zoom-in-95`, `slide-in-from-top-2`, …). Tailwind v4
+   does not ship them; without this import every one of those classes is a
+   no-op and the dialogs, popovers, dropdowns, selects, sheets and tooltips
+   appear and disappear with no transition at all. */
+@import 'tw-animate-css';
+
+@import './shadcn-bridge.css';
+@import './shadcn-reference-theme.css';
+@import './shadcn-v4-theme.css';
+/* Imported last: its presets override the palette above for the subtree that
+   carries the matching `data-v2-theme` value. */
+@import './v2-color-themes.css';
