@@ -127,6 +127,46 @@ src/
 - **Editor**: TipTap 3.22.3 — keep all `@tiptap/*` packages on the **same exact version** (they share peer deps; mismatches break silently).
 - **Lazy boundaries**: every page is `lazy()` with a `<Suspense fallback={<PageFallback />}>`. New pages should follow the same pattern in `routes/index.tsx`.
 
+## V2 interface design system
+
+The v2 web interface lives entirely under `apps/web/src/v2/**` and is built on
+shadcn/ui. **Read [AGENTS.md](AGENTS.md) before designing or implementing
+anything on that surface** — it is the authoritative design direction and
+lists the reference sources:
+
+- [shadcn/ui docs](https://ui.shadcn.com/docs/components) — primary reference for component APIs, composition, accessibility, and states.
+- [shadcn-ui/ui repo](https://github.com/shadcn-ui/ui) — source of truth when the docs are insufficient.
+- [AdminCN Free](https://shadcnstudio.com/templates/admin-dashboard/admincn-free) — visual/interaction reference for dashboard composition, navigation, tables, forms, and settings pages.
+
+Component config lives in `apps/web/components.json` (`new-york` style, slate
+base, lucide icons, `@/v2/components/ui` alias). Reuse existing primitives
+from that directory before adding new ones, and adapt references to Devlane's
+services, routes, and theme tokens rather than vendoring template code.
+
+**v2 is a preference, not a route.** Both interfaces answer to the same URLs.
+`routes/index.tsx` declares each path once and picks the element with
+`<Variant v1={…} v2={…} />` (`routes/InterfaceVariant.tsx`), which reads the
+stored preference from `v2/contexts/InterfaceContext` (localStorage key
+`devlane-interface-version`). Consequences when adding a page:
+
+- Add one route entry, not two. If only one interface has the page, use plain
+  `<Suspense>` (setup and instance-admin are v1-only).
+- v2 links must use the shipped v1 URL shapes (`/projects/:id/issues`, not
+  `work-items`); a v2 page reached by a v1 URL is the whole point.
+- Both shells (`components/layout/AppShell.tsx` and its v2 mirror) mount on the
+  `:workspaceSlug` route and render an `<Outlet />`, so child routes are shared.
+
+**v1 and v2 are isolated.** `src/v2/` mirrors `src/`: a v2 page carries the
+same filename and export name as the v1 page it replaces
+(`v2/pages/IssueListPage.tsx` ↔ `pages/IssueListPage.tsx`); `routes/index.tsx`
+aliases the v2 side to `…PageV2` locally. Outside `src/v2/` and `src/routes/`,
+nothing may import from `src/v2` — ESLint fails the build if it does. v1 files
+must stay byte-identical to what they'd be without v2; the only v2-aware line
+in a v1 page is `<InterfaceSwitch />` in `pages/SettingsPage.tsx`, whose
+implementation lives in `routes/InterfaceSwitch.tsx`. v2 styles are imported by
+the v2 shell and auth shell, not by the global `index.css`, so a v1 reader
+never downloads them.
+
 ## Working with this repo
 
 - When adding an API endpoint, the change usually touches: `model/` (if new entity) → `store/` → `service/` → `handler/` → register in `router/router.go` → corresponding service in `apps/web/src/services/` → web consumer.

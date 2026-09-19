@@ -45,3 +45,10 @@ shared `apiClient` in `src/api/client.ts` (`withCredentials: true` for cookie
 sessions — don't create new axios instances). Routing is workspace-scoped
 (`/:workspaceSlug/...`). See the repo-root `CLAUDE.md` for the full frontend
 architecture overview and `CONTRIBUTING.md` for commit/PR conventions.
+
+## V2 design system
+
+The v2 interface (`src/pages/*V2.tsx`, `src/components/shadcn/**`) is built on
+shadcn/ui — `new-york` style, slate base color, lucide icons, configured in
+`components.json`. The reference sources and the rules for using them are in
+the repo-root `AGENTS.md`; read it before adding or restyling v2 UI.

@@ -380,6 +380,9 @@ export function CreateWorkItemModal({
           setModuleId(null);
           setParentId(null);
         }
+      } catch {
+        /* The caller renders createError. A rejected save must leave the
+           composer open so the user can correct or retry it. */
       } finally {
         setSubmitting(false);
       }

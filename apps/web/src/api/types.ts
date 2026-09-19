@@ -429,7 +429,13 @@ export interface UserActivityItem {
   id: string;
   type: string;
   created_at: string;
+  /** Server-rendered English fallback, used when the parts below are absent. */
   description: string;
+  /** Set only for bookkeeping rows the client can phrase itself (see describeActivity). */
+  verb?: string;
+  field?: string;
+  old_value?: string;
+  new_value?: string;
   issue_id?: string;
   issue_name?: string;
   workspace_id?: string;

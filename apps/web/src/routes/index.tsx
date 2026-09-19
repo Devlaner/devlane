@@ -1,12 +1,14 @@
 /* eslint-disable react-refresh/only-export-components -- routes file exports router + layout components; keep for future use */
 import { lazy, Suspense, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { createBrowserRouter, Navigate, Outlet, useParams } from 'react-router-dom';
 import { AppShell, InstanceAdminLayout } from '../components/layout';
 import { RootRedirect } from '../components/RootRedirect';
 import { SetupGate } from '../components/SetupGate';
 import { recentsService } from '../services/recentsService';
+import { InterfaceProvider } from '../v2/contexts/InterfaceContext';
 import { InstanceAdminProtectedRoute } from './InstanceAdminProtectedRoute';
+import { Variant } from './InterfaceVariant';
+import { PageFallback } from './PageFallback';
 import { ProtectedRoute } from './ProtectedRoute';
 
 const page = (m: { [k: string]: React.ComponentType }) => ({
@@ -16,8 +18,22 @@ const page = (m: { [k: string]: React.ComponentType }) => ({
 const LoginPage = lazy(() =>
   import('../pages/LoginPage').then((m) => page({ LoginPage: m.LoginPage })),
 );
+const LoginPageV2 = lazy(() =>
+  import('../v2/pages/LoginPage').then((m) => page({ LoginPage: m.LoginPage })),
+);
+const SignUpPageV2 = lazy(() =>
+  import('../v2/pages/SignUpPage').then((m) => page({ SignUpPage: m.SignUpPage })),
+);
+const AppShellV2 = lazy(() =>
+  import('../v2/components/layout/AppShell').then((m) => page({ AppShell: m.AppShell })),
+);
 const ForgotPasswordPage = lazy(() =>
   import('../pages/ForgotPasswordPage').then((m) =>
+    page({ ForgotPasswordPage: m.ForgotPasswordPage }),
+  ),
+);
+const ForgotPasswordPageV2 = lazy(() =>
+  import('../v2/pages/ForgotPasswordPage').then((m) =>
     page({ ForgotPasswordPage: m.ForgotPasswordPage }),
   ),
 );
@@ -26,11 +42,19 @@ const ResetPasswordPage = lazy(() =>
     page({ ResetPasswordPage: m.ResetPasswordPage }),
   ),
 );
+const ResetPasswordPageV2 = lazy(() =>
+  import('../v2/pages/ResetPasswordPage').then((m) =>
+    page({ ResetPasswordPage: m.ResetPasswordPage }),
+  ),
+);
 const SignUpPage = lazy(() =>
   import('../pages/SignUpPage').then((m) => page({ SignUpPage: m.SignUpPage })),
 );
 const SetPasswordPage = lazy(() =>
   import('../pages/SetPasswordPage').then((m) => page({ SetPasswordPage: m.SetPasswordPage })),
+);
+const SetPasswordPageV2 = lazy(() =>
+  import('../v2/pages/SetPasswordPage').then((m) => page({ SetPasswordPage: m.SetPasswordPage })),
 );
 const WorkspaceHomePage = lazy(() =>
   import('../pages/WorkspaceHomePage').then((m) =>
@@ -48,10 +72,95 @@ const ProfilePage = lazy(() =>
 const ProjectsListPage = lazy(() =>
   import('../pages/ProjectsListPage').then((m) => page({ ProjectsListPage: m.ProjectsListPage })),
 );
+const ProjectsListPageV2 = lazy(() =>
+  import('../v2/pages/ProjectsListPage').then((m) =>
+    page({ ProjectsListPage: m.ProjectsListPage }),
+  ),
+);
 const WorkspaceViewsPage = lazy(() =>
   import('../pages/WorkspaceViewsPage').then((m) =>
     page({ WorkspaceViewsPage: m.WorkspaceViewsPage }),
   ),
+);
+const WorkspaceViewsPageV2 = lazy(() =>
+  import('../v2/pages/WorkspaceViewsPage').then((m) =>
+    page({ WorkspaceViewsPage: m.WorkspaceViewsPage }),
+  ),
+);
+const DraftsPageV2 = lazy(() =>
+  import('../v2/pages/DraftsPage').then((m) => page({ DraftsPage: m.DraftsPage })),
+);
+const ArchivesPageV2 = lazy(() =>
+  import('../v2/pages/ArchivesPage').then((m) => page({ ArchivesPage: m.ArchivesPage })),
+);
+const AnalyticsOverviewPageV2 = lazy(() =>
+  import('../v2/pages/AnalyticsOverviewPage').then((m) =>
+    page({ AnalyticsOverviewPage: m.AnalyticsOverviewPage }),
+  ),
+);
+const ProjectWorkItemsPageV2 = lazy(() =>
+  import('../v2/pages/IssueListPage').then((m) => page({ IssueListPage: m.IssueListPage })),
+);
+const ProjectEpicsPageV2 = lazy(() =>
+  import('../v2/pages/EpicsPage').then((m) => page({ EpicsPage: m.EpicsPage })),
+);
+const ProjectCyclesPageV2 = lazy(() =>
+  import('../v2/pages/CyclesPage').then((m) => page({ CyclesPage: m.CyclesPage })),
+);
+const ProjectModulesPageV2 = lazy(() =>
+  import('../v2/pages/ModulesPage').then((m) => page({ ModulesPage: m.ModulesPage })),
+);
+const ProjectViewsPageV2 = lazy(() =>
+  import('../v2/pages/ViewsPage').then((m) => page({ ViewsPage: m.ViewsPage })),
+);
+const ProjectPagesPageV2 = lazy(() =>
+  import('../v2/pages/PagesPage').then((m) => page({ PagesPage: m.PagesPage })),
+);
+const ProjectIntakePageV2 = lazy(() =>
+  import('../v2/pages/IntakePage').then((m) => page({ IntakePage: m.IntakePage })),
+);
+const EpicDetailPageV2 = lazy(() =>
+  import('../v2/pages/EpicDetailPage').then((m) => page({ EpicDetailPage: m.EpicDetailPage })),
+);
+const CycleDetailPageV2 = lazy(() =>
+  import('../v2/pages/CycleDetailPage').then((m) => page({ CycleDetailPage: m.CycleDetailPage })),
+);
+const IssueDetailPageV2 = lazy(() =>
+  import('../v2/pages/IssueDetailPage').then((m) => page({ IssueDetailPage: m.IssueDetailPage })),
+);
+const PageDetailPageV2 = lazy(() =>
+  import('../v2/pages/PageDetailPage').then((m) => page({ PageDetailPage: m.PageDetailPage })),
+);
+const ModuleDetailPageV2 = lazy(() =>
+  import('../v2/pages/ModuleDetailPage').then((m) =>
+    page({ ModuleDetailPage: m.ModuleDetailPage }),
+  ),
+);
+const ViewDetailPageV2 = lazy(() =>
+  import('../v2/pages/ViewDetailPage').then((m) => page({ ViewDetailPage: m.ViewDetailPage })),
+);
+const WorkspaceHomePageV2 = lazy(() =>
+  import('../v2/pages/WorkspaceHomePage').then((m) =>
+    page({ WorkspaceHomePage: m.WorkspaceHomePage }),
+  ),
+);
+/* Not routed through `page()`: this one takes a `scope` prop, which that
+   helper's prop-less ComponentType would erase. */
+const SettingsPageV2 = lazy(() =>
+  import('../v2/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+);
+const AnalyticsWorkItemsPageV2 = lazy(() =>
+  import('../v2/pages/AnalyticsWorkItemsPage').then((m) =>
+    page({ AnalyticsWorkItemsPage: m.AnalyticsWorkItemsPage }),
+  ),
+);
+const NotificationsPageV2 = lazy(() =>
+  import('../v2/pages/NotificationsPage').then((m) =>
+    page({ NotificationsPage: m.NotificationsPage }),
+  ),
+);
+const ProfilePageV2 = lazy(() =>
+  import('../v2/pages/ProfilePage').then((m) => page({ ProfilePage: m.ProfilePage })),
 );
 const DraftsPage = lazy(() =>
   import('../pages/DraftsPage').then((m) => page({ DraftsPage: m.DraftsPage })),
@@ -205,32 +314,52 @@ const CreateWorkspacePage = lazy(() =>
     page({ CreateWorkspacePage: m.CreateWorkspacePage }),
   ),
 );
+const CreateWorkspacePageV2 = lazy(() =>
+  import('../v2/pages/CreateWorkspacePage').then((m) =>
+    page({ CreateWorkspacePage: m.CreateWorkspacePage }),
+  ),
+);
 const InviteAcceptPage = lazy(() =>
   import('../pages/InviteAcceptPage').then((m) => page({ InviteAcceptPage: m.InviteAcceptPage })),
+);
+const InviteAcceptPageV2 = lazy(() =>
+  import('../v2/pages/InviteAcceptPage').then((m) =>
+    page({ InviteAcceptPage: m.InviteAcceptPage }),
+  ),
 );
 const InviteSignUpPage = lazy(() =>
   import('../pages/InviteSignUpPage').then((m) => page({ InviteSignUpPage: m.InviteSignUpPage })),
 );
+const InviteSignUpPageV2 = lazy(() =>
+  import('../v2/pages/InviteSignUpPage').then((m) =>
+    page({ InviteSignUpPage: m.InviteSignUpPage }),
+  ),
+);
 
-const PageFallback = () => {
-  const { t } = useTranslation();
-  return (
-    <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-      {t('common.loading', 'Loading…')}
-    </div>
-  );
-};
-
-function AppLayout() {
+/**
+ * The signed-in chrome. Which shell renders is the whole of the v1/v2 split at
+ * layout level: both render an <Outlet />, so every child route below is
+ * declared once and shared.
+ */
+function WorkspaceLayout() {
   return (
     <ProtectedRoute>
-      <AppShell />
+      <Variant v1={<AppShell />} v2={<AppShellV2 />} />
     </ProtectedRoute>
   );
 }
 
-function WorkspaceLayout() {
-  return <Outlet />;
+/**
+ * Root "/" only ever renders RootRedirect, which resolves to a workspace or to
+ * setup. v1 keeps its shell around that moment; v2 has no shell to show yet —
+ * its AppShell needs a :workspaceSlug, which this route has not matched.
+ */
+function RootLayout() {
+  return (
+    <ProtectedRoute>
+      <Variant v1={<AppShell />} v2={<Outlet />} />
+    </ProtectedRoute>
+  );
 }
 
 function ProjectLayout() {
@@ -253,10 +382,24 @@ function ProjectLayout() {
   return <Outlet />;
 }
 
+/**
+ * Holds the interface preference above every route, so <Variant> can read it
+ * anywhere in the tree. It lives here rather than in App.tsx to keep the v1
+ * app root free of anything v2 — this file is the one seam that knows about
+ * both interfaces.
+ */
+function InterfaceRoot() {
+  return (
+    <InterfaceProvider>
+      <SetupGate />
+    </InterfaceProvider>
+  );
+}
+
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <SetupGate />,
+    element: <InterfaceRoot />,
     children: [
       {
         path: 'setup',
@@ -287,6 +430,8 @@ const router = createBrowserRouter([
         element: <Navigate to="/login" state={{ from: { pathname: '/instance-admin' } }} replace />,
       },
       {
+        /* Instance admin has no v2 counterpart: it is a separate surface from
+           the workspace app and is deliberately left on the shipped chrome. */
         path: 'instance-admin',
         element: (
           <InstanceAdminProtectedRoute>
@@ -403,58 +548,39 @@ const router = createBrowserRouter([
       },
       {
         path: 'login',
-        element: (
-          <Suspense fallback={<PageFallback />}>
-            <LoginPage />
-          </Suspense>
-        ),
+        element: <Variant v1={<LoginPage />} v2={<LoginPageV2 />} />,
       },
       {
         path: 'forgot-password',
-        element: (
-          <Suspense fallback={<PageFallback />}>
-            <ForgotPasswordPage />
-          </Suspense>
-        ),
+        element: <Variant v1={<ForgotPasswordPage />} v2={<ForgotPasswordPageV2 />} />,
       },
       {
         path: 'reset-password',
-        element: (
-          <Suspense fallback={<PageFallback />}>
-            <ResetPasswordPage />
-          </Suspense>
-        ),
+        element: <Variant v1={<ResetPasswordPage />} v2={<ResetPasswordPageV2 />} />,
       },
       {
         path: 'sign-up',
-        element: (
-          <Suspense fallback={<PageFallback />}>
-            <SignUpPage />
-          </Suspense>
-        ),
+        element: <Variant v1={<SignUpPage />} v2={<SignUpPageV2 />} />,
       },
       {
         path: 'accounts/set-password',
         element: (
           <ProtectedRoute>
-            <Suspense fallback={<PageFallback />}>
-              <SetPasswordPage />
-            </Suspense>
+            <Variant v1={<SetPasswordPage />} v2={<SetPasswordPageV2 />} />
           </ProtectedRoute>
         ),
       },
       {
         path: 'invite',
-        element: (
-          <Suspense fallback={<PageFallback />}>
-            <Outlet />
-          </Suspense>
-        ),
+        element: <Outlet />,
         children: [
-          { index: true, element: <InviteAcceptPage /> },
+          {
+            index: true,
+            element: <Variant v1={<InviteAcceptPage />} v2={<InviteAcceptPageV2 />} />,
+          },
           {
             path: 'sign-up',
-            element: <InviteSignUpPage />,
+            element: <Variant v1={<InviteSignUpPage />} v2={<InviteSignUpPageV2 />} />,
           },
         ],
       },
@@ -462,276 +588,175 @@ const router = createBrowserRouter([
         path: 'create-workspace',
         element: (
           <ProtectedRoute>
-            <Suspense fallback={<PageFallback />}>
-              <CreateWorkspacePage />
-            </Suspense>
+            <Variant v1={<CreateWorkspacePage />} v2={<CreateWorkspacePageV2 />} />
           </ProtectedRoute>
         ),
       },
       {
-        element: <AppLayout />,
+        element: <RootLayout />,
+        children: [{ index: true, element: <RootRedirect /> }],
+      },
+      {
+        path: ':workspaceSlug',
+        element: <WorkspaceLayout />,
         children: [
-          { index: true, element: <RootRedirect /> },
           {
-            path: ':workspaceSlug',
-            element: <WorkspaceLayout />,
+            index: true,
+            element: <Variant v1={<WorkspaceHomePage />} v2={<WorkspaceHomePageV2 />} />,
+          },
+          {
+            path: 'notifications',
+            element: <Variant v1={<NotificationsPage />} v2={<NotificationsPageV2 />} />,
+          },
+          {
+            path: 'profile/:userId',
+            element: <Variant v1={<ProfilePage />} v2={<ProfilePageV2 />} />,
+          },
+          {
+            path: 'projects',
+            element: <Outlet />,
+            children: [
+              {
+                index: true,
+                element: <Variant v1={<ProjectsListPage />} v2={<ProjectsListPageV2 />} />,
+              },
+              {
+                path: ':projectId',
+                element: <ProjectLayout />,
+                children: [
+                  {
+                    index: true,
+                    element: <Navigate to="issues" replace />,
+                  },
+                  {
+                    path: 'issues',
+                    element: <Variant v1={<IssueListPage />} v2={<ProjectWorkItemsPageV2 />} />,
+                  },
+                  {
+                    path: 'issues/:issueId',
+                    element: <Variant v1={<IssueDetailPage />} v2={<IssueDetailPageV2 />} />,
+                  },
+                  {
+                    /* v1 keeps its dedicated board page; v2 folds the board into
+                       the work items page as a layout, so it redirects there. */
+                    path: 'board',
+                    element: (
+                      <Variant
+                        v1={<BoardPage />}
+                        v2={<Navigate to="../issues?layout=board" replace relative="path" />}
+                      />
+                    ),
+                  },
+                  {
+                    path: 'cycles',
+                    element: <Variant v1={<CyclesPage />} v2={<ProjectCyclesPageV2 />} />,
+                  },
+                  {
+                    path: 'cycles/:cycleId',
+                    element: <Variant v1={<CycleDetailPage />} v2={<CycleDetailPageV2 />} />,
+                  },
+                  {
+                    path: 'modules',
+                    element: <Variant v1={<ModulesPage />} v2={<ProjectModulesPageV2 />} />,
+                  },
+                  {
+                    path: 'modules/:moduleId',
+                    element: <Variant v1={<ModuleDetailPage />} v2={<ModuleDetailPageV2 />} />,
+                  },
+                  {
+                    path: 'views',
+                    element: <Variant v1={<ViewsPage />} v2={<ProjectViewsPageV2 />} />,
+                  },
+                  {
+                    path: 'views/:viewId',
+                    element: <Variant v1={<ViewDetailPage />} v2={<ViewDetailPageV2 />} />,
+                  },
+                  {
+                    path: 'pages',
+                    element: <Variant v1={<PagesPage />} v2={<ProjectPagesPageV2 />} />,
+                  },
+                  {
+                    path: 'pages/:pageId',
+                    element: <Variant v1={<PageDetailPage />} v2={<PageDetailPageV2 />} />,
+                  },
+                  {
+                    path: 'epics',
+                    element: <Variant v1={<EpicsPage />} v2={<ProjectEpicsPageV2 />} />,
+                  },
+                  {
+                    path: 'epics/:epicId',
+                    element: <Variant v1={<EpicDetailPage />} v2={<EpicDetailPageV2 />} />,
+                  },
+                  {
+                    path: 'intake',
+                    element: <Variant v1={<IntakePage />} v2={<ProjectIntakePageV2 />} />,
+                  },
+                  {
+                    path: 'settings',
+                    element: (
+                      <Variant v1={<SettingsPage />} v2={<SettingsPageV2 scope="project" />} />
+                    ),
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            path: 'analytics',
+            element: <Outlet />,
+            children: [
+              { index: true, element: <Navigate to="overview" replace /> },
+              {
+                path: 'overview',
+                element: (
+                  <Variant v1={<AnalyticsOverviewPage />} v2={<AnalyticsOverviewPageV2 />} />
+                ),
+              },
+              {
+                path: 'work-items',
+                element: (
+                  <Variant v1={<AnalyticsWorkItemsPage />} v2={<AnalyticsWorkItemsPageV2 />} />
+                ),
+              },
+            ],
+          },
+          {
+            path: 'views',
+            element: <Navigate to="all-issues" replace />,
+          },
+          {
+            path: 'views/:viewId',
+            element: <Variant v1={<WorkspaceViewsPage />} v2={<WorkspaceViewsPageV2 />} />,
+          },
+          {
+            path: 'drafts',
+            element: <Variant v1={<DraftsPage />} v2={<DraftsPageV2 />} />,
+          },
+          {
+            path: 'archives',
+            element: <Variant v1={<ArchivesPage />} v2={<ArchivesPageV2 />} />,
+          },
+          {
+            path: 'settings',
+            element: <Outlet />,
             children: [
               {
                 index: true,
                 element: (
-                  <Suspense fallback={<PageFallback />}>
-                    <WorkspaceHomePage />
-                  </Suspense>
+                  <Variant v1={<SettingsPage />} v2={<SettingsPageV2 scope="workspace" />} />
                 ),
               },
               {
-                path: 'notifications',
-                element: (
-                  <Suspense fallback={<PageFallback />}>
-                    <NotificationsPage />
-                  </Suspense>
-                ),
-              },
-              {
-                path: 'profile/:userId',
-                element: (
-                  <Suspense fallback={<PageFallback />}>
-                    <ProfilePage />
-                  </Suspense>
-                ),
+                path: 'account',
+                element: <Variant v1={<SettingsPage />} v2={<SettingsPageV2 scope="account" />} />,
               },
               {
                 path: 'projects',
-                element: <Outlet />,
-                children: [
-                  {
-                    index: true,
-                    element: (
-                      <Suspense fallback={<PageFallback />}>
-                        <ProjectsListPage />
-                      </Suspense>
-                    ),
-                  },
-                  {
-                    path: ':projectId',
-                    element: <ProjectLayout />,
-                    children: [
-                      {
-                        index: true,
-                        element: <Navigate to="issues" replace />,
-                      },
-                      {
-                        path: 'issues',
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <IssueListPage />
-                          </Suspense>
-                        ),
-                      },
-                      {
-                        path: 'issues/:issueId',
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <IssueDetailPage />
-                          </Suspense>
-                        ),
-                      },
-                      {
-                        path: 'board',
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <BoardPage />
-                          </Suspense>
-                        ),
-                      },
-                      {
-                        path: 'cycles',
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <CyclesPage />
-                          </Suspense>
-                        ),
-                      },
-                      {
-                        path: 'cycles/:cycleId',
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <CycleDetailPage />
-                          </Suspense>
-                        ),
-                      },
-                      {
-                        path: 'modules',
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <ModulesPage />
-                          </Suspense>
-                        ),
-                      },
-                      {
-                        path: 'modules/:moduleId',
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <ModuleDetailPage />
-                          </Suspense>
-                        ),
-                      },
-                      {
-                        path: 'views',
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <ViewsPage />
-                          </Suspense>
-                        ),
-                      },
-                      {
-                        path: 'views/:viewId',
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <ViewDetailPage />
-                          </Suspense>
-                        ),
-                      },
-                      {
-                        path: 'pages',
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <PagesPage />
-                          </Suspense>
-                        ),
-                      },
-                      {
-                        path: 'pages/:pageId',
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <PageDetailPage />
-                          </Suspense>
-                        ),
-                      },
-                      {
-                        path: 'epics',
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <EpicsPage />
-                          </Suspense>
-                        ),
-                      },
-                      {
-                        path: 'epics/:epicId',
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <EpicDetailPage />
-                          </Suspense>
-                        ),
-                      },
-                      {
-                        path: 'intake',
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <IntakePage />
-                          </Suspense>
-                        ),
-                      },
-                      {
-                        path: 'settings',
-                        element: (
-                          <Suspense fallback={<PageFallback />}>
-                            <SettingsPage />
-                          </Suspense>
-                        ),
-                      },
-                    ],
-                  },
-                ],
+                element: <Variant v1={<SettingsPage />} v2={<SettingsPageV2 scope="projects" />} />,
               },
               {
-                path: 'analytics',
-                element: <Outlet />,
-                children: [
-                  { index: true, element: <Navigate to="overview" replace /> },
-                  {
-                    path: 'overview',
-                    element: (
-                      <Suspense fallback={<PageFallback />}>
-                        <AnalyticsOverviewPage />
-                      </Suspense>
-                    ),
-                  },
-                  {
-                    path: 'work-items',
-                    element: (
-                      <Suspense fallback={<PageFallback />}>
-                        <AnalyticsWorkItemsPage />
-                      </Suspense>
-                    ),
-                  },
-                ],
-              },
-              {
-                path: 'views',
-                element: <Navigate to="all-issues" replace />,
-              },
-              {
-                path: 'views/:viewId',
-                element: (
-                  <Suspense fallback={<PageFallback />}>
-                    <WorkspaceViewsPage />
-                  </Suspense>
-                ),
-              },
-              {
-                path: 'drafts',
-                element: (
-                  <Suspense fallback={<PageFallback />}>
-                    <DraftsPage />
-                  </Suspense>
-                ),
-              },
-              {
-                path: 'archives',
-                element: (
-                  <Suspense fallback={<PageFallback />}>
-                    <ArchivesPage />
-                  </Suspense>
-                ),
-              },
-              {
-                path: 'settings',
-                element: <Outlet />,
-                children: [
-                  {
-                    index: true,
-                    element: (
-                      <Suspense fallback={<PageFallback />}>
-                        <SettingsPage />
-                      </Suspense>
-                    ),
-                  },
-                  {
-                    path: 'account',
-                    element: (
-                      <Suspense fallback={<PageFallback />}>
-                        <SettingsPage />
-                      </Suspense>
-                    ),
-                  },
-                  {
-                    path: 'projects',
-                    element: (
-                      <Suspense fallback={<PageFallback />}>
-                        <SettingsPage />
-                      </Suspense>
-                    ),
-                  },
-                  {
-                    path: 'projects/:projectId',
-                    element: (
-                      <Suspense fallback={<PageFallback />}>
-                        <SettingsPage />
-                      </Suspense>
-                    ),
-                  },
-                ],
+                path: 'projects/:projectId',
+                element: <Variant v1={<SettingsPage />} v2={<SettingsPageV2 scope="projects" />} />,
               },
             ],
           },

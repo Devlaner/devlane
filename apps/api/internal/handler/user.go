@@ -105,19 +105,32 @@ func (h *UserHandler) GetActivity(c *gin.Context) {
 			issueID = a.IssueID.String()
 			issueName = issueMap[issueID]
 		}
-		activities = append(activities, userActivityItem{
-			createdAt: a.CreatedAt,
-			body: gin.H{
-				"id":           a.ID.String(),
-				"type":         "issue_activity",
-				"created_at":   a.CreatedAt,
-				"description":  issueActivityDescription(a),
-				"issue_id":     issueID,
-				"issue_name":   issueName,
-				"workspace_id": a.WorkspaceID.String(),
-				"project_id":   a.ProjectID.String(),
-			},
-		})
+		body := gin.H{
+			"id":           a.ID.String(),
+			"type":         "issue_activity",
+			"created_at":   a.CreatedAt,
+			"description":  issueActivityDescription(a),
+			"issue_id":     issueID,
+			"issue_name":   issueName,
+			"workspace_id": a.WorkspaceID.String(),
+			"project_id":   a.ProjectID.String(),
+		}
+		// The row's own comment is free text, so `description` is the only thing
+		// to show for it. Everything else is bookkeeping the client can phrase
+		// itself — send the parts so it can render them in the user's language.
+		if a.Comment == nil || strings.TrimSpace(*a.Comment) == "" {
+			body["verb"] = a.Verb
+			if a.Field != nil {
+				body["field"] = *a.Field
+			}
+			if a.OldValue != nil {
+				body["old_value"] = *a.OldValue
+			}
+			if a.NewValue != nil {
+				body["new_value"] = *a.NewValue
+			}
+		}
+		activities = append(activities, userActivityItem{createdAt: a.CreatedAt, body: body})
 	}
 	sort.SliceStable(activities, func(i, j int) bool {
 		return activities[i].createdAt.After(activities[j].createdAt)
