@@ -7,12 +7,15 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/Devlaner/devlane/api/internal/auth"
 	"github.com/Devlaner/devlane/api/internal/crypto"
+	"github.com/Devlaner/devlane/api/internal/mail"
 	"github.com/Devlaner/devlane/api/internal/middleware"
 	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/store"
@@ -40,6 +43,7 @@ type InstanceSettingsHandler struct {
 	Settings *store.InstanceSettingStore
 	Admins   *store.InstanceAdminStore
 	Users    *store.UserStore
+	Log      *slog.Logger
 	// OnSectionUpdated, if set, is invoked after a successful update with the
 	// section key. Used for hot-reload of integration clients (e.g. github_app)
 	// so the new credentials take effect without an API restart.
@@ -616,4 +620,83 @@ func (h *InstanceSettingsHandler) UnsplashSearch(c *gin.Context) {
 		results = append(results, UnsplashSearchResult{ID: p.ID, URL: u, Thumb: p.URLs.Thumb})
 	}
 	c.JSON(http.StatusOK, gin.H{"results": results})
+}
+
+type sendTestEmailRequest struct {
+	Host        string `json:"host" binding:"required"`
+	Port        string `json:"port" binding:"required"`
+	SenderEmail string `json:"sender_email" binding:"required,email"`
+	Security    string `json:"security" binding:"required"`
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+}
+
+// SendTestEmail sends a test email using the SMTP values supplied by the
+// instance-admin form. The values are not persisted by this endpoint.
+// POST /api/instance/settings/email/test
+func (h *InstanceSettingsHandler) SendTestEmail(c *gin.Context) {
+	if !h.requireInstanceAdmin(c) {
+		return
+	}
+
+	var req sendTestEmailRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email settings", "detail": err.Error()})
+		return
+	}
+
+	host := strings.TrimSpace(req.Host)
+	if host == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "SMTP host is required"})
+		return
+	}
+
+	port, err := strconv.Atoi(strings.TrimSpace(req.Port))
+	if err != nil || port < 1 || port > 65535 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "SMTP port must be between 1 and 65535"})
+		return
+	}
+
+	security := strings.TrimSpace(req.Security)
+	switch security {
+	case "TLS", "SSL", "None":
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email security setting"})
+		return
+	}
+
+	user := middleware.GetUser(c)
+	if user == nil || user.Email == nil || strings.TrimSpace(*user.Email) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Your account does not have an email address"})
+		return
+	}
+
+	recipient := strings.TrimSpace(*user.Email)
+	cfg := &mail.SMTPSettings{
+		Host:        host,
+		Port:        port,
+		SenderEmail: strings.TrimSpace(req.SenderEmail),
+		Security:    security,
+		Username:    strings.TrimSpace(req.Username),
+		Password:    req.Password,
+	}
+
+	if err := mail.SendWithSMTPSettings(
+		c.Request.Context(),
+		cfg,
+		recipient,
+		"Devlane SMTP test email",
+		"This is a test email from Devlane. Your SMTP settings are working.",
+		h.Log,
+	); err != nil {
+		if h.Log != nil {
+			h.Log.Error("send SMTP test email", "error", err, "recipient", recipient)
+		}
+		c.JSON(http.StatusBadGateway, gin.H{
+			"error": "Failed to send test email. Check the SMTP settings and server logs.",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Test email sent"})
 }

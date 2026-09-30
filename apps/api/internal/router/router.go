@@ -140,7 +140,7 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 	r.GET("/api/invitations/by-token/", invitationHandler.GetInviteByToken)
 	r.POST("/api/invitations/decline/", invitationHandler.DeclineInviteByToken)
 
-	instanceSettingsHandler := &handler.InstanceSettingsHandler{Settings: instanceSettingStore, Admins: instanceAdminStore, Users: userStore}
+	instanceSettingsHandler := &handler.InstanceSettingsHandler{Settings: instanceSettingStore, Admins: instanceAdminStore, Users: userStore, Log: cfg.Log}
 
 	// Services
 	workspaceSvc := service.NewWorkspaceService(workspaceStore, workspaceInviteStore, userStore)
@@ -313,6 +313,7 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 		api.DELETE("/workspaces/:slug/favorites/:favId/", favoriteHandler.DeleteFavorite)
 		api.GET("/instance/settings/", instanceSettingsHandler.GetSettings)
 		api.PATCH("/instance/settings/:key", instanceSettingsHandler.UpdateSetting)
+		api.POST("/instance/settings/email/test", instanceSettingsHandler.SendTestEmail)
 		api.GET("/instance/unsplash/search", instanceSettingsHandler.UnsplashSearch)
 		// Instance-admin management (admin-gated inside the handler).
 		api.GET("/instance/admins/", instanceSettingsHandler.ListAdmins)

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, IconEye, IconEyeOff, Skeleton } from '../../components/ui';
-import { instanceSettingsService } from '../../services/instanceService';
-import { getApiErrorMessage } from '../../api/client';
+import { instanceSettingsService } from '../../services';
+import { getApiErrorMessage } from '../../api';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import type { InstanceEmailSection } from '../../api/types';
 
@@ -21,11 +21,25 @@ export function InstanceAdminEmailPage() {
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
   const [smtpPasswordLocal, setSmtpPasswordLocal] = useState<string | undefined>(undefined); // undefined = show stored mask, '' = user cleared, string = user typed
   const [error, setError] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [testSuccess, setTestSuccess] = useState('');
   useDocumentTitle(t('instanceAdmin.email.documentTitle', 'Email'));
 
   const smtpPasswordDisplay =
     smtpPasswordLocal !== undefined ? smtpPasswordLocal : (email.password ?? '');
+  const updateEmail = (changes: Partial<InstanceEmailSection>) => {
+    setEmail((previous) => ({ ...previous, ...changes }));
+    setTestSuccess('');
+  };
 
+  const portText = (email.port ?? '').trim();
+  const smtpPort = Number(portText);
+  const hasValidPort =
+    /^\d+$/.test(portText) && Number.isInteger(smtpPort) && smtpPort >= 1 && smtpPort <= 65535;
+  const hasValidSender = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email.sender_email ?? '').trim());
+
+  const canSendTest =
+    !saving && !testing && (email.host ?? '').trim() !== '' && hasValidPort && hasValidSender;
   useEffect(() => {
     let cancelled = false;
     instanceSettingsService
@@ -70,6 +84,31 @@ export function InstanceAdminEmailPage() {
       })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setSaving(false));
+  };
+
+  const handleSendTest = () => {
+    setError('');
+    setTestSuccess('');
+    setTesting(true);
+
+    const passwordToSend = smtpPasswordLocal !== undefined ? smtpPasswordLocal : email.password;
+
+    instanceSettingsService
+      .sendTestEmail({
+        host: (email.host ?? '').trim(),
+        port: (email.port ?? '').trim(),
+        sender_email: (email.sender_email ?? '').trim(),
+        security: email.security ?? 'TLS',
+        username: (email.username ?? '').trim(),
+        password: passwordToSend ?? '',
+      })
+      .then(() => {
+        setTestSuccess(
+          t('instanceAdmin.email.testSuccess', 'Test email sent to your account email.'),
+        );
+      })
+      .catch((err) => setError(getApiErrorMessage(err)))
+      .finally(() => setTesting(false));
   };
 
   if (loading) {
@@ -139,7 +178,17 @@ export function InstanceAdminEmailPage() {
         </p>
       </div>
 
-      {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-(--txt-danger-primary)">
+          {error}
+        </p>
+      )}
+
+      {testSuccess && (
+        <p role="status" className="text-sm text-(--txt-success-primary)">
+          {testSuccess}
+        </p>
+      )}
 
       <section className="space-y-3">
         <div className="grid gap-2.5 sm:grid-cols-2">
@@ -148,7 +197,7 @@ export function InstanceAdminEmailPage() {
             <input
               type="text"
               value={email.host ?? ''}
-              onChange={(e) => setEmail((p) => ({ ...p, host: e.target.value }))}
+              onChange={(e) => updateEmail({ host: e.target.value })}
               className="mt-0.5 block w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 text-xs text-(--txt-primary) focus:outline-none"
             />
           </label>
@@ -157,7 +206,7 @@ export function InstanceAdminEmailPage() {
             <input
               type="text"
               value={email.port ?? ''}
-              onChange={(e) => setEmail((p) => ({ ...p, port: e.target.value }))}
+              onChange={(e) => updateEmail({ port: e.target.value })}
               className="mt-0.5 block w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 text-xs text-(--txt-primary) focus:outline-none"
             />
           </label>
@@ -167,7 +216,7 @@ export function InstanceAdminEmailPage() {
           <input
             type="email"
             value={email.sender_email ?? ''}
-            onChange={(e) => setEmail((p) => ({ ...p, sender_email: e.target.value }))}
+            onChange={(e) => updateEmail({ sender_email: e.target.value })}
             className="mt-0.5 block w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 text-xs text-(--txt-primary) focus:outline-none"
           />
           <p className="mt-0.5 text-[11px] text-(--txt-tertiary)">
@@ -181,7 +230,7 @@ export function InstanceAdminEmailPage() {
           {t('instanceAdmin.email.security', 'Email security')}
           <select
             value={email.security ?? 'TLS'}
-            onChange={(e) => setEmail((p) => ({ ...p, security: e.target.value }))}
+            onChange={(e) => updateEmail({ security: e.target.value })}
             className="mt-0.5 block w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 text-xs text-(--txt-primary) focus:outline-none"
           >
             {}
@@ -208,7 +257,7 @@ export function InstanceAdminEmailPage() {
           <input
             type="text"
             value={email.username ?? ''}
-            onChange={(e) => setEmail((p) => ({ ...p, username: e.target.value }))}
+            onChange={(e) => updateEmail({ username: e.target.value })}
             className="mt-0.5 block w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 text-xs text-(--txt-primary) focus:outline-none"
           />
         </label>
@@ -218,7 +267,10 @@ export function InstanceAdminEmailPage() {
             <input
               type={showSmtpPassword ? 'text' : 'password'}
               value={smtpPasswordDisplay}
-              onChange={(e) => setSmtpPasswordLocal(e.target.value)}
+              onChange={(e) => {
+                setSmtpPasswordLocal(e.target.value);
+                setTestSuccess('');
+              }}
               onFocus={() => {
                 // Only copy the loaded password into local edit state when it is non-empty.
                 // Otherwise we would set local state to "" and the next save would send an empty
@@ -252,11 +304,20 @@ export function InstanceAdminEmailPage() {
       </section>
 
       <div className="flex gap-2">
-        <Button size="sm" className="text-xs" onClick={handleSave} disabled={saving}>
+        <Button size="sm" className="text-xs" onClick={handleSave} disabled={saving || testing}>
           {saving ? t('common.saving', 'Saving…') : t('common.saveChanges', 'Save changes')}
         </Button>
-        <Button variant="secondary" size="sm" className="text-xs" disabled>
-          {t('instanceAdmin.email.sendTest', 'Send test email')}
+
+        <Button
+          variant="secondary"
+          size="sm"
+          className="text-xs"
+          onClick={handleSendTest}
+          disabled={!canSendTest}
+        >
+          {testing
+            ? t('instanceAdmin.email.sendingTest', 'Sending test email…')
+            : t('instanceAdmin.email.sendTest', 'Send test email')}
         </Button>
       </div>
     </div>
