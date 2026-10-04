@@ -420,9 +420,14 @@ function startOfDay(d: Date): Date {
 }
 
 function parseDay(input: string): number | null {
-  const t = Date.parse(input);
-  if (Number.isNaN(t)) return null;
-  return startOfDay(new Date(t)).getTime();
+  // Dates arrive as "YYYY-MM-DD" or a UTC-midnight ISO timestamp. Take the
+  // leading date parts and build a local-midnight date, so the day doesn't
+  // shift for clients behind UTC. Routing the value through Date.parse +
+  // new Date reads local components off a UTC instant and lands on the previous
+  // day in the Americas (the calendar layout avoids this the same way).
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(input);
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime();
 }
 
 function pad2(n: number): string {
