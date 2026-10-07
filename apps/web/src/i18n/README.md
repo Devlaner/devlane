@@ -2,7 +2,8 @@
 
 The web UI is translated with [`react-i18next`](https://react.i18next.com/).
 `src/i18n/index.ts` initializes it once (imported from `main.tsx`); English
-(`en`) is the source of truth and Azerbaijani (`az`) is a full translation.
+(`en`) is the source of truth, with Azerbaijani (`az`) and Turkish (`tr`) as
+full translations.
 
 ## Using translations in a component
 

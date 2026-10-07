@@ -6,7 +6,7 @@
 module.exports = {
   input: ['src/**/*.{ts,tsx}'],
   output: 'src/i18n/locales/$LOCALE/$NAMESPACE.json',
-  locales: ['en', 'az'],
+  locales: ['en', 'az', 'tr'],
   defaultNamespace: 'translation',
   // Match the runtime config: flat, dotted keys.
   keySeparator: false,
@@ -16,6 +16,7 @@ module.exports = {
   keepRemoved: true,
   createOldCatalogs: false,
   // For a new/untranslated key, seed the value with the key's default (English
-  // text passed as the second t() arg). az values are filled in by translators.
+  // text passed as the second t() arg). Other locale values are filled in by
+  // translators.
   defaultValue: (locale, _ns, key, value) => (locale === 'en' ? (value ?? key) : ''),
 };

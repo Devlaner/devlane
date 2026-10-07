@@ -1,0 +1,134 @@
+/**
+ * Neutral black-and-white palette (opt-in).
+ *
+ * shadcn-bridge.css maps the shadcn variable names onto Devlane's own tokens,
+ * so shadcn components normally render in the Devlane palette (blue primary,
+ * Devlane greys). That is the right default for shipped UI.
+ *
+ * This file is the escape hatch for design comparisons: any subtree carrying
+ * `.shadcn-reference` renders in pure greyscale instead — every colour is
+ * `hsl(0 0% L)`, so nothing carries a hue and the primary button reads white on
+ * black in dark mode, black on white in light mode.
+ *
+ * Lightness steps follow shadcn's stock scale; only the hue and saturation are
+ * dropped. `--destructive` keeps its red, since an error that renders grey is
+ * indistinguishable from ordinary text.
+ *
+ * Scoped to the class on purpose: it overrides nothing globally, so /login and
+ * every other page keep the Devlane palette. Imported after shadcn-bridge.css.
+ */
+
+.shadcn-reference {
+  --radius: 0.625rem;
+
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(0 0% 4%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(0 0% 4%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(0 0% 4%);
+  --primary: hsl(0 0% 9%);
+  --primary-foreground: hsl(0 0% 98%);
+  --secondary: hsl(0 0% 96%);
+  --secondary-foreground: hsl(0 0% 9%);
+  --muted: hsl(0 0% 96%);
+  --muted-foreground: hsl(0 0% 45%);
+  --accent: hsl(0 0% 96%);
+  --accent-foreground: hsl(0 0% 9%);
+  --destructive: hsl(0 84.2% 60.2%);
+  --destructive-foreground: hsl(0 0% 98%);
+  --border: hsl(0 0% 90%);
+  --input: hsl(0 0% 90%);
+  --ring: hsl(0 0% 63%);
+
+  /* Decorative side panel. The form keeps the neutral greyscale palette; only
+     this panel carries colour, taken from Devlane's brand ramp rather than a
+     literal, so it follows the active theme (light, dark, pink) with no value
+     per theme here.
+
+     The panel stays dark in every theme — it is a standalone surface carrying
+     white text, not a page background — so the gradient runs between two dark
+     brand steps rather than inverting. It is written as a colour-mix against
+     black rather than a --brand-1000/1200 alias: the dark theme inverts the
+     ramp and defines no steps above 900, so those aliases would silently fall
+     back to the light theme's values there. */
+  --panel-ground: color-mix(in oklch, var(--brand-default) 62%, black);
+  --panel-ground-deep: color-mix(in oklch, var(--brand-default) 26%, black);
+  --panel-highlight: hsl(0 0% 100% / 0.1);
+  --panel-line: hsl(0 0% 100%);
+
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+[data-theme='dark'] .shadcn-reference,
+.shadcn-reference[data-theme='dark'] {
+  --background: hsl(0 0% 4%);
+  --foreground: hsl(0 0% 98%);
+  --card: hsl(0 0% 4%);
+  --card-foreground: hsl(0 0% 98%);
+  --popover: hsl(0 0% 4%);
+  --popover-foreground: hsl(0 0% 98%);
+  --primary: hsl(0 0% 98%);
+  --primary-foreground: hsl(0 0% 9%);
+  --secondary: hsl(0 0% 15%);
+  --secondary-foreground: hsl(0 0% 98%);
+  --muted: hsl(0 0% 15%);
+  --muted-foreground: hsl(0 0% 64%);
+  --accent: hsl(0 0% 15%);
+  --accent-foreground: hsl(0 0% 98%);
+  --destructive: hsl(0 62.8% 30.6%);
+  --destructive-foreground: hsl(0 0% 98%);
+  --border: hsl(0 0% 15%);
+  --input: hsl(0 0% 15%);
+  --ring: hsl(0 0% 45%);
+
+  /* The panel needs no override here: --panel-ground aliases --brand-default,
+     which tokens.css already redefines per theme. */
+}
+
+/**
+ * Glass surface. For a subtree that sits directly on a dark backdrop (an image
+ * or an animated gradient) rather than on --background, so it cannot inherit
+ * the page palette: over a moving gradient the light theme's near-black text
+ * would drop out wherever the gradient darkens.
+ *
+ * The values are fixed rather than themed for that reason — the backdrop is
+ * dark in every theme, so the subtree stays light-on-dark in every theme too.
+ * Surfaces are white at low alpha so the gradient still reads through them.
+ */
+.shadcn-reference-on-glass {
+  --background: hsl(0 0% 100% / 0.06);
+  --foreground: hsl(0 0% 100%);
+  --card: hsl(0 0% 100% / 0.06);
+  --card-foreground: hsl(0 0% 100%);
+  --popover: hsl(0 0% 12%);
+  --popover-foreground: hsl(0 0% 100%);
+  --primary: hsl(0 0% 100%);
+  --primary-foreground: hsl(0 0% 9%);
+  --secondary: hsl(0 0% 100% / 0.1);
+  --secondary-foreground: hsl(0 0% 100%);
+  --muted: hsl(0 0% 100% / 0.1);
+  --muted-foreground: hsl(0 0% 100% / 0.65);
+  --accent: hsl(0 0% 100% / 0.12);
+  --accent-foreground: hsl(0 0% 100%);
+  --destructive: hsl(0 84% 68%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(0 0% 100% / 0.18);
+  --input: hsl(0 0% 100% / 0.22);
+  --ring: hsl(0 0% 100% / 0.55);
+
+  color: var(--foreground);
+}
+
+/* Inputs ship as bg-transparent, which reads the backdrop directly. On a
+   moving gradient that puts shifting colour behind the text being typed, so
+   fields get a faint dark wash and a blur of their own to sit on. */
+.shadcn-reference-on-glass [data-slot='input'] {
+  background-color: hsl(0 0% 0% / 0.25);
+  backdrop-filter: blur(8px);
+}
+
+.shadcn-reference-on-glass [data-slot='input']::placeholder {
+  color: hsl(0 0% 100% / 0.5);
+}
