@@ -184,7 +184,7 @@ func (s *ModuleStore) StateDistributionByProject(ctx context.Context, projectID 
 		FROM module_issues mi
 		JOIN issues i ON i.id = mi.issue_id AND i.deleted_at IS NULL
 		LEFT JOIN states st ON st.id = i.state_id
-		WHERE mi.project_id = ?
+		WHERE mi.project_id = ? AND mi.deleted_at IS NULL
 		GROUP BY mi.module_id, COALESCE(st."group", 'backlog')
 	`, projectID).Scan(&rows).Error
 	if err != nil {
