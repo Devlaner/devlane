@@ -183,6 +183,11 @@ export function WorkspaceViewsPage() {
     if (prevViewIdRef.current !== viewId) {
       prevViewIdRef.current = viewId;
       viewAppliedRef.current = false;
+      // Static views (all-issues, assigned, etc.) carry no saved filters, so
+      // clear any left over from a custom view instead of keeping them applied.
+      if (!isCustomViewId(viewId)) {
+        setFilters(parseWorkspaceViewFiltersFromSearchParams(new URLSearchParams()));
+      }
     }
     if (!workspaceSlug || !viewId || !isCustomViewId(viewId) || viewAppliedRef.current) return;
     viewAppliedRef.current = true;
