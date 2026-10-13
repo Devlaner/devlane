@@ -1,3 +1,4 @@
+import { parseISODateLocal } from '../../lib/dateOnly';
 import { normalizeUuidKey } from '../../lib/utils';
 import type { ProjectIssuesFiltersState } from '../../lib/projectIssuesEvents';
 import type { Priority } from '../../types';
@@ -53,7 +54,11 @@ function issueMentionsUserId(issue: IssueApiResponse, userId: string): boolean {
 }
 
 function presetEnd(preset: string, from: Date): Date | null {
-  const addDays = (days: number) => new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
+  const addDays = (days: number) => {
+    const end = new Date(from);
+    end.setDate(end.getDate() + days);
+    return end;
+  };
   if (preset === '1_week') return addDays(7);
   if (preset === '2_weeks') return addDays(14);
   if (preset === '1_month') return addDays(30);
@@ -81,12 +86,19 @@ function matchesDatePresets(
   before: string | null | undefined,
   now: Date,
 ): boolean {
-  const date = value ? new Date(value) : null;
-  if (!date) return false;
+  const date = value ? parseISODateLocal(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return false;
   return presets.some((preset) => {
     if (preset === 'custom') {
       if (!after || !before) return false;
-      return date >= new Date(after) && date <= new Date(before);
+      const start = parseISODateLocal(after);
+      const end = parseISODateLocal(before);
+      return (
+        !Number.isNaN(start.getTime()) &&
+        !Number.isNaN(end.getTime()) &&
+        date >= start &&
+        date <= end
+      );
     }
     const end = presetEnd(preset, now);
     return Boolean(end && date >= now && date <= end);
@@ -165,6 +177,7 @@ export function applyProjectIssuesFilters({
   }
 
   const now = new Date();
+  now.setHours(0, 0, 0, 0);
   if (datePresetsEffective(filters.startDate, filters.startAfter, filters.startBefore)) {
     list = list.filter((issue) =>
       matchesDatePresets(

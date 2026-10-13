@@ -14,7 +14,11 @@ const InterfaceContext = createContext<InterfaceContextValue | null>(null);
 
 function getStoredInterfaceVersion(): InterfaceVersion {
   if (typeof window === 'undefined') return 'v1';
-  return window.localStorage.getItem(INTERFACE_STORAGE_KEY) === 'v2' ? 'v2' : 'v1';
+  try {
+    return window.localStorage.getItem(INTERFACE_STORAGE_KEY) === 'v2' ? 'v2' : 'v1';
+  } catch {
+    return 'v1';
+  }
 }
 
 export function InterfaceProvider({ children }: { children: ReactNode }) {
@@ -24,7 +28,11 @@ export function InterfaceProvider({ children }: { children: ReactNode }) {
   const setInterfaceVersion = useCallback((version: InterfaceVersion) => {
     setInterfaceVersionState(version);
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(INTERFACE_STORAGE_KEY, version);
+      try {
+        window.localStorage.setItem(INTERFACE_STORAGE_KEY, version);
+      } catch {
+        // Keep the in-memory preference when browser storage is unavailable.
+      }
     }
   }, []);
 
