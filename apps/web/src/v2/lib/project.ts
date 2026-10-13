@@ -1,5 +1,5 @@
 import i18n from 'i18next';
-import { parseISODateLocal } from '../../lib/dateOnly';
+import { parseISODateForDisplay, parseISODateLocal } from '../../lib/dateOnly';
 import type { IssueApiResponse, ProjectApiResponse, StateApiResponse } from '../../api/types';
 
 /**
@@ -46,7 +46,7 @@ export function workItemDisplayId(
 /** Short date, or an em dash when the value is missing or unparseable. */
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—';
-  const parsed = parseISODateLocal(iso);
+  const parsed = parseISODateForDisplay(iso) ?? parseISODateLocal(iso);
   if (Number.isNaN(parsed.getTime())) return '—';
   return parsed.toLocaleDateString(i18n.resolvedLanguage || i18n.language || undefined, {
     month: 'short',

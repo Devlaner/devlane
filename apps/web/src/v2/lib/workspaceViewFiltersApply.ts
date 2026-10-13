@@ -1,4 +1,4 @@
-import { parseISODateLocal } from '../../lib/dateOnly';
+import { parseISODateForDisplay } from '../../lib/dateOnly';
 import type { IssueApiResponse, StateApiResponse } from '../../api/types';
 import type { StateGroup, WorkspaceViewFilters } from '../../types/workspaceViewFilters';
 import type { Priority } from '../../types';
@@ -47,14 +47,16 @@ function matchesDatePresets(
   before: string | null | undefined,
   today: Date,
 ): boolean {
-  const date = value ? parseISODateLocal(value) : null;
+  const date = parseISODateForDisplay(value);
   if (!date || Number.isNaN(date.getTime())) return false;
   return presets.some((preset) => {
     if (preset === 'custom') {
       if (!after || !before) return false;
-      const start = parseISODateLocal(after);
-      const end = parseISODateLocal(before);
+      const start = parseISODateForDisplay(after);
+      const end = parseISODateForDisplay(before);
       return (
+        start !== null &&
+        end !== null &&
         !Number.isNaN(start.getTime()) &&
         !Number.isNaN(end.getTime()) &&
         date >= start &&
