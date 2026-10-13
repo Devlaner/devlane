@@ -6,7 +6,7 @@ import {
   type CycleProgress,
   type CycleProgressResponse,
 } from '../../services/cycleService';
-import { issueService } from '../../services/issueService';
+import { listAllProjectIssues } from '../lib/projectIssueLoader';
 import { stateService } from '../../services/stateService';
 import { labelService } from '../../services/labelService';
 import { useWorkspaceFavorites } from '../../hooks/useWorkspaceFavorites';
@@ -112,7 +112,7 @@ export function useProjectCyclesController(workspaceSlug?: string, projectId?: s
       projectService.get(workspaceSlug, projectId),
       cycleService.list(workspaceSlug, projectId),
       workspaceService.listMembers(workspaceSlug),
-      issueService.list(workspaceSlug, projectId, { limit: 500 }),
+      listAllProjectIssues(workspaceSlug, projectId),
       stateService.list(workspaceSlug, projectId),
       labelService.list(workspaceSlug, projectId),
     ])
@@ -186,14 +186,14 @@ export function useProjectCyclesController(workspaceSlug?: string, projectId?: s
 
       setFilters((prev) => ({
         ...prev,
-        searchQuery: next.searchQuery ?? prev.searchQuery,
+        searchQuery: next.searchQuery === undefined ? prev.searchQuery : next.searchQuery,
         statusKeys: (next.statusKeys ?? prev.statusKeys) as CycleStatusFilterKey[],
         startDatePresets: (next.startDatePresets ?? prev.startDatePresets) as DatePresetFilterKey[],
         dueDatePresets: (next.dueDatePresets ?? prev.dueDatePresets) as DatePresetFilterKey[],
-        startAfter: next.startAfter ?? prev.startAfter,
-        startBefore: next.startBefore ?? prev.startBefore,
-        dueAfter: next.dueAfter ?? prev.dueAfter,
-        dueBefore: next.dueBefore ?? prev.dueBefore,
+        startAfter: next.startAfter === undefined ? prev.startAfter : next.startAfter,
+        startBefore: next.startBefore === undefined ? prev.startBefore : next.startBefore,
+        dueAfter: next.dueAfter === undefined ? prev.dueAfter : next.dueAfter,
+        dueBefore: next.dueBefore === undefined ? prev.dueBefore : next.dueBefore,
       }));
     };
 
@@ -205,7 +205,7 @@ export function useProjectCyclesController(workspaceSlug?: string, projectId?: s
     if (!workspaceSlug || !projectId) return;
     Promise.all([
       cycleService.list(workspaceSlug, projectId),
-      issueService.list(workspaceSlug, projectId, { limit: 500 }),
+      listAllProjectIssues(workspaceSlug, projectId),
     ])
       .then(([list, iss]) => {
         setCycles(list ?? []);
@@ -227,7 +227,7 @@ export function useProjectCyclesController(workspaceSlug?: string, projectId?: s
       }
       Promise.all([
         cycleService.list(workspaceSlug, projectId),
-        issueService.list(workspaceSlug, projectId, { limit: 500 }),
+        listAllProjectIssues(workspaceSlug, projectId),
       ])
         .then(([list, iss]) => {
           setCycles(list ?? []);

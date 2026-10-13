@@ -1,3 +1,4 @@
+import { parseISODateLocal } from '../../lib/dateOnly';
 import type { IssueApiResponse, StateApiResponse } from '../../api/types';
 import type { StateGroup, WorkspaceViewFilters } from '../../types/workspaceViewFilters';
 import type { Priority } from '../../types';
@@ -27,7 +28,11 @@ const STATE_GROUP_BY_NAME: Record<string, StateGroup> = {
 };
 
 function presetEnd(preset: string, from: Date): Date | null {
-  const addDays = (days: number) => new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
+  const addDays = (days: number) => {
+    const end = new Date(from);
+    end.setDate(end.getDate() + days);
+    return end;
+  };
   if (preset === '1_week') return addDays(7);
   if (preset === '2_weeks') return addDays(14);
   if (preset === '1_month') return addDays(30);
@@ -42,12 +47,19 @@ function matchesDatePresets(
   before: string | null | undefined,
   today: Date,
 ): boolean {
-  const date = value ? new Date(value) : null;
+  const date = value ? parseISODateLocal(value) : null;
   if (!date || Number.isNaN(date.getTime())) return false;
   return presets.some((preset) => {
     if (preset === 'custom') {
       if (!after || !before) return false;
-      return date >= new Date(after) && date <= new Date(before);
+      const start = parseISODateLocal(after);
+      const end = parseISODateLocal(before);
+      return (
+        !Number.isNaN(start.getTime()) &&
+        !Number.isNaN(end.getTime()) &&
+        date >= start &&
+        date <= end
+      );
     }
     const end = presetEnd(preset, today);
     return Boolean(end && date >= today && date <= end);
@@ -96,6 +108,7 @@ export function applyWorkspaceViewFilters(
   }
 
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
   /* A half-filled custom range would exclude everything, so the whole date
      filter is skipped until both ends are set. */
   const startEffective =

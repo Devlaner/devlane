@@ -63,10 +63,14 @@ const AccentColorContext = createContext<AccentColorContextValue | null>(null);
 
 function getStoredAccentColor(): AccentColor {
   if (typeof window === 'undefined') return 'default';
-  const stored = window.localStorage.getItem(ACCENT_COLOR_STORAGE_KEY);
-  return ACCENT_COLOR_PRESETS.some((preset) => preset.value === stored)
-    ? (stored as AccentColor)
-    : 'default';
+  try {
+    const stored = window.localStorage.getItem(ACCENT_COLOR_STORAGE_KEY);
+    return ACCENT_COLOR_PRESETS.some((preset) => preset.value === stored)
+      ? (stored as AccentColor)
+      : 'default';
+  } catch {
+    return 'default';
+  }
 }
 
 /**
@@ -87,7 +91,11 @@ export function AccentColorProvider({ children }: { children: ReactNode }) {
   const setAccentColor = useCallback((value: AccentColor) => {
     setAccentColorState(value);
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(ACCENT_COLOR_STORAGE_KEY, value);
+      try {
+        window.localStorage.setItem(ACCENT_COLOR_STORAGE_KEY, value);
+      } catch {
+        // Keep the in-memory preference when browser storage is unavailable.
+      }
     }
   }, []);
 
