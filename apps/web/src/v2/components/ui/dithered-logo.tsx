@@ -390,7 +390,7 @@ export function DitheredLogo({
     observer.observe(canvas);
     themeObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['class', 'style'],
+      attributeFilter: ['class', 'style', 'data-theme'],
     });
     canvas.addEventListener('pointermove', onMove);
     canvas.addEventListener('pointerleave', onLeave);

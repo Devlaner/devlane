@@ -33,6 +33,7 @@ import {
   projectIssuesFiltersStorageKey,
   serializeProjectIssuesFilters,
 } from '../lib/projectIssuesFiltersStorage';
+import { listAllProjectIssues } from '../lib/projectIssueLoader';
 import { applyProjectIssuesFilters } from '../lib/projectIssuesFiltersApply';
 import type { IssueInlinePatch } from '../../components/work-item/layouts/IssueLayoutTypes';
 import type { SavedViewDisplayPropertyId } from '../../lib/projectSavedViewDisplay';
@@ -141,8 +142,10 @@ export function useProjectIssuesController(
 
   const refetchIssues = () => {
     if (!workspaceSlug || !projectId) return;
-    issueService
-      .list(workspaceSlug, projectId, { limit: 100 })
+    (cycleId
+      ? listAllProjectIssues(workspaceSlug, projectId)
+      : issueService.list(workspaceSlug, projectId, { limit: 100 })
+    )
       .then(setIssues)
       .catch(() => {});
   };
@@ -204,7 +207,9 @@ export function useProjectIssuesController(
 
       safeFetch(projectService.list(workspaceSlug), [] as ProjectApiResponse[]),
       safeFetch(
-        issueService.list(workspaceSlug, projectId, { limit: 100 }),
+        cycleId
+          ? listAllProjectIssues(workspaceSlug, projectId)
+          : issueService.list(workspaceSlug, projectId, { limit: 100 }),
         [] as IssueApiResponse[],
       ),
       safeFetch(stateService.list(workspaceSlug, projectId), [] as StateApiResponse[]),
@@ -238,7 +243,7 @@ export function useProjectIssuesController(
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug, projectId]);
+  }, [workspaceSlug, projectId, cycleId]);
 
   // Bulk-fetch GitHub PR summaries for the loaded issues. Re-runs when the
   // set of issue IDs changes (stable join key). The service short-circuits to
