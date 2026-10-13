@@ -4,6 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   CalendarDays,
+  CircleAlert,
+  RefreshCw,
   ChartGantt,
   Columns3,
   ListTodo,
@@ -121,6 +123,7 @@ export function ProjectWorkItemsSection({
   const {
     projects,
     issues,
+    issueLoadError,
     states,
     labels,
     cycles,
@@ -485,6 +488,31 @@ export function ProjectWorkItemsSection({
       </TableHead>
     </TableRow>
   );
+
+  if (issueLoadError) {
+    return (
+      <Empty className="min-h-80 rounded-xl border border-dashed" role="alert">
+        <EmptyHeader>
+          <EmptyMedia variant="icon" className="bg-destructive/10 text-destructive">
+            <CircleAlert aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle>{t('issues.loadErrorTitle', 'Work items could not be loaded')}</EmptyTitle>
+          <EmptyDescription>
+            {t(
+              'issues.loadErrorDescription',
+              'Check your connection and try again. Your work item data has not been changed.',
+            )}
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button type="button" variant="outline" onClick={() => refetchIssues()}>
+            <RefreshCw aria-hidden="true" />
+            {t('common.retry', 'Try again')}
+          </Button>
+        </EmptyContent>
+      </Empty>
+    );
+  }
 
   const hasRows = filteredIssues.length > 0;
   return (

@@ -107,6 +107,19 @@ export function useProjectIssuesController(
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [prSummary, setPrSummary] = useState<Record<string, GitHubIssueSummaryEntry>>({});
   const [loading, setLoading] = useState(true);
+  const [issuesLoading, setIssuesLoading] = useState(false);
+  const [issueLoadError, setIssueLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const issueLoadSequence = useRef(0);
+  const issueLoadScope = useRef('');
+  useLayoutEffect(() => {
+    issueLoadScope.current = `${workspaceSlug ?? ''}/${projectId ?? ''}/${cycleId ?? ''}`;
+    issueLoadSequence.current += 1;
+    return () => {
+      issueLoadScope.current = '';
+      issueLoadSequence.current += 1;
+    };
+  }, [workspaceSlug, projectId, cycleId]);
   const [createError, setCreateError] = useState<string | null>(null);
   const [listFilters, setListFilters] = useState<ProjectIssuesFiltersState>(() => ({
     ...DEFAULT_PROJECT_ISSUES_FILTERS,
@@ -142,12 +155,31 @@ export function useProjectIssuesController(
 
   const refetchIssues = () => {
     if (!workspaceSlug || !projectId) return;
+    const scope = `${workspaceSlug}/${projectId}/${cycleId ?? ''}`;
+    if (scope !== issueLoadScope.current) return;
+    if (!workspace || !project) {
+      setLoadAttempt((attempt) => attempt + 1);
+      return;
+    }
+    const request = ++issueLoadSequence.current;
+    const isCurrent = () =>
+      request === issueLoadSequence.current && scope === issueLoadScope.current;
+    setIssuesLoading(true);
+    setIssueLoadError(false);
     (cycleId
       ? listAllProjectIssues(workspaceSlug, projectId)
       : issueService.list(workspaceSlug, projectId, { limit: 100 })
     )
-      .then(setIssues)
-      .catch(() => {});
+      .then((list) => {
+        if (!isCurrent()) return;
+        setIssues(list);
+      })
+      .catch(() => {
+        if (isCurrent()) setIssueLoadError(true);
+      })
+      .finally(() => {
+        if (isCurrent()) setIssuesLoading(false);
+      });
   };
 
   // Multi-select for bulk actions.
@@ -186,10 +218,15 @@ export function useProjectIssuesController(
     if (!workspaceSlug || !projectId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset loading when no slug/project (kept for future use)
       setLoading(false);
+      setIssuesLoading(false);
+      setIssueLoadError(false);
       return;
     }
     let cancelled = false;
+    const request = ++issueLoadSequence.current;
     setLoading(true);
+    setIssuesLoading(true);
+    setIssueLoadError(false);
 
     const safeFetch = <T>(promise: Promise<T>, fallback: T): Promise<T> => {
       return Promise.resolve(promise)
@@ -206,12 +243,10 @@ export function useProjectIssuesController(
       projectService.get(workspaceSlug, projectId),
 
       safeFetch(projectService.list(workspaceSlug), [] as ProjectApiResponse[]),
-      safeFetch(
-        cycleId
-          ? listAllProjectIssues(workspaceSlug, projectId)
-          : issueService.list(workspaceSlug, projectId, { limit: 100 }),
-        [] as IssueApiResponse[],
-      ),
+      (cycleId
+        ? listAllProjectIssues(workspaceSlug, projectId)
+        : issueService.list(workspaceSlug, projectId, { limit: 100 })
+      ).catch(() => null),
       safeFetch(stateService.list(workspaceSlug, projectId), [] as StateApiResponse[]),
       safeFetch(labelService.list(workspaceSlug, projectId), [] as LabelApiResponse[]),
       safeFetch(cycleService.list(workspaceSlug, projectId), [] as CycleApiResponse[]),
@@ -223,7 +258,10 @@ export function useProjectIssuesController(
         setWorkspace(w);
         setProject(p);
         setProjects(list);
-        setIssues(iss);
+        if (request === issueLoadSequence.current) {
+          setIssueLoadError(iss === null);
+          if (iss !== null) setIssues(iss);
+        }
         setStates(st);
         setLabels(lab);
         setCycles(cyc);
@@ -238,12 +276,16 @@ export function useProjectIssuesController(
         }
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          if (request === issueLoadSequence.current) setIssuesLoading(false);
+        }
       });
     return () => {
       cancelled = true;
+      issueLoadSequence.current += 1;
     };
-  }, [workspaceSlug, projectId, cycleId]);
+  }, [workspaceSlug, projectId, cycleId, loadAttempt]);
 
   // Bulk-fetch GitHub PR summaries for the loaded issues. Re-runs when the
   // set of issue IDs changes (stable join key). The service short-circuits to
@@ -674,7 +716,8 @@ export function useProjectIssuesController(
     modules,
     members,
     prSummary,
-    loading,
+    loading: loading || issuesLoading,
+    issueLoadError,
     /* Filter + display state. The shipped header broadcasts changes as window
        events; the v2 toolbars are controlled and call these setters directly. */
     listFilters,
