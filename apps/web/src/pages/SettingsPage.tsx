@@ -15,6 +15,7 @@ import { ProjectIconModal, ProjectIconDisplay } from '../components/ProjectIconM
 import { getImageUrl } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme, type ThemePreference } from '../contexts/ThemeContext';
+import { InterfaceSwitch } from '../routes/InterfaceSwitch';
 import { workspaceService } from '../services/workspaceService';
 import { ProjectNetworkSelect } from '../components/ProjectNetworkSelect';
 import { projectService } from '../services/projectService';
@@ -71,6 +72,7 @@ import { InviteModal } from '../components/settings/modals/InviteModal';
 import { ProjectStateModal } from '../components/settings/modals/ProjectStateModal';
 import { ProjectLabelModal } from '../components/settings/modals/ProjectLabelModal';
 import { formatRelativeTime, getTimezoneOptions } from '../lib/settingsHelpers';
+import { describeActivity } from '../lib/activityDescription';
 
 const COMPANY_SIZES = ['1-10', '11-50', '51-200', '201-500', '500+'];
 export function SettingsPage() {
@@ -1372,6 +1374,7 @@ export function SettingsPage() {
                     })}
                   </div>
                 </div>
+                <InterfaceSwitch />
                 <div>
                   <label className="block text-sm font-medium text-(--txt-primary)">
                     {t('settings.preferences.firstDayOfWeek.title', 'First day of the week')}
@@ -1715,7 +1718,7 @@ export function SettingsPage() {
                         </p>
                         {a.description && (
                           <p className="mt-1 text-sm font-medium text-(--txt-primary)">
-                            {a.description}
+                            {describeActivity(a)}
                           </p>
                         )}
                         {a.issue_id && a.issue_name && workspaceSlug && (

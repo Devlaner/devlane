@@ -1,0 +1,718 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
+import { CircleAlert, ListTodo, RefreshCw, SearchX } from 'lucide-react';
+import {
+  CreateWorkItemDialog,
+  type CreateWorkItemDialogSubmit,
+} from '@/v2/components/create-work-item-dialog';
+import { ListPageSkeleton } from '@/v2/components/list-page-skeleton';
+import { PageHeading } from '@/v2/components/page-heading';
+import { ViewsToolbar } from '@/v2/components/views-toolbar';
+import { WorkItemsTable } from '@/v2/components/work-items-table';
+import { Button } from '@/v2/components/ui/button';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/v2/components/ui/empty';
+import { Skeleton } from '@/v2/components/ui/skeleton';
+import { IssueLayoutBoard } from '../../components/work-item/layouts/IssueLayoutBoard';
+import { IssueLayoutCalendar } from '../../components/work-item/layouts/IssueLayoutCalendar';
+import { IssueLayoutGantt } from '../../components/work-item/layouts/IssueLayoutGantt';
+import { useAuth } from '../../contexts/AuthContext';
+import { useWorkspaceViewsState } from '../../contexts/WorkspaceViewsStateContext';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { useWorkspaceViewPreferences } from '../hooks/useWorkspaceViewPreferences';
+import { DEFAULT_WORKSPACE_VIEW_ID, writeLastWorkspaceView } from '../lib/lastWorkspaceView';
+import { applyWorkspaceViewFilters } from '../lib/workspaceViewFiltersApply';
+import { sortWorkItems } from '../lib/workItemsSort';
+import { attachWorkItemRelations } from '../lib/workItemRelations';
+import { cycleService } from '../../services/cycleService';
+import { issueService } from '../../services/issueService';
+import { labelService } from '../../services/labelService';
+import { moduleService } from '../../services/moduleService';
+import { projectService } from '../../services/projectService';
+import { stateService } from '../../services/stateService';
+import { viewService } from '../../services/viewService';
+import { workspaceService } from '../../services/workspaceService';
+import type {
+  CycleApiResponse,
+  IssueApiResponse,
+  LabelApiResponse,
+  ModuleApiResponse,
+  ProjectApiResponse,
+  StateApiResponse,
+  WorkspaceApiResponse,
+  WorkspaceMemberApiResponse,
+} from '../../api/types';
+import type { Priority } from '../../types';
+import {
+  DEFAULT_WORKSPACE_VIEW_FILTERS,
+  parseWorkspaceViewFiltersFromSearchParams,
+} from '../../types/workspaceViewFilters';
+import {
+  DISPLAY_PROPERTY_KEYS,
+  VIEW_LAYOUTS,
+  type DisplayPropertyKey,
+  type SortableColumn,
+  type SortOrder,
+  type ViewLayout,
+} from '../../types/workspaceViewDisplay';
+
+/** Views that exist without anyone creating them; anything else is saved. */
+const STATIC_VIEW_IDS = ['all-issues', 'assigned', 'created', 'subscribed'];
+
+function isCustomViewId(viewId: string | undefined): boolean {
+  if (!viewId) return false;
+  return !STATIC_VIEW_IDS.includes(viewId);
+}
+
+/**
+ * The v2 view of the workspace views page, built from shadcn primitives. It
+ * renders at the same URL as WorkspaceViewsPage; the stored interface
+ * preference picks between them.
+ *
+ * Data loading, filtering, sorting and inline editing mirror the shipped page,
+ * and both read the same WorkspaceViewsState — only the chrome differs. The
+ * view picker, layout selector, filters and display controls live in the
+ * shell's header (ViewsToolbar). Kanban, calendar and gantt reuse the shipped
+ * work-item layout components, which are not part of this preview.
+ */
+export function WorkspaceViewsPage() {
+  const { t } = useTranslation();
+  const { workspaceSlug, viewId } = useParams<{ workspaceSlug?: string; viewId?: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { filters, setFilters, display, setDisplay } = useWorkspaceViewsState();
+  const { user: currentUser } = useAuth();
+
+  const currentViewId = viewId ?? 'all-issues';
+  const isSavedView = isCustomViewId(currentViewId);
+  /* Layout, columns, sorting and filters are mirrored into the URL and
+     remembered per view, so a reload — or a return through the sidebar — opens
+     the table the reader left. A saved view keeps its definition on the server,
+     so only the static views are remembered locally. */
+  const hasUrlViewParams = useWorkspaceViewPreferences(workspaceSlug, currentViewId, !isSavedView);
+
+  const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
+  const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
+  const [issues, setIssues] = useState<IssueApiResponse[]>([]);
+  const [states, setStates] = useState<StateApiResponse[]>([]);
+  const [labels, setLabels] = useState<LabelApiResponse[]>([]);
+  const [cycles, setCycles] = useState<CycleApiResponse[]>([]);
+  const [modules, setModules] = useState<ModuleApiResponse[]>([]);
+  const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+  const [viewLoading, setViewLoading] = useState(false);
+  const [viewNotFound, setViewNotFound] = useState(false);
+  /* Only a saved view carries a name of its own; the static ones are named
+     here so the page heading can label either kind. */
+  const [savedViewName, setSavedViewName] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  /* Stable per-mount timestamp for the work-item layouts' date cells. */
+  const [now] = useState(() => Date.now());
+  /* Per-issue serialization for kanban drag-to-column (see handleCardMove). */
+  const cardMoveChains = useRef<Map<string, Promise<void>>>(new Map());
+  const cardMoveSeq = useRef<Map<string, number>>(new Map());
+
+  useDocumentTitle(t('views.documentTitle', 'Views'));
+
+  /* Apply a saved view once for the current route. The cancellation guard keeps
+     a slow previous request from overwriting a newer route's title or filters. */
+  useEffect(() => {
+    let cancelled = false;
+    const loadSavedView = Boolean(workspaceSlug && viewId && isCustomViewId(viewId));
+
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setSavedViewName(null);
+      setViewNotFound(false);
+      setViewLoading(loadSavedView);
+    });
+
+    if (!workspaceSlug || !viewId || !loadSavedView) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    viewService
+      .get(workspaceSlug, viewId)
+      .then((view) => {
+        if (cancelled) return;
+        setViewNotFound(false);
+        setSavedViewName(view.name ?? null);
+        /* A link that already describes a table wins over the view's own
+           definition; without one the saved view still sets the page up. */
+        if (hasUrlViewParams()) {
+          setViewLoading(false);
+          return;
+        }
+        const savedFilters = view.filters as Record<string, string> | undefined;
+        if (savedFilters && typeof savedFilters === 'object') {
+          setFilters(parseWorkspaceViewFiltersFromSearchParams(new URLSearchParams(savedFilters)));
+        }
+        const savedProperties = view.display_properties as Record<string, boolean> | undefined;
+        if (savedProperties && typeof savedProperties === 'object') {
+          const keys = Object.entries(savedProperties)
+            .filter(([, enabled]) => enabled)
+            .map(([key]) => key)
+            .filter((key): key is DisplayPropertyKey =>
+              DISPLAY_PROPERTY_KEYS.includes(key as DisplayPropertyKey),
+            );
+          setDisplay((prev) => ({ ...prev, properties: keys }));
+        }
+        const savedDisplay = view.display_filters as Record<string, unknown> | undefined;
+        if (savedDisplay && typeof savedDisplay === 'object') {
+          setDisplay((prev) => {
+            const next = { ...prev, showSubWorkItems: savedDisplay.sub_issue === true };
+            if (
+              typeof savedDisplay.layout === 'string' &&
+              VIEW_LAYOUTS.includes(savedDisplay.layout as ViewLayout)
+            ) {
+              next.layout = savedDisplay.layout as ViewLayout;
+            }
+            return next;
+          });
+        }
+        setViewLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setViewLoading(false);
+        setViewNotFound(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug, viewId, setFilters, setDisplay, hasUrlViewParams]);
+
+  /* The sidebar's Views entry leads back here, so it follows the view the
+     reader last opened. A view that no longer resolves is dropped rather than
+     remembered, so the entry cannot point at a page that does not exist. */
+  useEffect(() => {
+    writeLastWorkspaceView(workspaceSlug, viewNotFound ? DEFAULT_WORKSPACE_VIEW_ID : currentViewId);
+  }, [workspaceSlug, currentViewId, viewNotFound]);
+
+  /* Workspace views span every project, so states, labels and issues are
+     gathered per project and flattened into one set. */
+  useEffect(() => {
+    if (!workspaceSlug) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- nothing to fetch without a slug
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
+    workspaceService
+      .getBySlug(workspaceSlug)
+      .then((w) => {
+        if (cancelled) return;
+        setWorkspace(w);
+        return projectService.list(workspaceSlug);
+      })
+      .then((projs) => {
+        if (cancelled) return null;
+        setProjects(projs ?? []);
+        if (!projs?.length) {
+          setIssues([]);
+          setStates([]);
+          setLabels([]);
+          setCycles([]);
+          setModules([]);
+          setMembers([]);
+          return null;
+        }
+        const n = projs.length;
+        return Promise.all([
+          workspaceService.listMembers(workspaceSlug),
+          ...projs.map((p) => issueService.list(workspaceSlug, p.id, { limit: 100 })),
+          ...projs.map((p) => stateService.list(workspaceSlug, p.id)),
+          ...projs.map((p) => labelService.list(workspaceSlug, p.id)),
+          ...projs.map((p) =>
+            cycleService.list(workspaceSlug, p.id).catch(() => [] as CycleApiResponse[]),
+          ),
+          ...projs.map((p) =>
+            moduleService.list(workspaceSlug, p.id).catch(() => [] as ModuleApiResponse[]),
+          ),
+        ]).then((results) => ({ results, n }));
+      })
+      .then((payload) => {
+        if (cancelled || !payload) return;
+        const { results, n } = payload;
+        const [memberList, ...rest] = results;
+        setMembers((memberList as WorkspaceMemberApiResponse[]) ?? []);
+        setIssues((rest.slice(0, n) as IssueApiResponse[][]).flat());
+        setStates((rest.slice(n, n * 2) as StateApiResponse[][]).flat());
+        setLabels((rest.slice(n * 2, n * 3) as LabelApiResponse[][]).flat());
+        setCycles((rest.slice(n * 3, n * 4) as CycleApiResponse[][]).flat());
+        setModules((rest.slice(n * 4, n * 5) as ModuleApiResponse[][]).flat());
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setWorkspace(null);
+        setProjects([]);
+        setIssues([]);
+        setStates([]);
+        setLabels([]);
+        setCycles([]);
+        setModules([]);
+        setMembers([]);
+        setLoadError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceSlug, reloadToken]);
+
+  const stateMap = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
+  const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
+
+  const filteredIssues = useMemo(() => {
+    const list = applyWorkspaceViewFilters(issues, filters, stateMap);
+    /* "subscribed" would filter by issue subscribers once the API exposes them. */
+    if (viewId === 'assigned' && currentUser?.id) {
+      return list.filter((i) => i.assignee_ids?.includes(currentUser.id));
+    }
+    if (viewId === 'created' && currentUser?.id) {
+      return list.filter((i) => i.created_by_id === currentUser.id);
+    }
+    return list;
+  }, [issues, filters, stateMap, viewId, currentUser]);
+
+  const sortedIssues = useMemo(
+    () =>
+      sortWorkItems({
+        issues: filteredIssues,
+        sortBy: display.sortBy,
+        sortOrder: display.sortOrder,
+        states,
+        members,
+      }),
+    [filteredIssues, display.sortBy, display.sortOrder, states, members],
+  );
+
+  /* The toolbar's search is URL-backed and applies on top of the view's own
+     filters, so a shared link lands on the same narrowed list. */
+  const searchQuery = searchParams.get('q')?.trim().toLowerCase() ?? '';
+  const visibleIssues = useMemo(() => {
+    const list = display.showSubWorkItems
+      ? sortedIssues
+      : sortedIssues.filter((issue) => !issue.parent_id?.trim());
+    if (!searchQuery) return list;
+    return list.filter((issue) => {
+      const project = projectMap.get(issue.project_id);
+      const identifier = project
+        ? `${project.identifier ?? project.id.slice(0, 8)}-${issue.sequence_id ?? ''}`.toLowerCase()
+        : '';
+      return (
+        (issue.name ?? '').toLowerCase().includes(searchQuery) || identifier.includes(searchQuery)
+      );
+    });
+  }, [sortedIssues, display.showSubWorkItems, searchQuery, projectMap]);
+
+  const groupOf = useCallback(
+    (issue: IssueApiResponse) => stateMap.get(issue.state_id ?? '')?.group?.toLowerCase(),
+    [stateMap],
+  );
+
+  const completedCount = visibleIssues.filter((issue) => groupOf(issue) === 'completed').length;
+  const openCount = visibleIssues.filter((issue) => {
+    const group = groupOf(issue);
+    return group !== 'completed' && group !== 'canceled' && group !== 'cancelled';
+  }).length;
+
+  const handleSort = (column: SortableColumn) => {
+    const nextOrder: SortOrder =
+      display.sortBy === column && display.sortOrder === 'desc' ? 'asc' : 'desc';
+    setDisplay((prev) => ({ ...prev, sortBy: column, sortOrder: nextOrder }));
+  };
+
+  const updateIssue = useCallback(
+    async (
+      issue: IssueApiResponse,
+      patch: Partial<{
+        state_id: string | null;
+        priority: Priority;
+        assignee_ids: string[];
+        label_ids: string[];
+        start_date: string | null;
+        target_date: string | null;
+      }>,
+    ) => {
+      if (!workspaceSlug) return;
+      try {
+        await issueService.update(workspaceSlug, issue.project_id, issue.id, patch as never);
+        setIssues((prev) => prev.map((i) => (i.id === issue.id ? { ...i, ...patch } : i)));
+      } catch {
+        /* The cell keeps its previous value; nothing is written locally. */
+      }
+    },
+    [workspaceSlug],
+  );
+
+  /* Kanban drag-to-column: the board resolves the target to a state in the
+     card's own project. PATCHes for one card are chained so they commit in
+     order, and only the latest move's failure rolls back — a stale request
+     cannot revert a newer one. */
+  const handleCardMove = useCallback(
+    (issueId: string, targetStateId: string) => {
+      if (!workspaceSlug) return;
+      const issue = issues.find((i) => i.id === issueId);
+      if (!issue || issue.state_id === targetStateId) return;
+      const prevStateId = issue.state_id;
+      const seq = (cardMoveSeq.current.get(issueId) ?? 0) + 1;
+      cardMoveSeq.current.set(issueId, seq);
+      setIssues((prev) =>
+        prev.map((i) => (i.id === issueId ? { ...i, state_id: targetStateId } : i)),
+      );
+      const chain = (cardMoveChains.current.get(issueId) ?? Promise.resolve())
+        .catch(() => {})
+        .then(() =>
+          issueService.update(workspaceSlug, issue.project_id, issueId, {
+            state_id: targetStateId,
+          }),
+        )
+        .then(() => undefined)
+        .catch(() => {
+          if (cardMoveSeq.current.get(issueId) === seq) {
+            setIssues((prev) =>
+              prev.map((i) => (i.id === issueId ? { ...i, state_id: prevStateId } : i)),
+            );
+          }
+        });
+      cardMoveChains.current.set(issueId, chain);
+    },
+    [workspaceSlug, issues],
+  );
+
+  const handleCreateSave = async (data: CreateWorkItemDialogSubmit) => {
+    if (!workspaceSlug || !data.title.trim()) return;
+    setCreateError(null);
+    try {
+      const created = await issueService.create(workspaceSlug, data.projectId, {
+        name: data.title.trim(),
+        description: data.description || undefined,
+        state_id: data.stateId || undefined,
+        priority: data.priority || undefined,
+        assignee_ids: data.assigneeIds?.length ? data.assigneeIds : undefined,
+        label_ids: data.labelIds?.length ? data.labelIds : undefined,
+        start_date: data.startDate || undefined,
+        target_date: data.dueDate || undefined,
+        parent_id: data.parentId || undefined,
+      });
+      if (created?.id) {
+        const relationsAttached = await attachWorkItemRelations(
+          workspaceSlug,
+          data.projectId,
+          created.id,
+          { cycleId: data.cycleId, moduleIds: [data.moduleId] },
+        );
+        if (!relationsAttached) {
+          toast.warning(
+            t(
+              'workItem.create.relationWarning',
+              'Work item created, but one or more planning properties could not be attached.',
+            ),
+          );
+        }
+        setIssues((prev) => [created, ...prev.filter((issue) => issue.id !== created.id)]);
+      }
+    } catch (error) {
+      setCreateError(
+        error instanceof Error
+          ? error.message
+          : t('workItem.list.createFailed', 'Failed to create work item'),
+      );
+      throw error;
+    }
+  };
+
+  const staticViewLabels: Record<string, string> = {
+    'all-issues': t('views.allWorkItems', 'All work items'),
+    assigned: t('views.assigned', 'Assigned'),
+    created: t('views.created', 'Created'),
+    subscribed: t('views.subscribed', 'Subscribed'),
+  };
+  const pageTitle = isSavedView
+    ? (savedViewName ?? t('views.documentTitleFallback', 'View'))
+    : (staticViewLabels[currentViewId] ?? staticViewLabels['all-issues']);
+
+  /* The table is the densest layout, so the placeholder is shaped like it:
+     heading, toolbar, then rows. */
+  const contentSkeleton = (
+    <div className="overflow-hidden rounded-xl border">
+      <Skeleton className="h-10 w-full rounded-none" />
+      {Array.from({ length: 8 }).map((_, index) => (
+        <div key={index} className="flex h-12 items-center gap-3 border-t px-4">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 max-w-80 flex-1" />
+          <Skeleton className="hidden h-5 w-20 sm:block" />
+        </div>
+      ))}
+    </div>
+  );
+
+  if (loading) {
+    return <ListPageSkeleton label={t('views.loading', 'Loading work items')} />;
+  }
+
+  if (loadError || !workspace) {
+    return (
+      <Empty className="min-h-80 rounded-xl border border-dashed" role="alert">
+        <EmptyHeader>
+          <EmptyMedia variant="icon" className="bg-destructive/10 text-destructive">
+            <CircleAlert aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle>{t('views.loadErrorTitle', 'Work items could not be loaded')}</EmptyTitle>
+          <EmptyDescription>
+            {t(
+              'views.loadErrorDescription',
+              'Check your connection and try again. Your work items have not been changed.',
+            )}
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setReloadToken((value) => value + 1)}
+          >
+            <RefreshCw aria-hidden="true" />
+            {t('common.retry', 'Try again')}
+          </Button>
+        </EmptyContent>
+      </Empty>
+    );
+  }
+
+  const baseUrl = `/${workspace.slug}`;
+  const issueHref = (issue: IssueApiResponse) => {
+    const project = projectMap.get(issue.project_id);
+    return project ? `${baseUrl}/projects/${project.id}/issues/${issue.id}` : baseUrl;
+  };
+
+  const clearDiscoveryFilters = () => {
+    setFilters(DEFAULT_WORKSPACE_VIEW_FILTERS);
+    const next = new URLSearchParams(searchParams);
+    next.delete('q');
+    setSearchParams(next, { replace: true });
+  };
+
+  const hasDiscoveryFilters =
+    Boolean(searchQuery) ||
+    filters.priority.length > 0 ||
+    filters.stateGroup.length > 0 ||
+    filters.assigneeIds.length > 0 ||
+    filters.createdByIds.length > 0 ||
+    filters.projectIds.length > 0 ||
+    filters.grouping !== 'all';
+
+  const emptyState = (
+    <Empty className="rounded-xl border border-dashed">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          {issues.length === 0 ? <ListTodo aria-hidden="true" /> : <SearchX aria-hidden="true" />}
+        </EmptyMedia>
+        <EmptyTitle>
+          {issues.length === 0
+            ? t('views.emptyWorkItemsTitle', 'No work items yet')
+            : t('views.noFilterResultsTitle', 'No work items found')}
+        </EmptyTitle>
+        <EmptyDescription>
+          {issues.length === 0
+            ? t(
+                'views.emptyWorkItems',
+                'No work items yet. Create one to start tracking work across your workspace.',
+              )
+            : t('views.noFilterResults', 'No work items match the current search and filters.')}
+        </EmptyDescription>
+      </EmptyHeader>
+      {issues.length === 0 && projects.length > 0 && (
+        <EmptyContent>
+          <Button
+            type="button"
+            onClick={() => {
+              setCreateError(null);
+              setCreateOpen(true);
+            }}
+          >
+            {t('views.newWorkItem', 'New work item')}
+          </Button>
+        </EmptyContent>
+      )}
+      {issues.length > 0 && hasDiscoveryFilters && (
+        <EmptyContent>
+          <Button type="button" variant="outline" onClick={clearDiscoveryFilters}>
+            <SearchX aria-hidden="true" />
+            {t('common.clearFilters', 'Clear filters')}
+          </Button>
+        </EmptyContent>
+      )}
+    </Empty>
+  );
+
+  const notFoundState = (
+    <Empty className="rounded-xl border border-dashed">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <SearchX aria-hidden="true" />
+        </EmptyMedia>
+        <EmptyTitle>{t('views.viewDoesNotExist', 'View does not exist')}</EmptyTitle>
+        <EmptyDescription>
+          {t(
+            'views.viewNotFoundDescription',
+            "The view you are looking for does not exist or you don't have permission to view it.",
+          )}
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button asChild variant="outline">
+          <Link to={`${baseUrl}/views/all-issues`}>
+            {t('views.allWorkItems', 'All work items')}
+          </Link>
+        </Button>
+      </EmptyContent>
+    </Empty>
+  );
+
+  /** Wraps whichever layout is selected in the page's list chrome. */
+  const renderContent = () => {
+    if (viewNotFound) return notFoundState;
+    if (viewLoading) return contentSkeleton;
+    if (visibleIssues.length === 0) return emptyState;
+
+    /* Kanban, calendar and gantt reuse the shipped work-item layouts, which take
+       a single project. A representative one satisfies the prop while the map
+       drives each card's own identifier and link. */
+    if (
+      display.layout === 'kanban' ||
+      display.layout === 'calendar' ||
+      display.layout === 'gantt_chart'
+    ) {
+      const layoutProject = projects[0];
+      if (!layoutProject) return emptyState;
+      const layoutProps = {
+        workspaceSlug: workspace.slug,
+        project: layoutProject,
+        projectsById: Object.fromEntries(projectMap),
+        issues: visibleIssues,
+        states,
+        labels,
+        members,
+        prSummary: {},
+        baseUrl,
+        issueHref: (id: string) => {
+          const issue = visibleIssues.find((i) => i.id === id);
+          return issue ? issueHref(issue) : baseUrl;
+        },
+        now,
+      };
+      return (
+        <section
+          className="max-h-[70vh] overflow-auto rounded-xl border"
+          aria-label={t('views.boardLabel', 'Work items board')}
+        >
+          {display.layout === 'kanban' && (
+            <IssueLayoutBoard {...layoutProps} groupByStateGroup onCardMove={handleCardMove} />
+          )}
+          {display.layout === 'calendar' && <IssueLayoutCalendar {...layoutProps} />}
+          {display.layout === 'gantt_chart' && <IssueLayoutGantt {...layoutProps} />}
+        </section>
+      );
+    }
+
+    /* List and spreadsheet are the same table in two densities, shared with
+       the cycle page so both render work items identically. */
+    return (
+      <section className="rounded-xl border" aria-label={t('views.tableLabel', 'Work items table')}>
+        <WorkItemsTable
+          issues={visibleIssues}
+          variant={display.layout === 'list' ? 'list' : 'spreadsheet'}
+          properties={display.properties}
+          projects={projects}
+          states={states}
+          labels={labels}
+          members={members}
+          modules={modules}
+          cycles={cycles}
+          sortBy={display.sortBy}
+          sortOrder={display.sortOrder}
+          onSort={handleSort}
+          issueHref={issueHref}
+          onPatch={updateIssue}
+          currentUserId={currentUser?.id}
+        />
+      </section>
+    );
+  };
+
+  return (
+    <div className="space-y-6 pb-8">
+      <PageHeading
+        title={pageTitle}
+        description={t(
+          'views.pageDescription',
+          'Track work items across every project in your workspace.',
+        )}
+        summary={t(
+          'views.summary',
+          'Work items {{items}} · Open {{open}} · Completed {{completed}}',
+          {
+            items: visibleIssues.length,
+            open: openCount,
+            completed: completedCount,
+          },
+        )}
+      />
+
+      <ViewsToolbar
+        workspaceSlug={workspace.slug}
+        onCreateWorkItem={
+          projects.length > 0
+            ? () => {
+                setCreateError(null);
+                setCreateOpen(true);
+              }
+            : undefined
+        }
+      />
+
+      <CreateWorkItemDialog
+        open={createOpen}
+        onClose={() => {
+          setCreateOpen(false);
+          setCreateError(null);
+        }}
+        workspaceSlug={workspace.slug}
+        projects={projects}
+        defaultProjectId={projects[0]?.id}
+        createError={createError}
+        onSave={handleCreateSave}
+      />
+
+      {renderContent()}
+
+      {hasDiscoveryFilters && (
+        <p className="sr-only" aria-live="polite">
+          {t('views.visibleCount', '{{count}} work items visible', {
+            count: visibleIssues.length,
+          })}
+        </p>
+      )}
+    </div>
+  );
+}
