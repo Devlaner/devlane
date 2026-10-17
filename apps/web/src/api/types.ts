@@ -556,6 +556,16 @@ export interface InstanceEmailSection {
   password?: string;
 }
 
+/** SMTP settings used only to send a test email; they are not persisted. */
+export interface InstanceEmailTestRequest {
+  host: string;
+  port: string;
+  sender_email: string;
+  security: string;
+  username: string;
+  password: string;
+}
+
 /** Auth section shape */
 export interface InstanceAuthSection {
   allow_public_signup?: boolean;
