@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/smtp"
 	"strconv"
 	"strings"
@@ -87,7 +88,7 @@ func NewSMTPEmailSender(instanceSettings *store.InstanceSettingStore, log *slog.
 			return fmt.Errorf("sender email not configured")
 		}
 		addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
-		auth := smtp.PlainAuth("", cfg.Username, cfg.Password, cfg.Host)
+		auth := newSMTPAuth(cfg.Host, cfg.Username, cfg.Password)
 		msg := buildMessage(to, from, subject, body)
 		if err := sendMailWithConfig(addr, cfg.Host, cfg.Port, cfg.Security, auth, from, to, msg); err != nil {
 			return err
@@ -96,11 +97,22 @@ func NewSMTPEmailSender(instanceSettings *store.InstanceSettingStore, log *slog.
 	}
 }
 
-// sendMailWithConfig sends email using smtp.SendMail or, for port 465 with SSL,
-// an explicit TLS connection (smtp.SendMail only supports STARTTLS).
+func newSMTPAuth(host, username, password string) smtp.Auth {
+	if username == "" {
+		return nil
+	}
+	return smtp.PlainAuth("", username, password, host)
+}
+
+// sendMailWithConfig sends email using the configured SMTP security mode:
+// TLS requires STARTTLS, SSL uses implicit TLS, and None sends plaintext.
 func sendMailWithConfig(addr, host string, port int, security string, auth smtp.Auth, from, to string, msg []byte) error {
-	useImplicitTLS := port == 465 && strings.EqualFold(strings.TrimSpace(security), "SSL")
-	if useImplicitTLS {
+	security = strings.ToUpper(strings.TrimSpace(security))
+	if security == "" {
+		security = "TLS"
+	}
+
+	if security == "SSL" {
 		conn, err := tls.Dial("tcp", addr, &tls.Config{ServerName: host})
 		if err != nil {
 			return err
@@ -111,30 +123,64 @@ func sendMailWithConfig(addr, host string, port int, security string, auth smtp.
 			return err
 		}
 		defer client.Close()
-		if err := client.Auth(auth); err != nil {
-			return err
-		}
-		if err := client.Mail(from); err != nil {
-			return err
-		}
-		if err := client.Rcpt(to); err != nil {
-			return err
-		}
-		w, err := client.Data()
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(msg); err != nil {
-			_ = w.Close()
-			return err
-		}
-		if err := w.Close(); err != nil {
+		if err := sendMailWithClient(client, auth, from, to, msg); err != nil {
 			return err
 		}
 		return client.Quit()
 	}
-	// STARTTLS (port 587) or no security: standard SendMail
-	return smtp.SendMail(addr, auth, from, []string{to}, msg)
+
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		return err
+	}
+	client, err := smtp.NewClient(conn, host)
+	if err != nil {
+		_ = conn.Close()
+		return err
+	}
+	defer client.Close()
+
+	switch security {
+	case "TLS":
+		if ok, _ := client.Extension("STARTTLS"); !ok {
+			return fmt.Errorf("SMTP server does not support STARTTLS")
+		}
+		if err := client.StartTLS(&tls.Config{ServerName: host}); err != nil {
+			return err
+		}
+	case "NONE":
+		// The explicit None setting opts out of Go's opportunistic STARTTLS.
+	default:
+		return fmt.Errorf("unsupported SMTP security setting %q", security)
+	}
+
+	if err := sendMailWithClient(client, auth, from, to, msg); err != nil {
+		return err
+	}
+	return client.Quit()
+}
+
+func sendMailWithClient(client *smtp.Client, auth smtp.Auth, from, to string, msg []byte) error {
+	if auth != nil {
+		if err := client.Auth(auth); err != nil {
+			return err
+		}
+	}
+	if err := client.Mail(from); err != nil {
+		return err
+	}
+	if err := client.Rcpt(to); err != nil {
+		return err
+	}
+	w, err := client.Data()
+	if err != nil {
+		return err
+	}
+	if _, err := w.Write(msg); err != nil {
+		_ = w.Close()
+		return err
+	}
+	return w.Close()
 }
 
 // sanitizeHeader removes CR/LF to prevent header injection.
