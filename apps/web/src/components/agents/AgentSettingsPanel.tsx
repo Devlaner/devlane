@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import type {
   AgentApiResponse,
@@ -28,6 +29,12 @@ interface AgentFormState {
   enabled: boolean;
 }
 
+const MODEL_OPTIONS = [
+  { value: 'gpt-5', label: 'GPT-5' },
+  { value: 'gpt-5-mini', label: 'GPT-5 mini' },
+  { value: 'claude-sonnet', label: 'Claude Sonnet' },
+] as const;
+
 const EMPTY_FORM: AgentFormState = {
   name: '',
   description: '',
@@ -53,6 +60,7 @@ function formFromAgent(agent: AgentApiResponse): AgentFormState {
 }
 
 export function AgentSettingsPanel({ workspaceSlug, projects }: AgentSettingsPanelProps) {
+  const { t } = useTranslation();
   const [agents, setAgents] = useState<AgentApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -149,7 +157,14 @@ export function AgentSettingsPanel({ workspaceSlug, projects }: AgentSettingsPan
   };
 
   const deleteAgent = async (agent: AgentApiResponse) => {
-    if (!window.confirm(`Delete ${agent.name}? Existing run history will be retained.`)) return;
+    if (
+      !window.confirm(
+        t('agents.deleteConfirm', 'Delete {{name}}? Existing run history will be retained.', {
+          name: agent.name,
+        }),
+      )
+    )
+      return;
     setDeletingId(agent.id);
     setError(null);
     try {
@@ -166,22 +181,27 @@ export function AgentSettingsPanel({ workspaceSlug, projects }: AgentSettingsPan
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-(--txt-primary)">Agents</h2>
+          <h2 className="text-base font-semibold text-(--txt-primary)">
+            {t('agents.title', 'Agents')}
+          </h2>
           <p className="mt-1 max-w-2xl text-sm text-(--txt-secondary)">
-            Configure autonomous teammates, their boundaries, and the tools they can use.
+            {t(
+              'agents.subtitle',
+              'Configure autonomous teammates, their boundaries, and the tools they can use.',
+            )}
           </p>
         </div>
         <Button size="sm" className="gap-1.5" onClick={openCreate}>
           <Plus className="size-4" aria-hidden />
-          New agent
+          {t('agents.new', 'New agent')}
         </Button>
       </div>
 
       <div className="grid grid-cols-3 border-y border-(--border-subtle) py-3">
         {[
-          ['Total agents', agents.length],
-          ['Enabled', enabledCount],
-          ['Tools in use', toolCount],
+          [t('agents.stats.total', 'Total agents'), agents.length],
+          [t('agents.stats.enabled', 'Enabled'), enabledCount],
+          [t('agents.stats.toolsInUse', 'Tools in use'), toolCount],
         ].map(([label, value], index) => (
           <div
             key={label}
@@ -200,17 +220,24 @@ export function AgentSettingsPanel({ workspaceSlug, projects }: AgentSettingsPan
       )}
 
       {loading ? (
-        <div className="py-12 text-center text-sm text-(--txt-tertiary)">Loading agents...</div>
+        <div className="py-12 text-center text-sm text-(--txt-tertiary)">
+          {t('agents.loading', 'Loading agents...')}
+        </div>
       ) : agents.length === 0 ? (
         <div className="border-y border-(--border-subtle) py-12 text-center">
           <AgentMark name="New" />
-          <p className="mt-3 text-sm font-medium text-(--txt-primary)">No agents yet</p>
+          <p className="mt-3 text-sm font-medium text-(--txt-primary)">
+            {t('agents.empty.title', 'No agents yet')}
+          </p>
           <p className="mt-1 text-sm text-(--txt-secondary)">
-            Create one, give it a job, then assign it from any work item.
+            {t(
+              'agents.empty.body',
+              'Create one, give it a job, then assign it from any work item.',
+            )}
           </p>
           <Button size="sm" className="mt-4 gap-1.5" onClick={openCreate}>
             <Plus className="size-4" aria-hidden />
-            Create agent
+            {t('agents.create', 'Create agent')}
           </Button>
         </div>
       ) : (
@@ -231,11 +258,11 @@ export function AgentSettingsPanel({ workspaceSlug, projects }: AgentSettingsPan
                         {autonomyLabel(agent.autonomy_level)}
                       </span>
                       <span className="text-xs text-(--txt-tertiary)">
-                        {project ? project.name : 'All projects'}
+                        {project ? project.name : t('agents.allProjects', 'All projects')}
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-(--txt-secondary)">
-                      {agent.description || 'No description provided.'}
+                      {agent.description || t('agents.noDescription', 'No description provided.')}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {(agent.tool_permissions ?? []).length ? (
@@ -248,7 +275,9 @@ export function AgentSettingsPanel({ workspaceSlug, projects }: AgentSettingsPan
                           </span>
                         ))
                       ) : (
-                        <span className="text-xs text-(--txt-tertiary)">No tools granted</span>
+                        <span className="text-xs text-(--txt-tertiary)">
+                          {t('agents.noTools', 'No tools granted')}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -257,7 +286,11 @@ export function AgentSettingsPanel({ workspaceSlug, projects }: AgentSettingsPan
                       type="button"
                       role="switch"
                       aria-checked={agent.enabled}
-                      aria-label={`${agent.enabled ? 'Disable' : 'Enable'} ${agent.name}`}
+                      aria-label={
+                        agent.enabled
+                          ? t('agents.disableNamed', 'Disable {{name}}', { name: agent.name })
+                          : t('agents.enableNamed', 'Enable {{name}}', { name: agent.name })
+                      }
                       disabled={togglingId === agent.id}
                       onClick={() => void toggleAgent(agent)}
                       className={`relative mr-1 h-6 w-10 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
@@ -270,23 +303,25 @@ export function AgentSettingsPanel({ workspaceSlug, projects }: AgentSettingsPan
                         }`}
                       />
                     </button>
-                    <Tooltip content="Edit agent">
+                    <Tooltip content={t('agents.edit', 'Edit agent')}>
                       <button
                         type="button"
                         onClick={() => openEdit(agent)}
                         className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
-                        aria-label={`Edit ${agent.name}`}
+                        aria-label={t('agents.editNamed', 'Edit {{name}}', { name: agent.name })}
                       >
                         <Pencil className="size-4" aria-hidden />
                       </button>
                     </Tooltip>
-                    <Tooltip content="Delete agent">
+                    <Tooltip content={t('agents.delete', 'Delete agent')}>
                       <button
                         type="button"
                         disabled={deletingId === agent.id}
                         onClick={() => void deleteAgent(agent)}
                         className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-secondary) hover:bg-(--bg-danger-subtle) hover:text-(--txt-danger-primary) disabled:opacity-50"
-                        aria-label={`Delete ${agent.name}`}
+                        aria-label={t('agents.deleteNamed', 'Delete {{name}}', {
+                          name: agent.name,
+                        })}
                       >
                         <Trash2 className="size-4" aria-hidden />
                       </button>
@@ -302,15 +337,19 @@ export function AgentSettingsPanel({ workspaceSlug, projects }: AgentSettingsPan
       <Modal
         open={modalOpen}
         onClose={() => !saving && setModalOpen(false)}
-        title={editingAgent ? 'Edit agent' : 'Create agent'}
+        title={editingAgent ? t('agents.edit', 'Edit agent') : t('agents.create', 'Create agent')}
         className="max-h-[calc(100dvh-2rem)] max-w-2xl overflow-y-auto"
         footer={
           <>
             <Button variant="secondary" onClick={() => setModalOpen(false)} disabled={saving}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button onClick={() => void saveAgent()} disabled={saving || !form.name.trim()}>
-              {saving ? 'Saving...' : editingAgent ? 'Save changes' : 'Create agent'}
+              {saving
+                ? t('common.saving', 'Saving…')
+                : editingAgent
+                  ? t('common.saveChanges', 'Save changes')
+                  : t('agents.create', 'Create agent')}
             </Button>
           </>
         }
@@ -318,19 +357,19 @@ export function AgentSettingsPanel({ workspaceSlug, projects }: AgentSettingsPan
         <div className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-medium text-(--txt-secondary)">
-              Name
+              {t('agents.form.name', 'Name')}
               <input
                 autoFocus
                 value={form.name}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, name: event.target.value }))
                 }
-                placeholder="Bug triage agent"
+                placeholder={t('agents.form.namePlaceholder', 'Bug triage agent')}
                 className="mt-1.5 w-full rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) outline-none placeholder:text-(--txt-placeholder) focus:border-(--border-strong)"
               />
             </label>
             <label className="block text-sm font-medium text-(--txt-secondary)">
-              Scope
+              {t('agents.form.scope', 'Scope')}
               <select
                 value={form.projectId}
                 disabled={Boolean(editingAgent)}
@@ -339,7 +378,7 @@ export function AgentSettingsPanel({ workspaceSlug, projects }: AgentSettingsPan
                 }
                 className="mt-1.5 w-full rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) outline-none focus:border-(--border-strong) disabled:opacity-60"
               >
-                <option value="">All projects</option>
+                <option value="">{t('agents.allProjects', 'All projects')}</option>
                 {projects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
@@ -350,33 +389,39 @@ export function AgentSettingsPanel({ workspaceSlug, projects }: AgentSettingsPan
           </div>
 
           <label className="block text-sm font-medium text-(--txt-secondary)">
-            Description
+            {t('agents.form.description', 'Description')}
             <input
               value={form.description}
               onChange={(event) =>
                 setForm((current) => ({ ...current, description: event.target.value }))
               }
-              placeholder="What this agent is responsible for"
+              placeholder={t(
+                'agents.form.descriptionPlaceholder',
+                'What this agent is responsible for',
+              )}
               className="mt-1.5 w-full rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) outline-none placeholder:text-(--txt-placeholder) focus:border-(--border-strong)"
             />
           </label>
 
           <label className="block text-sm font-medium text-(--txt-secondary)">
-            Instructions
+            {t('agents.form.instructions', 'Instructions')}
             <textarea
               rows={4}
               value={form.instructions}
               onChange={(event) =>
                 setForm((current) => ({ ...current, instructions: event.target.value }))
               }
-              placeholder="Describe how the agent should approach its work, what it should check, and when it should ask for review."
+              placeholder={t(
+                'agents.form.instructionsPlaceholder',
+                'Describe how the agent should approach its work, what it should check, and when it should ask for review.',
+              )}
               className="mt-1.5 w-full resize-y rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) outline-none placeholder:text-(--txt-placeholder) focus:border-(--border-strong)"
             />
           </label>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-medium text-(--txt-secondary)">
-              Model
+              {t('agents.form.model', 'Model')}
               <select
                 value={form.model}
                 onChange={(event) =>
@@ -384,14 +429,16 @@ export function AgentSettingsPanel({ workspaceSlug, projects }: AgentSettingsPan
                 }
                 className="mt-1.5 w-full rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) outline-none focus:border-(--border-strong)"
               >
-                <option value="gpt-5">GPT-5</option>
-                <option value="gpt-5-mini">GPT-5 mini</option>
-                <option value="claude-sonnet">Claude Sonnet</option>
-                <option value="custom">Custom provider</option>
+                {MODEL_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+                <option value="custom">{t('agents.form.customProvider', 'Custom provider')}</option>
               </select>
             </label>
             <label className="block text-sm font-medium text-(--txt-secondary)">
-              Autonomy
+              {t('agents.form.autonomy', 'Autonomy')}
               <select
                 value={form.autonomyLevel}
                 onChange={(event) =>
@@ -418,7 +465,9 @@ export function AgentSettingsPanel({ workspaceSlug, projects }: AgentSettingsPan
           </div>
 
           <fieldset>
-            <legend className="text-sm font-medium text-(--txt-secondary)">Allowed tools</legend>
+            <legend className="text-sm font-medium text-(--txt-secondary)">
+              {t('agents.form.allowedTools', 'Allowed tools')}
+            </legend>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               {TOOL_OPTIONS.map((tool) => {
                 const checked = form.tools.includes(tool.value);

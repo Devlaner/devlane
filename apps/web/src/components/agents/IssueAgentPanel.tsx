@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Bot, ChevronDown, Pencil, Play, Settings2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type {
@@ -29,6 +30,7 @@ function relativeTime(value: string): string {
 }
 
 export function IssueAgentPanel({ workspaceSlug, projectId, issueId }: IssueAgentPanelProps) {
+  const { t } = useTranslation();
   const [agents, setAgents] = useState<AgentApiResponse[]>([]);
   const [assignments, setAssignments] = useState<AgentIssueAssignmentApiResponse[]>([]);
   const [runs, setRuns] = useState<AgentRunApiResponse[]>([]);
@@ -129,28 +131,32 @@ export function IssueAgentPanel({ workspaceSlug, projectId, issueId }: IssueAgen
       <CardHeader className="flex items-center justify-between">
         <span className="flex items-center gap-2 text-sm font-medium text-(--txt-secondary)">
           <Bot className="size-4 text-(--txt-icon-secondary)" aria-hidden />
-          Agent
+          {t('agents.issue.title', 'Agent')}
         </span>
         <Link
           to={`/${workspaceSlug}/settings?section=agents`}
           className="flex size-7 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
-          aria-label="Manage agents"
-          title="Manage agents"
+          aria-label={t('agents.issue.manage', 'Manage agents')}
+          title={t('agents.issue.manage', 'Manage agents')}
         >
           <Settings2 className="size-3.5" aria-hidden />
         </Link>
       </CardHeader>
       <CardContent className="space-y-3">
         {loading ? (
-          <p className="py-2 text-xs text-(--txt-tertiary)">Loading agents...</p>
+          <p className="py-2 text-xs text-(--txt-tertiary)">
+            {t('agents.loading', 'Loading agents...')}
+          </p>
         ) : enabledAgents.length === 0 ? (
           <div className="py-2 text-center">
-            <p className="text-sm font-medium text-(--txt-primary)">No agents available</p>
+            <p className="text-sm font-medium text-(--txt-primary)">
+              {t('agents.issue.noneAvailable', 'No agents available')}
+            </p>
             <Link
               to={`/${workspaceSlug}/settings?section=agents`}
               className="mt-1 inline-block text-xs font-medium text-(--txt-accent-primary) hover:underline"
             >
-              Create an agent
+              {t('agents.issue.createOne', 'Create an agent')}
             </Link>
           </div>
         ) : (
@@ -164,7 +170,7 @@ export function IssueAgentPanel({ workspaceSlug, projectId, issueId }: IssueAgen
                       {assignedAgent.name}
                     </p>
                     <span className="shrink-0 rounded bg-(--bg-accent-subtle) px-1.5 py-0.5 text-[10px] font-medium text-(--txt-accent-primary)">
-                      Assigned
+                      {t('agents.issue.assigned', 'Assigned')}
                     </span>
                   </div>
                   <p className="mt-0.5 text-xs text-(--txt-tertiary)">
@@ -184,8 +190,8 @@ export function IssueAgentPanel({ workspaceSlug, projectId, issueId }: IssueAgen
                     setShowAssignmentForm(true);
                   }}
                   className="flex size-7 shrink-0 items-center justify-center rounded-md text-(--txt-icon-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
-                  aria-label="Change assigned agent"
-                  title="Change assigned agent"
+                  aria-label={t('agents.issue.change', 'Change assigned agent')}
+                  title={t('agents.issue.change', 'Change assigned agent')}
                 >
                   <Pencil className="size-3.5" aria-hidden />
                 </button>
@@ -197,11 +203,14 @@ export function IssueAgentPanel({ workspaceSlug, projectId, issueId }: IssueAgen
                     value={selectedAgentId}
                     onChange={(event) => setSelectedAgentId(event.target.value)}
                     className="w-full appearance-none rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) outline-none focus:border-(--border-strong)"
-                    aria-label="Select agent"
+                    aria-label={t('agents.issue.select', 'Select agent')}
                   >
                     {enabledAgents.map((agent) => (
                       <option key={agent.id} value={agent.id}>
-                        {agent.name} - {autonomyLabel(agent.autonomy_level)}
+                        {t('agents.issue.optionLabel', '{{name}} - {{autonomy}}', {
+                          name: agent.name,
+                          autonomy: autonomyLabel(agent.autonomy_level),
+                        })}
                       </option>
                     ))}
                   </select>
@@ -210,13 +219,13 @@ export function IssueAgentPanel({ workspaceSlug, projectId, issueId }: IssueAgen
                 <input
                   value={reason}
                   onChange={(event) => setReason(event.target.value)}
-                  placeholder="What should this agent own?"
+                  placeholder={t('agents.issue.reasonPlaceholder', 'What should this agent own?')}
                   className="w-full rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-xs text-(--txt-primary) outline-none placeholder:text-(--txt-placeholder) focus:border-(--border-strong)"
                 />
                 <div className="flex justify-end gap-2">
                   {assignedAgent && (
                     <Button variant="ghost" size="sm" onClick={() => setShowAssignmentForm(false)}>
-                      Cancel
+                      {t('common.cancel', 'Cancel')}
                     </Button>
                   )}
                   <Button
@@ -224,7 +233,11 @@ export function IssueAgentPanel({ workspaceSlug, projectId, issueId }: IssueAgen
                     disabled={!selectedAgent || assigning}
                     onClick={() => void assignAgent()}
                   >
-                    {assigning ? 'Assigning...' : assignedAgent ? 'Update' : 'Assign agent'}
+                    {assigning
+                      ? t('agents.issue.assigning', 'Assigning...')
+                      : assignedAgent
+                        ? t('agents.issue.update', 'Update')
+                        : t('agents.issue.assign', 'Assign agent')}
                   </Button>
                 </div>
               </div>
@@ -233,12 +246,12 @@ export function IssueAgentPanel({ workspaceSlug, projectId, issueId }: IssueAgen
             {assignedAgent && !showAssignmentForm && (
               <div className="border-t border-(--border-subtle) pt-3">
                 <label className="block text-xs font-medium text-(--txt-secondary)">
-                  Task for this run
+                  {t('agents.issue.runTask', 'Task for this run')}
                   <textarea
                     rows={2}
                     value={prompt}
                     onChange={(event) => setPrompt(event.target.value)}
-                    placeholder="Optional focus or constraints"
+                    placeholder={t('agents.issue.runPlaceholder', 'Optional focus or constraints')}
                     className="mt-1.5 w-full resize-none rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-xs font-normal text-(--txt-primary) outline-none placeholder:text-(--txt-placeholder) focus:border-(--border-strong)"
                   />
                 </label>
@@ -249,7 +262,9 @@ export function IssueAgentPanel({ workspaceSlug, projectId, issueId }: IssueAgen
                   onClick={() => void runAgent()}
                 >
                   <Play className="size-3.5" fill="currentColor" aria-hidden />
-                  {running ? 'Queueing...' : 'Run now'}
+                  {running
+                    ? t('agents.issue.queueing', 'Queueing...')
+                    : t('agents.issue.runNow', 'Run now')}
                 </Button>
               </div>
             )}
@@ -257,14 +272,20 @@ export function IssueAgentPanel({ workspaceSlug, projectId, issueId }: IssueAgen
             {runs.length > 0 && (
               <div className="border-t border-(--border-subtle) pt-3">
                 <div className="mb-2 flex items-center justify-between">
-                  <p className="text-xs font-medium text-(--txt-secondary)">Recent runs</p>
-                  <span className="text-[11px] text-(--txt-tertiary)">{runs.length} total</span>
+                  <p className="text-xs font-medium text-(--txt-secondary)">
+                    {t('agents.issue.recentRuns', 'Recent runs')}
+                  </p>
+                  <span className="text-[11px] text-(--txt-tertiary)">
+                    {t('agents.issue.runsTotal', '{{count}} total', { count: runs.length })}
+                  </span>
                 </div>
                 <div className="space-y-2">
                   {runs.slice(0, 4).map((run) => {
                     const agent = agents.find((item) => item.id === run.agent_id);
                     const runPrompt =
-                      typeof run.input?.prompt === 'string' ? run.input.prompt : 'Manual run';
+                      typeof run.input?.prompt === 'string'
+                        ? run.input.prompt
+                        : t('agents.issue.manualRun', 'Manual run');
                     return (
                       <div key={run.id} className="flex items-start justify-between gap-2 text-xs">
                         <div className="min-w-0">
@@ -272,7 +293,10 @@ export function IssueAgentPanel({ workspaceSlug, projectId, issueId }: IssueAgen
                             {runPrompt}
                           </p>
                           <p className="mt-0.5 text-[11px] text-(--txt-tertiary)">
-                            {agent?.name ?? 'Agent'} · {relativeTime(run.queued_at)}
+                            {t('agents.issue.runMeta', '{{agent}} · {{time}}', {
+                              agent: agent?.name ?? t('agents.issue.title', 'Agent'),
+                              time: relativeTime(run.queued_at),
+                            })}
                           </p>
                         </div>
                         <AgentRunStatusBadge status={run.status} />
