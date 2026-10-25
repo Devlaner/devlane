@@ -2,6 +2,7 @@ package mail
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -29,7 +30,7 @@ func TestNewSMTPAuthWithUsernameReturnsAuth(t *testing.T) {
 func TestSendMailWithConfigNoneDoesNotAttemptSTARTTLS(t *testing.T) {
 	server := startSMTPProbe(t, []string{"STARTTLS"})
 	port := smtpTestPort(t, server.addr)
-	if err := sendMailWithConfig(server.addr, "smtp.example.test", port, " None ", nil,
+	if err := sendMailWithConfig(context.Background(), server.addr, "smtp.example.test", port, " None ", nil,
 		"sender@example.com", "recipient@example.com", []byte("Subject: test\r\n\r\nbody")); err != nil {
 		t.Fatalf("sendMailWithConfig returned an error: %v", err)
 	}
@@ -44,7 +45,7 @@ func TestSendMailWithConfigTLSRequiresSTARTTLS(t *testing.T) {
 		t.Run("security="+security, func(t *testing.T) {
 			server := startSMTPProbe(t, nil)
 			port := smtpTestPort(t, server.addr)
-			err := sendMailWithConfig(server.addr, "smtp.example.test", port, security, nil,
+			err := sendMailWithConfig(context.Background(), server.addr, "smtp.example.test", port, security, nil,
 				"sender@example.com", "recipient@example.com", []byte("Subject: test\r\n\r\nbody"))
 			result := server.wait(t)
 			if err == nil || !strings.Contains(err.Error(), "does not support STARTTLS") {
@@ -63,7 +64,7 @@ func TestSendMailWithConfigTLSRejectsUntrustedSTARTTLSCertificate(t *testing.T) 
 	server := startSMTPProbe(t, []string{"STARTTLS", "AUTH PLAIN"}, &certificate)
 	port := smtpTestPort(t, server.addr)
 
-	err := sendMailWithConfig(server.addr, "example.com", port, "TLS", nil,
+	err := sendMailWithConfig(context.Background(), server.addr, "example.com", port, "TLS", nil,
 		"sender@example.com", "recipient@example.com", []byte("Subject: test\r\n\r\nbody"))
 	if err == nil || !strings.Contains(err.Error(), "certificate signed by unknown authority") {
 		t.Fatalf("expected TLS mode to reject the untrusted certificate, got %v", err)
@@ -86,7 +87,7 @@ func TestSendMailWithConfigTLSRejectsUntrustedSTARTTLSCertificate(t *testing.T) 
 func TestSendMailWithConfigTLSDoesNotDowngradeWhenSTARTTLSFails(t *testing.T) {
 	server := startSMTPProbe(t, []string{"STARTTLS", "AUTH PLAIN"})
 	port := smtpTestPort(t, server.addr)
-	err := sendMailWithConfig(server.addr, "smtp.example.test", port, "TLS", nil,
+	err := sendMailWithConfig(context.Background(), server.addr, "smtp.example.test", port, "TLS", nil,
 		"sender@example.com", "recipient@example.com", []byte("Subject: test\r\n\r\nbody"))
 	if err == nil || !strings.Contains(err.Error(), "STARTTLS unavailable") {
 		t.Fatalf("expected STARTTLS refusal error, got %v", err)
@@ -103,7 +104,7 @@ func TestSendMailWithConfigNoneDoesNotSendPlainAuthCredentialsRemotely(t *testin
 	port := smtpTestPort(t, server.addr)
 	auth := smtp.PlainAuth("", "sender", "password", "smtp.example.test")
 
-	err := sendMailWithConfig(server.addr, "smtp.example.test", port, "None", auth,
+	err := sendMailWithConfig(context.Background(), server.addr, "smtp.example.test", port, "None", auth,
 		"sender@example.com", "recipient@example.com", []byte("Subject: test\r\n\r\nbody"))
 	if err == nil || !strings.Contains(err.Error(), "unencrypted connection") {
 		t.Fatalf("expected Go to refuse PLAIN authentication over plaintext, got %v", err)
@@ -139,7 +140,7 @@ func TestSendMailWithConfigSSLUsesImplicitTLS(t *testing.T) {
 	// Use a local ephemeral listener while passing the standard implicit-TLS port.
 	// The probe closes during the handshake; the first byte still proves the
 	// client started TLS immediately instead of sending an SMTP greeting.
-	if err := sendMailWithConfig(listener.Addr().String(), "smtp.example.test", 465, "SSL", nil,
+	if err := sendMailWithConfig(context.Background(), listener.Addr().String(), "smtp.example.test", 465, "SSL", nil,
 		"sender@example.com", "recipient@example.com", nil); err == nil {
 		t.Fatal("expected the SMTP probe to close the incomplete TLS handshake")
 	}

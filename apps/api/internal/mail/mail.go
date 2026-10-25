@@ -9,12 +9,13 @@ import (
 	"net/smtp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Devlaner/devlane/api/internal/crypto"
 	"github.com/Devlaner/devlane/api/internal/store"
 )
 
-type smtpSettings struct {
+type SMTPSettings struct {
 	Host        string
 	Port        int
 	SenderEmail string
@@ -23,7 +24,7 @@ type smtpSettings struct {
 	Password    string
 }
 
-func getEmailSettings(ctx context.Context, s *store.InstanceSettingStore) (*smtpSettings, error) {
+func getEmailSettings(ctx context.Context, s *store.InstanceSettingStore) (*SMTPSettings, error) {
 	row, err := s.Get(ctx, "email")
 	if err != nil || row == nil {
 		return nil, fmt.Errorf("email settings not found")
@@ -56,7 +57,7 @@ func getEmailSettings(ctx context.Context, s *store.InstanceSettingStore) (*smtp
 	if host == "" {
 		return nil, fmt.Errorf("email host not configured")
 	}
-	return &smtpSettings{
+	return &SMTPSettings{
 		Host:        host,
 		Port:        port,
 		SenderEmail: strings.TrimSpace(sender),
@@ -79,22 +80,38 @@ func NewSMTPEmailSender(instanceSettings *store.InstanceSettingStore, log *slog.
 			LogSkip(log, "instance email not configured", to, err)
 			return err
 		}
-		from := cfg.SenderEmail
-		if from == "" {
-			from = cfg.Username
-		}
-		if from == "" {
-			LogSkip(log, "sender_email and username empty", to, fmt.Errorf("sender not set"))
-			return fmt.Errorf("sender email not configured")
-		}
-		addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
-		auth := newSMTPAuth(cfg.Host, cfg.Username, cfg.Password)
-		msg := buildMessage(to, from, subject, body)
-		if err := sendMailWithConfig(addr, cfg.Host, cfg.Port, cfg.Security, auth, from, to, msg); err != nil {
+		if err := SendWithSMTPSettings(ctx, cfg, to, subject, body, log); err != nil {
 			return err
 		}
 		return nil
 	}
+}
+
+var smtpSendTimeout = 15 * time.Second
+
+// SendWithSMTPSettings sends an email using the supplied SMTP settings without persisting them.
+func SendWithSMTPSettings(ctx context.Context, cfg *SMTPSettings, to, subject, body string, log *slog.Logger) error {
+	if cfg == nil {
+		return fmt.Errorf("SMTP settings not configured")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(ctx, smtpSendTimeout)
+	defer cancel()
+
+	from := cfg.SenderEmail
+	if from == "" {
+		from = cfg.Username
+	}
+	if from == "" {
+		LogSkip(log, "sender_email and username empty", to, fmt.Errorf("sender not set"))
+		return fmt.Errorf("sender email not configured")
+	}
+	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
+	auth := newSMTPAuth(cfg.Host, cfg.Username, cfg.Password)
+	msg := buildMessage(to, from, subject, body)
+	return sendMailWithConfig(ctx, addr, cfg.Host, cfg.Port, cfg.Security, auth, from, to, msg)
 }
 
 func newSMTPAuth(host, username, password string) smtp.Auth {
@@ -106,37 +123,46 @@ func newSMTPAuth(host, username, password string) smtp.Auth {
 
 // sendMailWithConfig sends email using the configured SMTP security mode:
 // TLS requires STARTTLS, SSL uses implicit TLS, and None sends plaintext.
-func sendMailWithConfig(addr, host string, port int, security string, auth smtp.Auth, from, to string, msg []byte) error {
+// Dialing honors ctx, and its deadline bounds every SMTP read and write.
+func sendMailWithConfig(ctx context.Context, addr, host string, port int, security string, auth smtp.Auth, from, to string, msg []byte) error {
 	security = strings.ToUpper(strings.TrimSpace(security))
 	if security == "" {
 		security = "TLS"
 	}
+	switch security {
+	case "TLS", "SSL", "NONE":
+	default:
+		return fmt.Errorf("unsupported SMTP security setting %q", security)
+	}
 
+	conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", addr)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	if deadline, ok := ctx.Deadline(); ok {
+		if err := conn.SetDeadline(deadline); err != nil {
+			return err
+		}
+	}
+	stopCancel := context.AfterFunc(ctx, func() {
+		_ = conn.SetDeadline(time.Now())
+	})
+	defer stopCancel()
+
+	var client *smtp.Client
 	if security == "SSL" {
-		conn, err := tls.Dial("tcp", addr, &tls.Config{ServerName: host})
-		if err != nil {
+		tlsConn := tls.Client(conn, &tls.Config{ServerName: host})
+		if err := tlsConn.HandshakeContext(ctx); err != nil {
 			return err
 		}
-		defer conn.Close()
-		client, err := smtp.NewClient(conn, host)
-		if err != nil {
+		if client, err = smtp.NewClient(tlsConn, host); err != nil {
 			return err
 		}
-		defer client.Close()
-		if err := sendMailWithClient(client, auth, from, to, msg); err != nil {
+	} else {
+		if client, err = smtp.NewClient(conn, host); err != nil {
 			return err
 		}
-		return client.Quit()
-	}
-
-	conn, err := net.Dial("tcp", addr)
-	if err != nil {
-		return err
-	}
-	client, err := smtp.NewClient(conn, host)
-	if err != nil {
-		_ = conn.Close()
-		return err
 	}
 	defer client.Close()
 
@@ -150,8 +176,6 @@ func sendMailWithConfig(addr, host string, port int, security string, auth smtp.
 		}
 	case "NONE":
 		// The explicit None setting opts out of Go's opportunistic STARTTLS.
-	default:
-		return fmt.Errorf("unsupported SMTP security setting %q", security)
 	}
 
 	if err := sendMailWithClient(client, auth, from, to, msg); err != nil {
