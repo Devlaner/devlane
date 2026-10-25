@@ -7,7 +7,12 @@
       (function () {
         try {
           var pref = localStorage.getItem('devlane-theme');
-          if (pref !== 'light' && pref !== 'dark' && pref !== 'system' && pref !== 'pink') {
+          if (
+            pref !== 'light' &&
+            pref !== 'dark' &&
+            pref !== 'system' &&
+            pref !== 'pink'
+          ) {
             pref = 'system';
           }
           var effective = pref;
