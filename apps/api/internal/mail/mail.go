@@ -94,14 +94,13 @@ func SendWithSMTPSettings(ctx context.Context, cfg *SMTPSettings, to, subject, b
 	if cfg == nil {
 		return fmt.Errorf("SMTP settings not configured")
 	}
-	from := cfg.SenderEmail
-
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	ctx, cancel := context.WithTimeout(ctx, smtpSendTimeout)
 	defer cancel()
 
+	from := cfg.SenderEmail
 	if from == "" {
 		from = cfg.Username
 	}
@@ -110,74 +109,82 @@ func SendWithSMTPSettings(ctx context.Context, cfg *SMTPSettings, to, subject, b
 		return fmt.Errorf("sender email not configured")
 	}
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
-	var auth smtp.Auth
-	if cfg.Username != "" || cfg.Password != "" {
-		auth = smtp.PlainAuth("", cfg.Username, cfg.Password, cfg.Host)
-	}
+	auth := newSMTPAuth(cfg.Host, cfg.Username, cfg.Password)
 	msg := buildMessage(to, from, subject, body)
-	if err := sendMailWithConfig(ctx, addr, cfg.Host, cfg.Port, cfg.Security, auth, from, to, msg); err != nil {
-		return err
-	}
-	return nil
+	return sendMailWithConfig(ctx, addr, cfg.Host, cfg.Port, cfg.Security, auth, from, to, msg)
 }
 
-// sendMailWithConfig delivers an email over SMTP using context-aware dialing
-// and connection deadlines to bound SMTP read and write operations.
-func sendMailWithConfig(
-	ctx context.Context,
-	addr, host string,
-	port int,
-	security string,
-	auth smtp.Auth,
-	from, to string,
-	msg []byte,
-) error {
+func newSMTPAuth(host, username, password string) smtp.Auth {
+	if username == "" {
+		return nil
+	}
+	return smtp.PlainAuth("", username, password, host)
+}
+
+// sendMailWithConfig sends email using the configured SMTP security mode:
+// TLS requires STARTTLS, SSL uses implicit TLS, and None sends plaintext.
+// Dialing honors ctx, and its deadline bounds every SMTP read and write.
+func sendMailWithConfig(ctx context.Context, addr, host string, port int, security string, auth smtp.Auth, from, to string, msg []byte) error {
+	security = strings.ToUpper(strings.TrimSpace(security))
+	if security == "" {
+		security = "TLS"
+	}
+	switch security {
+	case "TLS", "SSL", "NONE":
+	default:
+		return fmt.Errorf("unsupported SMTP security setting %q", security)
+	}
+
 	conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
-
 	if deadline, ok := ctx.Deadline(); ok {
 		if err := conn.SetDeadline(deadline); err != nil {
 			return err
 		}
 	}
-
 	stopCancel := context.AfterFunc(ctx, func() {
 		_ = conn.SetDeadline(time.Now())
 	})
 	defer stopCancel()
 
 	var client *smtp.Client
-	useImplicitTLS := port == 465 && strings.EqualFold(strings.TrimSpace(security), "SSL")
-
-	if useImplicitTLS {
+	if security == "SSL" {
 		tlsConn := tls.Client(conn, &tls.Config{ServerName: host})
 		if err := tlsConn.HandshakeContext(ctx); err != nil {
 			return err
 		}
-
-		client, err = smtp.NewClient(tlsConn, host)
-		if err != nil {
+		if client, err = smtp.NewClient(tlsConn, host); err != nil {
 			return err
 		}
 	} else {
-		client, err = smtp.NewClient(conn, host)
-		if err != nil {
+		if client, err = smtp.NewClient(conn, host); err != nil {
 			return err
-		}
-
-		// Preserve smtp.SendMail's existing behavior: use STARTTLS when the
-		// server advertises it.
-		if ok, _ := client.Extension("STARTTLS"); ok {
-			if err := client.StartTLS(&tls.Config{ServerName: host}); err != nil {
-				return err
-			}
 		}
 	}
 	defer client.Close()
 
+	switch security {
+	case "TLS":
+		if ok, _ := client.Extension("STARTTLS"); !ok {
+			return fmt.Errorf("SMTP server does not support STARTTLS")
+		}
+		if err := client.StartTLS(&tls.Config{ServerName: host}); err != nil {
+			return err
+		}
+	case "NONE":
+		// The explicit None setting opts out of Go's opportunistic STARTTLS.
+	}
+
+	if err := sendMailWithClient(client, auth, from, to, msg); err != nil {
+		return err
+	}
+	return client.Quit()
+}
+
+func sendMailWithClient(client *smtp.Client, auth smtp.Auth, from, to string, msg []byte) error {
 	if auth != nil {
 		if err := client.Auth(auth); err != nil {
 			return err
@@ -189,20 +196,15 @@ func sendMailWithConfig(
 	if err := client.Rcpt(to); err != nil {
 		return err
 	}
-
-	writer, err := client.Data()
+	w, err := client.Data()
 	if err != nil {
 		return err
 	}
-	if _, err := writer.Write(msg); err != nil {
-		_ = writer.Close()
+	if _, err := w.Write(msg); err != nil {
+		_ = w.Close()
 		return err
 	}
-	if err := writer.Close(); err != nil {
-		return err
-	}
-
-	return client.Quit()
+	return w.Close()
 }
 
 // sanitizeHeader removes CR/LF to prevent header injection.
