@@ -23,7 +23,15 @@ import {
 import { createMentionExtension, type MentionMember } from './editorMention';
 
 export interface CommentEditorProps {
-  onSubmit: (contentHtml: string, access: 'INTERNAL' | 'EXTERNAL') => void | Promise<void>;
+  /**
+   * Called when the user submits. Return (or resolve to) `false` — or throw —
+   * to signal the submit failed; the editor then keeps the typed text instead
+   * of clearing it, so nothing is lost on a network/permission error.
+   */
+  onSubmit: (
+    contentHtml: string,
+    access: 'INTERNAL' | 'EXTERNAL',
+  ) => void | boolean | Promise<void | boolean>;
   isSubmitting?: boolean;
   initialHtml?: string;
   placeholder?: string;
@@ -105,11 +113,21 @@ export function CommentEditor({
 
   if (!editor) return null;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (isSubmitting) return;
     const html = editor.getHTML().trim();
     if (html === '<p></p>' || html === '') return;
-    void onSubmit(html, access);
+    try {
+      // Only clear once the submit has actually succeeded — otherwise a failed
+      // post/edit would silently discard the user's text.
+      const result = await onSubmit(html, access);
+      if (result === false) return;
+    } catch {
+      return;
+    }
+    // The await above may outlive the editor (parent unmounts / cancels the
+    // edit); clearing a destroyed editor throws.
+    if (editor.isDestroyed) return;
     editor.commands.clearContent();
     setIsEmpty(true);
   };

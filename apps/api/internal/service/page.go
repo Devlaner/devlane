@@ -123,6 +123,9 @@ func (s *PageService) ensureProjectAccess(ctx context.Context, workspaceSlug str
 	if !inWorkspace {
 		return ErrProjectNotFound
 	}
+	if err := enforceProjectVisibility(ctx, s.projectStore, s.ws, wrk.ID, projectID, userID); err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -109,15 +109,36 @@ func Load() (*Config, error) {
 		if cfg.MagicCodeSecret == "" {
 			missing = append(missing, "MAGIC_CODE_SECRET")
 		}
-		if os.Getenv("INSTANCE_ENCRYPTION_KEY") == "" {
+		encKey := os.Getenv("INSTANCE_ENCRYPTION_KEY")
+		if encKey == "" {
 			missing = append(missing, "INSTANCE_ENCRYPTION_KEY")
 		}
 		if len(missing) > 0 {
 			return nil, fmt.Errorf("missing required production secrets %v (set ENV=development only for local dev)", missing)
 		}
+		// A set-but-weak encryption key is as dangerous as a missing one: it
+		// feeds the AES key that protects instance secrets (SMTP password, OAuth
+		// client secrets, GitHub App private key). Reject the shipped placeholder
+		// and anything too short to be meaningfully random.
+		if isWeakSecret(encKey) {
+			return nil, fmt.Errorf("INSTANCE_ENCRYPTION_KEY is a placeholder or too short; set a random value of at least 16 characters for production")
+		}
 	}
 
 	return cfg, nil
+}
+
+// isWeakSecret reports whether a production secret is unusable: a known
+// .env.example placeholder, or too short to carry meaningful entropy.
+func isWeakSecret(v string) bool {
+	if len(v) < 16 {
+		return true
+	}
+	switch v {
+	case "change-me-generate-a-random-key", "change-me", "changeme":
+		return true
+	}
+	return false
 }
 
 func getEnv(key, defaultVal string) string {

@@ -47,6 +47,9 @@ func (s *StateService) ensureProjectAccess(ctx context.Context, workspaceSlug st
 	if !inWorkspace {
 		return uuid.Nil, ErrProjectNotFound
 	}
+	if err := enforceProjectVisibility(ctx, s.ps, s.ws, wrk.ID, projectID, userID); err != nil {
+		return uuid.Nil, err
+	}
 	return wrk.ID, nil
 }
 
@@ -80,7 +83,7 @@ var defaultProjectStates = []struct {
 	{name: "Todo", color: "#60646C", sequence: 25000, group: "unstarted"},
 	{name: "In Progress", color: "#F59E0B", sequence: 35000, group: "started"},
 	{name: "Done", color: "#46A758", sequence: 45000, group: "completed"},
-	{name: "Cancelled", color: "#9AA4BC", sequence: 55000, group: "canceled"},
+	{name: "Cancelled", color: "#9AA4BC", sequence: 55000, group: "cancelled"},
 }
 
 func (s *StateService) ensureDefaultStates(ctx context.Context, projectID, workspaceID uuid.UUID) error {
