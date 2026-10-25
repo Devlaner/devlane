@@ -7,17 +7,14 @@
       (function () {
         try {
           var pref = localStorage.getItem('devlane-theme');
-          if (
-            pref !== 'light' &&
-            pref !== 'dark' &&
-            pref !== 'system' &&
-            pref !== 'pink'
-          ) {
+          if (pref !== 'light' && pref !== 'dark' && pref !== 'system' && pref !== 'pink') {
             pref = 'system';
           }
           var effective = pref;
           if (pref === 'system') {
-            effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            effective = window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
           }
           if (effective === 'dark' || effective === 'pink') {
             document.documentElement.setAttribute('data-theme', effective);
