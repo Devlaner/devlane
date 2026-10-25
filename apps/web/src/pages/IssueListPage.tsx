@@ -220,11 +220,12 @@ export function IssueListPage() {
         setMembers(mem);
       })
       .catch((err) => {
+        // Guard the whole reset: a stale request rejecting after the user
+        // switched projects must not wipe the newly-loaded project's data.
+        if (cancelled) return;
         console.error('Critical error when loading Project or Workspace : ', err);
-        if (!cancelled) {
-          setWorkspace(null);
-          setProject(null);
-        }
+        setWorkspace(null);
+        setProject(null);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

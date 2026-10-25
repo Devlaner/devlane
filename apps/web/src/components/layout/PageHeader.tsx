@@ -71,7 +71,8 @@ export function PageHeader() {
         if (!cancelled && list) setProjects(list);
       })
       .catch(() => {
-        if (!cancelled) setWorkspace(null);
+        if (cancelled) return;
+        setWorkspace(null);
         setProjects([]);
       });
     return () => {
@@ -98,7 +99,8 @@ export function PageHeader() {
         if (!cancelled && Array.isArray(issues)) setProjectIssueCount(issues.length);
       })
       .catch(() => {
-        if (!cancelled) setProject(null);
+        if (cancelled) return;
+        setProject(null);
         setProjectIssueCount(0);
       });
     return () => {
