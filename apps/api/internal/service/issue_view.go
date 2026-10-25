@@ -48,6 +48,9 @@ func (s *IssueViewService) ensureProjectAccess(ctx context.Context, workspaceSlu
 	if !inWorkspace {
 		return ErrProjectNotFound
 	}
+	if err := enforceProjectVisibility(ctx, s.ps, s.ws, wrk.ID, projectID, userID); err != nil {
+		return err
+	}
 	return nil
 }
 

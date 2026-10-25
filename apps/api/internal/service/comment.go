@@ -74,6 +74,9 @@ func (s *CommentService) ensureProjectAccess(ctx context.Context, workspaceSlug 
 	if !inWorkspace {
 		return ErrProjectNotFound
 	}
+	if err := enforceProjectVisibility(ctx, s.ps, s.ws, wrk.ID, projectID, userID); err != nil {
+		return err
+	}
 	return nil
 }
 
