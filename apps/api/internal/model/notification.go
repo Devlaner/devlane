@@ -54,6 +54,7 @@ const (
 	NotificationSenderCommented    = "commented"
 	NotificationSenderStateChanged = "state_changed"
 	NotificationSenderSubscribed   = "subscribed"
+	NotificationSenderCreated      = "created"
 
 	NotificationEntityIssue = "issue"
 )

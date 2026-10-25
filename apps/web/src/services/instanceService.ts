@@ -1,4 +1,4 @@
-import { apiClient } from '../api/client';
+import { apiClient } from '../api';
 import type {
   InstanceSetupStatusResponse,
   InstanceSetupRequest,
@@ -6,6 +6,7 @@ import type {
   InstanceSettingsResponse,
   InstanceSettingSectionValue,
   InstanceAdminApiResponse,
+  InstanceEmailTestRequest,
 } from '../api/types';
 
 /**
@@ -47,6 +48,14 @@ export const instanceSettingsService = {
       key: string;
       value: InstanceSettingSectionValue;
     }>(`/api/instance/settings/${encodeURIComponent(key)}`, { value });
+    return data;
+  },
+
+  async sendTestEmail(payload: InstanceEmailTestRequest): Promise<{ message: string }> {
+    const { data } = await apiClient.post<{ message: string }>(
+      '/api/instance/settings/email/test',
+      payload,
+    );
     return data;
   },
 

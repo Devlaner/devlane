@@ -556,6 +556,16 @@ export interface InstanceEmailSection {
   password?: string;
 }
 
+/** SMTP settings used only to send a test email; they are not persisted. */
+export interface InstanceEmailTestRequest {
+  host: string;
+  port: string;
+  sender_email: string;
+  security: string;
+  username: string;
+  password: string;
+}
+
 /** Auth section shape */
 export interface InstanceAuthSection {
   allow_public_signup?: boolean;
@@ -605,6 +615,13 @@ export interface InstanceGitHubAppSection {
   private_key_set?: boolean;
   webhook_secret?: string;
   webhook_secret_set?: boolean;
+}
+
+/** Slack App config (instance admin). Secrets are never echoed back. */
+export interface InstanceSlackAppSection {
+  client_id?: string;
+  client_secret?: string;
+  client_secret_set?: boolean;
 }
 
 /** Available integration provider, returned by GET /api/integrations/. */
@@ -732,6 +749,26 @@ export interface GitHubRepositorySyncResponse {
     created_at: string;
     updated_at: string;
   } | null;
+}
+
+/** Slack channel from the Slack API */
+export interface SlackChannel {
+  id: string;
+  name: string;
+}
+
+/** A linked Slack channel for a project */
+export interface SlackChannelLinkResponse {
+  id: string;
+  workspace_integration_id: string;
+  project_id: string;
+  workspace_id: string;
+  channel_id: string;
+  channel_name: string;
+  events: Record<string, boolean>;
+  actor_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 /** Cycle as returned by the API */

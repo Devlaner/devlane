@@ -117,7 +117,13 @@ AI-assisted contributions are accepted, but must be disclosed — note the tool 
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/chart?repos=Devlaner/devlane&type=date&legend=top-left&sealed_token=yPOtCk5zPGKPb2fCBiFqXqR-ngUoKILo94BdhU-l7k7oiYxWAKiNSTorxvTolVAsA7ubsRdyFLrJMjaBiM8fs_a7JD_28o6MNdsLqVv0KFeZzeYtMxsrwrcbcqFXgp7c2pi4m4sKpLIXOhPoA5Kcj536PhZhuAMO0J2GbwJFc-FEbTGLLKAofaejCljG)](https://www.star-history.com/?repos=Devlaner%2Fdevlane&type=date&legend=top-left)
+<a href="https://www.star-history.com/?repos=Devlaner%2Fdevlane&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Devlaner/devlane&type=date&theme=dark&legend=top-left&sealed_token=kGLSNgbrnvlf8SFEs9OweVgHjGleFsOPLxFNSbS8sHbo6NWeCjO4twizjuMlX9fCkdivM2KMB3NunAcKwfp2RuyzZxH45s-quC0irrasw5dWrr47yriGwg" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Devlaner/devlane&type=date&legend=top-left&sealed_token=kGLSNgbrnvlf8SFEs9OweVgHjGleFsOPLxFNSbS8sHbo6NWeCjO4twizjuMlX9fCkdivM2KMB3NunAcKwfp2RuyzZxH45s-quC0irrasw5dWrr47yriGwg" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Devlaner/devlane&type=date&legend=top-left&sealed_token=kGLSNgbrnvlf8SFEs9OweVgHjGleFsOPLxFNSbS8sHbo6NWeCjO4twizjuMlX9fCkdivM2KMB3NunAcKwfp2RuyzZxH45s-quC0irrasw5dWrr47yriGwg" />
+ </picture>
+</a>
 
 ## License
 

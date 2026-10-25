@@ -226,6 +226,9 @@ func (s *IssueService) ensureProjectAccess(ctx context.Context, workspaceSlug st
 	if !inWorkspace {
 		return ErrProjectNotFound
 	}
+	if err := enforceProjectVisibility(ctx, s.ps, s.ws, wrk.ID, projectID, userID); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -645,6 +648,9 @@ func (s *IssueService) Create(ctx context.Context, workspaceSlug string, project
 				s.notify.IssueMentioned(ctx, issue, userID, mentioned, "description")
 			}
 		}
+	}
+	if s.notify != nil {
+		s.notify.IssueCreated(ctx, issue, userID)
 	}
 	s.dispatchIssueWebhook(ctx, issue, "created")
 	return issue, nil
