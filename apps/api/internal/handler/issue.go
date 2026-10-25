@@ -49,8 +49,10 @@ func (h *IssueHandler) ListWorkspaceDrafts(c *gin.Context) {
 	slug := c.Param("slug")
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	if limit <= 0 || limit > 100 {
+	if limit <= 0 {
 		limit = 50
+	} else if limit > 100 {
+		limit = 100
 	}
 	list, err := h.Issue.ListDraftsForWorkspace(c.Request.Context(), slug, user.ID, limit, offset)
 	if err != nil {
@@ -75,8 +77,10 @@ func (h *IssueHandler) ListWorkspaceArchived(c *gin.Context) {
 	slug := c.Param("slug")
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	if limit <= 0 || limit > 100 {
+	if limit <= 0 {
 		limit = 50
+	} else if limit > 100 {
+		limit = 100
 	}
 	list, err := h.Issue.ListArchivedForWorkspace(c.Request.Context(), slug, user.ID, limit, offset)
 	if err != nil {
@@ -106,8 +110,10 @@ func (h *IssueHandler) List(c *gin.Context) {
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	if limit <= 0 || limit > 100 {
+	if limit <= 0 {
 		limit = 50
+	} else if limit > 100 {
+		limit = 100
 	}
 	list, err := h.Issue.List(c.Request.Context(), slug, projectID, user.ID, limit, offset)
 	if err != nil {

@@ -275,7 +275,7 @@ export function ModuleDetailPage() {
   const refetchIssues = () => {
     if (!workspaceSlug || !projectId || !resolvedModuleId) return;
     issueService
-      .list(workspaceSlug, projectId, { limit: 1000 })
+      .listAll(workspaceSlug, projectId)
       .then((list) => {
         setIssues((list ?? []).filter((i) => i.module_ids?.includes(resolvedModuleId)));
       })
@@ -293,7 +293,7 @@ export function ModuleDetailPage() {
       workspaceService.getBySlug(workspaceSlug),
       projectService.get(workspaceSlug, projectId),
       moduleService.list(workspaceSlug, projectId),
-      issueService.list(workspaceSlug, projectId, { limit: 1000 }),
+      issueService.listAll(workspaceSlug, projectId),
       stateService.list(workspaceSlug, projectId),
       labelService.list(workspaceSlug, projectId),
       cycleService.list(workspaceSlug, projectId),

@@ -65,7 +65,7 @@ export function EpicDetailPage() {
       projectService.get(workspaceSlug, projectId),
       epicService.get(workspaceSlug, projectId, epicId),
       epicService.listIssues(workspaceSlug, projectId, epicId),
-      issueService.list(workspaceSlug, projectId, { limit: 250 }),
+      issueService.listAll(workspaceSlug, projectId),
       stateService.list(workspaceSlug, projectId),
       epicService.listLinks(workspaceSlug, projectId, epicId).catch(() => []),
       epicService.listProgress(workspaceSlug, projectId).catch(() => ({})),

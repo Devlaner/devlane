@@ -22,27 +22,6 @@ import type {
   WorkspaceMemberApiResponse,
 } from '../api/types';
 
-const ISSUE_PAGE_SIZE = 100;
-
-async function fetchAllProjectIssues(
-  workspaceSlug: string,
-  projectId: string,
-): Promise<IssueApiResponse[]> {
-  const issues: IssueApiResponse[] = [];
-  let offset = 0;
-
-  while (true) {
-    const page = await issueService.list(workspaceSlug, projectId, {
-      limit: ISSUE_PAGE_SIZE,
-      offset,
-    });
-    issues.push(...page);
-
-    if (page.length < ISSUE_PAGE_SIZE) return issues;
-    offset += page.length;
-  }
-}
-
 export function AnalyticsOverviewPage() {
   const { t } = useTranslation();
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
@@ -89,7 +68,7 @@ export function AnalyticsOverviewPage() {
         ]);
         const [issueArrays, stateArrays] = projs.length
           ? await Promise.all([
-              Promise.all(projs.map((p) => fetchAllProjectIssues(workspaceSlug, p.id))),
+              Promise.all(projs.map((p) => issueService.listAll(workspaceSlug, p.id))),
               Promise.all(projs.map((p) => stateService.list(workspaceSlug, p.id))),
             ])
           : [[], []];

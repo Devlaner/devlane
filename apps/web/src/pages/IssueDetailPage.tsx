@@ -158,7 +158,7 @@ export function IssueDetailPage() {
       cycleService.list(workspaceSlug, projectId),
       moduleService.list(workspaceSlug, projectId),
       workspaceService.listMembers(workspaceSlug),
-      issueService.list(workspaceSlug, projectId, { limit: 250 }),
+      issueService.listAll(workspaceSlug, projectId),
       commentService.list(workspaceSlug, projectId, issueId),
       issueService
         .listActivities(workspaceSlug, projectId, issueId)
@@ -1601,7 +1601,7 @@ export function IssueDetailPage() {
                 .catch(() => {});
             }
             const refreshedAll = await issueService
-              .list(workspaceSlug, project.id, { limit: 250 })
+              .listAll(workspaceSlug, project.id)
               .catch(() => null);
             if (refreshedAll) setAllIssues(refreshedAll);
             setSubCreateOpen(false);

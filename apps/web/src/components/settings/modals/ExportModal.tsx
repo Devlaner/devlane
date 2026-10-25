@@ -86,7 +86,8 @@ export function ExportModal({
                     project_name?: string;
                   }
                 > = [];
-                const limit = 2000;
+                // The server caps `limit` at 100, so page through in 100s.
+                const limit = 100;
                 for (const pid of projectIds) {
                   const proj = projects.find((p) => p.id === pid);
                   let offset = 0;

@@ -112,7 +112,7 @@ export function IntakePage() {
       projectService.get(workspaceSlug, projectId),
       intakeService.list(workspaceSlug, projectId, 'pending'),
       intakeService.pendingCount(workspaceSlug, projectId),
-      issueService.list(workspaceSlug, projectId, { limit: 500 }),
+      issueService.listAll(workspaceSlug, projectId),
     ])
       .then(([w, p, pending, count, issues]) => {
         if (cancelled) return;

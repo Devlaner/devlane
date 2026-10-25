@@ -175,8 +175,10 @@ func (h *IssueHandler) ListArchived(c *gin.Context) {
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	if limit <= 0 || limit > 100 {
+	if limit <= 0 {
 		limit = 50
+	} else if limit > 100 {
+		limit = 100
 	}
 	list, err := h.Issue.ListArchived(c.Request.Context(), slug, projectID, user.ID, limit, offset)
 	if err != nil {
