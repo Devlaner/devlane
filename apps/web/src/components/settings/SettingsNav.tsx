@@ -15,6 +15,14 @@ import {
 import type { ProjectApiResponse, WorkspaceApiResponse } from '../../api/types';
 import type { User } from '../../types';
 
+const DEVELOPER_SECTION_IDS: WorkspaceSettingsSection[] = ['webhooks', 'api-tokens'];
+const ADMIN_WORKSPACE_SECTIONS = WORKSPACE_SECTIONS.filter(
+  ({ id }) => !DEVELOPER_SECTION_IDS.includes(id),
+);
+const DEVELOPER_WORKSPACE_SECTIONS = WORKSPACE_SECTIONS.filter(({ id }) =>
+  DEVELOPER_SECTION_IDS.includes(id),
+);
+
 interface SectionNavButtonProps {
   label: string;
   icon: ReactNode;
@@ -190,7 +198,7 @@ export function SettingsNav({
             <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-(--txt-tertiary)">
               {t('settings.nav.administration', 'Administration')}
             </p>
-            {WORKSPACE_SECTIONS.slice(0, 5).map(({ id, label, icon }) => (
+            {ADMIN_WORKSPACE_SECTIONS.map(({ id, label, icon }) => (
               <SectionNavButton
                 key={id}
                 label={t(`settings.section.${id}`, label)}
@@ -202,7 +210,7 @@ export function SettingsNav({
             <p className="mb-2 mt-4 px-2 text-xs font-medium uppercase tracking-wider text-(--txt-tertiary)">
               {t('settings.nav.developer', 'Developer')}
             </p>
-            {WORKSPACE_SECTIONS.slice(5).map(({ id, label, icon }) => (
+            {DEVELOPER_WORKSPACE_SECTIONS.map(({ id, label, icon }) => (
               <SectionNavButton
                 key={id}
                 label={t(`settings.section.${id}`, label)}

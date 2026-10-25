@@ -70,6 +70,7 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 	stateStore := store.NewStateStore(cfg.DB)
 	labelStore := store.NewLabelStore(cfg.DB)
 	issueStore := store.NewIssueStore(cfg.DB)
+	agentStore := store.NewAgentStore(cfg.DB)
 	cycleStore := store.NewCycleStore(cfg.DB)
 	moduleStore := store.NewModuleStore(cfg.DB)
 	issueViewStore := store.NewIssueViewStore(cfg.DB)
@@ -151,6 +152,8 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 	issueActivityStore := store.NewIssueActivityStore(cfg.DB)
 	issueSvc := service.NewIssueService(issueStore, projectStore, workspaceStore)
 	issueSvc.SetActivityStore(issueActivityStore)
+	agentSvc := service.NewAgentService(agentStore, projectStore, workspaceStore, issueStore)
+	agentSvc.SetActivityStore(issueActivityStore)
 	attachmentSvc := service.NewAttachmentService(issueStore, projectStore, workspaceStore, cfg.Minio)
 	attachmentSvc.SetActivityStore(issueActivityStore)
 	cycleSvc := service.NewCycleService(cycleStore, projectStore, workspaceStore)
@@ -271,6 +274,7 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 	issueHandler := &handler.IssueHandler{Issue: issueSvc}
 	importerHandler := &handler.ImporterHandler{Importers: importerSvc}
 	issueLinkHandler := &handler.IssueLinkHandler{Issue: issueSvc}
+	agentHandler := &handler.AgentHandler{Agent: agentSvc}
 	attachmentHandler := &handler.AttachmentHandler{Attachment: attachmentSvc}
 	epicHandler := &handler.EpicHandler{Issue: issueSvc}
 	cycleHandler := &handler.CycleHandler{Cycle: cycleSvc}
@@ -358,6 +362,11 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 		api.DELETE("/workspaces/:slug/webhooks/:webhookId/", webhookHandler.Delete)
 		api.GET("/workspaces/:slug/webhooks/:webhookId/logs/", webhookHandler.ListLogs)
 		api.GET("/workspaces/:slug/search/", searchHandler.Search)
+		api.GET("/workspaces/:slug/agents/", agentHandler.List)
+		api.POST("/workspaces/:slug/agents/", agentHandler.Create)
+		api.GET("/workspaces/:slug/agents/:agentId/", agentHandler.Get)
+		api.PATCH("/workspaces/:slug/agents/:agentId/", agentHandler.Update)
+		api.DELETE("/workspaces/:slug/agents/:agentId/", agentHandler.Delete)
 
 		api.GET("/workspaces/:slug/projects/", projectHandler.List)
 		api.POST("/workspaces/:slug/projects/", projectHandler.Create)
@@ -378,6 +387,8 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 		api.GET("/workspaces/:slug/projects/:projectId/invitations/:pk/", projectHandler.GetInvite)
 		api.DELETE("/workspaces/:slug/projects/:projectId/invitations/:pk/", projectHandler.DeleteInvite)
 		api.POST("/workspaces/:slug/projects/:projectId/invitations/:pk/join/", projectHandler.JoinByInvite)
+		api.GET("/workspaces/:slug/projects/:projectId/agents/", agentHandler.List)
+		api.POST("/workspaces/:slug/projects/:projectId/agents/", agentHandler.Create)
 
 		api.GET("/workspaces/:slug/projects/:projectId/states/", stateHandler.List)
 		api.POST("/workspaces/:slug/projects/:projectId/states/", stateHandler.Create)
@@ -433,6 +444,10 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 		api.DELETE("/workspaces/:slug/projects/:projectId/issues/:pk/archive/", issueHandler.Restore)
 		api.POST("/workspaces/:slug/projects/:projectId/issues/:pk/convert/", issueHandler.Convert)
 		api.POST("/workspaces/:slug/projects/:projectId/issues/:pk/move/", issueHandler.Move)
+		api.GET("/workspaces/:slug/projects/:projectId/issues/:pk/agent-assignments/", agentHandler.ListIssueAssignments)
+		api.POST("/workspaces/:slug/projects/:projectId/issues/:pk/agent-assignments/", agentHandler.AssignIssue)
+		api.GET("/workspaces/:slug/projects/:projectId/issues/:pk/agent-runs/", agentHandler.ListIssueRuns)
+		api.POST("/workspaces/:slug/projects/:projectId/issues/:pk/agent-runs/", agentHandler.CreateIssueRun)
 		api.GET("/workspaces/:slug/projects/:projectId/archived-issues/", issueHandler.ListArchived)
 		api.POST("/workspaces/:slug/projects/:projectId/issues-bulk/update/", issueHandler.BulkUpdate)
 		api.POST("/workspaces/:slug/projects/:projectId/issues-bulk/archive/", issueHandler.BulkArchive)

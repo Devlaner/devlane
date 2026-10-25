@@ -95,6 +95,7 @@ For contribution workflow and code style, see [CONTRIBUTING](CONTRIBUTING.md) if
 
 - **API** — See `apps/api/README.md` for setup, env vars, and running the server.
 - **UI** — See `apps/web/README.md` for front-end setup and scripts.
+- **Agent workflows** — See `proposals/agent-workflows.md` for the proposed autonomous agent architecture and rollout plan.
 
 ---
 
