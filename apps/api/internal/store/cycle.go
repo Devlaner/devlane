@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/Devlaner/devlane/api/internal/model"
@@ -44,7 +45,33 @@ func (s *CycleStore) Delete(ctx context.Context, id uuid.UUID) error {
 
 // CycleIssue
 func (s *CycleStore) AddCycleIssue(ctx context.Context, ci *model.CycleIssue) error {
-	return s.db.WithContext(ctx).Create(ci).Error
+	return upsertCycleIssue(ctx, s.db, ci)
+}
+
+// upsertCycleIssue adds a cycle_issue link, reviving a soft-deleted row for the
+// same (cycle_id, issue_id) rather than colliding with the UNIQUE constraint
+// (which ignores deleted_at). Without this, removing an issue from a cycle and
+// re-adding it would fail with a unique violation. Pass tx to run inside a
+// transaction.
+func upsertCycleIssue(ctx context.Context, db *gorm.DB, ci *model.CycleIssue) error {
+	var existing model.CycleIssue
+	err := db.WithContext(ctx).Unscoped().
+		Where("cycle_id = ? AND issue_id = ?", ci.CycleID, ci.IssueID).
+		First(&existing).Error
+	if err == nil {
+		if !existing.DeletedAt.Valid {
+			return nil // already an active member of the cycle
+		}
+		existing.ProjectID = ci.ProjectID
+		existing.WorkspaceID = ci.WorkspaceID
+		existing.CreatedByID = ci.CreatedByID
+		existing.DeletedAt = gorm.DeletedAt{}
+		return db.WithContext(ctx).Unscoped().Save(&existing).Error
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	return db.WithContext(ctx).Create(ci).Error
 }
 
 func (s *CycleStore) RemoveCycleIssue(ctx context.Context, cycleID, issueID uuid.UUID) error {
@@ -93,24 +120,16 @@ func (s *CycleStore) TransferIncompleteIssues(ctx context.Context, sourceCycleID
 				Delete(&model.CycleIssue{}).Error; err != nil {
 				return err
 			}
-			var existing int64
-			if err := tx.Model(&model.CycleIssue{}).
-				Where("cycle_id = ? AND issue_id = ? AND deleted_at IS NULL", target.ID, r.IssueID).
-				Count(&existing).Error; err != nil {
-				return err
+			cb := userID
+			ci := &model.CycleIssue{
+				CycleID:     target.ID,
+				IssueID:     r.IssueID,
+				ProjectID:   target.ProjectID,
+				WorkspaceID: target.WorkspaceID,
+				CreatedByID: &cb,
 			}
-			if existing == 0 {
-				cb := userID
-				ci := &model.CycleIssue{
-					CycleID:     target.ID,
-					IssueID:     r.IssueID,
-					ProjectID:   target.ProjectID,
-					WorkspaceID: target.WorkspaceID,
-					CreatedByID: &cb,
-				}
-				if err := tx.Create(ci).Error; err != nil {
-					return err
-				}
+			if err := upsertCycleIssue(ctx, tx, ci); err != nil {
+				return err
 			}
 			moved++
 		}

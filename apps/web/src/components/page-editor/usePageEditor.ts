@@ -19,6 +19,15 @@ import { SlashCommand } from './slashCommands';
 import { createMention } from './mentions';
 import type { MentionItem } from './mentionTypes';
 
+/** Treat empty variants and surrounding whitespace as the same value, so an
+ *  autosave round-trip that echoes back semantically-identical HTML doesn't
+ *  count as an external change. */
+function normalize(html: string | undefined | null): string {
+  const s = (html ?? '').trim();
+  if (s === '' || s === '<p></p>' || s === '<p><br></p>') return '';
+  return s;
+}
+
 export interface UsePageEditorOptions {
   /** Initial HTML to seed the editor with on mount. */
   initialHtml?: string;
@@ -53,6 +62,11 @@ export function usePageEditor(opts: UsePageEditorOptions): Editor | null {
   // only invoked by the ProseMirror suggestion plugin on input, never in render.
   const mentionItemsRef = useRef<MentionItem[]>(mentionItems ?? []);
   const getMentionItems = () => mentionItemsRef.current;
+
+  // The last HTML we synced from `initialHtml`. Used to recognise an autosave
+  // round-trip (the server echoing our own content back) so we don't reseed the
+  // document and jump the caret mid-edit.
+  const lastSyncedRef = useRef<string>(normalize(initialHtml));
 
   const editor = useEditor({
     extensions: [
@@ -117,9 +131,13 @@ export function usePageEditor(opts: UsePageEditorOptions): Editor | null {
   // selection state during autosave round-trips.
   useEffect(() => {
     if (!editor || initialHtml === undefined) return;
-    const current = editor.getHTML();
-    if (current === initialHtml) return;
+    const incoming = normalize(initialHtml);
+    // Skip when the incoming HTML already matches what's shown, or matches what
+    // we last synced — e.g. an autosave echoing our own content back — so we
+    // only reseed on a genuine external change (load, route swap, restore).
+    if (incoming === normalize(editor.getHTML()) || incoming === lastSyncedRef.current) return;
     editor.commands.setContent(initialHtml || '', { emitUpdate: false });
+    lastSyncedRef.current = incoming;
   }, [editor, initialHtml]);
 
   // Toggle editability when the readOnly prop flips (e.g. archive/unlock).

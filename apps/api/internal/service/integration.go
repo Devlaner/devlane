@@ -2,14 +2,18 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/Devlaner/devlane/api/internal/crypto"
 	"github.com/Devlaner/devlane/api/internal/github"
 	"github.com/Devlaner/devlane/api/internal/model"
+	"github.com/Devlaner/devlane/api/internal/oauth"
+	"github.com/Devlaner/devlane/api/internal/slack"
 	"github.com/Devlaner/devlane/api/internal/store"
 	"github.com/google/uuid"
 )
@@ -30,6 +34,7 @@ type IntegrationService struct {
 	wis *store.WorkspaceIntegrationStore
 	ws  *store.WorkspaceStore
 	set *store.InstanceSettingStore
+	sls *store.SlackChannelLinkStore
 
 	githubClient *github.Client
 }
@@ -41,9 +46,10 @@ func NewIntegrationService(
 	wis *store.WorkspaceIntegrationStore,
 	ws *store.WorkspaceStore,
 	set *store.InstanceSettingStore,
+	sls *store.SlackChannelLinkStore,
 	githubClient *github.Client,
 ) *IntegrationService {
-	return &IntegrationService{is: is, wis: wis, ws: ws, set: set, githubClient: githubClient}
+	return &IntegrationService{is: is, wis: wis, ws: ws, set: set, githubClient: githubClient, sls: sls}
 }
 
 // SetGitHubClient replaces the cached client (called when admin updates
@@ -108,6 +114,206 @@ func (s *IntegrationService) GetByProvider(ctx context.Context, workspaceSlug, p
 		return nil, ErrIntegrationNotFound
 	}
 	return wi, nil
+}
+
+func (s *IntegrationService) InstallSlack(ctx context.Context, workspaceSlug string, userID uuid.UUID, tokenData *oauth.TokenData) (*model.WorkspaceIntegration, error) {
+	w, err := s.ws.GetBySlug(ctx, workspaceSlug)
+	if err != nil {
+		return nil, ErrWorkspaceNotFound
+	}
+
+	m, err := s.ws.GetMember(ctx, w.ID, userID)
+	if err != nil || m == nil || m.Role < model.RoleAdmin {
+		return nil, ErrWorkspaceForbidden
+	}
+
+	slk, err := s.is.GetByProvider(ctx, "slack")
+	if err != nil {
+		return nil, ErrIntegrationNotFound
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://slack.com/api/auth.test", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create auth request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+tokenData.AccessToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify slack token: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var authResult struct {
+		Ok     bool   `json:"ok"`
+		TeamID string `json:"team_id"`
+		Team   string `json:"team"`
+		Error  string `json:"error"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&authResult); err != nil {
+		return nil, fmt.Errorf("failed to parse auth response: %w", err)
+	}
+
+	if !authResult.Ok {
+		return nil, fmt.Errorf("slack token verification failed: %s", authResult.Error)
+	}
+
+	// Encrypt the token for safe storage
+	encryptedToken, err := crypto.Encrypt(tokenData.AccessToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt token: %w", err)
+	}
+
+	// Upsert the WorkspaceIntegration
+	wi, err := s.wis.GetByWorkspaceAndProvider(ctx, w.ID, "slack")
+	if err != nil {
+		wi = &model.WorkspaceIntegration{
+			WorkspaceID:   w.ID,
+			IntegrationID: slk.ID,
+			ActorID:       userID,
+			AccountLogin:  authResult.Team,
+			Config: model.JSONMap{
+				"bot_token": encryptedToken,
+				"team_id":   authResult.TeamID,
+			},
+		}
+		if createErr := s.wis.Create(ctx, wi); createErr != nil {
+			// There may be a soft-deleted row blocking the unique constraint.
+			// Try to revive it instead.
+			revived, reviveErr := s.wis.ReviveByWorkspaceAndIntegration(ctx, w.ID, slk.ID)
+			if reviveErr != nil || revived == nil {
+				return nil, fmt.Errorf("failed to save slack integration: %w", createErr)
+			}
+			wi = revived
+			// Fall through to update the revived row below.
+		} else {
+			return wi, nil
+		}
+	}
+
+	// Already exists (or just revived), update the token, name, and actor
+	if wi.Config == nil {
+		wi.Config = make(model.JSONMap)
+	}
+	wi.Config["bot_token"] = encryptedToken
+	wi.Config["team_id"] = authResult.TeamID
+	wi.AccountLogin = authResult.Team
+	wi.ActorID = userID
+
+	if err := s.wis.Update(ctx, wi); err != nil {
+		return nil, fmt.Errorf("failed to update slack integration: %w", err)
+	}
+
+	return wi, nil
+}
+
+func (s *IntegrationService) SlackListChannels(ctx context.Context, workspaceSlug string, userID uuid.UUID) ([]slack.Channel, error) {
+	w, err := s.ws.GetBySlug(ctx, workspaceSlug)
+	if err != nil {
+		return nil, ErrWorkspaceNotFound
+	}
+
+	ok, _ := s.ws.IsMember(ctx, w.ID, userID)
+	if !ok {
+		return nil, ErrWorkspaceForbidden
+	}
+
+	wi, err := s.wis.GetByWorkspaceAndProvider(ctx, w.ID, "slack")
+	if err != nil {
+		return nil, ErrIntegrationNotFound
+	}
+
+	rawToken, ok := wi.Config["bot_token"].(string)
+	if !ok || rawToken == "" {
+		return nil, errors.New("slack bot token is missing or invalid")
+	}
+
+	token := crypto.DecryptOrPlain(rawToken)
+	slackClient := slack.NewClient(token)
+
+	return slackClient.ListChannels(ctx)
+}
+
+func (s *IntegrationService) SlackLinkChannel(ctx context.Context, workspaceSlug string, projectID, userID uuid.UUID, channelID, channelName string) (*model.SlackChannelLink, error) {
+	w, err := s.ws.GetBySlug(ctx, workspaceSlug)
+	if err != nil {
+		return nil, ErrWorkspaceNotFound
+	}
+	m, err := s.ws.GetMember(ctx, w.ID, userID)
+	if err != nil || m == nil || m.Role < model.RoleAdmin {
+		return nil, ErrWorkspaceForbidden
+	}
+	wi, err := s.wis.GetByWorkspaceAndProvider(ctx, w.ID, "slack")
+	if err != nil {
+		return nil, ErrIntegrationNotFound
+	}
+
+	link := &model.SlackChannelLink{
+		WorkspaceIntegrationID: wi.ID,
+		ProjectID:              projectID,
+		WorkspaceID:            w.ID,
+		ChannelID:              channelID,
+		ChannelName:            channelName,
+		ActorID:                userID,
+		Events:                 model.JSONMap{"created": true, "state_changed": true, "commented": true},
+	}
+
+	// Ensure we only have one active channel per project
+	_ = s.sls.SoftDelete(ctx, projectID)
+
+	if err := s.sls.Create(ctx, link); err != nil {
+		return nil, err
+	}
+	return link, nil
+}
+
+func (s *IntegrationService) SlackGetChannel(ctx context.Context, workspaceSlug string, projectID, userID uuid.UUID) (*model.SlackChannelLink, error) {
+	w, err := s.ws.GetBySlug(ctx, workspaceSlug)
+	if err != nil {
+		return nil, ErrWorkspaceNotFound
+	}
+	ok, _ := s.ws.IsMember(ctx, w.ID, userID)
+	if !ok {
+		return nil, ErrWorkspaceForbidden
+	}
+	return s.sls.GetByProject(ctx, projectID)
+}
+
+func (s *IntegrationService) SlackUpdateChannel(ctx context.Context, workspaceSlug string, projectID, userID uuid.UUID, events model.JSONMap) (*model.SlackChannelLink, error) {
+	w, err := s.ws.GetBySlug(ctx, workspaceSlug)
+	if err != nil {
+		return nil, ErrWorkspaceNotFound
+	}
+	m, err := s.ws.GetMember(ctx, w.ID, userID)
+	if err != nil || m == nil || m.Role < model.RoleAdmin {
+		return nil, ErrWorkspaceForbidden
+	}
+
+	link, err := s.sls.GetByProject(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	link.Events = events
+	link.ActorID = userID
+
+	if err := s.sls.Update(ctx, link); err != nil {
+		return nil, err
+	}
+	return link, nil
+}
+
+func (s *IntegrationService) SlackUnlinkChannel(ctx context.Context, workspaceSlug string, projectID, userID uuid.UUID) error {
+	w, err := s.ws.GetBySlug(ctx, workspaceSlug)
+	if err != nil {
+		return ErrWorkspaceNotFound
+	}
+	m, err := s.ws.GetMember(ctx, w.ID, userID)
+	if err != nil || m == nil || m.Role < model.RoleAdmin {
+		return ErrWorkspaceForbidden
+	}
+	return s.sls.SoftDelete(ctx, projectID)
 }
 
 // InstallGitHub creates (or updates) a workspace_integrations row for a fresh

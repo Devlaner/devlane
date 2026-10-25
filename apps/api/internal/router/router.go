@@ -91,6 +91,7 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 
 	// Integration stores
 	integrationStore := store.NewIntegrationStore(cfg.DB)
+	slackChannelLinkStore := store.NewSlackChannelLinkStore(cfg.DB)
 	workspaceIntegrationStore := store.NewWorkspaceIntegrationStore(cfg.DB)
 	githubRepoStore := store.NewGithubRepositoryStore(cfg.DB)
 	githubRepoSyncStore := store.NewGithubRepositorySyncStore(cfg.DB)
@@ -106,6 +107,7 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 	authSvc := auth.NewService(userStore, sessionStore, passwordResetTokenStore)
 	authSvc.SetAccountStore(accountStore)
 	authSvc.SetApiTokenStore(apiTokenStore)
+	authSvc.SetWorkspaceStore(workspaceStore)
 	accountSvc := service.NewAccountService(userStore, sessionStore, store.NewEmailChangeRequestStore(cfg.DB), cfg.MagicCodeSecret)
 	appBaseURL := cfg.AppBaseURL
 	if appBaseURL == "" {
@@ -138,7 +140,7 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 	r.GET("/api/invitations/by-token/", invitationHandler.GetInviteByToken)
 	r.POST("/api/invitations/decline/", invitationHandler.DeclineInviteByToken)
 
-	instanceSettingsHandler := &handler.InstanceSettingsHandler{Settings: instanceSettingStore, Admins: instanceAdminStore, Users: userStore}
+	instanceSettingsHandler := &handler.InstanceSettingsHandler{Settings: instanceSettingStore, Admins: instanceAdminStore, Users: userStore, Log: cfg.Log}
 
 	// Services
 	workspaceSvc := service.NewWorkspaceService(workspaceStore, workspaceInviteStore, userStore)
@@ -175,6 +177,10 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 		notificationSvc.SetEmailLogStore(emailLogStore)
 		notificationSvc.SetQueue(cfg.Queue)
 		notificationSvc.SetAppBaseURL(appBaseURL)
+
+		// Wire Slack notifications to the same publisher
+		notificationSvc.SetSlackQueue(cfg.Queue)
+		notificationSvc.SetSlackStores(slackChannelLinkStore, workspaceIntegrationStore)
 	}
 	issueSvc.SetNotificationService(notificationSvc)
 	issueSvc.SetSubscriberStore(issueSubscriberStore)
@@ -205,7 +211,7 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 	}
 
 	integrationSvc := service.NewIntegrationService(
-		integrationStore, workspaceIntegrationStore, workspaceStore, instanceSettingStore, githubClient,
+		integrationStore, workspaceIntegrationStore, workspaceStore, instanceSettingStore, slackChannelLinkStore, githubClient,
 	)
 	githubSyncSvc := service.NewGithubSyncService(
 		integrationSvc, workspaceIntegrationStore, githubRepoStore, githubRepoSyncStore,
@@ -244,6 +250,14 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 		Queue:      cfg.Queue,
 		AppBaseURL: appBaseURL,
 	}
+
+	analyticsStore := store.NewAnalyticsStore(cfg.DB)
+	analyticsSvc := service.NewAnalyticsService(analyticsStore, workspaceStore, projectStore, cfg.Log)
+	analyticsHandler := &handler.AnalyticsHandler{
+		AnalyticsService: analyticsSvc,
+		Log:              cfg.Log,
+	}
+
 	projectHandler := &handler.ProjectHandler{Project: projectSvc, State: stateSvc}
 	notifPrefHandler := &handler.NotificationPreferenceHandler{Prefs: userNotifPrefStore, Ws: workspaceStore, Projects: projectSvc}
 	favoriteSvc := service.NewFavoriteService(userFavoriteStore, workspaceStore, projectSvc)
@@ -299,6 +313,7 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 		api.DELETE("/workspaces/:slug/favorites/:favId/", favoriteHandler.DeleteFavorite)
 		api.GET("/instance/settings/", instanceSettingsHandler.GetSettings)
 		api.PATCH("/instance/settings/:key", instanceSettingsHandler.UpdateSetting)
+		api.POST("/instance/settings/email/test", instanceSettingsHandler.SendTestEmail)
 		api.GET("/instance/unsplash/search", instanceSettingsHandler.UnsplashSearch)
 		// Instance-admin management (admin-gated inside the handler).
 		api.GET("/instance/admins/", instanceSettingsHandler.ListAdmins)
@@ -424,6 +439,12 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 		api.POST("/workspaces/:slug/projects/:projectId/issues-bulk/delete/", issueHandler.BulkDelete)
 		api.POST("/workspaces/:slug/projects/:projectId/issues-bulk/reorder/", issueHandler.BulkReorder)
 
+		api.GET("/workspaces/:slug/analytics/", analyticsHandler.GetWorkspaceAnalytics)
+		api.GET("/workspaces/:slug/analytics/export/", analyticsHandler.ExportWorkspaceCSV)
+
+		api.GET("/workspaces/:slug/projects/:projectId/analytics/", analyticsHandler.GetProjectAnalytics)
+		api.GET("/workspaces/:slug/projects/:projectId/analytics/export/", analyticsHandler.ExportProjectCSV)
+
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/", cycleHandler.List)
 		api.GET("/workspaces/:slug/projects/:projectId/cycles-progress/", cycleHandler.CyclesProgress)
 		api.POST("/workspaces/:slug/projects/:projectId/cycles/", cycleHandler.Create)
@@ -438,8 +459,8 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/:cycleId/cycle-progress/", cycleHandler.Progress)
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/:cycleId/analytics", cycleHandler.Analytics)
 
-		api.GET("/workspaces/:slug/projects/:projectId/modules/", moduleHandler.List)
 		api.GET("/workspaces/:slug/projects/:projectId/modules-progress/", moduleHandler.ModulesProgress)
+		api.GET("/workspaces/:slug/projects/:projectId/modules/", moduleHandler.List)
 		api.POST("/workspaces/:slug/projects/:projectId/modules/", moduleHandler.Create)
 		api.GET("/workspaces/:slug/projects/:projectId/modules/:moduleId/", moduleHandler.Get)
 		api.PATCH("/workspaces/:slug/projects/:projectId/modules/:moduleId/", moduleHandler.Update)
@@ -537,6 +558,13 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 		api.GET("/workspaces/:slug/integrations/", integrationHandler.ListInstalled)
 		api.DELETE("/workspaces/:slug/integrations/:provider/", integrationHandler.Uninstall)
 
+		// Slack Channel Link Routes
+		api.GET("/workspaces/:slug/integrations/slack/channels/", integrationHandler.SlackListChannels)
+		api.GET("/workspaces/:slug/projects/:projectId/integrations/slack/channel/", integrationHandler.SlackGetChannel)
+		api.POST("/workspaces/:slug/projects/:projectId/integrations/slack/channel/", integrationHandler.SlackLinkChannel)
+		api.PATCH("/workspaces/:slug/projects/:projectId/integrations/slack/channel/", integrationHandler.SlackUpdateChannel)
+		api.DELETE("/workspaces/:slug/projects/:projectId/integrations/slack/channel/", integrationHandler.SlackUnlinkChannel)
+
 		// GitHub-specific (workspace-level): list installation repos.
 		api.GET("/workspaces/:slug/integrations/github/repositories/", integrationHandler.GitHubListRepositories)
 
@@ -601,6 +629,10 @@ func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 	// their workspace.
 	r.GET("/auth/github-app/install", middleware.RequireAuth(authSvc, cfg.Log), integrationHandler.GitHubInstallStart)
 	r.GET("/auth/github-app/callback", middleware.RequireAuth(authSvc, cfg.Log), integrationHandler.GitHubInstallCallback)
+
+	// Slack App install flow.
+	r.GET("/auth/slack/install", middleware.RequireAuth(authSvc, cfg.Log), integrationHandler.SlackInstallStart)
+	r.GET("/auth/slack/callback", middleware.RequireAuth(authSvc, cfg.Log), integrationHandler.SlackInstallCallback)
 
 	// GitHub webhook receiver — public; HMAC-signature-verified.
 	r.POST("/webhooks/github", integrationHandler.GitHubWebhook)
