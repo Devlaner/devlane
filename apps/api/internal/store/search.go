@@ -4,9 +4,21 @@ import (
 	"context"
 	"strings"
 
+	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+// projectVisibleClause restricts a query joined to the projects table (aliased
+// `alias`) to projects the user may see: public projects, projects they belong
+// to, or any project when they're a workspace admin/owner. Mirrors the gate in
+// ProjectService.GetByID so search can't leak secret-project content.
+func projectVisibleClause(alias string, userID uuid.UUID) (string, []interface{}) {
+	clause := "(" + alias + ".network = ?" +
+		" OR EXISTS (SELECT 1 FROM project_members pm WHERE pm.project_id = " + alias + ".id AND pm.member_id = ? AND pm.deleted_at IS NULL)" +
+		" OR EXISTS (SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = " + alias + ".workspace_id AND wm.member_id = ? AND wm.role >= ? AND wm.deleted_at IS NULL))"
+	return clause, []interface{}{model.NetworkPublic, userID, userID, model.RoleAdmin}
+}
 
 // SearchStore runs cross-entity text search within a workspace. It is pure DB:
 // callers are responsible for authorizing the workspace/user first.
@@ -63,9 +75,10 @@ func likePattern(q string) string {
 // non-nil the project-owned entities (issues, epics, cycles, modules, views)
 // are scoped to that project and the workspace-level groups (pages, projects)
 // are left empty. limit caps the number of hits per group.
-func (s *SearchStore) Search(ctx context.Context, workspaceID uuid.UUID, query string, projectID *uuid.UUID, limit int) (SearchResults, error) {
+func (s *SearchStore) Search(ctx context.Context, workspaceID uuid.UUID, query string, projectID *uuid.UUID, userID uuid.UUID, limit int) (SearchResults, error) {
 	res := EmptyResults()
 	pat := likePattern(query)
+	visClause, visArgs := projectVisibleClause("p", userID)
 
 	// Work items / epics: match by name or "IDENTIFIER-seq" (e.g. "DEV-42").
 	searchIssues := func(epic bool, dst *[]SearchHit) error {
@@ -73,7 +86,8 @@ func (s *SearchStore) Search(ctx context.Context, workspaceID uuid.UUID, query s
 			Select("i.id, i.name, i.project_id, i.sequence_id, p.identifier AS project_identifier").
 			Joins("JOIN projects p ON p.id = i.project_id AND p.deleted_at IS NULL").
 			Where("i.workspace_id = ? AND i.deleted_at IS NULL AND i.archived_at IS NULL AND i.is_epic = ?", workspaceID, epic).
-			Where("(i.name ILIKE ? OR (p.identifier || '-' || i.sequence_id::text) ILIKE ?)", pat, pat)
+			Where("(i.name ILIKE ? OR (p.identifier || '-' || i.sequence_id::text) ILIKE ?)", pat, pat).
+			Where(visClause, visArgs...)
 		if projectID != nil {
 			q = q.Where("i.project_id = ?", *projectID)
 		}
@@ -92,7 +106,8 @@ func (s *SearchStore) Search(ctx context.Context, workspaceID uuid.UUID, query s
 		q := s.db.WithContext(ctx).Table(table+" AS e").
 			Select("e.id, e.name, e.project_id, p.identifier AS project_identifier").
 			Joins("JOIN projects p ON p.id = e.project_id AND p.deleted_at IS NULL").
-			Where("e.workspace_id = ? AND e.deleted_at IS NULL AND e.name ILIKE ?", workspaceID, pat)
+			Where("e.workspace_id = ? AND e.deleted_at IS NULL AND e.name ILIKE ?", workspaceID, pat).
+			Where(visClause, visArgs...)
 		if hasArchived {
 			q = q.Where("e.archived_at IS NULL")
 		}
@@ -123,6 +138,7 @@ func (s *SearchStore) Search(ctx context.Context, workspaceID uuid.UUID, query s
 			(SELECT pp.project_id FROM project_pages pp WHERE pp.page_id = pg.id AND pp.deleted_at IS NULL ORDER BY pp.created_at ASC LIMIT 1) AS project_id,
 			(SELECT p2.identifier FROM project_pages pp JOIN projects p2 ON p2.id = pp.project_id WHERE pp.page_id = pg.id AND pp.deleted_at IS NULL ORDER BY pp.created_at ASC LIMIT 1) AS project_identifier`).
 		Where("pg.workspace_id = ? AND pg.deleted_at IS NULL AND pg.archived_at IS NULL AND pg.name ILIKE ?", workspaceID, pat).
+		Where("(pg.access = ? OR pg.owned_by_id = ?)", model.PageAccessPublic, userID).
 		Where("EXISTS (SELECT 1 FROM project_pages pp WHERE pp.page_id = pg.id AND pp.deleted_at IS NULL)").
 		Order("pg.name ASC").Limit(limit).Scan(&res.Pages).Error; err != nil {
 		return res, err
@@ -132,6 +148,7 @@ func (s *SearchStore) Search(ctx context.Context, workspaceID uuid.UUID, query s
 	if err := s.db.WithContext(ctx).Table("projects AS p").
 		Select("p.id, p.name, p.id AS project_id, p.identifier AS project_identifier").
 		Where("p.workspace_id = ? AND p.deleted_at IS NULL AND (p.name ILIKE ? OR p.identifier ILIKE ?)", workspaceID, pat, pat).
+		Where(visClause, visArgs...).
 		Order("p.name ASC").Limit(limit).Scan(&res.Projects).Error; err != nil {
 		return res, err
 	}
