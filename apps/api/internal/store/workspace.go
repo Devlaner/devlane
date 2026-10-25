@@ -22,6 +22,23 @@ func (s *WorkspaceStore) Create(ctx context.Context, w *model.Workspace) error {
 	return s.db.WithContext(ctx).Create(w).Error
 }
 
+// CreateWithOwner inserts a workspace and its owner membership in one
+// transaction. Without this, a failed membership insert would leave a workspace
+// with no members, and since access is gated on membership the owner would be
+// locked out of the workspace they just created.
+func (s *WorkspaceStore) CreateWithOwner(ctx context.Context, w *model.Workspace, ownerID uuid.UUID) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(w).Error; err != nil {
+			return err
+		}
+		return tx.Create(&model.WorkspaceMember{
+			WorkspaceID: w.ID,
+			MemberID:    ownerID,
+			Role:        model.RoleOwner,
+		}).Error
+	})
+}
+
 func (s *WorkspaceStore) GetByID(ctx context.Context, id uuid.UUID) (*model.Workspace, error) {
 	var w model.Workspace
 	err := s.db.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&w).Error

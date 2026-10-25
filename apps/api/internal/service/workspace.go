@@ -142,11 +142,9 @@ func (s *WorkspaceService) Create(ctx context.Context, name, slug, organizationS
 		CreatedByID:      &ownerID,
 		OrganizationSize: orgSize,
 	}
-	if err := s.ws.Create(ctx, w); err != nil {
+	if err := s.ws.CreateWithOwner(ctx, w, ownerID); err != nil {
 		return nil, err
 	}
-	m := &model.WorkspaceMember{WorkspaceID: w.ID, MemberID: ownerID, Role: 20}
-	_ = s.ws.AddMember(ctx, m)
 	return w, nil
 }
 
