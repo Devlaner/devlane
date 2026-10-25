@@ -15,12 +15,33 @@ export interface UpdateCycleRequest {
   end_date?: string;
 }
 
+/** Child-issue counts for a cycle, grouped by state group (plus a total). */
+export interface CycleProgress {
+  backlog: number;
+  unstarted: number;
+  started: number;
+  completed: number;
+  cancelled: number;
+  total: number;
+}
+
 export const cycleService = {
   async list(workspaceSlug: string, projectId: string): Promise<CycleApiResponse[]> {
     const { data } = await apiClient.get<CycleApiResponse[]>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/cycles/`,
     );
     return data;
+  },
+
+  /** Per-cycle progress for the whole project, keyed by cycle id. */
+  async listProgress(
+    workspaceSlug: string,
+    projectId: string,
+  ): Promise<Record<string, CycleProgress>> {
+    const { data } = await apiClient.get<Record<string, CycleProgress>>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/cycles-progress/`,
+    );
+    return data ?? {};
   },
 
   async create(
@@ -92,6 +113,23 @@ export const cycleService = {
   ): Promise<CycleProgressResponse> {
     const { data } = await apiClient.get<CycleProgressResponse>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/cycles/${encodeURIComponent(cycleId)}/progress/`,
+    );
+    return data;
+  },
+
+  /**
+   * Complete a cycle: snapshots its progress and marks it completed. When
+   * targetCycleId is given, incomplete work items are moved into that cycle.
+   */
+  async completeCycle(
+    workspaceSlug: string,
+    projectId: string,
+    cycleId: string,
+    targetCycleId?: string | null,
+  ): Promise<{ cycle: CycleApiResponse; transferred_count: number }> {
+    const { data } = await apiClient.post<{ cycle: CycleApiResponse; transferred_count: number }>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/cycles/${encodeURIComponent(cycleId)}/transfer-issues/`,
+      targetCycleId ? { target_cycle_id: targetCycleId } : {},
     );
     return data;
   },

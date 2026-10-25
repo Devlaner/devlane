@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { Button } from './ui';
 import { issueService } from '../services/issueService';
@@ -43,6 +44,7 @@ export function AddExistingWorkItemModal({
   projectIdentifier,
   onAdded,
 }: AddExistingWorkItemModalProps) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [projectIssues, setProjectIssues] = useState<IssueApiResponse[]>([]);
@@ -67,7 +69,7 @@ export function AddExistingWorkItemModal({
         setSelectedIds(new Set());
       })
       .catch(() => {
-        if (!cancelled) setError('Failed to load work items');
+        if (!cancelled) setError(t('workItem.failedToLoad', 'Failed to load work items'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -75,7 +77,7 @@ export function AddExistingWorkItemModal({
     return () => {
       cancelled = true;
     };
-  }, [open, workspaceSlug, projectId, moduleId]);
+  }, [open, workspaceSlug, projectId, moduleId, t]);
 
   useEffect(() => {
     if (!open) {
@@ -133,7 +135,7 @@ export function AddExistingWorkItemModal({
       onAdded?.();
       onClose();
     } catch {
-      setError('Failed to add work items');
+      setError(t('workItem.failedToAdd', 'Failed to add work items'));
     } finally {
       setSubmitting(false);
     }
@@ -142,8 +144,8 @@ export function AddExistingWorkItemModal({
   const selectedCount = selectedIds.size;
   const selectionLabel =
     selectedCount === 0
-      ? 'No work items selected'
-      : `${selectedCount} work item${selectedCount === 1 ? '' : 's'} selected`;
+      ? t('workItem.noneSelected', 'No work items selected')
+      : t('workItem.selectedCount', '{{count}} work items selected', { count: selectedCount });
 
   const footer = (
     <div className="flex w-full items-center justify-between">
@@ -152,18 +154,18 @@ export function AddExistingWorkItemModal({
         onClick={selectAll}
         className="text-sm font-medium text-(--brand-default) hover:underline"
       >
-        Select all
+        {t('workItem.selectAll', 'Select all')}
       </button>
       <div className="flex gap-2">
         <Button variant="secondary" onClick={onClose} disabled={submitting}>
-          Cancel
+          {t('common.cancel', 'Cancel')}
         </Button>
         <Button
           onClick={handleAdd}
           disabled={selectedCount === 0 || submitting}
           className="gap-1.5"
         >
-          Add selected work items
+          {t('workItem.addSelected', 'Add selected work items')}
         </Button>
       </div>
     </div>
@@ -190,11 +192,11 @@ export function AddExistingWorkItemModal({
             </span>
             <input
               type="text"
-              placeholder="Type to search"
+              placeholder={t('workItem.typeToSearch', 'Type to search')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-9 w-full rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-2 pl-9 pr-3 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
-              aria-label="Search work items"
+              aria-label={t('workItem.searchWorkItems', 'Search work items')}
             />
           </div>
           <span
@@ -208,12 +210,14 @@ export function AddExistingWorkItemModal({
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4">
           {error && <p className="mb-2 text-sm text-(--txt-danger-primary)">{error}</p>}
           {loading ? (
-            <p className="py-8 text-center text-sm text-(--txt-tertiary)">Loading work items…</p>
+            <p className="py-8 text-center text-sm text-(--txt-tertiary)">
+              {t('workItem.loading', 'Loading work items…')}
+            </p>
           ) : filteredIssues.length === 0 ? (
             <p className="py-8 text-center text-sm text-(--txt-tertiary)">
               {availableIssues.length === 0
-                ? 'No other work items in this project.'
-                : 'No matching work items.'}
+                ? t('workItem.noneInProject', 'No other work items in this project.')
+                : t('workItem.noMatches', 'No matching work items.')}
             </p>
           ) : (
             <ul className="max-h-64 overflow-y-auto divide-y divide-(--border-subtle)">

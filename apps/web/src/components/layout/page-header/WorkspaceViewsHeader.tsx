@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../../ui';
 import { Dropdown } from '../../work-item';
@@ -13,22 +14,22 @@ import { viewService } from '../../../services/viewService';
 import type { IssueViewApiResponse } from '../../../api/types';
 import { IconProjectViews, IconSearch, IconLayers, IconCheck, IconPlus } from './icons';
 
-/** Default workspace view options: all-issues, assigned, created, subscribed. */
-const DEFAULT_WORKSPACE_VIEWS = [
-  { id: 'all-issues', name: 'All work items' },
-  { id: 'assigned', name: 'Assigned' },
-  { id: 'created', name: 'Created' },
-  { id: 'subscribed', name: 'Subscribed' },
-] as const;
-
 const LONG_LIST_PANEL_STYLE = { maxHeight: 'min(70vh, 28rem)' };
 
 export function WorkspaceViewsHeader() {
+  const { t } = useTranslation();
   const { workspaceSlug, viewId: urlViewId } = useParams<{
     workspaceSlug?: string;
     viewId?: string;
   }>();
   const navigate = useNavigate();
+  /** Default workspace view options: all-issues, assigned, created, subscribed. */
+  const DEFAULT_WORKSPACE_VIEWS = [
+    { id: 'all-issues', name: t('header.views.default.allWorkItems', 'All work items') },
+    { id: 'assigned', name: t('header.views.default.assigned', 'Assigned') },
+    { id: 'created', name: t('header.views.default.created', 'Created') },
+    { id: 'subscribed', name: t('header.views.default.subscribed', 'Subscribed') },
+  ] as const;
   const [viewDropdownOpen, setViewDropdownOpen] = useState<string | null>(null);
   const [toolbarDropdownOpen, setToolbarDropdownOpen] = useState<string | null>(null);
   const [createViewModalOpen, setCreateViewModalOpen] = useState(false);
@@ -73,7 +74,8 @@ export function WorkspaceViewsHeader() {
     DEFAULT_WORKSPACE_VIEWS.find((v) => v.id === selectedViewId) ??
     customViews.find((v) => v.id === selectedViewId) ??
     DEFAULT_WORKSPACE_VIEWS[0];
-  const displayName = selectedView?.name ?? 'All work items';
+  const displayName =
+    selectedView?.name ?? t('header.views.default.allWorkItems', 'All work items');
   const q = (s: string) => s.trim().toLowerCase();
   const filteredViews = allOptions.filter((v) => q(v.name).includes(q(viewSearch)));
 
@@ -93,7 +95,7 @@ export function WorkspaceViewsHeader() {
           <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
             <IconProjectViews />
           </span>
-          <span>Views</span>
+          <span>{t('common.views', 'Views')}</span>
         </Link>
         <span className="text-(--txt-icon-tertiary)" aria-hidden>
           &gt;
@@ -102,7 +104,7 @@ export function WorkspaceViewsHeader() {
           id="workspace-view-select"
           openId={viewDropdownOpen}
           onOpen={setViewDropdownOpen}
-          label="All work items"
+          label={t('header.views.default.allWorkItems', 'All work items')}
           icon={<IconProjectViews />}
           displayValue={displayName}
           panelClassName="flex min-w-[220px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
@@ -115,7 +117,7 @@ export function WorkspaceViewsHeader() {
               </span>
               <input
                 type="text"
-                placeholder="Search"
+                placeholder={t('common.search', 'Search')}
                 value={viewSearch}
                 onChange={(e) => setViewSearch(e.target.value)}
                 className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -162,7 +164,7 @@ export function WorkspaceViewsHeader() {
             setCreateViewModalOpen(true);
           }}
         >
-          <IconPlus /> Add view
+          <IconPlus /> {t('common.addView', 'Add view')}
         </Button>
         <CreateViewModal
           open={createViewModalOpen}

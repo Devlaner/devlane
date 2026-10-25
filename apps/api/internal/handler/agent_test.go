@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -177,4 +178,30 @@ func TestAgent_DisabledAgentCannotBeAssigned(t *testing.T) {
 	rrAssign := ts.POST(base+"agent-assignments/", map[string]any{"agent_id": agentID}, w.Session)
 	require.Equal(t, http.StatusBadRequest, rrAssign.Code, "body=%s", rrAssign.Body.String())
 	assert.Contains(t, rrAssign.Body.String(), "agent is not available")
+}
+
+// A plain workspace member who is not in a secret project must not be able to
+// read or queue agent work on that project's issues.
+func TestAgent_SecretProjectHiddenFromNonMembers(t *testing.T) {
+	ts := testutil.NewTestServer(t)
+	w := testutil.SeedWorld(t, ts.DB)
+	agentID := createTestAgent(t, ts, w, "Secret Helper")
+	issue := testutil.CreateIssue(t, ts.DB, w.Project.ID, w.Workspace.ID, w.User.ID)
+	require.NoError(t, ts.DB.Model(&model.Project{}).Where("id = ?", w.Project.ID).
+		Update("network", model.NetworkSecret).Error)
+
+	outsider := testutil.CreateUser(t, ts.DB)
+	testutil.AddWorkspaceMember(t, ts.DB, w.Workspace.ID, outsider.ID, testutil.RoleMember)
+	outsiderSession := testutil.LoginAs(t, ts.DB, outsider)
+	base := issueAgentBase(w.Workspace.Slug, w.Project.ID.String(), issue.ID.String())
+
+	assert.Equal(t, http.StatusNotFound, ts.GET(base+"agent-runs/", outsiderSession).Code)
+	assert.Equal(t, http.StatusNotFound, ts.GET(base+"agent-assignments/", outsiderSession).Code)
+	assert.Equal(t, http.StatusNotFound,
+		ts.POST(base+"agent-runs/", map[string]any{"agent_id": agentID}, outsiderSession).Code)
+	assert.Equal(t, http.StatusNotFound,
+		ts.GET(projectAgentBase(w.Workspace.Slug, w.Project.ID.String()), outsiderSession).Code)
+
+	// The owner (workspace admin) still has access.
+	assert.Equal(t, http.StatusOK, ts.GET(base+"agent-runs/", w.Session).Code)
 }

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { Link, NavLink, useLocation, useParams } from 'react-router-dom';
 import { workspaceService } from '../../services/workspaceService';
@@ -7,8 +8,6 @@ import { favoriteService } from '../../services/favoriteService';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
-  ModuleApiResponse,
-  CycleApiResponse,
   IssueViewApiResponse,
 } from '../../api/types';
 import { CreateWorkItemModal } from '../CreateWorkItemModal';
@@ -18,14 +17,11 @@ import { ProjectIconDisplay } from '../ProjectIconModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import { cn, getImageUrl } from '../../lib/utils';
-import { moduleService } from '../../services/moduleService';
-import { cycleService } from '../../services/cycleService';
 import { viewService } from '../../services/viewService';
-import { slugify } from '../../lib/slug';
-import { cyclePathSegment } from '../../lib/cycle';
 import { OPEN_COMMAND_PALETTE } from '../../lib/commandPaletteEvents';
 import { ISSUE_VIEW_FAVORITES_CHANGED_EVENT } from '../../lib/issueViewFavoritesEvents';
-import { CYCLE_FAVORITES_CHANGED_EVENT } from '../../hooks/useCycleFavorites';
+import { IntakeNavBadge } from './IntakeNavBadge';
+import { WorkspaceFavoritesTree } from './WorkspaceFavoritesTree';
 
 const SIDEBAR_WIDTH = 256;
 const SIDEBAR_WIDTH_COLLAPSED = 0;
@@ -451,6 +447,7 @@ const projectNavItems = [
 
 /** Pill + grid icon — matches the “Modules” category badge (not list progress rings). */
 export function Sidebar() {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [workspaceDropdownOpen, setWorkspaceDropdownOpen] = useState(false);
@@ -468,14 +465,6 @@ export function Sidebar() {
   const [workspaces, setWorkspaces] = useState<WorkspaceApiResponse[]>([]);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const { favoriteProjectIds, setFavoriteProjectIds } = useFavorites();
-  const [favoriteModules, setFavoriteModules] = useState<
-    Array<{ projectId: string; module: ModuleApiResponse }>
-  >([]);
-  const [moduleFavoritesNonce, setModuleFavoritesNonce] = useState(0);
-  const [favoriteCycles, setFavoriteCycles] = useState<
-    Array<{ projectId: string; cycle: CycleApiResponse }>
-  >([]);
-  const [cycleFavoritesNonce, setCycleFavoritesNonce] = useState(0);
   const [favoriteIssueViews, setFavoriteIssueViews] = useState<IssueViewApiResponse[]>([]);
   const [issueViewFavoritesNonce, setIssueViewFavoritesNonce] = useState(0);
   const workspaceTriggerRef = useRef<HTMLButtonElement>(null);
@@ -496,35 +485,6 @@ export function Sidebar() {
   const workspace = workspaces.find((w) => w.slug === workspaceSlug) ?? workspaces[0] ?? null;
   const baseUrl = workspaceSlug ? `/${workspaceSlug}` : workspace ? `/${workspace.slug}` : '';
   const favoriteProjects = projects.filter((p) => favoriteProjectIds.includes(p.id));
-
-  const MODULE_STORAGE_KEY_PREFIX = 'module_favorites';
-  const CYCLE_STORAGE_KEY_PREFIX = 'cycle_favorites';
-  const moduleStorageKey = (workspaceId: string, projId: string) =>
-    `${MODULE_STORAGE_KEY_PREFIX}_${workspaceId}_${projId}`;
-  const cycleStorageKey = (workspaceId: string, projId: string) =>
-    `${CYCLE_STORAGE_KEY_PREFIX}_${workspaceId}_${projId}`;
-
-  const loadModuleFavoriteIds = useCallback((workspaceId: string, projId: string) => {
-    try {
-      const raw = localStorage.getItem(moduleStorageKey(workspaceId, projId));
-      if (!raw) return [];
-      const parsed = JSON.parse(raw) as unknown;
-      return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : [];
-    } catch {
-      return [];
-    }
-  }, []);
-
-  const loadCycleFavoriteIds = useCallback((workspaceId: string, projId: string) => {
-    try {
-      const raw = localStorage.getItem(cycleStorageKey(workspaceId, projId));
-      if (!raw) return [];
-      const parsed = JSON.parse(raw) as unknown;
-      return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : [];
-    } catch {
-      return [];
-    }
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -559,87 +519,6 @@ export function Sidebar() {
     };
   }, [slugForProjects]);
 
-  // Only the projects that actually have starred modules, as a stable string.
-  // Keying the fetch effect on this (instead of the whole projects array) stops
-  // the per-project module fetches from re-running every time projects is
-  // replaced with a fresh array on workspace load.
-  const moduleFavProjectIds = useMemo(() => {
-    if (!workspaceSlug) return '';
-    return projects
-      .map((p) => p.id)
-      .filter((id) => loadModuleFavoriteIds(workspaceSlug, id).length > 0)
-      .sort()
-      .join(',');
-    // moduleFavoritesNonce forces a recompute after a toggle mutates the
-    // (non-reactive) localStorage the filter reads from.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceSlug, projects, loadModuleFavoriteIds, moduleFavoritesNonce]);
-
-  useEffect(() => {
-    if (!workspaceSlug || !moduleFavProjectIds) {
-      setFavoriteModules([]);
-      return;
-    }
-    // Load starred modules from localStorage, then resolve names via module list.
-    let cancelled = false;
-    const run = async () => {
-      const entries: Array<{ projectId: string; module: ModuleApiResponse }> = [];
-      for (const projectId of moduleFavProjectIds.split(',')) {
-        const favIds = loadModuleFavoriteIds(workspaceSlug, projectId);
-        if (!favIds.length) continue;
-        const mods = await moduleService.list(workspaceSlug, projectId);
-        const favSet = new Set(favIds);
-        for (const m of mods ?? []) {
-          if (favSet.has(m.id)) {
-            entries.push({ projectId, module: m });
-          }
-        }
-      }
-      if (!cancelled) setFavoriteModules(entries);
-    };
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaceSlug, moduleFavProjectIds, moduleFavoritesNonce, loadModuleFavoriteIds]);
-
-  const cycleFavProjectIds = useMemo(() => {
-    if (!workspaceSlug) return '';
-    return projects
-      .map((p) => p.id)
-      .filter((id) => loadCycleFavoriteIds(workspaceSlug, id).length > 0)
-      .sort()
-      .join(',');
-    // cycleFavoritesNonce forces a recompute after a toggle mutates the
-    // (non-reactive) localStorage the filter reads from.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceSlug, projects, loadCycleFavoriteIds, cycleFavoritesNonce]);
-
-  useEffect(() => {
-    if (!workspaceSlug || !cycleFavProjectIds) {
-      setFavoriteCycles([]);
-      return;
-    }
-    let cancelled = false;
-    const run = async () => {
-      const results = await Promise.all(
-        cycleFavProjectIds.split(',').map(async (projectId) => {
-          const favSet = new Set(loadCycleFavoriteIds(workspaceSlug, projectId));
-          const cycles = await cycleService.list(workspaceSlug, projectId);
-          return (cycles ?? [])
-            .filter((c) => favSet.has(c.id))
-            .map((c) => ({ projectId, cycle: c }));
-        }),
-      );
-      const entries = results.flat();
-      if (!cancelled) setFavoriteCycles(entries);
-    };
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaceSlug, cycleFavProjectIds, cycleFavoritesNonce, loadCycleFavoriteIds]);
-
   useEffect(() => {
     if (!workspaceSlug) {
       setFavoriteIssueViews([]);
@@ -669,55 +548,6 @@ export function Sidebar() {
     window.addEventListener(ISSUE_VIEW_FAVORITES_CHANGED_EVENT, handler as EventListener);
     return () => {
       window.removeEventListener(ISSUE_VIEW_FAVORITES_CHANGED_EVENT, handler as EventListener);
-    };
-  }, [workspaceSlug]);
-
-  // Keep the "Favorites -> Modules" list in sync without requiring a full refresh.
-  useEffect(() => {
-    if (!workspaceSlug) return;
-    const handler = (e: Event) => {
-      const ce = e as CustomEvent<{
-        workspaceId?: string;
-        projectId?: string;
-        moduleId?: string;
-        isFavorite?: boolean;
-      }>;
-      if (ce?.detail?.workspaceId !== workspaceSlug) return;
-      const { moduleId, isFavorite } = ce.detail ?? {};
-
-      // Optimistically remove immediately on un-favorite.
-      if (moduleId && isFavorite === false) {
-        setFavoriteModules((prev) => prev.filter(({ module }) => module.id !== moduleId));
-      }
-
-      // Always reload after a change to ensure names and newly-added items are correct.
-      setModuleFavoritesNonce((n) => n + 1);
-    };
-    window.addEventListener('module-favorites-changed', handler as EventListener);
-    return () => {
-      window.removeEventListener('module-favorites-changed', handler as EventListener);
-    };
-  }, [workspaceSlug]);
-
-  useEffect(() => {
-    if (!workspaceSlug) return;
-    const handler = (e: Event) => {
-      const ce = e as CustomEvent<{
-        workspaceId?: string;
-        projectId?: string;
-        cycleId?: string;
-        isFavorite?: boolean;
-      }>;
-      if (ce?.detail?.workspaceId !== workspaceSlug) return;
-      const { cycleId, isFavorite } = ce.detail ?? {};
-      if (cycleId && isFavorite === false) {
-        setFavoriteCycles((prev) => prev.filter(({ cycle }) => cycle.id !== cycleId));
-      }
-      setCycleFavoritesNonce((n) => n + 1);
-    };
-    window.addEventListener(CYCLE_FAVORITES_CHANGED_EVENT, handler as EventListener);
-    return () => {
-      window.removeEventListener(CYCLE_FAVORITES_CHANGED_EVENT, handler as EventListener);
     };
   }, [workspaceSlug]);
 
@@ -843,7 +673,7 @@ export function Sidebar() {
           maxWidth: `${width}px`,
         }}
         role="complementary"
-        aria-label="Main sidebar"
+        aria-label={t('nav.sidebar.ariaLabel', 'Main sidebar')}
       >
         <aside className="flex h-full w-full flex-col overflow-hidden bg-(--bg-surface-1)">
           {/* 1. Top: Workspace name (left, clickable) + User avatar (right) */}
@@ -855,7 +685,7 @@ export function Sidebar() {
               className="group flex min-w-0 flex-1 items-center gap-2 rounded-(--radius-md) py-0.5 text-left outline-none hover:bg-(--bg-layer-transparent-hover) focus-visible:outline-none"
               aria-expanded={workspaceDropdownOpen}
               aria-haspopup="true"
-              aria-label="Workspace menu"
+              aria-label={t('nav.workspaceMenu', 'Workspace menu')}
             >
               <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-(--radius-md) bg-(--bg-layer-1) text-sm font-semibold text-(--txt-secondary)">
                 {workspace?.logo && getImageUrl(workspace.logo) ? (
@@ -869,7 +699,7 @@ export function Sidebar() {
                 )}
               </div>
               <span className="min-w-0 flex-1 truncate text-sm font-semibold text-(--txt-primary)">
-                {workspace?.name ?? 'Loading…'}
+                {workspace?.name ?? t('common.loading', 'Loading…')}
               </span>
               <span
                 className={cn(
@@ -886,11 +716,15 @@ export function Sidebar() {
                 type="button"
                 onClick={() => setCollapsed(true)}
                 className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover)"
-                aria-label="Collapse sidebar"
+                aria-label={t('common.collapseSidebar', 'Collapse sidebar')}
               >
                 <IconPanelLeft />
               </button>
-              <Avatar name={user?.name ?? 'User'} src={getImageUrl(user?.avatarUrl)} size="sm" />
+              <Avatar
+                name={user?.name ?? t('common.user', 'User')}
+                src={getImageUrl(user?.avatarUrl)}
+                size="sm"
+              />
             </div>
           </div>
 
@@ -928,7 +762,9 @@ export function Sidebar() {
                     <p className="truncate text-sm font-semibold text-(--txt-primary)">
                       {workspace?.name ?? '—'}
                     </p>
-                    <p className="text-xs text-(--txt-tertiary)">Members</p>
+                    <p className="text-xs text-(--txt-tertiary)">
+                      {t('common.members', 'Members')}
+                    </p>
                   </div>
                   <span className="shrink-0 text-(--txt-primary)" aria-hidden>
                     <IconCheck />
@@ -941,7 +777,7 @@ export function Sidebar() {
                     className="flex flex-1 items-center justify-center gap-1 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-1.5 py-1.5 text-[12px] font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover) whitespace-nowrap"
                   >
                     <IconSettings />
-                    Settings
+                    {t('nav.settings', 'Settings')}
                   </Link>
                   <Link
                     to={baseUrl ? `${baseUrl}/settings?section=members` : '/settings'}
@@ -949,7 +785,7 @@ export function Sidebar() {
                     className="flex flex-1 items-center justify-center gap-1 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-1.5 py-1.5 text-[12px] font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover) whitespace-nowrap no-underline"
                   >
                     <IconUserPlus />
-                    Invite members
+                    {t('nav.inviteMembers', 'Invite members')}
                   </Link>
                 </div>
                 <div className="flex flex-col gap-0.5 border-t border-(--border-subtle) pt-3">
@@ -959,7 +795,7 @@ export function Sidebar() {
                     className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-2 text-left text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary) no-underline"
                   >
                     <IconEnvelope />
-                    Workspace invites
+                    {t('nav.workspaceInvites', 'Workspace invites')}
                   </Link>
                   <button
                     type="button"
@@ -970,7 +806,7 @@ export function Sidebar() {
                     className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-2 text-left text-[13px] font-medium text-(--txt-danger-primary) hover:bg-(--bg-danger-subtle) hover:text-(--txt-danger-primary)"
                   >
                     <IconLogOut />
-                    Sign out
+                    {t('nav.signOut', 'Sign out')}
                   </button>
                 </div>
               </div>,
@@ -985,14 +821,14 @@ export function Sidebar() {
               onClick={() => setCreateWorkItemOpen(true)}
             >
               <IconPencil />
-              <span className="truncate">New work item</span>
+              <span className="truncate">{t('nav.newWorkItem', 'New work item')}</span>
             </Button>
             <button
               type="button"
               onClick={() => baseUrl && setCommandPaletteOpen(true)}
               disabled={!baseUrl}
               className="flex size-9 shrink-0 items-center justify-center rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) text-(--txt-icon-tertiary) transition-[background-color,box-shadow,transform] duration-150 hover:bg-(--bg-layer-1-hover) hover:shadow-sm active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40"
-              aria-label="Open command palette"
+              aria-label={t('nav.openCommandPalette', 'Open command palette')}
               aria-keyshortcuts="Control+K Meta+K"
             >
               <IconSearch />
@@ -1023,7 +859,7 @@ export function Sidebar() {
                 >
                   <IconHome />
                 </span>
-                Home
+                {t('nav.home', 'Home')}
               </NavLink>
               <NavLink
                 to={baseUrl ? `${baseUrl}/notifications` : '/'}
@@ -1040,7 +876,7 @@ export function Sidebar() {
                 <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
                   <IconInbox />
                 </span>
-                Inbox
+                {t('nav.inbox', 'Inbox')}
               </NavLink>
               <NavLink
                 to={baseUrl && user ? `${baseUrl}/profile/${user.id}` : baseUrl || '/'}
@@ -1057,7 +893,7 @@ export function Sidebar() {
                 <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
                   <IconUser />
                 </span>
-                Your work
+                {t('nav.yourWork', 'Your work')}
               </NavLink>
             </div>
 
@@ -1069,7 +905,7 @@ export function Sidebar() {
                 className="group flex w-full items-center justify-between gap-2 rounded-(--radius-md) px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-(--txt-placeholder) outline-none hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-secondary)"
                 aria-expanded={workspaceSectionExpanded}
               >
-                <span>Workspace</span>
+                <span>{t('nav.section.workspace', 'Workspace')}</span>
                 <span className="flex size-4 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
                   <IconChevronRight
                     className={cn(
@@ -1096,7 +932,7 @@ export function Sidebar() {
                     <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
                       <IconBriefcase />
                     </span>
-                    Projects
+                    {t('nav.projects', 'Projects')}
                   </NavLink>
                   <NavLink
                     to={baseUrl ? `${baseUrl}/views/all-issues` : '/'}
@@ -1112,7 +948,7 @@ export function Sidebar() {
                     <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
                       <IconLayers />
                     </span>
-                    Views
+                    {t('nav.views', 'Views')}
                   </NavLink>
                   <NavLink
                     to={baseUrl ? `${baseUrl}/analytics` : '/'}
@@ -1129,7 +965,7 @@ export function Sidebar() {
                     <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
                       <IconBarChart />
                     </span>
-                    Analytics
+                    {t('nav.analytics', 'Analytics')}
                   </NavLink>
                   <NavLink
                     to={baseUrl ? `${baseUrl}/drafts` : '/'}
@@ -1146,7 +982,7 @@ export function Sidebar() {
                     <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
                       <IconPencil />
                     </span>
-                    Drafts
+                    {t('nav.drafts', 'Drafts')}
                   </NavLink>
                   <NavLink
                     to={baseUrl ? `${baseUrl}/archives` : '/'}
@@ -1163,7 +999,7 @@ export function Sidebar() {
                     <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
                       <IconArchive />
                     </span>
-                    Archives
+                    {t('nav.archives', 'Archives')}
                   </NavLink>
                 </div>
               )}
@@ -1177,7 +1013,7 @@ export function Sidebar() {
                 className="group flex w-full items-center justify-between gap-2 rounded-(--radius-md) px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-(--txt-placeholder) outline-none hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-secondary)"
                 aria-expanded={favoritesSectionExpanded}
               >
-                <span>Favorites</span>
+                <span>{t('nav.section.favorites', 'Favorites')}</span>
                 <span className="flex size-4 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
                   <IconChevronRight
                     className={cn(
@@ -1218,41 +1054,8 @@ export function Sidebar() {
                       <span className="truncate">{view.name}</span>
                     </Link>
                   ))}
-                  {favoriteModules.length > 0 && (
-                    <>
-                      {favoriteModules.map(({ projectId, module }) => (
-                        <Link
-                          key={`${projectId}:${module.id}`}
-                          to={`${baseUrl}/projects/${projectId}/modules/${slugify(module.name)}`}
-                          className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
-                        >
-                          <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
-                            <IconModuleGrid />
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <span className="truncate">{module.name}</span>
-                          </div>
-                        </Link>
-                      ))}
-                    </>
-                  )}
-                  {favoriteCycles.length > 0 && (
-                    <>
-                      {favoriteCycles.map(({ projectId, cycle }) => (
-                        <Link
-                          key={`${projectId}:${cycle.id}`}
-                          to={`${baseUrl}/projects/${projectId}/cycles/${cyclePathSegment(cycle)}`}
-                          className="flex w-full items-center gap-2 rounded-(--radius-md) px-2 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-primary)"
-                        >
-                          <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
-                            <IconIterationCw />
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <span className="truncate">{cycle.name}</span>
-                          </div>
-                        </Link>
-                      ))}
-                    </>
+                  {workspaceSlug && (
+                    <WorkspaceFavoritesTree workspaceSlug={workspaceSlug} baseUrl={baseUrl} />
                   )}
                 </div>
               )}
@@ -1267,7 +1070,7 @@ export function Sidebar() {
                   className="group flex w-full items-center justify-between gap-2 rounded-(--radius-md) px-2 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-(--txt-placeholder) outline-none hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-secondary)"
                   aria-expanded={projectsSectionExpanded}
                 >
-                  <span>Projects</span>
+                  <span>{t('nav.section.projects', 'Projects')}</span>
                   <span className="flex size-4 shrink-0 items-center justify-center opacity-0 transition-[opacity,transform] duration-150 group-hover:opacity-100">
                     <IconChevronRight
                       className={cn(
@@ -1329,7 +1132,13 @@ export function Sidebar() {
                                 <span className="flex size-4 shrink-0 items-center justify-center text-(--txt-icon-tertiary)">
                                   <Icon />
                                 </span>
-                                {label}
+                                {t(`nav.project.${key}`, label)}
+                                {key === 'intake' && workspaceSlug && (
+                                  <IntakeNavBadge
+                                    workspaceSlug={workspaceSlug}
+                                    projectId={project.id}
+                                  />
+                                )}
                               </NavLink>
                             ))}
                           </div>
@@ -1355,7 +1164,7 @@ export function Sidebar() {
               <button
                 type="button"
                 className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
-                aria-label="Help"
+                aria-label={t('nav.help', 'Help')}
               >
                 <IconHelp />
               </button>
@@ -1363,8 +1172,16 @@ export function Sidebar() {
                 type="button"
                 onClick={() => setCollapsed((c) => !c)}
                 className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
-                aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                aria-label={
+                  collapsed
+                    ? t('common.expandSidebar', 'Expand sidebar')
+                    : t('common.collapseSidebar', 'Collapse sidebar')
+                }
+                title={
+                  collapsed
+                    ? t('common.expandSidebar', 'Expand sidebar')
+                    : t('common.collapseSidebar', 'Collapse sidebar')
+                }
               >
                 <IconPanelLeft />
               </button>
@@ -1382,7 +1199,7 @@ export function Sidebar() {
             type="button"
             onClick={() => setCollapsed(false)}
             className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover)"
-            aria-label="Expand sidebar"
+            aria-label={t('common.expandSidebar', 'Expand sidebar')}
           >
             <span className="rotate-180">
               <IconPanelLeft />
@@ -1393,8 +1210,8 @@ export function Sidebar() {
             onClick={() => baseUrl && setCommandPaletteOpen(true)}
             disabled={!baseUrl}
             className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) transition-colors hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-secondary) disabled:pointer-events-none disabled:opacity-40"
-            aria-label="Open command palette"
-            title="Search"
+            aria-label={t('nav.openCommandPalette', 'Open command palette')}
+            title={t('nav.search', 'Search')}
           >
             <IconSearch />
           </button>

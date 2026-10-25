@@ -1,4 +1,6 @@
 import { GitPullRequest, GitMerge } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import type { GitHubIssueSummaryEntry } from '../../api/types';
 
 interface IssuePRBadgeProps {
@@ -11,10 +13,11 @@ interface IssuePRBadgeProps {
  * tooltip lists the breakdown.
  */
 export function IssuePRBadge({ summary }: IssuePRBadgeProps) {
+  const { t } = useTranslation();
   if (!summary || summary.total === 0) return null;
 
   const { color, icon } = badgeStyle(summary.latest_state);
-  const tooltip = buildTooltip(summary);
+  const tooltip = buildTooltip(summary, t);
 
   return (
     <span
@@ -41,12 +44,12 @@ function badgeStyle(latest: string): { color: string; icon: React.ReactNode } {
   return { color: '#1a7f37', icon: <GitPullRequest className="h-3.5 w-3.5" /> };
 }
 
-function buildTooltip(s: GitHubIssueSummaryEntry): string {
+function buildTooltip(s: GitHubIssueSummaryEntry, t: TFunction): string {
   const parts: string[] = [];
-  parts.push(`${s.total} pull request${s.total === 1 ? '' : 's'}`);
-  if (s.open) parts.push(`${s.open} open`);
-  if (s.merged) parts.push(`${s.merged} merged`);
-  if (s.closed) parts.push(`${s.closed} closed`);
-  if (s.draft) parts.push(`${s.draft} draft`);
+  parts.push(t('workItem.pr.prCount', '{{count}} pull requests', { count: s.total }));
+  if (s.open) parts.push(t('workItem.pr.countOpen', '{{count}} open', { count: s.open }));
+  if (s.merged) parts.push(t('workItem.pr.countMerged', '{{count}} merged', { count: s.merged }));
+  if (s.closed) parts.push(t('workItem.pr.countClosed', '{{count}} closed', { count: s.closed }));
+  if (s.draft) parts.push(t('workItem.pr.countDraft', '{{count}} draft', { count: s.draft }));
   return parts.join(' · ');
 }

@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { SUPPORTED_LANGUAGES, setLanguage as setUiLanguage, type LanguageCode } from '../i18n';
 import { Card, CardContent, Button, Avatar, Modal } from '../components/ui';
 import { CoverImageModal } from '../components/CoverImageModal';
 import { IntegrationsSection } from '../components/integrations/IntegrationsSection';
 import { ProjectEstimatesSettings } from '../components/settings/ProjectEstimatesSettings';
 import { AgentSettingsPanel } from '../components/agents/AgentSettingsPanel';
+import { NotificationPreferencesPanel } from '../components/settings/NotificationPreferencesPanel';
+import { WebhooksSettings } from '../components/settings/WebhooksSettings';
+import { notificationPreferenceService } from '../services/notificationPreferenceService';
+import { accountService } from '../services/accountService';
 import { UploadImageModal } from '../components/UploadImageModal';
 import { ProjectIconModal, ProjectIconDisplay } from '../components/ProjectIconModal';
 import { getImageUrl } from '../lib/utils';
@@ -29,6 +35,7 @@ import type {
   WorkspaceMemberApiResponse,
   UserActivityItem,
   ApiTokenResponse,
+  NotificationPreferencesResponse,
 } from '../api/types';
 import {
   IconGrid,
@@ -59,6 +66,7 @@ import {
   type AccountSettingsSection,
 } from '../components/settings/sections-config';
 import { SettingsNav } from '../components/settings/SettingsNav';
+import { WorkspaceApiTokensPanel } from '../components/settings/WorkspaceApiTokensPanel';
 import { ExportModal } from '../components/settings/modals/ExportModal';
 import { InviteModal } from '../components/settings/modals/InviteModal';
 import { ProjectStateModal } from '../components/settings/modals/ProjectStateModal';
@@ -67,13 +75,14 @@ import { formatRelativeTime, getTimezoneOptions } from '../lib/settingsHelpers';
 
 const COMPANY_SIZES = ['1-10', '11-50', '51-200', '201-500', '500+'];
 export function SettingsPage() {
+  const { t, i18n } = useTranslation();
   const { workspaceSlug, projectId: projectIdFromPath } = useParams<{
     workspaceSlug: string;
     projectId?: string;
   }>();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, setUserFromApi } = useAuth();
+  const { user, setUserFromApi, logout, refreshUser } = useAuth();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMemberApiResponse[]>([]);
@@ -84,7 +93,7 @@ export function SettingsPage() {
   const [projectLabels, setProjectLabels] = useState<LabelApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useDocumentTitle('Settings');
+  useDocumentTitle(t('settings.documentTitle', 'Settings'));
 
   useEffect(() => {
     if (!workspaceSlug) {
@@ -145,6 +154,7 @@ export function SettingsPage() {
     'general',
     'members',
     'features',
+    'notifications',
     'states',
     'labels',
     'estimates',
@@ -161,6 +171,37 @@ export function SettingsPage() {
   const selectedProject = selectedProjectId
     ? (projects.find((p) => p.id === selectedProjectId) ?? null)
     : null;
+
+  // Notification preference load/save, one pair per scope. Kept stable so the
+  // panel's effect only re-runs when the target scope changes.
+  const loadAccountNotifPrefs = useCallback(() => userService.getNotificationPreferences(), []);
+  const saveAccountNotifPrefs = useCallback(
+    (partial: Partial<NotificationPreferencesResponse>) =>
+      userService.updateNotificationPreferences(partial),
+    [],
+  );
+  const loadWorkspaceNotifPrefs = useCallback(
+    () => notificationPreferenceService.getWorkspace(workspaceSlug ?? ''),
+    [workspaceSlug],
+  );
+  const saveWorkspaceNotifPrefs = useCallback(
+    (partial: Partial<NotificationPreferencesResponse>) =>
+      notificationPreferenceService.updateWorkspace(workspaceSlug ?? '', partial),
+    [workspaceSlug],
+  );
+  const loadProjectNotifPrefs = useCallback(
+    () => notificationPreferenceService.getProject(workspaceSlug ?? '', selectedProjectId ?? ''),
+    [workspaceSlug, selectedProjectId],
+  );
+  const saveProjectNotifPrefs = useCallback(
+    (partial: Partial<NotificationPreferencesResponse>) =>
+      notificationPreferenceService.updateProject(
+        workspaceSlug ?? '',
+        selectedProjectId ?? '',
+        partial,
+      ),
+    [workspaceSlug, selectedProjectId],
+  );
   const pendingInvites = workspaceInvites.filter((i) => !i.accepted);
   const pendingProjectInvites = projectInvites.filter((i) => !i.accepted);
 
@@ -222,8 +263,8 @@ export function SettingsPage() {
       setProjectName(selectedProject.name);
       setProjectDescription(selectedProject.description ?? '');
       if (selectedProject.timezone != null) setProjectTimezone(selectedProject.timezone);
-      // Derive Network dropdown value from guest_view_all_features so it reflects persisted visibility
-      setProjectNetwork(selectedProject.guest_view_all_features ? 'public' : 'private');
+      // Reflect the project's persisted network visibility (2 = public, 0 = secret).
+      setProjectNetwork(selectedProject.network === 0 ? 'private' : 'public');
       setProjectLeadId(selectedProject.project_lead_id ?? null);
       setDefaultAssigneeId(selectedProject.default_assignee_id ?? null);
       setGuestAccess(selectedProject.guest_view_all_features ?? false);
@@ -233,6 +274,12 @@ export function SettingsPage() {
       setFeaturePages(selectedProject.page_view ?? true);
       setFeatureIntake(selectedProject.intake_view ?? false);
       setFeatureTimeTracking(selectedProject.is_time_tracking_enabled ?? false);
+      const months = selectedProject.archive_in ?? 0;
+      setAutoArchive(months > 0);
+      if (months > 0) setAutoArchiveMonths(months);
+      const closeMonths = selectedProject.close_in ?? 0;
+      setAutoClose(closeMonths > 0);
+      if (closeMonths > 0) setAutoCloseMonths(closeMonths);
     }
   }, [
     selectedProject,
@@ -243,13 +290,60 @@ export function SettingsPage() {
     selectedProject?.project_lead_id,
     selectedProject?.default_assignee_id,
     selectedProject?.guest_view_all_features,
+    selectedProject?.network,
     selectedProject?.cycle_view,
     selectedProject?.module_view,
     selectedProject?.issue_views_view,
     selectedProject?.page_view,
     selectedProject?.intake_view,
     selectedProject?.is_time_tracking_enabled,
+    selectedProject?.archive_in,
+    selectedProject?.close_in,
   ]);
+
+  // Persist the auto-archive automation: archive_in is the number of months (0
+  // disables it). Optimistically flips the toggle, then saves.
+  const persistAutoArchive = async (enabled: boolean, months: number) => {
+    if (!workspaceSlug || !selectedProjectId) return;
+    setAutoArchive(enabled);
+    setAutoArchiveMonths(months);
+    setAutoArchiveSaving(true);
+    try {
+      const updated = await projectService.update(workspaceSlug, selectedProjectId, {
+        archive_in: enabled ? months : 0,
+      });
+      setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    } catch {
+      // Revert the toggle to the persisted value on failure.
+      const persisted = selectedProject?.archive_in ?? 0;
+      setAutoArchive(persisted > 0);
+      if (persisted > 0) setAutoArchiveMonths(persisted);
+    } finally {
+      setAutoArchiveSaving(false);
+    }
+  };
+
+  // Persist the auto-close automation: close_in is the number of months (0
+  // disables it). Optimistically flips the toggle, then saves.
+  const persistAutoClose = async (enabled: boolean, months: number) => {
+    if (!workspaceSlug || !selectedProjectId) return;
+    setAutoClose(enabled);
+    setAutoCloseMonths(months);
+    setAutoCloseSaving(true);
+    try {
+      const updated = await projectService.update(workspaceSlug, selectedProjectId, {
+        close_in: enabled ? months : 0,
+      });
+      setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    } catch {
+      // Revert the toggle to the persisted value on failure.
+      const persisted = selectedProject?.close_in ?? 0;
+      setAutoClose(persisted > 0);
+      if (persisted > 0) setAutoCloseMonths(persisted);
+    } finally {
+      setAutoCloseSaving(false);
+    }
+  };
 
   const [workspaceName, setWorkspaceName] = useState('');
   const [companySize, setCompanySize] = useState('51-200');
@@ -266,15 +360,106 @@ export function SettingsPage() {
   const [displayName, setDisplayName] = useState(user?.name?.split(' ')[0]?.toLowerCase() ?? '');
   const [profileEmail, setProfileEmail] = useState(user?.email ?? '');
   const [deactivateOpen, setDeactivateOpen] = useState(false);
+  const [deactivateConfirmOpen, setDeactivateConfirmOpen] = useState(false);
+  const [deactivateBusy, setDeactivateBusy] = useState(false);
+  const [deactivateError, setDeactivateError] = useState<string | null>(null);
+  // Email-change flow: 'idle' (show Change), 'request' (enter new email),
+  // 'verify' (enter the emailed code).
+  const [emailChangeStep, setEmailChangeStep] = useState<'idle' | 'request' | 'verify'>('idle');
+  const [emailChangeNew, setEmailChangeNew] = useState('');
+  const [emailChangeCode, setEmailChangeCode] = useState('');
+  const [emailChangeError, setEmailChangeError] = useState<string | null>(null);
+  const [emailChangeBusy, setEmailChangeBusy] = useState(false);
+
+  const apiErrorMessage = (e: unknown, fallback: string): string => {
+    if (
+      e &&
+      typeof e === 'object' &&
+      'response' in e &&
+      typeof (e as { response?: { data?: { error?: string } } }).response?.data?.error === 'string'
+    ) {
+      return (e as { response: { data: { error: string } } }).response.data.error;
+    }
+    return fallback;
+  };
+
+  // Bumped whenever the email-change flow is reset/cancelled; in-flight requests
+  // captured an earlier value and bail out instead of resurrecting the panel.
+  const emailFlowToken = useRef(0);
+
+  const resetEmailChange = () => {
+    emailFlowToken.current += 1;
+    setEmailChangeStep('idle');
+    setEmailChangeNew('');
+    setEmailChangeCode('');
+    setEmailChangeError(null);
+    setEmailChangeBusy(false);
+  };
+
+  const requestEmailChange = async () => {
+    const token = emailFlowToken.current;
+    setEmailChangeError(null);
+    setEmailChangeBusy(true);
+    try {
+      await accountService.requestEmailChange(emailChangeNew.trim());
+      if (emailFlowToken.current !== token) return;
+      setEmailChangeStep('verify');
+    } catch (e: unknown) {
+      if (emailFlowToken.current !== token) return;
+      setEmailChangeError(
+        apiErrorMessage(
+          e,
+          t('settings.account.emailChange.sendError', 'Failed to send the confirmation code'),
+        ),
+      );
+    } finally {
+      if (emailFlowToken.current === token) setEmailChangeBusy(false);
+    }
+  };
+
+  const verifyEmailChange = async () => {
+    const token = emailFlowToken.current;
+    setEmailChangeError(null);
+    setEmailChangeBusy(true);
+    try {
+      const updated = await accountService.verifyEmailChange(emailChangeCode.trim());
+      if (emailFlowToken.current !== token) return;
+      setProfileEmail(updated);
+      await refreshUser();
+      if (emailFlowToken.current !== token) return;
+      resetEmailChange();
+    } catch (e: unknown) {
+      if (emailFlowToken.current !== token) return;
+      setEmailChangeError(
+        apiErrorMessage(
+          e,
+          t('settings.account.emailChange.confirmError', 'Failed to confirm the new email'),
+        ),
+      );
+    } finally {
+      if (emailFlowToken.current === token) setEmailChangeBusy(false);
+    }
+  };
+
+  const deactivateAccount = async () => {
+    setDeactivateError(null);
+    setDeactivateBusy(true);
+    try {
+      await accountService.deactivate();
+      await logout();
+    } catch (e: unknown) {
+      setDeactivateError(
+        apiErrorMessage(
+          e,
+          t('settings.account.deactivate.error', 'Failed to deactivate account. Please try again.'),
+        ),
+      );
+      setDeactivateBusy(false);
+    }
+  };
   const { theme, setTheme } = useTheme();
   const [firstDayOfWeek, setFirstDayOfWeek] = useState('monday');
   const [timezone, setTimezone] = useState('UTC');
-  const [language, setLanguage] = useState('en');
-  const [notifProperty, setNotifProperty] = useState(true);
-  const [notifState, setNotifState] = useState(true);
-  const [notifCompleted, setNotifCompleted] = useState(true);
-  const [notifComments, setNotifComments] = useState(true);
-  const [notifMentions, setNotifMentions] = useState(true);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -291,6 +476,7 @@ export function SettingsPage() {
   const [projectMembersSearch, setProjectMembersSearch] = useState('');
   const [projectUpdateLoading, setProjectUpdateLoading] = useState(false);
   const [projectUpdateError, setProjectUpdateError] = useState<string | null>(null);
+  const [archivingProject, setArchivingProject] = useState(false);
   const [inviteTarget, setInviteTarget] = useState<'workspace' | 'project' | null>(null);
   const [projectLabelModalOpen, setProjectLabelModalOpen] = useState(false);
   const [projectLabelEdit, setProjectLabelEdit] = useState<LabelApiResponse | null>(null);
@@ -358,8 +544,12 @@ export function SettingsPage() {
   const [featurePages, setFeaturePages] = useState(true);
   const [featureIntake, setFeatureIntake] = useState(false);
   const [featureTimeTracking, setFeatureTimeTracking] = useState(false);
-  const [autoArchive, setAutoArchive] = useState(true);
-  const [autoClose, setAutoClose] = useState(true);
+  const [autoArchive, setAutoArchive] = useState(false);
+  const [autoArchiveMonths, setAutoArchiveMonths] = useState(3);
+  const [autoArchiveSaving, setAutoArchiveSaving] = useState(false);
+  const [autoClose, setAutoClose] = useState(false);
+  const [autoCloseMonths, setAutoCloseMonths] = useState(3);
+  const [autoCloseSaving, setAutoCloseSaving] = useState(false);
   const [pendingInvitesExpanded, setPendingInvitesExpanded] = useState(true);
   const [pendingInviteMenuId, setPendingInviteMenuId] = useState<string | null>(null);
   const pendingInviteMenuRef = useRef<HTMLDivElement>(null);
@@ -423,7 +613,6 @@ export function SettingsPage() {
   const [projectTimezoneDropdownOpen, setProjectTimezoneDropdownOpen] = useState(false);
   const [projectTimezoneSearch, setProjectTimezoneSearch] = useState('');
   const projectTimezoneDropdownRef = useRef<HTMLDivElement>(null);
-  const [notifPrefsLoaded, setNotifPrefsLoaded] = useState(false);
   const [changePasswordLoading, setChangePasswordLoading] = useState(false);
   const [changePasswordError, setChangePasswordError] = useState<string | null>(null);
   const [activityList, setActivityList] = useState<UserActivityItem[]>([]);
@@ -477,29 +666,6 @@ export function SettingsPage() {
       cancelled = true;
     };
   }, [isAccountTab, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps -- user for prefetch; kept for future use
-
-  useEffect(() => {
-    if (!isAccountTab || accountSection !== 'notifications') return;
-    let cancelled = false;
-    setNotifPrefsLoaded(false);
-    userService
-      .getNotificationPreferences()
-      .then((p) => {
-        if (cancelled) return;
-        setNotifProperty(p.property_change);
-        setNotifState(p.state_change);
-        setNotifComments(p.comment);
-        setNotifMentions(p.mention);
-        setNotifCompleted(p.issue_completed);
-        setNotifPrefsLoaded(true);
-      })
-      .catch(() => {
-        if (!cancelled) setNotifPrefsLoaded(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isAccountTab, accountSection]);
 
   useEffect(() => {
     if (!isAccountTab || accountSection !== 'activity') return;
@@ -613,13 +779,15 @@ export function SettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-        Loading…
+        {t('common.loading', 'Loading…')}
       </div>
     );
   }
   if (!workspace) {
     return (
-      <div className="px-(--padding-page) py-8 text-(--txt-secondary)">Workspace not found.</div>
+      <div className="px-(--padding-page) py-8 text-(--txt-secondary)">
+        {t('settings.workspaceNotFound', 'Workspace not found.')}
+      </div>
     );
   }
 
@@ -633,7 +801,7 @@ export function SettingsPage() {
     if (display) return display;
     const emailUser = m?.member_email?.split('@')[0]?.trim();
     if (emailUser) return emailUser;
-    return 'Member';
+    return t('settings.members.fallbackName', 'Member');
   };
 
   const setSection = (s: WorkspaceSettingsSection) => {
@@ -669,7 +837,7 @@ export function SettingsPage() {
               : 'border-transparent text-(--txt-secondary) hover:text-(--txt-primary)'
           }`}
         >
-          Account
+          {t('settings.tabs.account', 'Account')}
         </Link>
         <Link
           to={baseSettingsUrl}
@@ -679,7 +847,7 @@ export function SettingsPage() {
               : 'border-transparent text-(--txt-secondary) hover:text-(--txt-primary)'
           }`}
         >
-          Workspace
+          {t('settings.tabs.workspace', 'Workspace')}
         </Link>
         <Link
           to={projectsSettingsUrl}
@@ -689,7 +857,7 @@ export function SettingsPage() {
               : 'border-transparent text-(--txt-secondary) hover:text-(--txt-primary)'
           }`}
         >
-          Projects
+          {t('settings.tabs.projects', 'Projects')}
         </Link>
       </div>
 
@@ -741,14 +909,17 @@ export function SettingsPage() {
                   className="absolute bottom-2 right-2 z-10 gap-1.5 text-[13px]"
                   onClick={() => setAccountCoverModalOpen(true)}
                 >
-                  Change cover
+                  {t('settings.cover.change', 'Change cover')}
                 </Button>
                 <div className="absolute bottom-0 left-4 -mb-8 z-10">
                   <button
                     type="button"
                     onClick={() => setAccountAvatarModalOpen(true)}
                     className="block h-24 w-20 overflow-hidden rounded-xl focus:outline-none focus:ring-2 focus:ring-(--brand-default)"
-                    aria-label="Change profile picture"
+                    aria-label={t(
+                      'settings.account.changeProfilePicture',
+                      'Change profile picture',
+                    )}
                   >
                     {getImageUrl(user?.avatarUrl) ? (
                       <img
@@ -778,7 +949,8 @@ export function SettingsPage() {
               <div className="grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    First name <span className="text-(--txt-danger-primary)">*</span>
+                    {t('settings.account.firstName', 'First name')}{' '}
+                    <span className="text-(--txt-danger-primary)">*</span>
                   </label>
                   <input
                     type="text"
@@ -789,7 +961,7 @@ export function SettingsPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    Last name
+                    {t('settings.account.lastName', 'Last name')}
                   </label>
                   <input
                     type="text"
@@ -800,7 +972,8 @@ export function SettingsPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    Display name <span className="text-(--txt-danger-primary)">*</span>
+                    {t('settings.account.displayName', 'Display name')}{' '}
+                    <span className="text-(--txt-danger-primary)">*</span>
                   </label>
                   <input
                     type="text"
@@ -811,15 +984,103 @@ export function SettingsPage() {
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    Email <span className="text-(--txt-danger-primary)">*</span>
+                    {t('settings.account.email', 'Email')}{' '}
+                    <span className="text-(--txt-danger-primary)">*</span>
                   </label>
-                  <input
-                    type="email"
-                    value={profileEmail}
-                    readOnly
-                    disabled
-                    className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-2 text-sm text-(--txt-tertiary) cursor-not-allowed"
-                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="email"
+                      value={profileEmail}
+                      readOnly
+                      disabled
+                      className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-2 text-sm text-(--txt-tertiary) cursor-not-allowed"
+                    />
+                    {emailChangeStep === 'idle' && (
+                      <Button
+                        variant="secondary"
+                        className="shrink-0"
+                        onClick={() => {
+                          setEmailChangeError(null);
+                          setEmailChangeNew('');
+                          setEmailChangeStep('request');
+                        }}
+                      >
+                        {t('common.change', 'Change')}
+                      </Button>
+                    )}
+                  </div>
+                  {emailChangeStep === 'request' && (
+                    <div className="mt-2 space-y-2 rounded-(--radius-md) border border-(--border-subtle) p-3">
+                      <p className="text-sm text-(--txt-secondary)">
+                        {t(
+                          'settings.account.emailChange.requestPrompt',
+                          "Enter your new email. We'll send a confirmation code to it.",
+                        )}
+                      </p>
+                      <input
+                        type="email"
+                        value={emailChangeNew}
+                        onChange={(e) => setEmailChangeNew(e.target.value)}
+                        placeholder={t(
+                          'settings.account.emailChange.newEmailPlaceholder',
+                          'new@email.com',
+                        )}
+                        className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          disabled={emailChangeBusy || !emailChangeNew.trim()}
+                          onClick={requestEmailChange}
+                        >
+                          {emailChangeBusy
+                            ? t('settings.account.emailChange.sending', 'Sending…')
+                            : t('settings.account.emailChange.sendCode', 'Send code')}
+                        </Button>
+                        <Button variant="secondary" onClick={resetEmailChange}>
+                          {t('common.cancel', 'Cancel')}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  {emailChangeStep === 'verify' && (
+                    <div className="mt-2 space-y-2 rounded-(--radius-md) border border-(--border-subtle) p-3">
+                      <p className="text-sm text-(--txt-secondary)">
+                        <Trans
+                          i18nKey="settings.account.emailChange.verifyPrompt"
+                          defaults="Enter the code we sent to <b>{{email}}</b>."
+                          values={{ email: emailChangeNew.trim() }}
+                          components={{ b: <span className="text-(--txt-primary)" /> }}
+                        />
+                      </p>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={emailChangeCode}
+                        onChange={(e) => setEmailChangeCode(e.target.value)}
+                        placeholder={t(
+                          'settings.account.emailChange.codePlaceholder',
+                          '6-digit code',
+                        )}
+                        className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          disabled={emailChangeBusy || !emailChangeCode.trim()}
+                          onClick={verifyEmailChange}
+                        >
+                          {emailChangeBusy
+                            ? t('settings.account.emailChange.confirming', 'Confirming…')
+                            : t('settings.account.emailChange.confirmEmail', 'Confirm email')}
+                        </Button>
+                        <Button variant="secondary" onClick={resetEmailChange}>
+                          {t('common.cancel', 'Cancel')}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  {emailChangeError && (
+                    <p className="mt-1 text-sm text-(--txt-danger-primary)">{emailChangeError}</p>
+                  )}
                 </div>
               </div>
               {profileError && (
@@ -845,14 +1106,16 @@ export function SettingsPage() {
                         typeof (e as { response?: { data?: { error?: string } } }).response?.data
                           ?.error === 'string'
                         ? (e as { response: { data: { error: string } } }).response.data.error
-                        : 'Failed to save profile',
+                        : t('settings.account.profileSaveError', 'Failed to save profile'),
                     );
                   } finally {
                     setProfileSaveLoading(false);
                   }
                 }}
               >
-                {profileSaveLoading ? 'Saving…' : 'Save changes'}
+                {profileSaveLoading
+                  ? t('common.saving', 'Saving…')
+                  : t('settings.account.saveChanges', 'Save changes')}
               </Button>
               <Card variant="outlined" className="border-(--border-subtle)">
                 <button
@@ -861,7 +1124,7 @@ export function SettingsPage() {
                   className="flex w-full items-center justify-between px-4 py-3 text-left"
                 >
                   <span className="text-sm font-medium text-(--txt-danger-primary)">
-                    Deactivate account
+                    {t('settings.account.deactivate.title', 'Deactivate account')}
                   </span>
                   <span
                     className={`text-(--txt-icon-tertiary) transition-transform ${deactivateOpen ? 'rotate-180' : ''}`}
@@ -872,14 +1135,66 @@ export function SettingsPage() {
                 {deactivateOpen && (
                   <CardContent className="border-t border-(--border-subtle) pt-3">
                     <p className="text-sm text-(--txt-secondary)">
-                      This action cannot be undone. Your account will be deactivated.
+                      {t(
+                        'settings.account.deactivate.description',
+                        'This deactivates your account and signs you out everywhere. Reactivating it requires an administrator.',
+                      )}
                     </p>
-                    <Button variant="secondary" className="mt-3 text-(--txt-danger-primary)">
-                      Deactivate account
+                    <Button
+                      variant="secondary"
+                      className="mt-3 text-(--txt-danger-primary)"
+                      disabled={deactivateBusy}
+                      onClick={() => setDeactivateConfirmOpen(true)}
+                    >
+                      {deactivateBusy
+                        ? t('settings.account.deactivate.busy', 'Deactivating…')
+                        : t('settings.account.deactivate.title', 'Deactivate account')}
                     </Button>
                   </CardContent>
                 )}
               </Card>
+              <Modal
+                open={deactivateConfirmOpen}
+                onClose={() => {
+                  if (deactivateBusy) return;
+                  setDeactivateError(null);
+                  setDeactivateConfirmOpen(false);
+                }}
+                title={t('settings.account.deactivate.confirmTitle', 'Deactivate account?')}
+              >
+                <div className="space-y-4">
+                  <p className="text-sm text-(--txt-secondary)">
+                    {t(
+                      'settings.account.deactivate.confirmBody',
+                      "You'll be signed out everywhere and won't be able to sign back in. Reactivating your account requires an administrator.",
+                    )}
+                  </p>
+                  {deactivateError && (
+                    <p className="text-sm text-(--txt-danger-primary)">{deactivateError}</p>
+                  )}
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="secondary"
+                      disabled={deactivateBusy}
+                      onClick={() => {
+                        setDeactivateError(null);
+                        setDeactivateConfirmOpen(false);
+                      }}
+                    >
+                      {t('common.cancel', 'Cancel')}
+                    </Button>
+                    <Button
+                      className="text-(--txt-danger-primary)"
+                      disabled={deactivateBusy}
+                      onClick={() => void deactivateAccount()}
+                    >
+                      {deactivateBusy
+                        ? t('settings.account.deactivate.busy', 'Deactivating…')
+                        : t('settings.account.deactivate.confirm', 'Deactivate')}
+                    </Button>
+                  </div>
+                </div>
+              </Modal>
               <CoverImageModal
                 open={accountCoverModalOpen}
                 onClose={() => setAccountCoverModalOpen(false)}
@@ -893,7 +1208,7 @@ export function SettingsPage() {
                     // error could be shown in modal or toast
                   }
                 }}
-                title="Select cover image"
+                title={t('settings.account.selectCoverImage', 'Select cover image')}
               />
               <UploadImageModal
                 open={accountAvatarModalOpen}
@@ -906,7 +1221,7 @@ export function SettingsPage() {
                     // error shown in modal
                   }
                 }}
-                title="Upload profile picture"
+                title={t('settings.account.uploadProfilePicture', 'Upload profile picture')}
               />
             </div>
           )}
@@ -914,23 +1229,33 @@ export function SettingsPage() {
           {isAccountTab && accountSection === 'preferences' && (
             <div className="space-y-8">
               <div>
-                <h2 className="text-base font-semibold text-(--txt-primary)">Preferences</h2>
+                <h2 className="text-base font-semibold text-(--txt-primary)">
+                  {t('settings.preferences.title', 'Preferences')}
+                </h2>
                 <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                  Customize your app experience the way you work
+                  {t(
+                    'settings.preferences.subtitle',
+                    'Customize your app experience the way you work',
+                  )}
                 </p>
               </div>
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-(--txt-primary)">Theme</label>
+                  <label className="block text-sm font-medium text-(--txt-primary)">
+                    {t('settings.preferences.theme.title', 'Theme')}
+                  </label>
                   <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                    Select or customize your interface color scheme.
+                    {t(
+                      'settings.preferences.theme.help',
+                      'Select or customize your interface color scheme.',
+                    )}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2.5">
                     {(
                       [
                         {
                           value: 'light' as ThemePreference,
-                          label: 'Light',
+                          label: t('settings.preferences.theme.light', 'Light'),
                           bg: '#f4f5f7',
                           surface: '#ffffff',
                           brand: '#4b72c4',
@@ -938,7 +1263,7 @@ export function SettingsPage() {
                         },
                         {
                           value: 'dark' as ThemePreference,
-                          label: 'Dark',
+                          label: t('settings.preferences.theme.dark', 'Dark'),
                           bg: '#1f2227',
                           surface: '#27292e',
                           brand: '#5e8de8',
@@ -946,7 +1271,7 @@ export function SettingsPage() {
                         },
                         {
                           value: 'pink' as ThemePreference,
-                          label: 'Pink',
+                          label: t('settings.preferences.theme.pink', 'Pink'),
                           bg: '#fce8ef',
                           surface: '#fff5f8',
                           brand: '#c4336a',
@@ -954,7 +1279,7 @@ export function SettingsPage() {
                         },
                         {
                           value: 'system' as ThemePreference,
-                          label: 'System',
+                          label: t('settings.preferences.theme.system', 'System'),
                           bg: 'linear-gradient(135deg,#1f2227 50%,#f4f5f7 50%)',
                           surface: null,
                           brand: null,
@@ -1050,10 +1375,13 @@ export function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-(--txt-primary)">
-                    First day of the week
+                    {t('settings.preferences.firstDayOfWeek.title', 'First day of the week')}
                   </label>
                   <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                    This will change how all calendars in your app look.
+                    {t(
+                      'settings.preferences.firstDayOfWeek.help',
+                      'This will change how all calendars in your app look.',
+                    )}
                   </p>
                   <div className="relative mt-2 max-w-xs">
                     <select
@@ -1061,8 +1389,12 @@ export function SettingsPage() {
                       onChange={(e) => setFirstDayOfWeek(e.target.value)}
                       className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                     >
-                      <option value="sunday">Sunday</option>
-                      <option value="monday">Monday</option>
+                      <option value="sunday">
+                        {t('settings.preferences.firstDayOfWeek.sunday', 'Sunday')}
+                      </option>
+                      <option value="monday">
+                        {t('settings.preferences.firstDayOfWeek.monday', 'Monday')}
+                      </option>
                     </select>
                     <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                       <IconChevronDown />
@@ -1071,14 +1403,16 @@ export function SettingsPage() {
                 </div>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-(--txt-primary)">Language & Time</h3>
+                <h3 className="text-sm font-semibold text-(--txt-primary)">
+                  {t('settings.preferences.languageAndTime', 'Language & Time')}
+                </h3>
                 <div className="mt-4 space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-(--txt-primary)">
-                      Timezone
+                      {t('settings.preferences.timezone.title', 'Timezone')}
                     </label>
                     <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                      Current timezone setting.
+                      {t('settings.preferences.timezone.help', 'Current timezone setting.')}
                     </p>
                     <div className="relative mt-2 max-w-xs" ref={timezoneDropdownRef}>
                       <button
@@ -1102,7 +1436,7 @@ export function SettingsPage() {
                                 type="text"
                                 value={timezoneSearch}
                                 onChange={(e) => setTimezoneSearch(e.target.value)}
-                                placeholder="Search"
+                                placeholder={t('common.search', 'Search')}
                                 className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) outline-none placeholder:text-(--txt-placeholder)"
                               />
                             </div>
@@ -1129,18 +1463,25 @@ export function SettingsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-(--txt-primary)">
-                      Language
+                      {t('settings.preferences.language.title', 'Language')}
                     </label>
                     <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                      Choose the language used in the user interface.
+                      {t(
+                        'settings.preferences.language.help',
+                        'Choose the language used in the user interface.',
+                      )}
                     </p>
                     <div className="relative mt-2 max-w-xs">
                       <select
-                        value={language}
-                        onChange={(e) => setLanguage(e.target.value)}
+                        value={i18n.resolvedLanguage ?? i18n.language}
+                        onChange={(e) => setUiLanguage(e.target.value as LanguageCode)}
                         className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                       >
-                        <option value="en">English</option>
+                        {SUPPORTED_LANGUAGES.map((lng) => (
+                          <option key={lng.code} value={lng.code}>
+                            {lng.label}
+                          </option>
+                        ))}
                       </select>
                       <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                         <IconChevronDown />
@@ -1160,127 +1501,52 @@ export function SettingsPage() {
                   }
                 }}
               >
-                {preferencesSaveLoading ? 'Saving…' : 'Save preferences'}
+                {preferencesSaveLoading
+                  ? t('common.saving', 'Saving…')
+                  : t('settings.preferences.save', 'Save preferences')}
               </Button>
             </div>
           )}
 
           {isAccountTab && accountSection === 'notifications' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-base font-semibold text-(--txt-primary)">
-                  Email notifications
-                </h2>
-                <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                  Stay in the loop on Work items you are subscribed to. Enable this to get notified.
-                </p>
-              </div>
-              <div className="space-y-4">
-                {[
-                  {
-                    id: 'property',
-                    label: 'Property changes',
-                    desc: "Notify me when work items' properties like assignees, priority, estimates or anything else changes.",
-                    value: notifProperty,
-                    set: setNotifProperty,
-                    key: 'property_change' as const,
-                  },
-                  {
-                    id: 'state',
-                    label: 'State change',
-                    desc: 'Notify me when the work items moves to a different state',
-                    value: notifState,
-                    set: setNotifState,
-                    key: 'state_change' as const,
-                  },
-                  {
-                    id: 'completed',
-                    label: 'Work item completed',
-                    desc: 'Notify me only when a work item is completed',
-                    value: notifCompleted,
-                    set: setNotifCompleted,
-                    key: 'issue_completed' as const,
-                  },
-                  {
-                    id: 'comments',
-                    label: 'Comments',
-                    desc: 'Notify me when someone leaves a comment on the work item',
-                    value: notifComments,
-                    set: setNotifComments,
-                    key: 'comment' as const,
-                  },
-                  {
-                    id: 'mentions',
-                    label: 'Mentions',
-                    desc: 'Notify me only when someone mentions me in the comments or description',
-                    value: notifMentions,
-                    set: setNotifMentions,
-                    key: 'mention' as const,
-                  },
-                ].map(({ id, label, desc, value, set, key }) => (
-                  <div
-                    key={id}
-                    className="flex items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3"
-                  >
-                    <div>
-                      <p
-                        id={`notif-toggle-label-${id}`}
-                        className="text-sm font-medium text-(--txt-primary)"
-                      >
-                        {label}
-                      </p>
-                      <p className="mt-0.5 text-sm text-(--txt-secondary)">{desc}</p>
-                    </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={value}
-                      aria-labelledby={`notif-toggle-label-${id}`}
-                      disabled={!notifPrefsLoaded}
-                      onClick={async () => {
-                        const next = !value;
-                        set(next);
-                        try {
-                          await userService.updateNotificationPreferences({
-                            [key]: next,
-                          });
-                        } catch {
-                          set(value);
-                        }
-                      }}
-                      className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${value ? 'bg-(--brand-default)' : 'bg-(--neutral-400)'}`}
-                    >
-                      <span
-                        className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-4' : 'translate-x-0'}`}
-                      />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <NotificationPreferencesPanel
+              load={loadAccountNotifPrefs}
+              save={saveAccountNotifPrefs}
+              title={t('settings.notifications.account.title', 'Notifications')}
+              description={t(
+                'settings.notifications.account.description',
+                'Your default notifications across every workspace. Workspaces and projects can override these.',
+              )}
+            />
           )}
 
           {isAccountTab && accountSection === 'security' && (
             <div className="space-y-6">
-              <h2 className="text-base font-semibold text-(--txt-primary)">Change password</h2>
+              <h2 className="text-base font-semibold text-(--txt-primary)">
+                {t('settings.security.changePassword', 'Change password')}
+              </h2>
               <div className="max-w-md space-y-4">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    Current password
+                    {t('settings.security.currentPassword', 'Current password')}
                   </label>
                   <div className="relative">
                     <input
                       type={showCurrentPass ? 'text' : 'password'}
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Old password"
+                      placeholder={t('settings.security.oldPasswordPlaceholder', 'Old password')}
                       className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-9 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                     />
                     <button
                       type="button"
                       onClick={() => setShowCurrentPass(!showCurrentPass)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary) hover:text-(--txt-secondary)"
-                      aria-label={showCurrentPass ? 'Hide password' : 'Show password'}
+                      aria-label={
+                        showCurrentPass
+                          ? t('settings.security.hidePassword', 'Hide password')
+                          : t('settings.security.showPassword', 'Show password')
+                      }
                     >
                       {showCurrentPass ? <IconEyeOff /> : <IconEye />}
                     </button>
@@ -1288,21 +1554,28 @@ export function SettingsPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    New password
+                    {t('settings.security.newPassword', 'New password')}
                   </label>
                   <div className="relative">
                     <input
                       type={showNewPass ? 'text' : 'password'}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter new password"
+                      placeholder={t(
+                        'settings.security.newPasswordPlaceholder',
+                        'Enter new password',
+                      )}
                       className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-9 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                     />
                     <button
                       type="button"
                       onClick={() => setShowNewPass(!showNewPass)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary) hover:text-(--txt-secondary)"
-                      aria-label={showNewPass ? 'Hide password' : 'Show password'}
+                      aria-label={
+                        showNewPass
+                          ? t('settings.security.hidePassword', 'Hide password')
+                          : t('settings.security.showPassword', 'Show password')
+                      }
                     >
                       {showNewPass ? <IconEyeOff /> : <IconEye />}
                     </button>
@@ -1310,21 +1583,28 @@ export function SettingsPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    Confirm password
+                    {t('settings.security.confirmPassword', 'Confirm password')}
                   </label>
                   <div className="relative">
                     <input
                       type={showConfirmPass ? 'text' : 'password'}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Confirm password"
+                      placeholder={t(
+                        'settings.security.confirmPasswordPlaceholder',
+                        'Confirm password',
+                      )}
                       className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-9 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPass(!showConfirmPass)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary) hover:text-(--txt-secondary)"
-                      aria-label={showConfirmPass ? 'Hide password' : 'Show password'}
+                      aria-label={
+                        showConfirmPass
+                          ? t('settings.security.hidePassword', 'Hide password')
+                          : t('settings.security.showPassword', 'Show password')
+                      }
                     >
                       {showConfirmPass ? <IconEyeOff /> : <IconEye />}
                     </button>
@@ -1345,11 +1625,21 @@ export function SettingsPage() {
                 onClick={async () => {
                   setChangePasswordError(null);
                   if (newPassword.length < 8) {
-                    setChangePasswordError('New password must be at least 8 characters');
+                    setChangePasswordError(
+                      t(
+                        'settings.security.passwordTooShort',
+                        'New password must be at least 8 characters',
+                      ),
+                    );
                     return;
                   }
                   if (newPassword !== confirmPassword) {
-                    setChangePasswordError('New password and confirmation do not match');
+                    setChangePasswordError(
+                      t(
+                        'settings.security.passwordMismatch',
+                        'New password and confirmation do not match',
+                      ),
+                    );
                     return;
                   }
                   setChangePasswordLoading(true);
@@ -1369,14 +1659,16 @@ export function SettingsPage() {
                       typeof (e as { response?: { data?: { error?: string } } }).response?.data
                         ?.error === 'string'
                         ? (e as { response: { data: { error: string } } }).response.data.error
-                        : 'Failed to change password';
+                        : t('settings.security.changeError', 'Failed to change password');
                     setChangePasswordError(msg);
                   } finally {
                     setChangePasswordLoading(false);
                   }
                 }}
               >
-                {changePasswordLoading ? 'Changing…' : 'Change password'}
+                {changePasswordLoading
+                  ? t('settings.security.changing', 'Changing…')
+                  : t('settings.security.changePassword', 'Change password')}
               </Button>
             </div>
           )}
@@ -1384,19 +1676,26 @@ export function SettingsPage() {
           {isAccountTab && accountSection === 'activity' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-(--txt-primary)">Activity</h2>
+                <h2 className="text-base font-semibold text-(--txt-primary)">
+                  {t('settings.activity.title', 'Activity')}
+                </h2>
                 <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                  Track your recent actions and changes across all projects and work items.
+                  {t(
+                    'settings.activity.subtitle',
+                    'Track your recent actions and changes across all projects and work items.',
+                  )}
                 </p>
               </div>
               {activityLoading ? (
                 <div className="py-10 text-center text-sm text-(--txt-tertiary)">
-                  Loading activity…
+                  {t('settings.activity.loading', 'Loading activity…')}
                 </div>
               ) : activityList.length === 0 ? (
                 <Card variant="outlined">
                   <CardContent className="py-10 text-center">
-                    <p className="text-sm text-(--txt-tertiary)">No activity yet.</p>
+                    <p className="text-sm text-(--txt-tertiary)">
+                      {t('settings.activity.empty', 'No activity yet.')}
+                    </p>
                   </CardContent>
                 </Card>
               ) : (
@@ -1411,7 +1710,9 @@ export function SettingsPage() {
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm text-(--txt-secondary)">
-                          You commented {formatRelativeTime(a.created_at)}
+                          {t('settings.activity.youCommented', 'You commented {{time}}', {
+                            time: formatRelativeTime(a.created_at),
+                          })}
                         </p>
                         {a.description && (
                           <p className="mt-1 text-sm font-medium text-(--txt-primary)">
@@ -1439,11 +1740,13 @@ export function SettingsPage() {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <h2 className="text-base font-semibold text-(--txt-primary)">
-                    Personal Access Tokens
+                    {t('settings.tokens.title', 'Personal Access Tokens')}
                   </h2>
                   <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                    Generate secure API tokens to integrate your data with external systems and
-                    applications.
+                    {t(
+                      'settings.tokens.subtitle',
+                      'Generate secure API tokens to integrate your data with external systems and applications.',
+                    )}
                   </p>
                 </div>
                 <Button
@@ -1456,51 +1759,57 @@ export function SettingsPage() {
                   }}
                 >
                   <IconPlus />
-                  Add personal access token
+                  {t('settings.tokens.add', 'Add personal access token')}
                 </Button>
               </div>
               {tokensLoading ? (
                 <div className="py-10 text-center text-sm text-(--txt-tertiary)">
-                  Loading tokens…
+                  {t('settings.tokens.loading', 'Loading tokens…')}
                 </div>
               ) : tokensList.length === 0 ? (
                 <Card variant="outlined">
                   <CardContent className="py-10 text-center">
-                    <p className="text-sm text-(--txt-tertiary)">No tokens yet.</p>
+                    <p className="text-sm text-(--txt-tertiary)">
+                      {t('settings.tokens.empty', 'No tokens yet.')}
+                    </p>
                   </CardContent>
                 </Card>
               ) : (
                 <div className="space-y-2">
-                  {tokensList.map((t) => (
+                  {tokensList.map((tok) => (
                     <div
-                      key={t.id}
+                      key={tok.id}
                       className="flex items-center justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3"
                     >
                       <div>
-                        <p className="text-sm font-medium text-(--txt-primary)">{t.label}</p>
-                        {t.description && (
-                          <p className="text-xs text-(--txt-tertiary)">{t.description}</p>
+                        <p className="text-sm font-medium text-(--txt-primary)">{tok.label}</p>
+                        {tok.description && (
+                          <p className="text-xs text-(--txt-tertiary)">{tok.description}</p>
                         )}
                         <p className="mt-0.5 text-xs text-(--txt-placeholder)">
-                          Created {formatRelativeTime(t.created_at)}
+                          {t('settings.tokens.created', 'Created {{time}}', {
+                            time: formatRelativeTime(tok.created_at),
+                          })}
                         </p>
                       </div>
                       <Button
                         variant="secondary"
                         size="sm"
                         className="text-(--txt-danger-primary)"
-                        disabled={revokingId === t.id}
+                        disabled={revokingId === tok.id}
                         onClick={async () => {
-                          setRevokingId(t.id);
+                          setRevokingId(tok.id);
                           try {
-                            await userService.revokeToken(t.id);
-                            setTokensList((prev) => prev.filter((x) => x.id !== t.id));
+                            await userService.revokeToken(tok.id);
+                            setTokensList((prev) => prev.filter((x) => x.id !== tok.id));
                           } finally {
                             setRevokingId(null);
                           }
                         }}
                       >
-                        {revokingId === t.id ? 'Revoking…' : 'Revoke'}
+                        {revokingId === tok.id
+                          ? t('settings.tokens.revoking', 'Revoking…')
+                          : t('settings.tokens.revoke', 'Revoke')}
                       </Button>
                     </div>
                   ))}
@@ -1513,12 +1822,19 @@ export function SettingsPage() {
                   setCreateTokenModalOpen(false);
                   setCreatedTokenValue(null);
                 }}
-                title={createdTokenValue ? 'Token created' : 'Create token'}
+                title={
+                  createdTokenValue
+                    ? t('settings.tokens.createdTitle', 'Token created')
+                    : t('settings.tokens.createTitle', 'Create token')
+                }
               >
                 {createdTokenValue ? (
                   <div className="space-y-4">
                     <p className="text-sm text-(--txt-secondary)">
-                      Copy this token now; it will not be shown again.
+                      {t(
+                        'settings.tokens.copyWarning',
+                        'Copy this token now; it will not be shown again.',
+                      )}
                     </p>
                     <div className="rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-2 font-mono text-sm text-(--txt-primary) break-all">
                       {createdTokenValue}
@@ -1530,7 +1846,7 @@ export function SettingsPage() {
                           setCreatedTokenValue(null);
                         }}
                       >
-                        Done
+                        {t('common.done', 'Done')}
                       </Button>
                     </div>
                   </div>
@@ -1538,19 +1854,19 @@ export function SettingsPage() {
                   <div className="space-y-4">
                     <div>
                       <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                        Title
+                        {t('settings.tokens.form.title', 'Title')}
                       </label>
                       <input
                         type="text"
                         value={tokenForm.label}
                         onChange={(e) => setTokenForm((f) => ({ ...f, label: e.target.value }))}
-                        placeholder="Title"
+                        placeholder={t('settings.tokens.form.title', 'Title')}
                         className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                       />
                     </div>
                     <div>
                       <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                        Description
+                        {t('common.description', 'Description')}
                       </label>
                       <textarea
                         value={tokenForm.description}
@@ -1560,14 +1876,14 @@ export function SettingsPage() {
                             description: e.target.value,
                           }))
                         }
-                        placeholder="Description"
+                        placeholder={t('common.description', 'Description')}
                         rows={2}
                         className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                       />
                     </div>
                     <div>
                       <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                        Expiration
+                        {t('settings.tokens.form.expiration', 'Expiration')}
                       </label>
                       <div className="relative max-w-xs">
                         <select
@@ -1580,11 +1896,17 @@ export function SettingsPage() {
                           }
                           className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                         >
-                          <option value="">Never expires</option>
-                          <option value="7d">1 week</option>
-                          <option value="30d">1 month</option>
-                          <option value="90d">3 months</option>
-                          <option value="365d">1 year</option>
+                          <option value="">
+                            {t('settings.tokens.expiry.never', 'Never expires')}
+                          </option>
+                          <option value="7d">{t('settings.tokens.expiry.week', '1 week')}</option>
+                          <option value="30d">
+                            {t('settings.tokens.expiry.month', '1 month')}
+                          </option>
+                          <option value="90d">
+                            {t('settings.tokens.expiry.threeMonths', '3 months')}
+                          </option>
+                          <option value="365d">{t('settings.tokens.expiry.year', '1 year')}</option>
                         </select>
                         <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                           <IconChevronDown />
@@ -1593,7 +1915,7 @@ export function SettingsPage() {
                     </div>
                     <div className="flex justify-end gap-2">
                       <Button variant="secondary" onClick={() => setCreateTokenModalOpen(false)}>
-                        Cancel
+                        {t('common.cancel', 'Cancel')}
                       </Button>
                       <Button
                         disabled={!tokenForm.label.trim()}
@@ -1612,7 +1934,7 @@ export function SettingsPage() {
                           }
                         }}
                       >
-                        Generate token
+                        {t('settings.tokens.generate', 'Generate token')}
                       </Button>
                     </div>
                   </div>
@@ -1646,14 +1968,14 @@ export function SettingsPage() {
                   className="absolute bottom-2 right-2 z-10 gap-1.5 text-[13px]"
                   onClick={() => setProjectCoverModalOpen(true)}
                 >
-                  Change cover
+                  {t('settings.cover.change', 'Change cover')}
                 </Button>
                 <div className="absolute bottom-4 left-4 z-10 flex items-center gap-3 px-1 py-1">
                   <button
                     type="button"
                     onClick={() => setProjectIconModalOpen(true)}
                     className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/15 backdrop-blur-sm hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white/50"
-                    aria-label="Change project icon"
+                    aria-label={t('settings.project.changeIcon', 'Change project icon')}
                   >
                     <ProjectIconDisplay
                       emoji={selectedProject.emoji}
@@ -1666,7 +1988,7 @@ export function SettingsPage() {
                       {projectName || selectedProject.name}
                     </p>
                     <p className="text-xs text-white/90 drop-shadow-sm">
-                      {selectedProject.identifier} · Public
+                      {selectedProject.identifier} · {t('settings.project.public', 'Public')}
                     </p>
                   </div>
                 </div>
@@ -1674,7 +1996,7 @@ export function SettingsPage() {
               <div className="pt-10 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    Project name
+                    {t('settings.project.name', 'Project name')}
                   </label>
                   <input
                     type="text"
@@ -1685,19 +2007,19 @@ export function SettingsPage() {
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    Description
+                    {t('common.description', 'Description')}
                   </label>
                   <textarea
                     value={(projectDescription || selectedProject.description) ?? ''}
                     onChange={(e) => setProjectDescription(e.target.value)}
                     rows={3}
-                    placeholder="Description..."
+                    placeholder={t('settings.project.descriptionPlaceholder', 'Description...')}
                     className="w-full resize-y rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                   />
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    Project ID
+                    {t('settings.project.id', 'Project ID')}
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
@@ -1706,7 +2028,10 @@ export function SettingsPage() {
                       value={selectedProject.identifier}
                       className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-2 text-sm text-(--txt-tertiary)"
                     />
-                    <span className="text-(--txt-icon-tertiary)" title="Project identifier">
+                    <span
+                      className="text-(--txt-icon-tertiary)"
+                      title={t('settings.project.identifierTooltip', 'Project identifier')}
+                    >
                       <IconInfo />
                     </span>
                   </div>
@@ -1714,28 +2039,28 @@ export function SettingsPage() {
                 <ProjectNetworkSelect
                   value={projectNetwork}
                   onChange={async (v) => {
-                    // Map network dropdown to the same guest_view_all_features flag used elsewhere
-                    const nextGuestAccess = v === 'public';
-                    setProjectNetwork(v);
-                    setGuestAccess(nextGuestAccess);
                     if (!workspaceSlug || !selectedProjectId) return;
+                    const prev = projectNetwork;
+                    setProjectNetwork(v);
                     try {
                       const updated = await projectService.update(
                         workspaceSlug,
                         selectedProjectId,
-                        { guest_view_all_features: nextGuestAccess },
+                        {
+                          network: v === 'public' ? 2 : 0,
+                        },
                       );
-                      setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                      setProjects((prevProjects) =>
+                        prevProjects.map((p) => (p.id === updated.id ? updated : p)),
+                      );
                     } catch {
-                      // revert local state on failure
-                      setProjectNetwork(nextGuestAccess ? 'private' : 'public');
-                      setGuestAccess(!nextGuestAccess);
+                      setProjectNetwork(prev); // revert on failure
                     }
                   }}
                 />
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    Project Timezone
+                    {t('settings.project.timezone', 'Project Timezone')}
                   </label>
                   <div className="relative max-w-xs" ref={projectTimezoneDropdownRef}>
                     <button
@@ -1760,7 +2085,7 @@ export function SettingsPage() {
                               type="text"
                               value={projectTimezoneSearch}
                               onChange={(e) => setProjectTimezoneSearch(e.target.value)}
-                              placeholder="Search"
+                              placeholder={t('common.search', 'Search')}
                               className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) outline-none placeholder:text-(--txt-placeholder)"
                             />
                           </div>
@@ -1808,24 +2133,65 @@ export function SettingsPage() {
                   } catch (err: unknown) {
                     const msg =
                       (err as { response?: { data?: { error?: string } } })?.response?.data
-                        ?.error ?? 'Failed to update project';
+                        ?.error ?? t('settings.project.updateError', 'Failed to update project');
                     setProjectUpdateError(msg);
                   } finally {
                     setProjectUpdateLoading(false);
                   }
                 }}
               >
-                {projectUpdateLoading ? 'Updating…' : 'Update project'}
+                {projectUpdateLoading
+                  ? t('common.updating', 'Updating…')
+                  : t('settings.project.update', 'Update project')}
               </Button>
               {selectedProject?.created_at && (
                 <p className="text-sm text-(--txt-tertiary)">
-                  Created on{' '}
-                  {new Date(selectedProject.created_at).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
+                  {t('settings.project.createdOn', 'Created on {{date}}', {
+                    date: new Date(selectedProject.created_at).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    }),
                   })}
                 </p>
+              )}
+              {workspaceSlug && selectedProjectId && (
+                <div className="mt-4 flex items-center justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-(--txt-primary)">
+                      {t('settings.project.archive.title', 'Archive project')}
+                    </p>
+                    <p className="mt-0.5 text-sm text-(--txt-secondary)">
+                      {t(
+                        'settings.project.archive.description',
+                        'Hide this project and its work from the workspace. You can restore it later from Archives.',
+                      )}
+                    </p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    className="shrink-0 text-(--txt-danger-primary)"
+                    disabled={archivingProject}
+                    onClick={async () => {
+                      if (!workspaceSlug || !selectedProjectId) return;
+                      setArchivingProject(true);
+                      try {
+                        await projectService.archive(workspaceSlug, selectedProjectId);
+                        setProjects((prev) => prev.filter((p) => p.id !== selectedProjectId));
+                        navigate(`/${workspaceSlug}`);
+                      } catch {
+                        setProjectUpdateError(
+                          t('settings.project.archive.error', 'Failed to archive project.'),
+                        );
+                        setArchivingProject(false);
+                      }
+                    }}
+                  >
+                    {archivingProject
+                      ? t('settings.project.archive.busy', 'Archiving…')
+                      : t('settings.project.archive.title', 'Archive project')}
+                  </Button>
+                </div>
               )}
               {workspaceSlug && selectedProjectId && (
                 <>
@@ -1844,7 +2210,7 @@ export function SettingsPage() {
                         // error could be shown
                       }
                     }}
-                    title="Select project cover"
+                    title={t('settings.project.selectCover', 'Select project cover')}
                   />
                   <ProjectIconModal
                     open={projectIconModalOpen}
@@ -1870,7 +2236,7 @@ export function SettingsPage() {
                         // error could be shown
                       }
                     }}
-                    title="Project icon"
+                    title={t('settings.project.iconModalTitle', 'Project icon')}
                   />
                 </>
               )}
@@ -1879,13 +2245,20 @@ export function SettingsPage() {
 
           {isProjectsTab && selectedProject && projectSection === 'members' && (
             <div className="space-y-6">
-              <h2 className="text-base font-semibold text-(--txt-primary)">Members</h2>
+              <h2 className="text-base font-semibold text-(--txt-primary)">
+                {t('settings.members.title', 'Members')}
+              </h2>
               <div className="space-y-6">
                 <div className="flex flex-wrap items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium text-(--txt-primary)">Project Lead</p>
+                    <p className="text-sm font-medium text-(--txt-primary)">
+                      {t('settings.members.projectLead.title', 'Project Lead')}
+                    </p>
                     <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                      Select the project lead for the project.
+                      {t(
+                        'settings.members.projectLead.help',
+                        'Select the project lead for the project.',
+                      )}
                     </p>
                   </div>
                   <div className="relative min-w-[180px]">
@@ -1911,7 +2284,7 @@ export function SettingsPage() {
                       }}
                       className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                     >
-                      <option value="">Select</option>
+                      <option value="">{t('common.select', 'Select')}</option>
                       {workspaceMembers.map((m) => (
                         <option key={m.member_id} value={m.member_id ?? ''}>
                           {memberLabel(m.member_id)}
@@ -1925,9 +2298,14 @@ export function SettingsPage() {
                 </div>
                 <div className="flex flex-wrap items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium text-(--txt-primary)">Default Assignee</p>
+                    <p className="text-sm font-medium text-(--txt-primary)">
+                      {t('settings.members.defaultAssignee.title', 'Default Assignee')}
+                    </p>
                     <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                      Select the default assignee for the project.
+                      {t(
+                        'settings.members.defaultAssignee.help',
+                        'Select the default assignee for the project.',
+                      )}
                     </p>
                   </div>
                   <div className="relative min-w-[120px]">
@@ -1953,7 +2331,7 @@ export function SettingsPage() {
                       }}
                       className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                     >
-                      <option value="none">None</option>
+                      <option value="none">{t('common.none', 'None')}</option>
                       {workspaceMembers.map((m) => (
                         <option key={m.member_id} value={m.member_id}>
                           {memberLabel(m.member_id)}
@@ -1971,10 +2349,13 @@ export function SettingsPage() {
                       id={`guest-toggle-label-${selectedProjectId ?? 'project'}`}
                       className="text-sm font-medium text-(--txt-primary)"
                     >
-                      Guest access
+                      {t('settings.members.guestAccess.title', 'Guest access')}
                     </p>
                     <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                      This will allow guests to have view access to all the project work items.
+                      {t(
+                        'settings.members.guestAccess.help',
+                        'This will allow guests to have view access to all the project work items.',
+                      )}
                     </p>
                   </div>
                   <button
@@ -2006,7 +2387,9 @@ export function SettingsPage() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-4">
-                <h3 className="text-sm font-semibold text-(--txt-primary)">Members</h3>
+                <h3 className="text-sm font-semibold text-(--txt-primary)">
+                  {t('settings.members.title', 'Members')}
+                </h3>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-2 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1.5">
                     <span className="text-(--txt-icon-tertiary)">
@@ -2016,7 +2399,7 @@ export function SettingsPage() {
                       type="text"
                       value={projectMembersSearch}
                       onChange={(e) => setProjectMembersSearch(e.target.value)}
-                      placeholder="Search"
+                      placeholder={t('common.search', 'Search')}
                       className="w-32 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
                     />
                   </div>
@@ -2028,7 +2411,7 @@ export function SettingsPage() {
                       setInviteModalOpen(true);
                     }}
                   >
-                    <IconPlus /> Add member
+                    <IconPlus /> {t('settings.members.add', 'Add member')}
                   </Button>
                 </div>
               </div>
@@ -2037,14 +2420,18 @@ export function SettingsPage() {
                   <table className="w-full text-left text-sm">
                     <thead>
                       <tr className="border-b border-(--border-subtle)">
-                        <th className="py-3 pr-4 font-medium text-(--txt-secondary)">Full name</th>
                         <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
-                          Display name
+                          {t('settings.members.fullName', 'Full name')}
                         </th>
                         <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
-                          Account type
+                          {t('settings.members.displayName', 'Display name')}
                         </th>
-                        <th className="py-3 font-medium text-(--txt-secondary)">Joining date</th>
+                        <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
+                          {t('settings.members.accountType', 'Account type')}
+                        </th>
+                        <th className="py-3 font-medium text-(--txt-secondary)">
+                          {t('settings.members.joiningDate', 'Joining date')}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2088,8 +2475,10 @@ export function SettingsPage() {
                                 }}
                                 className="w-full appearance-none rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1.5 pl-2.5 pr-7 text-sm capitalize text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                               >
-                                <option value="member">Member</option>
-                                <option value="admin">Admin</option>
+                                <option value="member">
+                                  {t('settings.role.member', 'Member')}
+                                </option>
+                                <option value="admin">{t('settings.role.admin', 'Admin')}</option>
                               </select>
                               <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                                 <IconChevronDown />
@@ -2114,7 +2503,7 @@ export function SettingsPage() {
               {pendingProjectInvites.length > 0 && (
                 <div className="mt-6">
                   <h3 className="text-sm font-semibold text-(--txt-primary) mb-2">
-                    Pending invites
+                    {t('settings.members.pendingInvites', 'Pending invites')}
                   </h3>
                   <div className="space-y-2">
                     {pendingProjectInvites.map((inv) => (
@@ -2124,7 +2513,7 @@ export function SettingsPage() {
                       >
                         <span className="text-sm text-(--txt-primary)">{inv.email}</span>
                         <span className="rounded-full bg-(--bg-warning-subtle) px-2.5 py-0.5 text-xs font-medium text-(--txt-warning-primary)">
-                          Pending
+                          {t('settings.members.pending', 'Pending')}
                         </span>
                         <Button
                           size="sm"
@@ -2147,7 +2536,7 @@ export function SettingsPage() {
                             }
                           }}
                         >
-                          Revoke
+                          {t('settings.members.revoke', 'Revoke')}
                         </Button>
                       </div>
                     ))}
@@ -2161,50 +2550,65 @@ export function SettingsPage() {
             <div className="space-y-8">
               <div>
                 <h2 className="text-base font-semibold text-(--txt-primary)">
-                  Projects and work items
+                  {t('settings.features.title', 'Projects and work items')}
                 </h2>
                 <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                  Toggle these on or off this project.
+                  {t('settings.features.subtitle', 'Toggle these on or off this project.')}
                 </p>
               </div>
               <div className="space-y-3">
                 {[
                   {
                     id: 'cycles',
-                    label: 'Cycles',
-                    desc: 'Timebox work per project and adjust the time period as needed. One cycle can be 2 weeks, the next 1 week.',
+                    label: t('settings.features.cycles.label', 'Cycles'),
+                    desc: t(
+                      'settings.features.cycles.desc',
+                      'Timebox work per project and adjust the time period as needed. One cycle can be 2 weeks, the next 1 week.',
+                    ),
                     value: featureCycles,
                     set: setFeatureCycles,
                     key: 'cycle_view' as const,
                   },
                   {
                     id: 'modules',
-                    label: 'Modules',
-                    desc: 'Organize work into sub-projects with dedicated leads and assignees.',
+                    label: t('settings.features.modules.label', 'Modules'),
+                    desc: t(
+                      'settings.features.modules.desc',
+                      'Organize work into sub-projects with dedicated leads and assignees.',
+                    ),
                     value: featureModules,
                     set: setFeatureModules,
                     key: 'module_view' as const,
                   },
                   {
                     id: 'views',
-                    label: 'Views',
-                    desc: 'Save custom sorts, filters, and display options or share them with your team.',
+                    label: t('settings.features.views.label', 'Views'),
+                    desc: t(
+                      'settings.features.views.desc',
+                      'Save custom sorts, filters, and display options or share them with your team.',
+                    ),
                     value: featureViews,
                     set: setFeatureViews,
                     key: 'issue_views_view' as const,
                   },
                   {
                     id: 'pages',
-                    label: 'Pages',
-                    desc: 'Create and edit free-form content; notes, docs, anything.',
+                    label: t('settings.features.pages.label', 'Pages'),
+                    desc: t(
+                      'settings.features.pages.desc',
+                      'Create and edit free-form content; notes, docs, anything.',
+                    ),
                     value: featurePages,
                     set: setFeaturePages,
                     key: 'page_view' as const,
                   },
                   {
                     id: 'intake',
-                    label: 'Intake',
-                    desc: 'Let non-members share bugs, feedback, and suggestions; without disrupting your workflow.',
+                    label: t('settings.features.intake.label', 'Intake'),
+                    desc: t(
+                      'settings.features.intake.desc',
+                      'Let non-members share bugs, feedback, and suggestions; without disrupting your workflow.',
+                    ),
                     value: featureIntake,
                     set: setFeatureIntake,
                     key: 'intake_view' as const,
@@ -2264,9 +2668,14 @@ export function SettingsPage() {
                 ))}
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-(--txt-primary)">Work management</h3>
+                <h3 className="text-sm font-semibold text-(--txt-primary)">
+                  {t('settings.features.workManagement.title', 'Work management')}
+                </h3>
                 <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                  Manage your work and projects with ease.
+                  {t(
+                    'settings.features.workManagement.subtitle',
+                    'Manage your work and projects with ease.',
+                  )}
                 </p>
               </div>
               <div className="flex items-start justify-between gap-4 rounded-(--radius-md) border border-(--border-subtle) px-4 py-3">
@@ -2279,10 +2688,13 @@ export function SettingsPage() {
                       id={`feature-toggle-label-time-tracking-${selectedProjectId ?? 'project'}`}
                       className="text-sm font-medium text-(--txt-primary)"
                     >
-                      Time Tracking
+                      {t('settings.features.timeTracking.label', 'Time Tracking')}
                     </p>
                     <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                      Log time spent on work items and projects.
+                      {t(
+                        'settings.features.timeTracking.desc',
+                        'Log time spent on work items and projects.',
+                      )}
                     </p>
                   </div>
                 </div>
@@ -2316,13 +2728,31 @@ export function SettingsPage() {
             </div>
           )}
 
+          {isProjectsTab && selectedProject && projectSection === 'notifications' && (
+            <NotificationPreferencesPanel
+              key={selectedProject.id}
+              load={loadProjectNotifPrefs}
+              save={saveProjectNotifPrefs}
+              title={t('settings.notifications.project.title', 'Project notifications')}
+              description={t(
+                'settings.notifications.project.description',
+                "How you're notified for work in this project. Overrides your workspace and account defaults.",
+              )}
+            />
+          )}
+
           {isProjectsTab && selectedProject && projectSection === 'states' && (
             <div className="space-y-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-base font-semibold text-(--txt-primary)">States</h2>
+                  <h2 className="text-base font-semibold text-(--txt-primary)">
+                    {t('settings.states.title', 'States')}
+                  </h2>
                   <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                    Define and customize workflow states to track the progress of your work items.
+                    {t(
+                      'settings.states.subtitle',
+                      'Define and customize workflow states to track the progress of your work items.',
+                    )}
                   </p>
                 </div>
                 <Button
@@ -2336,7 +2766,7 @@ export function SettingsPage() {
                     setProjectStateModalOpen(true);
                   }}
                 >
-                  <IconPlus /> Add state
+                  <IconPlus /> {t('settings.states.add', 'Add state')}
                 </Button>
               </div>
               <div className="space-y-4">
@@ -2362,7 +2792,7 @@ export function SettingsPage() {
                         <div className="space-y-2">
                           {states.length === 0 ? (
                             <p className="text-sm text-(--txt-tertiary) py-2">
-                              No states in this group.
+                              {t('settings.states.emptyGroup', 'No states in this group.')}
                             </p>
                           ) : (
                             states.map((st, stIndex) => (
@@ -2383,28 +2813,38 @@ export function SettingsPage() {
                                   </span>
                                   {st.default && (
                                     <span className="rounded-full bg-(--bg-accent-subtle) px-2 py-0.5 text-[11px] font-medium text-(--txt-accent-primary)">
-                                      Default
+                                      {t('settings.states.default', 'Default')}
                                     </span>
                                   )}
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <button
                                     type="button"
-                                    aria-label={`Move ${st.name} up`}
+                                    aria-label={t('settings.states.moveUp', 'Move {{name}} up', {
+                                      name: st.name,
+                                    })}
                                     disabled={stIndex === 0}
                                     onClick={() => moveStateWithinGroup(st, -1)}
                                     className="flex size-7 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary) disabled:opacity-30 disabled:hover:bg-transparent"
                                   >
-                                    ↑
+                                    {}
+                                    <span aria-hidden>↑</span>
                                   </button>
                                   <button
                                     type="button"
-                                    aria-label={`Move ${st.name} down`}
+                                    aria-label={t(
+                                      'settings.states.moveDown',
+                                      'Move {{name}} down',
+                                      {
+                                        name: st.name,
+                                      },
+                                    )}
                                     disabled={stIndex === states.length - 1}
                                     onClick={() => moveStateWithinGroup(st, 1)}
                                     className="flex size-7 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary) disabled:opacity-30 disabled:hover:bg-transparent"
                                   >
-                                    ↓
+                                    {}
+                                    <span aria-hidden>↓</span>
                                   </button>
                                   {!st.default && (
                                     <Button
@@ -2412,7 +2852,7 @@ export function SettingsPage() {
                                       variant="secondary"
                                       onClick={() => setStateAsDefault(st)}
                                     >
-                                      Set default
+                                      {t('settings.states.setDefault', 'Set default')}
                                     </Button>
                                   )}
                                   <Button
@@ -2426,7 +2866,7 @@ export function SettingsPage() {
                                       setProjectStateModalOpen(true);
                                     }}
                                   >
-                                    Edit
+                                    {t('common.edit', 'Edit')}
                                   </Button>
                                   <Button
                                     size="sm"
@@ -2450,7 +2890,7 @@ export function SettingsPage() {
                                       }
                                     }}
                                   >
-                                    Delete
+                                    {t('common.delete', 'Delete')}
                                   </Button>
                                 </div>
                               </Card>
@@ -2469,9 +2909,14 @@ export function SettingsPage() {
             <div className="space-y-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-base font-semibold text-(--txt-primary)">Labels</h2>
+                  <h2 className="text-base font-semibold text-(--txt-primary)">
+                    {t('settings.labels.title', 'Labels')}
+                  </h2>
                   <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                    Create custom labels to categorize and organize your work items.
+                    {t(
+                      'settings.labels.subtitle',
+                      'Create custom labels to categorize and organize your work items.',
+                    )}
                   </p>
                 </div>
                 <Button
@@ -2484,7 +2929,7 @@ export function SettingsPage() {
                     setProjectLabelModalOpen(true);
                   }}
                 >
-                  <IconPlus /> Add label
+                  <IconPlus /> {t('settings.labels.add', 'Add label')}
                 </Button>
               </div>
               <div className="space-y-2">
@@ -2516,7 +2961,7 @@ export function SettingsPage() {
                           setProjectLabelModalOpen(true);
                         }}
                       >
-                        Edit
+                        {t('common.edit', 'Edit')}
                       </Button>
                       <Button
                         size="sm"
@@ -2533,7 +2978,7 @@ export function SettingsPage() {
                           }
                         }}
                       >
-                        Delete
+                        {t('common.delete', 'Delete')}
                       </Button>
                     </div>
                   </Card>
@@ -2556,10 +3001,14 @@ export function SettingsPage() {
           {isProjectsTab && selectedProject && projectSection === 'automations' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-(--txt-primary)">Automations</h2>
+                <h2 className="text-base font-semibold text-(--txt-primary)">
+                  {t('settings.automations.title', 'Automations')}
+                </h2>
                 <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                  Configure automated actions to streamline your project management workflow and
-                  reduce manual tasks.
+                  {t(
+                    'settings.automations.subtitle',
+                    'Configure automated actions to streamline your project management workflow and reduce manual tasks.',
+                  )}
                 </p>
               </div>
               <div className="space-y-3">
@@ -2573,11 +3022,42 @@ export function SettingsPage() {
                         id={`auto-archive-toggle-${selectedProjectId ?? 'project'}`}
                         className="text-sm font-medium text-(--txt-primary)"
                       >
-                        Auto-archive closed work items
+                        {t(
+                          'settings.automations.autoArchive.title',
+                          'Auto-archive closed work items',
+                        )}
                       </p>
                       <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                        Devlane will auto archive work items that have been completed or canceled.
+                        {t(
+                          'settings.automations.autoArchive.desc',
+                          'Devlane will auto archive work items that have been completed or canceled.',
+                        )}
                       </p>
+                      {autoArchive && (
+                        <label className="mt-2 flex items-center gap-2 text-sm text-(--txt-secondary)">
+                          {t('settings.automations.archiveAfter', 'Archive after')}
+                          <select
+                            value={autoArchiveMonths}
+                            disabled={autoArchiveSaving}
+                            onChange={(e) => persistAutoArchive(true, Number(e.target.value))}
+                            className="rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
+                          >
+                            <option value={1}>
+                              {t('settings.automations.months.one', '1 month')}
+                            </option>
+                            <option value={3}>
+                              {t('settings.automations.months.three', '3 months')}
+                            </option>
+                            <option value={6}>
+                              {t('settings.automations.months.six', '6 months')}
+                            </option>
+                            <option value={12}>
+                              {t('settings.automations.months.twelve', '12 months')}
+                            </option>
+                          </select>
+                          {t('settings.automations.ofInactivity', 'of inactivity')}
+                        </label>
+                      )}
                     </div>
                   </div>
                   <button
@@ -2585,7 +3065,8 @@ export function SettingsPage() {
                     role="switch"
                     aria-checked={autoArchive}
                     aria-labelledby={`auto-archive-toggle-${selectedProjectId ?? 'project'}`}
-                    onClick={() => setAutoArchive(!autoArchive)}
+                    disabled={autoArchiveSaving}
+                    onClick={() => persistAutoArchive(!autoArchive, autoArchiveMonths)}
                     className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${autoArchive ? 'bg-(--brand-default)' : 'bg-(--neutral-400)'}`}
                   >
                     <span
@@ -2603,12 +3084,39 @@ export function SettingsPage() {
                         id={`auto-close-toggle-${selectedProjectId ?? 'project'}`}
                         className="text-sm font-medium text-(--txt-primary)"
                       >
-                        Auto-close work items
+                        {t('settings.automations.autoClose.title', 'Auto-close work items')}
                       </p>
                       <p className="mt-0.5 text-sm text-(--txt-secondary)">
-                        Devlane will automatically close work items that haven&apos;t been completed
-                        or canceled.
+                        {t(
+                          'settings.automations.autoClose.desc',
+                          "Devlane will automatically close work items that haven't been completed or canceled.",
+                        )}
                       </p>
+                      {autoClose && (
+                        <label className="mt-2 flex items-center gap-2 text-sm text-(--txt-secondary)">
+                          {t('settings.automations.closeAfter', 'Close after')}
+                          <select
+                            value={autoCloseMonths}
+                            disabled={autoCloseSaving}
+                            onChange={(e) => persistAutoClose(true, Number(e.target.value))}
+                            className="rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
+                          >
+                            <option value={1}>
+                              {t('settings.automations.months.one', '1 month')}
+                            </option>
+                            <option value={3}>
+                              {t('settings.automations.months.three', '3 months')}
+                            </option>
+                            <option value={6}>
+                              {t('settings.automations.months.six', '6 months')}
+                            </option>
+                            <option value={12}>
+                              {t('settings.automations.months.twelve', '12 months')}
+                            </option>
+                          </select>
+                          {t('settings.automations.ofInactivity', 'of inactivity')}
+                        </label>
+                      )}
                     </div>
                   </div>
                   <button
@@ -2616,7 +3124,8 @@ export function SettingsPage() {
                     role="switch"
                     aria-checked={autoClose}
                     aria-labelledby={`auto-close-toggle-${selectedProjectId ?? 'project'}`}
-                    onClick={() => setAutoClose(!autoClose)}
+                    disabled={autoCloseSaving}
+                    onClick={() => persistAutoClose(!autoClose, autoCloseMonths)}
                     className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${autoClose ? 'bg-(--brand-default)' : 'bg-(--neutral-400)'}`}
                   >
                     <span
@@ -2653,14 +3162,14 @@ export function SettingsPage() {
                     className="mt-1 flex items-center gap-1 text-sm font-medium text-(--txt-accent-primary) hover:underline"
                   >
                     <IconPencil />
-                    Edit logo
+                    {t('settings.workspace.editLogo', 'Edit logo')}
                   </button>
                 </div>
               </div>
               <div className="grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    Workspace name
+                    {t('settings.workspace.name', 'Workspace name')}
                   </label>
                   <input
                     type="text"
@@ -2671,7 +3180,7 @@ export function SettingsPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    Company size
+                    {t('settings.workspace.companySize', 'Company size')}
                   </label>
                   <div className="relative">
                     <select
@@ -2692,7 +3201,7 @@ export function SettingsPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    Workspace URL
+                    {t('settings.workspace.url', 'Workspace URL')}
                   </label>
                   <input
                     type="text"
@@ -2719,14 +3228,17 @@ export function SettingsPage() {
                   } catch (err: unknown) {
                     const msg =
                       (err as { response?: { data?: { error?: string } } })?.response?.data
-                        ?.error ?? 'Failed to update workspace';
+                        ?.error ??
+                      t('settings.workspace.updateError', 'Failed to update workspace');
                     setGeneralUpdateError(msg);
                   } finally {
                     setGeneralUpdateLoading(false);
                   }
                 }}
               >
-                {generalUpdateLoading ? 'Updating…' : 'Update workspace'}
+                {generalUpdateLoading
+                  ? t('common.updating', 'Updating…')
+                  : t('settings.workspace.update', 'Update workspace')}
               </Button>
               <Card variant="outlined" className="border-(--border-subtle)">
                 <button
@@ -2735,7 +3247,7 @@ export function SettingsPage() {
                   className="flex w-full items-center justify-between px-4 py-3 text-left"
                 >
                   <span className="text-sm font-medium text-(--txt-danger-primary)">
-                    Delete this workspace
+                    {t('settings.workspace.delete.title', 'Delete this workspace')}
                   </span>
                   <span
                     className={`text-(--txt-icon-tertiary) transition-transform ${deleteWorkspaceOpen ? 'rotate-180' : ''}`}
@@ -2746,11 +3258,13 @@ export function SettingsPage() {
                 {deleteWorkspaceOpen && (
                   <CardContent className="border-t border-(--border-subtle) pt-3">
                     <p className="text-sm text-(--txt-secondary)">
-                      This action cannot be undone. All projects and data in this workspace will be
-                      permanently removed.
+                      {t(
+                        'settings.workspace.delete.description',
+                        'This action cannot be undone. All projects and data in this workspace will be permanently removed.',
+                      )}
                     </p>
                     <Button variant="secondary" className="mt-3 text-(--txt-danger-primary)">
-                      Delete workspace
+                      {t('settings.workspace.delete.button', 'Delete workspace')}
                     </Button>
                   </CardContent>
                 )}
@@ -2767,7 +3281,7 @@ export function SettingsPage() {
                       // error shown in modal
                     }
                   }}
-                  title="Upload workspace logo"
+                  title={t('settings.workspace.uploadLogo', 'Upload workspace logo')}
                 />
               )}
             </div>
@@ -2777,7 +3291,9 @@ export function SettingsPage() {
             <div className="space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base font-semibold text-(--txt-primary)">Members</h2>
+                  <h2 className="text-base font-semibold text-(--txt-primary)">
+                    {t('settings.members.title', 'Members')}
+                  </h2>
                   <span className="rounded-full bg-(--brand-200) px-2 py-0.5 text-xs font-medium text-(--txt-primary)">
                     {workspaceMembers.length}
                   </span>
@@ -2791,7 +3307,7 @@ export function SettingsPage() {
                       type="text"
                       value={membersSearch}
                       onChange={(e) => setMembersSearch(e.target.value)}
-                      placeholder="Search..."
+                      placeholder={t('settings.members.searchPlaceholder', 'Search...')}
                       className="w-40 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
                     />
                   </div>
@@ -2804,7 +3320,7 @@ export function SettingsPage() {
                     }}
                   >
                     <IconPlus />
-                    Add member
+                    {t('settings.members.add', 'Add member')}
                   </Button>
                 </div>
               </div>
@@ -2813,20 +3329,24 @@ export function SettingsPage() {
                   <table className="w-full text-left text-sm">
                     <thead>
                       <tr className="border-b border-(--border-subtle)">
-                        <th className="py-3 pr-4 font-medium text-(--txt-secondary)">Full name</th>
                         <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
-                          Display name
+                          {t('settings.members.fullName', 'Full name')}
                         </th>
                         <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
-                          Email address
+                          {t('settings.members.displayName', 'Display name')}
                         </th>
                         <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
-                          Account type
+                          {t('settings.members.emailAddress', 'Email address')}
                         </th>
                         <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
-                          Authentication
+                          {t('settings.members.accountType', 'Account type')}
                         </th>
-                        <th className="py-3 font-medium text-(--txt-secondary)">Joining date</th>
+                        <th className="py-3 pr-4 font-medium text-(--txt-secondary)">
+                          {t('settings.members.authentication', 'Authentication')}
+                        </th>
+                        <th className="py-3 font-medium text-(--txt-secondary)">
+                          {t('settings.members.joiningDate', 'Joining date')}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2864,15 +3384,19 @@ export function SettingsPage() {
                                 }}
                                 className="w-full appearance-none rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1.5 pl-2.5 pr-7 text-sm capitalize text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                               >
-                                <option value="member">Member</option>
-                                <option value="admin">Admin</option>
+                                <option value="member">
+                                  {t('settings.role.member', 'Member')}
+                                </option>
+                                <option value="admin">{t('settings.role.admin', 'Admin')}</option>
                               </select>
                               <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                                 <IconChevronDown />
                               </span>
                             </div>
                           </td>
-                          <td className="py-3 pr-4 text-(--txt-secondary)">Email</td>
+                          <td className="py-3 pr-4 text-(--txt-secondary)">
+                            {t('settings.members.authEmail', 'Email')}
+                          </td>
                           <td className="py-3 text-(--txt-secondary)">
                             {m.created_at
                               ? new Date(m.created_at).toLocaleDateString('en-US', {
@@ -2894,7 +3418,7 @@ export function SettingsPage() {
                   onClick={() => setPendingInvitesExpanded((e) => !e)}
                   className="flex w-full items-center gap-2 rounded-md py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover)"
                 >
-                  Pending invites
+                  {t('settings.members.pendingInvites', 'Pending invites')}
                   <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-(--brand-200) px-2 py-0.5 text-xs font-medium text-(--brand-default)">
                     {pendingInvites.length}
                   </span>
@@ -2905,7 +3429,9 @@ export function SettingsPage() {
                 {pendingInvitesExpanded && (
                   <div className="mt-2 space-y-2">
                     {pendingInvites.length === 0 ? (
-                      <p className="py-4 text-sm text-(--txt-tertiary)">No pending invites.</p>
+                      <p className="py-4 text-sm text-(--txt-tertiary)">
+                        {t('settings.members.noPendingInvites', 'No pending invites.')}
+                      </p>
                     ) : (
                       pendingInvites.map((inv) => {
                         const initial = inv.email.charAt(0).toUpperCase();
@@ -2921,15 +3447,17 @@ export function SettingsPage() {
                               {inv.email}
                             </span>
                             <span className="shrink-0 rounded-full bg-(--bg-warning-subtle) px-2.5 py-0.5 text-xs font-medium text-(--txt-warning-primary)">
-                              Pending
+                              {t('settings.members.pending', 'Pending')}
                             </span>
                             <div className="relative shrink-0 min-w-[100px]">
                               <select
                                 defaultValue={roleLabel(inv.role)}
                                 className="w-full appearance-none rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1.5 pl-2.5 pr-7 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                               >
-                                <option value="member">Member</option>
-                                <option value="admin">Admin</option>
+                                <option value="member">
+                                  {t('settings.role.member', 'Member')}
+                                </option>
+                                <option value="admin">{t('settings.role.admin', 'Admin')}</option>
                               </select>
                               <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                                 <IconChevronDown />
@@ -2944,7 +3472,7 @@ export function SettingsPage() {
                               <button
                                 type="button"
                                 className="flex size-8 shrink-0 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-                                aria-label="More options"
+                                aria-label={t('common.moreOptions', 'More options')}
                                 aria-expanded={pendingInviteMenuId === inv.id}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -2974,7 +3502,7 @@ export function SettingsPage() {
                                     }}
                                   >
                                     <IconLink />
-                                    Copy link
+                                    {t('settings.members.copyLink', 'Copy link')}
                                   </button>
                                   <button
                                     type="button"
@@ -2994,7 +3522,7 @@ export function SettingsPage() {
                                     }}
                                   >
                                     <IconTrash />
-                                    Remove
+                                    {t('common.remove', 'Remove')}
                                   </button>
                                 </div>
                               )}
@@ -3009,6 +3537,23 @@ export function SettingsPage() {
             </div>
           )}
 
+          {!isAccountTab && !isProjectsTab && section === 'notifications' && workspaceSlug && (
+            <NotificationPreferencesPanel
+              key={workspaceSlug}
+              load={loadWorkspaceNotifPrefs}
+              save={saveWorkspaceNotifPrefs}
+              title={t('settings.notifications.workspace.title', 'Workspace notifications')}
+              description={t(
+                'settings.notifications.workspace.description',
+                "How you're notified for work in this workspace. Overrides your account defaults; projects can override this.",
+              )}
+            />
+          )}
+
+          {!isAccountTab && !isProjectsTab && section === 'api-tokens' && workspaceSlug && (
+            <WorkspaceApiTokensPanel workspaceSlug={workspaceSlug} />
+          )}
+
           {!isAccountTab && !isProjectsTab && section === 'integrations' && workspaceSlug && (
             <IntegrationsSection workspaceSlug={workspaceSlug} projects={projects} />
           )}
@@ -3020,16 +3565,20 @@ export function SettingsPage() {
           {!isAccountTab && !isProjectsTab && section === 'exports' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-base font-semibold text-(--txt-primary)">Exports</h2>
+                <h2 className="text-base font-semibold text-(--txt-primary)">
+                  {t('settings.export.title', 'Exports')}
+                </h2>
                 <p className="mt-1 text-sm text-(--txt-secondary)">
-                  Export your project data in various formats and access your export history with
-                  download links.
+                  {t(
+                    'settings.export.subtitle',
+                    'Export your project data in various formats and access your export history with download links.',
+                  )}
                 </p>
               </div>
               <div className="flex flex-wrap items-end gap-4">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    Exporting project
+                    {t('settings.export.exportingProject', 'Exporting project')}
                   </label>
                   <div className="relative min-w-[200px]">
                     <select
@@ -3037,7 +3586,9 @@ export function SettingsPage() {
                       onChange={(e) => setExportProjectValue(e.target.value)}
                       className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                     >
-                      <option value="all">All projects</option>
+                      <option value="all">
+                        {t('settings.export.allProjects', 'All projects')}
+                      </option>
                       {projects.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name}
@@ -3051,7 +3602,7 @@ export function SettingsPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                    Format
+                    {t('settings.export.format', 'Format')}
                   </label>
                   <div className="relative min-w-[120px]">
                     <select
@@ -3059,40 +3610,53 @@ export function SettingsPage() {
                       onChange={(e) => setExportFormat(e.target.value)}
                       className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                     >
+                      {}
                       <option value="csv">CSV</option>
+                      {}
                       <option value="json">JSON</option>
-                      <option value="xlsx">Excel</option>
+                      <option value="xlsx">{t('settings.export.formatExcel', 'Excel')}</option>
                     </select>
                     <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                       <IconChevronDown />
                     </span>
                   </div>
                 </div>
-                <Button onClick={() => setExportProjectOpen(true)}>Export</Button>
+                <Button onClick={() => setExportProjectOpen(true)}>
+                  {t('settings.export.export', 'Export')}
+                </Button>
               </div>
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-(--txt-primary)">Previous exports</h3>
+                  <h3 className="text-sm font-semibold text-(--txt-primary)">
+                    {t('settings.export.previous', 'Previous exports')}
+                  </h3>
                   <button
                     type="button"
                     className="flex items-center gap-1 text-sm font-medium text-(--txt-secondary) hover:text-(--txt-primary)"
                   >
                     <IconRefresh />
-                    Refresh status
+                    {t('settings.export.refreshStatus', 'Refresh status')}
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-(--txt-tertiary)">← Prev</span>
-                  <span className="text-sm text-(--txt-tertiary)">Next →</span>
+                  <span className="text-sm text-(--txt-tertiary)">
+                    {t('settings.export.prev', '← Prev')}
+                  </span>
+                  <span className="text-sm text-(--txt-tertiary)">
+                    {t('settings.export.next', 'Next →')}
+                  </span>
                 </div>
                 <Card variant="outlined" className="mt-2">
                   <CardContent className="flex flex-col items-center justify-center py-12">
                     <IconCog />
                     <p className="mt-2 text-sm font-medium text-(--txt-secondary)">
-                      No exports yet
+                      {t('settings.export.empty', 'No exports yet')}
                     </p>
                     <p className="mt-0.5 text-sm text-(--txt-tertiary)">
-                      Anytime you export, you will also have a copy here for reference.
+                      {t(
+                        'settings.export.emptyHelp',
+                        'Anytime you export, you will also have a copy here for reference.',
+                      )}
                     </p>
                   </CardContent>
                 </Card>
@@ -3100,14 +3664,8 @@ export function SettingsPage() {
             </div>
           )}
 
-          {!isAccountTab && !isProjectsTab && section === 'webhooks' && (
-            <Card variant="outlined">
-              <CardContent className="py-10 text-center">
-                <p className="text-sm text-(--txt-secondary)">
-                  Webhooks settings will be available when the API is connected.
-                </p>
-              </CardContent>
-            </Card>
+          {!isAccountTab && !isProjectsTab && section === 'webhooks' && workspaceSlug && (
+            <WebhooksSettings workspaceSlug={workspaceSlug} />
           )}
         </main>
       </div>

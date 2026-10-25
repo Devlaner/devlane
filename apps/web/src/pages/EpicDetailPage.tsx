@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge, Card, CardContent, CardHeader } from '../components/ui';
 import { workspaceService } from '../services/workspaceService';
@@ -33,6 +34,7 @@ export function EpicDetailPage() {
     epicId: string;
   }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
@@ -50,7 +52,7 @@ export function EpicDetailPage() {
   const [addLinkTitle, setAddLinkTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  useDocumentTitle(loading ? 'Epic' : (epic?.name ?? 'Epic'));
+  useDocumentTitle(loading ? t('epic.title', 'Epic') : (epic?.name ?? t('epic.title', 'Epic')));
 
   useEffect(() => {
     if (!workspaceSlug || !projectId || !epicId) return;
@@ -97,9 +99,16 @@ export function EpicDetailPage() {
   const stateName = (stateId: string | null | undefined) =>
     stateId ? (states.find((s) => s.id === stateId)?.name ?? '—') : '—';
 
-  if (loading) return <div className="p-6 text-sm text-(--txt-tertiary)">Loading epic…</div>;
+  if (loading)
+    return (
+      <div className="p-6 text-sm text-(--txt-tertiary)">{t('epic.loading', 'Loading epic…')}</div>
+    );
   if (!workspace || !project || !epic)
-    return <div className="p-6 text-sm text-(--txt-secondary)">Epic not found.</div>;
+    return (
+      <div className="p-6 text-sm text-(--txt-secondary)">
+        {t('epic.notFound', 'Epic not found.')}
+      </div>
+    );
 
   const projectBase = `/${workspace.slug}/projects/${project.id}`;
   const candidateIssues = allIssues.filter(
@@ -112,13 +121,13 @@ export function EpicDetailPage() {
 
   const handleConvertToWorkItem = async () => {
     if (!workspaceSlug || !epicId) return;
-    if (!window.confirm('Convert this epic back to a work item?')) return;
+    if (!window.confirm(t('epic.convertConfirm', 'Convert this epic back to a work item?'))) return;
     try {
       await issueService.convert(workspaceSlug, project.id, epicId, false);
       navigate(`${projectBase}/issues/${epicId}`);
     } catch (err) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg || 'Failed to convert to work item.');
+      setError(msg || t('epic.convertError', 'Failed to convert to work item.'));
     }
   };
 
@@ -129,14 +138,14 @@ export function EpicDetailPage() {
           to={`${projectBase}/epics`}
           className="inline-flex items-center text-sm text-(--txt-secondary) hover:text-(--txt-primary)"
         >
-          ← Back to epics
+          ← {t('epic.backToEpics', 'Back to epics')}
         </Link>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-xl font-semibold text-(--txt-primary)">{epic.name}</h1>
             <p className="text-sm text-(--txt-secondary)">
               {project.identifier ?? project.id.slice(0, 6)}-{epic.sequence_id} ·{' '}
-              {stateName(epic.state_id)} · {epic.priority ?? 'no priority'}
+              {stateName(epic.state_id)} · {epic.priority ?? t('epic.noPriority', 'no priority')}
             </p>
           </div>
           <button
@@ -144,7 +153,7 @@ export function EpicDetailPage() {
             onClick={() => void handleConvertToWorkItem()}
             className="inline-flex shrink-0 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-secondary) transition-colors hover:bg-(--bg-layer-1-hover)"
           >
-            Convert to work item
+            {t('epic.convertToWorkItem', 'Convert to work item')}
           </button>
         </div>
         <div className="mt-2">
@@ -163,14 +172,14 @@ export function EpicDetailPage() {
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-(--txt-secondary)">
-              Work items ({issues.length})
+              {t('epic.workItemsCount', 'Work items ({{count}})', { count: issues.length })}
             </h2>
             <button
               type="button"
               onClick={() => setAddIssueOpen((v) => !v)}
               className="rounded-(--radius-md) px-2 py-1 text-xs text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)"
             >
-              + Add issue
+              + {t('epic.addIssue', 'Add issue')}
             </button>
           </div>
           {addIssueOpen && (
@@ -178,7 +187,7 @@ export function EpicDetailPage() {
               <input
                 autoFocus
                 type="text"
-                placeholder="Search issues…"
+                placeholder={t('epic.searchIssues', 'Search issues…')}
                 value={addIssueSearch}
                 onChange={(e) => setAddIssueSearch(e.target.value)}
                 className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-canvas) px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-(--border-focus)"
@@ -196,7 +205,7 @@ export function EpicDetailPage() {
                         setIssues((prev) => [...prev, i]);
                         setAddIssueOpen(false);
                       } catch {
-                        setError('Failed to add issue.');
+                        setError(t('epic.addIssueError', 'Failed to add issue.'));
                       }
                     }}
                   >
@@ -207,7 +216,9 @@ export function EpicDetailPage() {
                   </button>
                 ))}
                 {candidateIssues.length === 0 && (
-                  <p className="px-2 py-1 text-xs text-(--txt-tertiary)">No matching issues.</p>
+                  <p className="px-2 py-1 text-xs text-(--txt-tertiary)">
+                    {t('epic.noMatchingIssues', 'No matching issues.')}
+                  </p>
                 )}
               </div>
               <button
@@ -215,7 +226,7 @@ export function EpicDetailPage() {
                 onClick={() => setAddIssueOpen(false)}
                 className="text-xs text-(--txt-tertiary) hover:text-(--txt-secondary)"
               >
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </button>
             </div>
           )}
@@ -223,17 +234,23 @@ export function EpicDetailPage() {
             <table className="w-full text-left text-sm">
               <thead className="bg-(--bg-layer-1)">
                 <tr>
-                  <th className="px-4 py-2 font-medium text-(--txt-secondary)">Work item</th>
-                  <th className="px-4 py-2 font-medium text-(--txt-secondary)">State</th>
-                  <th className="px-4 py-2 font-medium text-(--txt-secondary)">Priority</th>
-                  <th className="w-10 px-4 py-2" aria-label="Actions" />
+                  <th className="px-4 py-2 font-medium text-(--txt-secondary)">
+                    {t('epic.colWorkItem', 'Work item')}
+                  </th>
+                  <th className="px-4 py-2 font-medium text-(--txt-secondary)">
+                    {t('common.state', 'State')}
+                  </th>
+                  <th className="px-4 py-2 font-medium text-(--txt-secondary)">
+                    {t('common.priority', 'Priority')}
+                  </th>
+                  <th className="w-10 px-4 py-2" aria-label={t('common.actions', 'Actions')} />
                 </tr>
               </thead>
               <tbody>
                 {issues.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-4 py-6 text-center text-xs text-(--txt-tertiary)">
-                      No work items yet.
+                      {t('epic.noWorkItems', 'No work items yet.')}
                     </td>
                   </tr>
                 ) : (
@@ -258,8 +275,10 @@ export function EpicDetailPage() {
                       <td className="px-4 py-2 text-right">
                         <button
                           type="button"
-                          title="Remove from epic"
-                          aria-label={`Remove ${i.name} from epic`}
+                          title={t('epic.removeFromEpic', 'Remove from epic')}
+                          aria-label={t('epic.removeNamedFromEpic', 'Remove {{name}} from epic', {
+                            name: i.name,
+                          })}
                           onClick={async () => {
                             if (!workspaceSlug) return;
                             try {
@@ -271,7 +290,9 @@ export function EpicDetailPage() {
                               );
                               setIssues((prev) => prev.filter((x) => x.id !== i.id));
                             } catch {
-                              setError('Failed to remove issue from epic.');
+                              setError(
+                                t('epic.removeIssueError', 'Failed to remove issue from epic.'),
+                              );
                             }
                           }}
                           className="rounded-(--radius-sm) text-sm text-(--txt-tertiary) opacity-0 group-hover:opacity-100 hover:text-(--txt-danger-primary) focus-visible:text-(--txt-danger-primary) focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-(--border-focus)"
@@ -291,7 +312,7 @@ export function EpicDetailPage() {
         <div>
           <Card>
             <CardHeader className="flex items-center justify-between text-sm font-medium text-(--txt-secondary)">
-              <span>Links</span>
+              <span>{t('epic.links', 'Links')}</span>
               <button
                 type="button"
                 onClick={() => {
@@ -321,7 +342,7 @@ export function EpicDetailPage() {
                       setLinks((prev) => [...prev, created]);
                       setAddLinkOpen(false);
                     } catch {
-                      setError('Failed to add link.');
+                      setError(t('epic.addLinkError', 'Failed to add link.'));
                     }
                   }}
                 >
@@ -335,7 +356,7 @@ export function EpicDetailPage() {
                   />
                   <input
                     type="text"
-                    placeholder="Title (optional)"
+                    placeholder={t('epic.linkTitlePlaceholder', 'Title (optional)')}
                     value={addLinkTitle}
                     onChange={(e) => setAddLinkTitle(e.target.value)}
                     className="w-full rounded border border-(--border-subtle) bg-(--bg-canvas) px-2 py-1 text-xs focus:outline-none"
@@ -345,20 +366,22 @@ export function EpicDetailPage() {
                       type="submit"
                       className="rounded bg-(--bg-accent-primary) px-2 py-1 text-xs text-white"
                     >
-                      Add
+                      {t('common.add', 'Add')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setAddLinkOpen(false)}
                       className="rounded px-2 py-1 text-xs text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)"
                     >
-                      Cancel
+                      {t('common.cancel', 'Cancel')}
                     </button>
                   </div>
                 </form>
               )}
               {links.length === 0 && !addLinkOpen && (
-                <p className="text-xs text-(--txt-tertiary)">No links yet.</p>
+                <p className="text-xs text-(--txt-tertiary)">
+                  {t('epic.noLinks', 'No links yet.')}
+                </p>
               )}
               {links.map((l) => (
                 <div key={l.id} className="flex items-center gap-1 group">

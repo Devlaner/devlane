@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 
 const IconSearch = () => (
@@ -23,6 +24,7 @@ export function SelectParentModal({
   value,
   onChange,
 }: SelectParentModalProps) {
+  const { t } = useTranslation();
   void value; // reserved for future use (e.g. pre-select current parent)
   const [search, setSearch] = useState('');
 
@@ -53,7 +55,7 @@ export function SelectParentModal({
       >
         <div className="border-b border-(--border-subtle) px-4 py-3">
           <h2 id="select-parent-title" className="text-sm font-semibold text-(--txt-primary)">
-            Select parent
+            {t('views.selectParent.title', 'Select parent')}
           </h2>
         </div>
         <div className="flex flex-col p-3">
@@ -79,7 +81,7 @@ export function SelectParentModal({
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
             >
               <span className="text-(--txt-icon-tertiary)">•</span>
-              No parent
+              {t('views.selectParent.noParent', 'No parent')}
             </button>
             {filteredIssues.map((i) => (
               <button

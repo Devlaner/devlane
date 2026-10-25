@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, Modal } from './ui';
 import { instanceSettingsService, type UnsplashSearchResult } from '../services/instanceService';
 import { uploadImage } from '../services/uploadService';
@@ -14,12 +15,8 @@ export interface CoverImageModalProps {
   title?: string;
 }
 
-export function CoverImageModal({
-  open,
-  onClose,
-  onSelect,
-  title = 'Select cover image',
-}: CoverImageModalProps) {
+export function CoverImageModal({ open, onClose, onSelect, title }: CoverImageModalProps) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>(TAB_UNSPLASH);
   const [unsplashQuery, setUnsplashQuery] = useState('');
   const [unsplashResults, setUnsplashResults] = useState<UnsplashSearchResult[]>([]);
@@ -52,12 +49,12 @@ export function CoverImageModal({
       const { results } = await instanceSettingsService.unsplashSearch(unsplashQuery.trim());
       setUnsplashResults(results);
     } catch (e) {
-      setUnsplashError(e instanceof Error ? e.message : 'Search failed');
+      setUnsplashError(e instanceof Error ? e.message : t('image.searchFailed', 'Search failed'));
       setUnsplashResults([]);
     } finally {
       setUnsplashLoading(false);
     }
-  }, [unsplashQuery]);
+  }, [unsplashQuery, t]);
 
   const handleUnsplashSelect = useCallback(() => {
     if (selectedUrl) {
@@ -66,36 +63,46 @@ export function CoverImageModal({
     }
   }, [selectedUrl, onSelect, onClose]);
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!allowed.includes(file.type)) {
-      setUploadError('Invalid file type. Supported: .jpeg, .jpg, .png, .webp');
-      return;
-    }
-    setUploadError(null);
-    setUploadFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setUploadPreview(reader.result as string);
-    reader.readAsDataURL(file);
-  }, []);
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowed.includes(file.type)) {
+        setUploadError(
+          t('image.invalidType', 'Invalid file type. Supported: .jpeg, .jpg, .png, .webp'),
+        );
+        return;
+      }
+      setUploadError(null);
+      setUploadFile(file);
+      const reader = new FileReader();
+      reader.onload = () => setUploadPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    },
+    [t],
+  );
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!allowed.includes(file.type)) {
-      setUploadError('Invalid file type. Supported: .jpeg, .jpg, .png, .webp');
-      return;
-    }
-    setUploadError(null);
-    setUploadFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setUploadPreview(reader.result as string);
-    reader.readAsDataURL(file);
-  }, []);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      const file = e.dataTransfer.files?.[0];
+      if (!file) return;
+      const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowed.includes(file.type)) {
+        setUploadError(
+          t('image.invalidType', 'Invalid file type. Supported: .jpeg, .jpg, .png, .webp'),
+        );
+        return;
+      }
+      setUploadError(null);
+      setUploadFile(file);
+      const reader = new FileReader();
+      reader.onload = () => setUploadPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    },
+    [t],
+  );
 
   const handleDragOver = useCallback((e: React.DragEvent) => e.preventDefault(), []);
 
@@ -108,11 +115,11 @@ export function CoverImageModal({
       onSelect(url);
       onClose();
     } catch (e) {
-      setUploadError(e instanceof Error ? e.message : 'Upload failed');
+      setUploadError(e instanceof Error ? e.message : t('image.uploadFailed', 'Upload failed'));
     } finally {
       setUploadLoading(false);
     }
-  }, [uploadFile, onSelect, onClose]);
+  }, [uploadFile, onSelect, onClose, t]);
 
   const handleRemoveUpload = useCallback(() => {
     setUploadFile(null);
@@ -123,23 +130,31 @@ export function CoverImageModal({
   const footer = (
     <>
       <Button variant="secondary" onClick={onClose}>
-        Cancel
+        {t('common.cancel', 'Cancel')}
       </Button>
       {tab === TAB_UNSPLASH && (
         <Button disabled={!selectedUrl} onClick={handleUnsplashSelect}>
-          Select
+          {t('common.select', 'Select')}
         </Button>
       )}
       {tab === TAB_UPLOAD && (
         <Button disabled={!uploadFile || uploadLoading} onClick={handleUploadSave}>
-          {uploadLoading ? 'Uploading…' : 'Upload & Save'}
+          {uploadLoading
+            ? t('image.uploading', 'Uploading…')
+            : t('image.uploadSave', 'Upload & Save')}
         </Button>
       )}
     </>
   );
 
   return (
-    <Modal open={open} onClose={onClose} title={title} footer={footer} className="max-w-2xl">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={title ?? t('image.coverTitle', 'Select cover image')}
+      footer={footer}
+      className="max-w-2xl"
+    >
       <div className="flex gap-2 border-b border-(--border-subtle) pb-3 mb-3">
         <button
           type="button"
@@ -161,7 +176,7 @@ export function CoverImageModal({
               : 'text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover)'
           }`}
         >
-          Upload
+          {t('image.tabUpload', 'Upload')}
         </button>
       </div>
 
@@ -173,11 +188,11 @@ export function CoverImageModal({
               value={unsplashQuery}
               onChange={(e) => setUnsplashQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Search for images"
+              placeholder={t('image.searchImages', 'Search for images')}
               className="min-w-0 flex-1 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
             />
             <Button variant="secondary" onClick={handleSearch} disabled={unsplashLoading}>
-              {unsplashLoading ? 'Searching…' : 'Search'}
+              {unsplashLoading ? t('image.searching', 'Searching…') : t('common.search', 'Search')}
             </Button>
           </div>
           {unsplashError && <p className="text-sm text-(--txt-danger-primary)">{unsplashError}</p>}
@@ -208,10 +223,12 @@ export function CoverImageModal({
               onDragOver={handleDragOver}
               className="flex flex-col items-center justify-center rounded-(--radius-md) border-2 border-dashed border-(--border-subtle) bg-(--bg-layer-2) py-12 px-4"
             >
-              <p className="text-sm text-(--txt-secondary) mb-2">Drag & drop image here</p>
+              <p className="text-sm text-(--txt-secondary) mb-2">
+                {t('image.dragDrop', 'Drag & drop image here')}
+              </p>
               <label className="cursor-pointer">
                 <span className="text-sm font-medium text-(--txt-accent-primary) hover:underline">
-                  Browse
+                  {t('image.browse', 'Browse')}
                 </span>
                 <input
                   type="file"
@@ -223,20 +240,24 @@ export function CoverImageModal({
             </div>
           ) : (
             <div className="relative rounded-(--radius-md) border border-(--border-subtle) overflow-hidden bg-(--bg-layer-2)">
-              <img src={uploadPreview} alt="Preview" className="w-full max-h-64 object-contain" />
+              <img
+                src={uploadPreview}
+                alt={t('image.previewAlt', 'Preview')}
+                className="w-full max-h-64 object-contain"
+              />
               <div className="absolute top-2 right-2">
                 <button
                   type="button"
                   onClick={handleRemoveUpload}
                   className="text-xs font-medium text-(--txt-accent-primary) hover:underline"
                 >
-                  Edit
+                  {t('common.edit', 'Edit')}
                 </button>
               </div>
             </div>
           )}
           <p className="text-xs text-(--txt-tertiary)">
-            File formats supported: .jpeg, .jpg, .png, .webp
+            {t('image.formatsSupported', 'File formats supported: .jpeg, .jpg, .png, .webp')}
           </p>
           {uploadError && <p className="text-sm text-(--txt-danger-primary)">{uploadError}</p>}
         </div>

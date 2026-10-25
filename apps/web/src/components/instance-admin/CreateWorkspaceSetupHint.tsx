@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Button } from '../ui';
 
 const IconWorkspace = () => (
@@ -23,25 +24,30 @@ interface CreateWorkspaceSetupHintProps {
 }
 
 export function CreateWorkspaceSetupHint({ onDismiss }: CreateWorkspaceSetupHintProps) {
+  const { t } = useTranslation();
   return (
     <div
       className="fixed bottom-6 right-6 z-50 w-full max-w-sm rounded-(--radius-lg) border border-(--border-subtle) bg-(--bg-surface-1) p-4 shadow-(--shadow-overlay)"
       role="dialog"
-      aria-label="Create workspace"
+      aria-label={t('instanceAdmin.createWorkspace', 'Create workspace')}
     >
       <div className="flex gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-(--txt-primary)">Create workspace</h3>
+          <h3 className="text-sm font-semibold text-(--txt-primary)">
+            {t('instanceAdmin.createWorkspace', 'Create workspace')}
+          </h3>
           <p className="mt-1 text-xs text-(--txt-secondary)">
-            Instance setup is complete. Welcome to your Devlane instance. Start your journey by
-            creating your first workspace.
+            {t(
+              'instanceAdmin.createWorkspaceHint',
+              'Instance setup is complete. Welcome to your Devlane instance. Start your journey by creating your first workspace.',
+            )}
           </p>
           <div className="mt-3 flex gap-2">
             <Button size="sm" type="button" onClick={onDismiss}>
-              Create workspace
+              {t('instanceAdmin.createWorkspace', 'Create workspace')}
             </Button>
             <Button size="sm" variant="secondary" type="button" onClick={onDismiss}>
-              Close
+              {t('common.close', 'Close')}
             </Button>
           </div>
         </div>

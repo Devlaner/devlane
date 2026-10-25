@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Dropdown } from './Dropdown';
 import { StatePill, PriorityIcon, WorkItemAvatarGroup, LabelChips } from './IssueRowCells';
 import { membersFromAssigneeIds } from '../../lib/issueRowHelpers';
@@ -51,18 +52,19 @@ export function EditableStateCell({
   states: StateApiResponse[];
   onChange: (stateId: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <Dropdown
       id={`${issueId}:state`}
       openId={openId}
       onOpen={onOpen}
-      label="State"
+      label={t('common.state', 'State')}
       icon={null}
       displayValue=""
       align={align}
       panelClassName={PANEL}
       triggerClassName={CELL_TRIGGER}
-      triggerAriaLabel="Change state"
+      triggerAriaLabel={t('workItem.cell.changeState', 'Change state')}
       triggerContent={<StatePill state={state} />}
     >
       {states.map((s) => (
@@ -96,19 +98,20 @@ export function EditablePriorityCell({
   priority?: Priority | string | null;
   onChange: (priority: Priority) => void;
 }) {
+  const { t } = useTranslation();
   const current = (priority ?? 'none') as Priority;
   return (
     <Dropdown
       id={`${issueId}:priority`}
       openId={openId}
       onOpen={onOpen}
-      label="Priority"
+      label={t('common.priority', 'Priority')}
       icon={null}
       displayValue=""
       align={align}
       panelClassName={PANEL}
       triggerClassName={CELL_TRIGGER}
-      triggerAriaLabel="Change priority"
+      triggerAriaLabel={t('workItem.cell.changePriority', 'Change priority')}
       triggerContent={<PriorityIcon priority={current} />}
     >
       {PRIORITIES.map((p) => (
@@ -123,7 +126,7 @@ export function EditablePriorityCell({
         >
           <PriorityIcon priority={p} />
           <span className="capitalize text-(--txt-primary)">
-            {p === 'none' ? 'No priority' : p}
+            {p === 'none' ? t('common.noPriority', 'No priority') : p}
           </span>
           {current === p && <span className="ml-auto text-xs text-(--txt-tertiary)">✓</span>}
         </button>
@@ -146,24 +149,25 @@ export function EditableAssigneeCell({
   members: WorkspaceMemberApiResponse[];
   onChange: (assigneeIds: string[]) => void;
 }) {
+  const { t } = useTranslation();
   const selected = membersFromAssigneeIds(members, assigneeIds);
   return (
     <Dropdown
       id={`${issueId}:assignees`}
       openId={openId}
       onOpen={onOpen}
-      label="Assignees"
+      label={t('common.assignees', 'Assignees')}
       icon={null}
       displayValue=""
       align={align}
       panelClassName={PANEL}
       triggerClassName={CELL_TRIGGER}
-      triggerAriaLabel="Change assignees"
+      triggerAriaLabel={t('workItem.cell.changeAssignees', 'Change assignees')}
       triggerContent={<WorkItemAvatarGroup members={selected} />}
     >
       {members.map((m) => {
         const checked = assigneeIds.includes(m.member_id);
-        const name = m.member_display_name || (m.member_email ?? 'Unknown');
+        const name = m.member_display_name || (m.member_email ?? t('common.unknown', 'Unknown'));
         return (
           <button
             key={m.id}
@@ -184,7 +188,9 @@ export function EditableAssigneeCell({
         );
       })}
       {members.length === 0 && (
-        <p className="px-3 py-2 text-sm text-(--txt-tertiary)">No members</p>
+        <p className="px-3 py-2 text-sm text-(--txt-tertiary)">
+          {t('workItem.cell.noMembers', 'No members')}
+        </p>
       )}
     </Dropdown>
   );
@@ -204,24 +210,25 @@ export function EditableLabelCell({
   labels: LabelApiResponse[];
   onChange: (labelIds: string[]) => void;
 }) {
+  const { t } = useTranslation();
   const selected = labels.filter((l) => labelIds.includes(l.id));
   return (
     <Dropdown
       id={`${issueId}:labels`}
       openId={openId}
       onOpen={onOpen}
-      label="Labels"
+      label={t('common.labels', 'Labels')}
       icon={null}
       displayValue=""
       align={align}
       panelClassName={PANEL}
       triggerClassName={CELL_TRIGGER}
-      triggerAriaLabel="Change labels"
+      triggerAriaLabel={t('workItem.cell.changeLabels', 'Change labels')}
       triggerContent={
         selected.length > 0 ? (
           <LabelChips labels={selected} max={2} />
         ) : (
-          <span className="text-[11px] text-(--txt-tertiary)">Labels</span>
+          <span className="text-[11px] text-(--txt-tertiary)">{t('common.labels', 'Labels')}</span>
         )
       }
     >
@@ -246,7 +253,11 @@ export function EditableLabelCell({
           </button>
         );
       })}
-      {labels.length === 0 && <p className="px-3 py-2 text-sm text-(--txt-tertiary)">No labels</p>}
+      {labels.length === 0 && (
+        <p className="px-3 py-2 text-sm text-(--txt-tertiary)">
+          {t('workItem.cell.noLabels', 'No labels')}
+        </p>
+      )}
     </Dropdown>
   );
 }

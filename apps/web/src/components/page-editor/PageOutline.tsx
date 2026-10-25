@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEditorState, type Editor } from '@tiptap/react';
 
 interface Props {
@@ -32,6 +33,7 @@ function sameHeadings(a: Heading[], b: Heading[] | null): boolean {
  * the caret to that heading and scrolls it into view.
  */
 export function PageOutline({ editor }: Props) {
+  const { t } = useTranslation();
   const headings =
     useEditorState({
       editor,
@@ -42,7 +44,7 @@ export function PageOutline({ editor }: Props) {
   if (headings.length === 0) {
     return (
       <p className="px-2 py-3 text-xs text-(--txt-tertiary)">
-        Headings you add to the page show up here.
+        {t('editor.outline.empty', 'Headings you add to the page show up here.')}
       </p>
     );
   }

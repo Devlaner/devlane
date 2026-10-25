@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { Button, Input, Tooltip } from './ui';
 import { CoverImageModal } from './CoverImageModal';
 import {
@@ -71,6 +72,7 @@ export function CreateProjectModal({
   workspaceSlug,
   onSuccess,
 }: CreateProjectModalProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [name, setName] = useState('');
   const [identifier, setIdentifier] = useState('');
@@ -103,7 +105,7 @@ export function CreateProjectModal({
     e.preventDefault();
     setError('');
     if (!name.trim()) {
-      setError('Project name is required.');
+      setError(t('project.create.nameRequired', 'Project name is required.'));
       return;
     }
     setSubmitting(true);
@@ -115,7 +117,7 @@ export function CreateProjectModal({
         cover_image: coverImage || undefined,
         emoji: emoji ?? undefined,
         icon_prop: iconProp ?? undefined,
-        guest_view_all_features: network === 'public' ? true : undefined,
+        network: network === 'public' ? 2 : 0,
         project_lead_id: projectLeadId ?? undefined,
       };
 
@@ -123,7 +125,9 @@ export function CreateProjectModal({
       onSuccess?.(project);
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create project.');
+      setError(
+        err instanceof Error ? err.message : t('project.create.error', 'Failed to create project.'),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -181,7 +185,7 @@ export function CreateProjectModal({
       aria-labelledby="create-project-modal-title"
     >
       <h2 id="create-project-modal-title" className="sr-only">
-        Create project
+        {t('project.create.title', 'Create project')}
       </h2>
       <div className="absolute inset-0 bg-(--bg-backdrop)" onClick={handleClose} aria-hidden />
       <div
@@ -194,7 +198,7 @@ export function CreateProjectModal({
             type="button"
             onClick={handleClose}
             className="absolute right-3 top-3 flex size-8 items-center justify-center rounded-full bg-black/20 text-white hover:bg-black/30 focus:outline-none focus:ring-2 focus:ring-white/50"
-            aria-label="Close"
+            aria-label={t('common.close', 'Close')}
           >
             <IconX />
           </button>
@@ -203,7 +207,7 @@ export function CreateProjectModal({
             onClick={() => setCoverModalOpen(true)}
             className="absolute bottom-3 right-3 rounded-md bg-white/20 px-2.5 py-1.5 text-xs font-medium text-white backdrop-blur-sm hover:bg-white/30"
           >
-            Choose image
+            {t('project.create.chooseImage', 'Choose image')}
           </button>
         </div>
 
@@ -213,7 +217,7 @@ export function CreateProjectModal({
             type="button"
             onClick={() => setIconModalOpen(true)}
             className="flex size-12 items-center justify-center rounded-lg border-2 border-(--bg-surface-1) bg-(--bg-layer-2) text-2xl shadow-sm hover:bg-(--bg-layer-transparent-hover) focus:outline-none focus:ring-2 focus:ring-(--border-strong)"
-            aria-label="Change project icon"
+            aria-label={t('project.create.changeIcon', 'Change project icon')}
           >
             <ProjectIconDisplay
               emoji={emoji ?? undefined}
@@ -230,7 +234,7 @@ export function CreateProjectModal({
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Project name"
+                placeholder={t('project.create.namePlaceholder', 'Project name')}
                 required
                 autoFocus
                 disabled={submitting}
@@ -248,20 +252,23 @@ export function CreateProjectModal({
                       .slice(0, 7),
                   )
                 }
-                placeholder="Project ID"
+                placeholder={t('project.create.idPlaceholder', 'Project ID')}
                 maxLength={7}
                 disabled={submitting}
                 className="w-full pr-9"
               />
               <div className="absolute right-3 top-1/2 z-[1] flex size-8 -translate-y-1/2 items-center justify-center text-(--txt-placeholder)">
                 <Tooltip
-                  content="Helps you identify work items in the project uniquely. Max 7 characters."
+                  content={t(
+                    'project.create.idTooltip',
+                    'Helps you identify work items in the project uniquely. Max 7 characters.',
+                  )}
                   placement="top"
                 >
                   <button
                     type="button"
                     className="flex size-8 items-center justify-center rounded-md text-(--txt-placeholder) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-secondary) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--border-strong)"
-                    aria-label="About project ID"
+                    aria-label={t('project.create.aboutId', 'About project ID')}
                   >
                     <IconIdentifierHint />
                   </button>
@@ -273,7 +280,7 @@ export function CreateProjectModal({
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Description"
+              placeholder={t('common.description', 'Description')}
               rows={3}
               disabled={submitting}
               className="min-h-[72px] w-full resize-y rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:ring-2 focus:ring-(--border-strong)"
@@ -296,10 +303,12 @@ export function CreateProjectModal({
           {/* Actions */}
           <div className="mt-6 flex justify-end gap-2 border-t border-(--border-subtle) pt-4">
             <Button type="button" variant="secondary" onClick={handleClose} disabled={submitting}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button type="submit" disabled={submitting || !name.trim()}>
-              {submitting ? 'Creating…' : 'Create project'}
+              {submitting
+                ? t('common.creating', 'Creating…')
+                : t('project.create.submit', 'Create project')}
             </Button>
           </div>
         </form>
@@ -312,7 +321,7 @@ export function CreateProjectModal({
             setCoverImage(url);
             setCoverModalOpen(false);
           }}
-          title="Select project cover"
+          title={t('project.create.coverTitle', 'Select project cover')}
         />
         <ProjectIconModal
           open={iconModalOpen}
@@ -327,7 +336,7 @@ export function CreateProjectModal({
             }
             setIconModalOpen(false);
           }}
-          title="Project icon"
+          title={t('project.icon.title', 'Project icon')}
         />
       </div>
     </div>,

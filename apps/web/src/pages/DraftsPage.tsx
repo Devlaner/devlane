@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui';
 import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
@@ -80,6 +81,7 @@ const IconFileDraft = () => (
 );
 
 export function DraftsPage() {
+  const { t } = useTranslation();
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -112,7 +114,7 @@ export function DraftsPage() {
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [propDropdownId, setPropDropdownId] = useState<string | null>(null);
 
-  useDocumentTitle('Drafts');
+  useDocumentTitle(t('drafts.documentTitle', 'Drafts'));
 
   const projectById = useMemo(() => {
     const m = new Map<string, ProjectApiResponse>();
@@ -195,12 +197,12 @@ export function DraftsPage() {
         setError(null);
       } catch {
         if (reset) setDrafts([]);
-        setError('Could not load drafts.');
+        setError(t('drafts.loadError', 'Could not load drafts.'));
       } finally {
         if (reset) setListLoading(false);
       }
     },
-    [workspaceSlug, offset],
+    [workspaceSlug, offset, t],
   );
 
   useEffect(() => {
@@ -227,7 +229,7 @@ export function DraftsPage() {
           setWorkspace(null);
           setProjects([]);
           setMembers([]);
-          setError('Could not load workspace.');
+          setError(t('drafts.loadWorkspaceError', 'Could not load workspace.'));
         }
       })
       .finally(() => {
@@ -236,7 +238,7 @@ export function DraftsPage() {
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug]);
+  }, [workspaceSlug, t]);
 
   useEffect(() => {
     if (!workspaceSlug || !workspace) return;
@@ -276,7 +278,7 @@ export function DraftsPage() {
       );
       setDrafts((prev) => prev.map((i) => (i.id === issue.id ? { ...i, ...updated } : i)));
     } catch {
-      setError('Could not update draft.');
+      setError(t('drafts.updateError', 'Could not update draft.'));
     } finally {
       setRowBusy(null);
     }
@@ -297,7 +299,7 @@ export function DraftsPage() {
       const fresh = await issueService.get(workspaceSlug, issue.project_id, issue.id);
       setDrafts((prev) => prev.map((i) => (i.id === issue.id ? { ...i, ...fresh } : i)));
     } catch {
-      setError('Could not update module.');
+      setError(t('drafts.updateModuleError', 'Could not update module.'));
     } finally {
       setRowBusy(null);
     }
@@ -318,7 +320,7 @@ export function DraftsPage() {
       const fresh = await issueService.get(workspaceSlug, issue.project_id, issue.id);
       setDrafts((prev) => prev.map((i) => (i.id === issue.id ? { ...i, ...fresh } : i)));
     } catch {
-      setError('Could not update cycle.');
+      setError(t('drafts.updateCycleError', 'Could not update cycle.'));
     } finally {
       setRowBusy(null);
     }
@@ -384,7 +386,9 @@ export function DraftsPage() {
       setModalInitialValues(undefined);
       await loadDrafts(true);
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'Failed to save draft.');
+      setCreateError(
+        err instanceof Error ? err.message : t('drafts.saveFailed', 'Failed to save draft.'),
+      );
     }
   };
 
@@ -397,7 +401,7 @@ export function DraftsPage() {
       await issueService.update(workspaceSlug, issue.project_id, issue.id, { is_draft: false });
       setDrafts((prev) => prev.filter((i) => i.id !== issue.id));
     } catch {
-      setError('Could not publish draft.');
+      setError(t('drafts.publishError', 'Could not publish draft.'));
     } finally {
       setRowBusy(null);
     }
@@ -405,7 +409,10 @@ export function DraftsPage() {
 
   const handleDelete = async (issue: IssueApiResponse) => {
     if (!workspaceSlug) return;
-    if (!window.confirm(`Delete draft “${issue.name}”?`)) return;
+    if (
+      !window.confirm(t('drafts.deleteConfirm', 'Delete draft “{{name}}”?', { name: issue.name }))
+    )
+      return;
     setMenuOpenId(null);
     setPropDropdownId(null);
     setRowBusy(issue.id);
@@ -413,7 +420,7 @@ export function DraftsPage() {
       await issueService.delete(workspaceSlug, issue.project_id, issue.id);
       setDrafts((prev) => prev.filter((i) => i.id !== issue.id));
     } catch {
-      setError('Could not delete draft.');
+      setError(t('drafts.deleteError', 'Could not delete draft.'));
     } finally {
       setRowBusy(null);
     }
@@ -448,7 +455,7 @@ export function DraftsPage() {
     setEditingIssueId(null);
     setModalInitialValues({
       ...issueToInitialValues(issue),
-      title: `${issue.name} (copy)`,
+      title: t('drafts.copySuffix', '{{name}} (copy)', { name: issue.name }),
     });
     setCreateOpen(true);
   };
@@ -456,13 +463,17 @@ export function DraftsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-        Loading…
+        {t('common.loading', 'Loading…')}
       </div>
     );
   }
 
   if (!workspaceSlug || !workspace) {
-    return <div className="text-sm text-(--txt-secondary)">Workspace not found.</div>;
+    return (
+      <div className="text-sm text-(--txt-secondary)">
+        {t('drafts.workspaceNotFound', 'Workspace not found.')}
+      </div>
+    );
   }
 
   const base = `/${workspace.slug}`;
@@ -471,15 +482,20 @@ export function DraftsPage() {
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center px-4 py-16 text-center">
         <IconFolderPlus />
-        <h1 className="mt-6 text-lg font-semibold text-(--txt-primary)">No projects yet</h1>
+        <h1 className="mt-6 text-lg font-semibold text-(--txt-primary)">
+          {t('drafts.noProjects', 'No projects yet')}
+        </h1>
         <p className="mt-2 text-sm text-(--txt-secondary)">
-          Create a project in this workspace before you can add draft work items.
+          {t(
+            'drafts.noProjectsHint',
+            'Create a project in this workspace before you can add draft work items.',
+          )}
         </p>
         <Link
           to={`${base}/projects`}
           className="mt-6 inline-flex h-9 items-center justify-center rounded-md bg-(--bg-accent-primary) px-4 text-sm font-medium text-(--txt-on-color) no-underline hover:bg-(--bg-accent-primary-hover)"
         >
-          Create project
+          {t('drafts.createProject', 'Create project')}
         </Link>
       </div>
     );
@@ -495,14 +511,19 @@ export function DraftsPage() {
 
       {listLoading && drafts.length === 0 ? (
         <div className="flex justify-center px-(--padding-page) py-8 text-sm text-(--txt-tertiary)">
-          Loading drafts…
+          {t('drafts.loadingDrafts', 'Loading drafts…')}
         </div>
       ) : drafts.length === 0 ? (
         <div className="mx-auto flex max-w-lg flex-col items-center px-4 py-16 text-center">
           <IconFileDraft />
-          <h2 className="mt-6 text-lg font-semibold text-(--txt-primary)">No draft work items</h2>
+          <h2 className="mt-6 text-lg font-semibold text-(--txt-primary)">
+            {t('drafts.empty', 'No draft work items')}
+          </h2>
           <p className="mt-2 text-sm text-(--txt-secondary)">
-            Capture ideas as drafts and publish them into a project when you are ready.
+            {t(
+              'drafts.emptyHint',
+              'Capture ideas as drafts and publish them into a project when you are ready.',
+            )}
           </p>
           <Button
             variant="primary"
@@ -510,7 +531,7 @@ export function DraftsPage() {
             type="button"
             onClick={() => setCreateOpen(true)}
           >
-            Draft a work item
+            {t('drafts.draftWorkItem', 'Draft a work item')}
           </Button>
         </div>
       ) : (
@@ -534,7 +555,9 @@ export function DraftsPage() {
                       tabIndex={0}
                       className="flex min-w-0 flex-1 cursor-default items-center gap-2 truncate text-[13px]"
                       onDoubleClick={() => navigate(issueUrl)}
-                      aria-label={`Open draft ${issue.name}`}
+                      aria-label={t('drafts.openDraft', 'Open draft {{name}}', {
+                        name: issue.name,
+                      })}
                     >
                       <span className="shrink-0 font-medium text-(--txt-tertiary)">
                         {displayId}
@@ -582,7 +605,7 @@ export function DraftsPage() {
                 className="text-[13px] font-medium text-(--brand-default) underline-offset-2 hover:underline"
                 onClick={() => void loadDrafts(false)}
               >
-                Load more
+                {t('common.loadMore', 'Load more')}
               </button>
             </div>
           ) : null}

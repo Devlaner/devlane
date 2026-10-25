@@ -43,10 +43,17 @@ commonly changed ones for local dev:
 
 ```sh
 go run ./cmd/api                              # start the API server (auto-runs migrations)
+go run ./cmd/api seed                          # seed a demo workspace/project/issues for local dev
+go run ./cmd/api admin grant <email>           # grant instance-admin to an existing user
 go vet ./...                                   # static analysis
 go test ./...                                  # run all tests
 go test ./internal/auth -run TestMagicCode     # run a single package/test
 ```
+
+The `seed` command creates a demo user (`demo@devlane.test` / `Demo1234!`), a
+workspace, a project with default workflow states, and sample work items so a
+fresh database has something to explore. It's idempotent (a no-op once the demo
+user exists). Local-only demo credentials — never use them in a real deployment.
 
 ## Migrations
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -37,10 +38,11 @@ export interface DescriptionEditorProps {
 export function DescriptionEditor({
   initialHtml,
   onSave,
-  placeholder = 'Add a description…',
+  placeholder,
   disabled = false,
   mentionMembers,
 }: DescriptionEditorProps) {
+  const { t } = useTranslation();
   const membersRef = useRef<MentionMember[]>(mentionMembers ?? []);
   useEffect(() => {
     membersRef.current = mentionMembers ?? [];
@@ -78,7 +80,9 @@ export function DescriptionEditor({
         codeBlock: {},
       }),
       Underline,
-      Placeholder.configure({ placeholder }),
+      Placeholder.configure({
+        placeholder: placeholder ?? t('workItem.description.placeholder', 'Add a description…'),
+      }),
       mentionExt,
       slashExt,
     ],
@@ -134,34 +138,37 @@ export function DescriptionEditor({
           type="button"
           className={buttonBase}
           onClick={() => editor.chain().focus().toggleBold().run()}
-          aria-label="Bold"
+          aria-label={t('workItem.editor.bold', 'Bold')}
           disabled={disabled}
         >
+          {}
           <span className="text-xs font-semibold">B</span>
         </button>
         <button
           type="button"
           className={buttonBase}
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          aria-label="Italic"
+          aria-label={t('workItem.editor.italic', 'Italic')}
           disabled={disabled}
         >
+          {}
           <span className="text-xs italic">I</span>
         </button>
         <button
           type="button"
           className={buttonBase}
           onClick={() => editor.chain().focus().toggleUnderline().run()}
-          aria-label="Underline"
+          aria-label={t('workItem.editor.underline', 'Underline')}
           disabled={disabled}
         >
+          {}
           <span className="text-xs underline">U</span>
         </button>
         <button
           type="button"
           className={buttonBase}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          aria-label="Bullet list"
+          aria-label={t('workItem.editor.bulletList', 'Bullet list')}
           disabled={disabled}
         >
           <span className="text-xs">••</span>
@@ -170,7 +177,7 @@ export function DescriptionEditor({
           type="button"
           className={buttonBase}
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          aria-label="Numbered list"
+          aria-label={t('workItem.editor.numberedList', 'Numbered list')}
           disabled={disabled}
         >
           <span className="text-xs">1.</span>
@@ -179,16 +186,18 @@ export function DescriptionEditor({
           type="button"
           className={buttonBase}
           onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-          aria-label="Code block"
+          aria-label={t('workItem.editor.codeBlock', 'Code block')}
           disabled={disabled}
         >
           <span className="text-xs">{'</>'}</span>
         </button>
         <div className="ml-auto text-[11px] text-(--txt-tertiary)">
-          {saveState === 'saving' && 'Saving…'}
-          {saveState === 'saved' && 'Saved'}
+          {saveState === 'saving' && t('workItem.description.saving', 'Saving…')}
+          {saveState === 'saved' && t('workItem.description.saved', 'Saved')}
           {saveState === 'error' && (
-            <span className="text-(--txt-danger-primary)">Failed to save</span>
+            <span className="text-(--txt-danger-primary)">
+              {t('workItem.description.saveFailed', 'Failed to save')}
+            </span>
           )}
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   CaseSensitive,
   ChevronDown,
@@ -40,6 +41,11 @@ interface Props {
  * clicking "Text" reverts to a paragraph.
  */
 export function TypographyDropdown({ editor, stateTick }: Props) {
+  const { t } = useTranslation();
+  const optionLabel = (opt: TypographyOption) =>
+    opt.key === 'paragraph'
+      ? t('editor.typography.text', 'Text')
+      : t('editor.typography.heading', 'Heading {{level}}', { level: opt.key });
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -79,9 +85,9 @@ export function TypographyDropdown({ editor, stateTick }: Props) {
             ? 'bg-(--bg-layer-1) text-(--txt-primary)'
             : 'text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)',
         )}
-        aria-label="Text style"
+        aria-label={t('editor.typography.textStyle', 'Text style')}
       >
-        <span className="truncate">{activeOption.label}</span>
+        <span className="truncate">{optionLabel(activeOption)}</span>
         <ChevronDown size={12} className="shrink-0" />
       </button>
       {open ? (
@@ -102,7 +108,7 @@ export function TypographyDropdown({ editor, stateTick }: Props) {
                 )}
               >
                 <Icon size={14} className="shrink-0" />
-                <span className="flex-1 truncate">{opt.label}</span>
+                <span className="flex-1 truncate">{optionLabel(opt)}</span>
               </button>
             );
           })}

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { usePageDetailHeader } from '../../../contexts/PageDetailHeaderContext';
 import { projectService } from '../../../services/projectService';
@@ -23,6 +24,7 @@ export function PageDetailHeader({
   projectId: string;
   project: ProjectApiResponse;
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { breadcrumb, actions } = usePageDetailHeader();
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
@@ -97,7 +99,7 @@ export function PageDetailHeader({
           type="button"
           onClick={() => setProjectDropdownOpen((o) => !o)}
           className="flex size-8 shrink-0 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
-          aria-label="Select project"
+          aria-label={t('header.selectProject', 'Select project')}
         >
           <IconChevronDown />
         </button>
@@ -109,7 +111,7 @@ export function PageDetailHeader({
               </span>
               <input
                 type="text"
-                placeholder="Search"
+                placeholder={t('common.search', 'Search')}
                 value={projectSearch}
                 onChange={(e) => setProjectSearch(e.target.value)}
                 className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -144,7 +146,7 @@ export function PageDetailHeader({
           <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
             <IconFileText />
           </span>
-          Pages
+          {t('header.pages', 'Pages')}
         </Link>
         {breadcrumb ? (
           <>

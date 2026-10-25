@@ -44,6 +44,26 @@ func (s *WorkspaceIntegrationStore) Update(ctx context.Context, w *model.Workspa
 	return s.db.WithContext(ctx).Save(w).Error
 }
 
+// ReviveByWorkspaceAndIntegration finds a soft-deleted row matching the unique
+// constraint (workspace_id, integration_id), clears deleted_at, and returns it.
+// This handles the case where a previous Uninstall soft-deleted the row but the
+// unique index still blocks a new INSERT.
+func (s *WorkspaceIntegrationStore) ReviveByWorkspaceAndIntegration(ctx context.Context, workspaceID, integrationID uuid.UUID) (*model.WorkspaceIntegration, error) {
+	var w model.WorkspaceIntegration
+	err := s.db.WithContext(ctx).Unscoped().
+		Where("workspace_id = ? AND integration_id = ? AND deleted_at IS NOT NULL", workspaceID, integrationID).
+		First(&w).Error
+	if err != nil {
+		return nil, err
+	}
+	// Clear soft-delete
+	w.DeletedAt.Valid = false
+	if err := s.db.WithContext(ctx).Unscoped().Model(&w).Update("deleted_at", nil).Error; err != nil {
+		return nil, err
+	}
+	return &w, nil
+}
+
 func (s *WorkspaceIntegrationStore) GetByID(ctx context.Context, id uuid.UUID) (*model.WorkspaceIntegration, error) {
 	var w model.WorkspaceIntegration
 	err := s.db.WithContext(ctx).Where("id = ? AND deleted_at IS NULL", id).First(&w).Error

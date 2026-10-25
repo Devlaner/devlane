@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../ui';
 import { useWorkspaceViewsState } from '../../../contexts/WorkspaceViewsStateContext';
@@ -44,6 +45,7 @@ export function ProjectSavedViewDetailHeader({
   issueCount: number;
 }) {
   void _issueCount;
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { filters: workspaceViewFilters, setFilters: setWorkspaceViewFilters } =
     useWorkspaceViewsState();
@@ -70,7 +72,7 @@ export function ProjectSavedViewDetailHeader({
     try {
       const v = await viewService.get(workspaceSlug, viewId);
       if (cancelledRef?.current) return;
-      setViewTitle(v?.name?.trim() ? v.name : 'View');
+      setViewTitle(v?.name?.trim() ? v.name : t('common.view', 'View'));
       const raw = v?.filters;
       if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
         const params = new URLSearchParams();
@@ -84,7 +86,7 @@ export function ProjectSavedViewDetailHeader({
         setSavedFilters(parseWorkspaceViewFiltersFromSearchParams(new URLSearchParams()));
       }
     } catch {
-      if (!cancelledRef?.current) setViewTitle('View');
+      if (!cancelledRef?.current) setViewTitle(t('common.view', 'View'));
     }
   };
 
@@ -219,7 +221,7 @@ export function ProjectSavedViewDetailHeader({
           type="button"
           onClick={() => setProjectDropdownOpen((o) => !o)}
           className="flex size-8 shrink-0 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
-          aria-label="Select project"
+          aria-label={t('common.selectProject', 'Select project')}
         >
           <IconChevronDown />
         </button>
@@ -231,7 +233,7 @@ export function ProjectSavedViewDetailHeader({
               </span>
               <input
                 type="text"
-                placeholder="Search"
+                placeholder={t('common.search', 'Search')}
                 value={projectSearch}
                 onChange={(e) => setProjectSearch(e.target.value)}
                 className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -266,7 +268,7 @@ export function ProjectSavedViewDetailHeader({
           <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
             <IconProjectViews />
           </span>
-          Views
+          {t('common.views', 'Views')}
         </Link>
         <span className="shrink-0 px-0.5 text-(--txt-icon-tertiary)" aria-hidden>
           &gt;
@@ -282,7 +284,7 @@ export function ProjectSavedViewDetailHeader({
         <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-1) p-0.5">
           <button
             type="button"
-            title="List view"
+            title={t('common.layout.listView', 'List view')}
             aria-pressed
             className="flex size-7 items-center justify-center rounded-md bg-(--bg-layer-2) text-(--txt-primary) shadow-sm"
           >
@@ -290,15 +292,15 @@ export function ProjectSavedViewDetailHeader({
           </button>
           <Link
             to={`${baseUrl}/board`}
-            title="Board"
-            aria-label="Board"
+            title={t('common.layout.board', 'Board')}
+            aria-label={t('common.layout.board', 'Board')}
             className="flex size-7 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-secondary)"
           >
             <IconColumns />
           </Link>
           <button
             type="button"
-            title="Calendar (coming soon)"
+            title={t('common.layout.calendarComingSoon', 'Calendar (coming soon)')}
             disabled
             className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
           >
@@ -306,7 +308,7 @@ export function ProjectSavedViewDetailHeader({
           </button>
           <button
             type="button"
-            title="Spreadsheet (coming soon)"
+            title={t('common.layout.spreadsheetComingSoon', 'Spreadsheet (coming soon)')}
             disabled
             className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
           >
@@ -314,7 +316,7 @@ export function ProjectSavedViewDetailHeader({
           </button>
           <button
             type="button"
-            title="Timeline (coming soon)"
+            title={t('common.layout.timelineComingSoon', 'Timeline (coming soon)')}
             disabled
             className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
           >
@@ -344,7 +346,7 @@ export function ProjectSavedViewDetailHeader({
               disabled={savingFilters}
               className="gap-1.5 text-[13px] font-medium"
             >
-              Reset
+              {t('common.reset', 'Reset')}
             </Button>
             <Button
               size="sm"
@@ -352,13 +354,15 @@ export function ProjectSavedViewDetailHeader({
               disabled={savingFilters}
               className="gap-1.5 text-[13px] font-medium"
             >
-              {savingFilters ? 'Saving…' : 'Save filters'}
+              {savingFilters
+                ? t('common.saving', 'Saving…')
+                : t('header.savedView.saveFilters', 'Save filters')}
             </Button>
           </>
         )}
         <Link to={`${baseUrl}/views/${viewId}?create=1`}>
           <Button size="sm" className="gap-1.5 text-[13px] font-medium">
-            <IconPlus /> Add work item
+            <IconPlus /> {t('common.addWorkItem', 'Add work item')}
           </Button>
         </Link>
         <ProjectSavedViewMoreMenu

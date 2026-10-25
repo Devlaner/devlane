@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { Button, Input } from '../../components/ui';
@@ -22,6 +23,7 @@ const IconGitHub = () => (
  * API — the form clears the field after save and shows a *_set badge instead.
  */
 export function InstanceAdminIntegrationGitHubPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   // Form state. Secrets default to empty; if the corresponding *_set is true,
@@ -55,7 +57,7 @@ export function InstanceAdminIntegrationGitHubPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  useDocumentTitle('GitHub integration');
+  useDocumentTitle(t('instanceAdmin.integration.github.documentTitle', 'GitHub integration'));
 
   const callbackUrl = useMemo(
     () => (oauthRedirectBase ? `${oauthRedirectBase}/auth/github-app/callback` : ''),
@@ -143,7 +145,12 @@ export function InstanceAdminIntegrationGitHubPage() {
         setClientSecret('');
         setPrivateKey('');
         setWebhookSecret('');
-        setSuccess('GitHub App settings saved. Workspaces can now connect.');
+        setSuccess(
+          t(
+            'instanceAdmin.integration.github.success',
+            'GitHub App settings saved. Workspaces can now connect.',
+          ),
+        );
       })
       .catch((err) => setError(getApiErrorMessage(err)))
       .finally(() => setSaving(false));
@@ -170,8 +177,10 @@ export function InstanceAdminIntegrationGitHubPage() {
         <div>
           <h1 className="text-base font-semibold text-(--txt-primary)">GitHub App</h1>
           <p className="text-xs text-(--txt-secondary)">
-            Register a GitHub App and paste its credentials here. The App is the bridge that lets
-            Devlane sync pull requests with issues across all workspaces on this instance.
+            {t(
+              'instanceAdmin.integration.github.subtitle',
+              'Register a GitHub App and paste its credentials here. The App is the bridge that lets Devlane sync pull requests with issues across all workspaces on this instance.',
+            )}
           </p>
         </div>
       </div>
@@ -180,37 +189,51 @@ export function InstanceAdminIntegrationGitHubPage() {
       {success && <p className="mb-4 text-sm text-green-600">{success}</p>}
 
       <div className="mb-6 rounded border border-(--border-subtle) bg-(--bg-surface-1) p-4 text-xs text-(--txt-secondary)">
-        <p className="font-medium text-(--txt-primary)">First time? Quick setup:</p>
+        <p className="font-medium text-(--txt-primary)">
+          {t('instanceAdmin.integration.github.quickSetupTitle', 'First time? Quick setup:')}
+        </p>
         <ol className="mt-2 list-decimal space-y-1 pl-5">
           <li>
-            Open{' '}
-            <a
-              href="https://github.com/settings/apps/new"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-(--txt-accent) hover:underline"
-            >
-              GitHub Settings → Developer settings → GitHub Apps → New GitHub App
-            </a>
-            .
+            <Trans
+              i18nKey="instanceAdmin.integration.github.step1"
+              defaults="Open <a>GitHub Settings → Developer settings → GitHub Apps → New GitHub App</a>."
+              components={{
+                a: (
+                  <a
+                    href="https://github.com/settings/apps/new"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-(--txt-accent) hover:underline"
+                  />
+                ),
+              }}
+            />
           </li>
-          <li>Set the URLs and webhook from the boxes below.</li>
           <li>
-            Permissions: <span className="font-mono">Contents: Read</span>,{' '}
-            <span className="font-mono">Issues: R/W</span>,{' '}
-            <span className="font-mono">Pull requests: R/W</span>,{' '}
+            {t(
+              'instanceAdmin.integration.github.step2',
+              'Set the URLs and webhook from the boxes below.',
+            )}
+          </li>
+          <li>
+            {t('instanceAdmin.integration.github.permissionsLabel', 'Permissions:')} {}
+            <span className="font-mono">Contents: Read</span>, {}
+            <span className="font-mono">Issues: R/W</span>, {}
+            <span className="font-mono">Pull requests: R/W</span>, {}
             <span className="font-mono">Metadata: Read</span>.
           </li>
           <li>
-            Subscribe to events: <span className="font-mono">Pull request</span>,{' '}
-            <span className="font-mono">Push</span>,{' '}
-            <span className="font-mono">Issue comment</span>,{' '}
-            <span className="font-mono">Installation</span>,{' '}
+            {t('instanceAdmin.integration.github.eventsLabel', 'Subscribe to events:')} {}
+            <span className="font-mono">Pull request</span>, <span className="font-mono">Push</span>
+            {}, <span className="font-mono">Issue comment</span>, {}
+            <span className="font-mono">Installation</span>, {}
             <span className="font-mono">Installation repositories</span>.
           </li>
           <li>
-            After creating, copy the App ID, App slug, Client ID, and generate a Client Secret +
-            Private key (.pem) + Webhook secret. Paste them here.
+            {t(
+              'instanceAdmin.integration.github.step5',
+              'After creating, copy the App ID, App slug, Client ID, and generate a Client Secret + Private key (.pem) + Webhook secret. Paste them here.',
+            )}
           </li>
         </ol>
       </div>
@@ -218,91 +241,132 @@ export function InstanceAdminIntegrationGitHubPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="rounded border border-(--border-subtle) bg-(--bg-surface-1) p-4">
           <h2 className="mb-4 text-sm font-semibold text-(--txt-primary)">
-            Credentials from your GitHub App
+            {t(
+              'instanceAdmin.integration.github.credentialsHeading',
+              'Credentials from your GitHub App',
+            )}
           </h2>
           <div className="space-y-3">
             <Input
-              label="App ID"
+              label={t('instanceAdmin.integration.github.appId', 'App ID')}
               value={appID}
               onChange={(e) => setAppID(e.target.value)}
               autoComplete="off"
-              placeholder="e.g. 1234567"
+              placeholder={t('instanceAdmin.integration.github.appIdPlaceholder', 'e.g. 1234567')}
               inputMode="numeric"
             />
             <p className="text-[11px] text-(--txt-tertiary)">
-              The numeric App ID shown at the top of your GitHub App settings page.
+              {t(
+                'instanceAdmin.integration.github.appIdHint',
+                'The numeric App ID shown at the top of your GitHub App settings page.',
+              )}
             </p>
 
             <Input
-              label="App slug"
+              label={t('instanceAdmin.integration.github.appSlug', 'App slug')}
               value={appName}
               onChange={(e) => setAppName(e.target.value)}
               autoComplete="off"
-              placeholder="e.g. devlane-acme"
+              placeholder={t(
+                'instanceAdmin.integration.github.appSlugPlaceholder',
+                'e.g. devlane-acme',
+              )}
             />
             <p className="text-[11px] text-(--txt-tertiary)">
-              The URL-safe slug from your App's public page,{' '}
-              <span className="font-mono">github.com/apps/&lt;slug&gt;</span>. Used to build the
-              install link.
+              {t(
+                'instanceAdmin.integration.github.appSlugHintPre',
+                "The URL-safe slug from your App's public page,",
+              )}{' '}
+              {}
+              <span className="font-mono">{'github.com/apps/<slug>'}</span>.{' '}
+              {t(
+                'instanceAdmin.integration.github.appSlugHintPost',
+                'Used to build the install link.',
+              )}
             </p>
 
             <Input
-              label="Client ID"
+              label={t('instanceAdmin.auth.clientId', 'Client ID')}
               value={clientID}
               onChange={(e) => setClientID(e.target.value)}
               autoComplete="off"
-              placeholder="e.g. Iv1.abc123def456"
+              placeholder={t(
+                'instanceAdmin.integration.github.clientIdPlaceholder',
+                'e.g. Iv1.abc123def456',
+              )}
             />
 
             <div className="relative">
               <Input
-                label="Client secret"
+                label={t('instanceAdmin.auth.clientSecret', 'Client secret')}
                 type={showClientSecret ? 'text' : 'password'}
                 value={clientSecret}
                 onChange={(e) => setClientSecret(e.target.value)}
                 autoComplete="new-password"
-                placeholder={clientSecretSet ? '(unchanged if left blank)' : 'Enter client secret'}
+                placeholder={
+                  clientSecretSet
+                    ? t('instanceAdmin.auth.unchangedIfBlank', '(unchanged if left blank)')
+                    : t('instanceAdmin.auth.enterClientSecret', 'Enter client secret')
+                }
               />
               <button
                 type="button"
                 onClick={() => setShowClientSecret(!showClientSecret)}
                 className="absolute top-7 right-2 p-1 text-(--txt-icon-tertiary) hover:text-(--txt-icon-secondary)"
-                aria-label={showClientSecret ? 'Hide client secret' : 'Show client secret'}
+                aria-label={
+                  showClientSecret
+                    ? t('instanceAdmin.integration.github.hideClientSecret', 'Hide client secret')
+                    : t('instanceAdmin.integration.github.showClientSecret', 'Show client secret')
+                }
               >
                 {showClientSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             <p className="text-[11px] text-(--txt-tertiary)">
-              Generate a fresh client secret in your App's settings under "Client secrets".
+              {t(
+                'instanceAdmin.integration.github.clientSecretHint',
+                'Generate a fresh client secret in your App\'s settings under "Client secrets".',
+              )}
             </p>
 
             <div className="relative">
               <Input
-                label="Webhook secret"
+                label={t('instanceAdmin.integration.github.webhookSecret', 'Webhook secret')}
                 type={showWebhookSecret ? 'text' : 'password'}
                 value={webhookSecret}
                 onChange={(e) => setWebhookSecret(e.target.value)}
                 autoComplete="new-password"
                 placeholder={
-                  webhookSecretSet ? '(unchanged if left blank)' : 'Enter webhook secret'
+                  webhookSecretSet
+                    ? t('instanceAdmin.auth.unchangedIfBlank', '(unchanged if left blank)')
+                    : t(
+                        'instanceAdmin.integration.github.enterWebhookSecret',
+                        'Enter webhook secret',
+                      )
                 }
               />
               <button
                 type="button"
                 onClick={() => setShowWebhookSecret(!showWebhookSecret)}
                 className="absolute top-7 right-2 p-1 text-(--txt-icon-tertiary) hover:text-(--txt-icon-secondary)"
-                aria-label={showWebhookSecret ? 'Hide webhook secret' : 'Show webhook secret'}
+                aria-label={
+                  showWebhookSecret
+                    ? t('instanceAdmin.integration.github.hideWebhookSecret', 'Hide webhook secret')
+                    : t('instanceAdmin.integration.github.showWebhookSecret', 'Show webhook secret')
+                }
               >
                 {showWebhookSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             <p className="text-[11px] text-(--txt-tertiary)">
-              Use the same secret you set in the App's "Webhook" → "Webhook secret" field. Devlane
-              uses it to verify each delivery's HMAC signature.
+              {t(
+                'instanceAdmin.integration.github.webhookSecretHint',
+                'Use the same secret you set in the App\'s "Webhook" → "Webhook secret" field. Devlane uses it to verify each delivery\'s HMAC signature.',
+              )}
             </p>
 
             <label className="block text-xs font-medium text-(--txt-secondary)">
-              Private key (PEM)
+              {t('instanceAdmin.integration.github.privateKey', 'Private key (PEM)')}
               <div className="relative mt-0.5">
                 <textarea
                   value={privateKey}
@@ -311,7 +375,7 @@ export function InstanceAdminIntegrationGitHubPage() {
                   rows={showPrivateKey ? 8 : 4}
                   placeholder={
                     privateKeySet
-                      ? '(unchanged if left blank)'
+                      ? t('instanceAdmin.auth.unchangedIfBlank', '(unchanged if left blank)')
                       : '-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----\n'
                   }
                   className={`block w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 font-mono text-xs text-(--txt-primary) focus:outline-none ${
@@ -322,38 +386,60 @@ export function InstanceAdminIntegrationGitHubPage() {
                   type="button"
                   onClick={() => setShowPrivateKey(!showPrivateKey)}
                   className="absolute right-2 top-2 p-1 text-(--txt-icon-tertiary) hover:text-(--txt-icon-secondary)"
-                  aria-label={showPrivateKey ? 'Hide private key' : 'Show private key'}
+                  aria-label={
+                    showPrivateKey
+                      ? t('instanceAdmin.integration.github.hidePrivateKey', 'Hide private key')
+                      : t('instanceAdmin.integration.github.showPrivateKey', 'Show private key')
+                  }
                 >
                   {showPrivateKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </label>
             <p className="text-[11px] text-(--txt-tertiary)">
-              Paste the entire <span className="font-mono">.pem</span> downloaded from your App's
-              "Generate a private key" button. Stored encrypted at rest (set{' '}
-              <span className="font-mono">INSTANCE_ENCRYPTION_KEY</span> on the API).
+              {t('instanceAdmin.integration.github.privateKeyHintPre', 'Paste the entire')} {}
+              <span className="font-mono">.pem</span>{' '}
+              {t(
+                'instanceAdmin.integration.github.privateKeyHintMid',
+                'downloaded from your App\'s "Generate a private key" button. Stored encrypted at rest (set',
+              )}{' '}
+              {}
+              <span className="font-mono">INSTANCE_ENCRYPTION_KEY</span>{' '}
+              {t('instanceAdmin.integration.github.privateKeyHintPost', 'on the API).')}
             </p>
           </div>
         </div>
 
         <div className="rounded border border-(--border-subtle) bg-(--bg-surface-1) p-4">
           <h2 className="mb-4 text-sm font-semibold text-(--txt-primary)">
-            Devlane URLs to paste into the GitHub App
+            {t(
+              'instanceAdmin.integration.github.urlsHeading',
+              'Devlane URLs to paste into the GitHub App',
+            )}
           </h2>
           <div className="space-y-3">
             <InstanceAdminCopyRow
-              label="Homepage URL"
-              hint="Paste this into the GitHub App Homepage URL field."
+              label={t('instanceAdmin.integration.github.homepageUrl', 'Homepage URL')}
+              hint={t(
+                'instanceAdmin.integration.github.homepageUrlHint',
+                'Paste this into the GitHub App Homepage URL field.',
+              )}
               value={oauthJsOrigin}
             />
             <InstanceAdminCopyRow
-              label="Setup URL / Callback URL"
-              hint="Paste this into the GitHub App Setup URL and User authorization callback URL fields. Tick 'Redirect on update'."
+              label={t('instanceAdmin.integration.github.setupUrl', 'Setup URL / Callback URL')}
+              hint={t(
+                'instanceAdmin.integration.github.setupUrlHint',
+                "Paste this into the GitHub App Setup URL and User authorization callback URL fields. Tick 'Redirect on update'.",
+              )}
               value={callbackUrl}
             />
             <InstanceAdminCopyRow
-              label="Webhook URL"
-              hint="Paste this into the GitHub App Webhook URL field. Make sure 'Active' is on."
+              label={t('instanceAdmin.integration.github.webhookUrl', 'Webhook URL')}
+              hint={t(
+                'instanceAdmin.integration.github.webhookUrlHint',
+                "Paste this into the GitHub App Webhook URL field. Make sure 'Active' is on.",
+              )}
               value={webhookUrl}
             />
           </div>
@@ -361,14 +447,14 @@ export function InstanceAdminIntegrationGitHubPage() {
 
         <div className="flex items-center gap-2">
           <Button type="submit" disabled={saving || !isDirty}>
-            {saving ? 'Saving…' : 'Save changes'}
+            {saving ? t('common.saving', 'Saving…') : t('common.saveChanges', 'Save changes')}
           </Button>
           <Button
             type="button"
             onClick={() => void navigate('/instance-admin/integrations')}
             className="bg-transparent text-(--txt-secondary) shadow-none hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
           >
-            Go back
+            {t('common.goBack', 'Go back')}
           </Button>
         </div>
       </form>

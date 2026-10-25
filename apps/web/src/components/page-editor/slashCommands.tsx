@@ -1,5 +1,7 @@
 import { Extension, type Range } from '@tiptap/core';
 import Suggestion from '@tiptap/suggestion';
+import i18n from 'i18next';
+import { useTranslation } from 'react-i18next';
 import type { Editor } from '@tiptap/react';
 import {
   Code2,
@@ -25,6 +27,7 @@ import {
 } from './suggestionPopup';
 
 interface SlashItem {
+  key: string;
   title: string;
   subtitle: string;
   icon: LucideIcon;
@@ -34,6 +37,7 @@ interface SlashItem {
 
 const ITEMS: SlashItem[] = [
   {
+    key: 'text',
     title: 'Text',
     subtitle: 'Plain paragraph',
     icon: Type,
@@ -41,6 +45,7 @@ const ITEMS: SlashItem[] = [
     run: (editor, range) => editor.chain().focus().deleteRange(range).setParagraph().run(),
   },
   {
+    key: 'heading1',
     title: 'Heading 1',
     subtitle: 'Large section heading',
     icon: Heading1,
@@ -49,6 +54,7 @@ const ITEMS: SlashItem[] = [
       editor.chain().focus().deleteRange(range).setNode('heading', { level: 1 }).run(),
   },
   {
+    key: 'heading2',
     title: 'Heading 2',
     subtitle: 'Medium section heading',
     icon: Heading2,
@@ -57,6 +63,7 @@ const ITEMS: SlashItem[] = [
       editor.chain().focus().deleteRange(range).setNode('heading', { level: 2 }).run(),
   },
   {
+    key: 'heading3',
     title: 'Heading 3',
     subtitle: 'Small section heading',
     icon: Heading3,
@@ -65,6 +72,7 @@ const ITEMS: SlashItem[] = [
       editor.chain().focus().deleteRange(range).setNode('heading', { level: 3 }).run(),
   },
   {
+    key: 'bulletList',
     title: 'Bulleted list',
     subtitle: 'Unordered list',
     icon: List,
@@ -72,6 +80,7 @@ const ITEMS: SlashItem[] = [
     run: (editor, range) => editor.chain().focus().deleteRange(range).toggleBulletList().run(),
   },
   {
+    key: 'numberedList',
     title: 'Numbered list',
     subtitle: 'Ordered list',
     icon: ListOrdered,
@@ -79,6 +88,7 @@ const ITEMS: SlashItem[] = [
     run: (editor, range) => editor.chain().focus().deleteRange(range).toggleOrderedList().run(),
   },
   {
+    key: 'todoList',
     title: 'To-do list',
     subtitle: 'Checklist',
     icon: ListTodo,
@@ -86,6 +96,7 @@ const ITEMS: SlashItem[] = [
     run: (editor, range) => editor.chain().focus().deleteRange(range).toggleTaskList().run(),
   },
   {
+    key: 'quote',
     title: 'Quote',
     subtitle: 'Block quote',
     icon: TextQuote,
@@ -93,6 +104,7 @@ const ITEMS: SlashItem[] = [
     run: (editor, range) => editor.chain().focus().deleteRange(range).toggleBlockquote().run(),
   },
   {
+    key: 'codeBlock',
     title: 'Code block',
     subtitle: 'Formatted code',
     icon: Code2,
@@ -100,6 +112,7 @@ const ITEMS: SlashItem[] = [
     run: (editor, range) => editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
   },
   {
+    key: 'table',
     title: 'Table',
     subtitle: '3x3 table',
     icon: TableIcon,
@@ -113,12 +126,13 @@ const ITEMS: SlashItem[] = [
         .run(),
   },
   {
+    key: 'image',
     title: 'Image',
     subtitle: 'Embed by URL',
     icon: ImageIcon,
     keywords: ['picture', 'photo', 'embed'],
     run: (editor, range) => {
-      const input = window.prompt('Image URL')?.trim();
+      const input = window.prompt(i18n.t('editor.slash.imagePrompt', 'Image URL'))?.trim();
       const chain = editor.chain().focus().deleteRange(range);
       // Only allow http(s) or site-relative URLs so an image can't smuggle a
       // javascript: / data: payload into an <img src>.
@@ -128,6 +142,7 @@ const ITEMS: SlashItem[] = [
     },
   },
   {
+    key: 'divider',
     title: 'Divider',
     subtitle: 'Horizontal rule',
     icon: Minus,
@@ -145,11 +160,12 @@ function filterItems(query: string): SlashItem[] {
 }
 
 function SlashMenu({ items, selectedIndex, onSelect }: SuggestionMenuProps<SlashItem>) {
+  const { t } = useTranslation();
   const listRef = useActiveItemScroll(selectedIndex);
   if (items.length === 0) {
     return (
       <div className="w-64 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-tertiary) shadow-(--shadow-overlay)">
-        No matching blocks
+        {t('editor.slash.noMatch', 'No matching blocks')}
       </div>
     );
   }
@@ -175,8 +191,12 @@ function SlashMenu({ items, selectedIndex, onSelect }: SuggestionMenuProps<Slash
             <item.icon size={15} />
           </span>
           <span className="min-w-0">
-            <span className="block truncate text-sm text-(--txt-primary)">{item.title}</span>
-            <span className="block truncate text-xs text-(--txt-tertiary)">{item.subtitle}</span>
+            <span className="block truncate text-sm text-(--txt-primary)">
+              {t(`editor.slash.${item.key}.title`, item.title)}
+            </span>
+            <span className="block truncate text-xs text-(--txt-tertiary)">
+              {t(`editor.slash.${item.key}.subtitle`, item.subtitle)}
+            </span>
           </span>
         </button>
       ))}

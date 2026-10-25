@@ -67,6 +67,8 @@ export interface CreateProjectRequest {
   project_lead_id?: string;
   default_assignee_id?: string;
   guest_view_all_features?: boolean;
+  /** 2 = public (any workspace member), 0 = secret (members only). */
+  network?: number;
   module_view?: boolean;
   cycle_view?: boolean;
   issue_views_view?: boolean;
@@ -96,12 +98,20 @@ export interface ProjectApiResponse {
   project_lead_id?: string | null;
   default_assignee_id?: string | null;
   guest_view_all_features?: boolean;
+  /** 2 = public (any workspace member), 0 = secret (members only). */
+  network?: number;
   module_view?: boolean;
   cycle_view?: boolean;
   issue_views_view?: boolean;
   page_view?: boolean;
   intake_view?: boolean;
   is_time_tracking_enabled?: boolean;
+  /** Auto-archive: months of inactivity after which settled items archive (0 = off). */
+  archive_in?: number;
+  /** Auto-close: months of inactivity after which active items are closed (0 = off). */
+  close_in?: number;
+  /** Set when the project is archived; absent/null for active projects. */
+  archived_at?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -314,6 +324,104 @@ export interface NotificationPreferencesResponse {
   comment: boolean;
   mention: boolean;
   issue_completed: boolean;
+  email_property_change: boolean;
+  email_state_change: boolean;
+  email_comment: boolean;
+  email_mention: boolean;
+  email_issue_completed: boolean;
+}
+
+/** Intake triage status codes (match the API's intake_issues.status). */
+export const IntakeStatus = {
+  Pending: -2,
+  Declined: -1,
+  Snoozed: 0,
+  Accepted: 1,
+  Duplicate: 2,
+} as const;
+
+/** An intake ("inbox") item: the triage row plus its work-item summary. */
+/** A user favorite: a favorited entity (cycle/module) or a folder grouping them. */
+export interface FavoriteApiResponse {
+  id: string;
+  name: string;
+  entity_type: string;
+  entity_identifier: string;
+  is_folder: boolean;
+  parent_id?: string | null;
+  sort_order: number;
+  workspace_id: string;
+  project_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** A bulk-import job (e.g. CSV) for a project. */
+export interface ImporterApiResponse {
+  id: string;
+  service: string;
+  status: 'queued' | 'processing' | 'completed' | 'completed_with_errors' | 'failed';
+  total_count: number;
+  processed_count: number;
+  error_count: number;
+  error_message?: string;
+  source_filename?: string;
+  project_id?: string;
+  workspace_id: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** An outbound workspace webhook. */
+export interface WebhookApiResponse {
+  id: string;
+  url: string;
+  secret_key?: string;
+  is_active: boolean;
+  project: boolean;
+  issue: boolean;
+  module: boolean;
+  cycle: boolean;
+  issue_comment: boolean;
+  version: string;
+  workspace_id: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** One webhook delivery attempt (request + response). */
+export interface WebhookLogApiResponse {
+  id: string;
+  webhook_id: string;
+  event_type: string;
+  request_method: string;
+  request_body?: string;
+  response_status: string;
+  response_body?: string;
+  retry_count: number;
+  created_at?: string;
+}
+
+export interface IntakeItemApiResponse {
+  id: string;
+  intake_id: string;
+  issue_id: string;
+  status: number;
+  snoozed_till?: string | null;
+  duplicate_to_id?: string | null;
+  source: string;
+  source_email?: string;
+  project_id: string;
+  workspace_id: string;
+  created_at: string;
+  updated_at: string;
+  issue: {
+    id: string;
+    name: string;
+    sequence_id: number;
+    priority: string;
+    created_at: string;
+  };
 }
 
 /** GET /api/users/me/activity/ */
@@ -448,6 +556,16 @@ export interface InstanceEmailSection {
   password?: string;
 }
 
+/** SMTP settings used only to send a test email; they are not persisted. */
+export interface InstanceEmailTestRequest {
+  host: string;
+  port: string;
+  sender_email: string;
+  security: string;
+  username: string;
+  password: string;
+}
+
 /** Auth section shape */
 export interface InstanceAuthSection {
   allow_public_signup?: boolean;
@@ -497,6 +615,13 @@ export interface InstanceGitHubAppSection {
   private_key_set?: boolean;
   webhook_secret?: string;
   webhook_secret_set?: boolean;
+}
+
+/** Slack App config (instance admin). Secrets are never echoed back. */
+export interface InstanceSlackAppSection {
+  client_id?: string;
+  client_secret?: string;
+  client_secret_set?: boolean;
 }
 
 /** Available integration provider, returned by GET /api/integrations/. */
@@ -624,6 +749,26 @@ export interface GitHubRepositorySyncResponse {
     created_at: string;
     updated_at: string;
   } | null;
+}
+
+/** Slack channel from the Slack API */
+export interface SlackChannel {
+  id: string;
+  name: string;
+}
+
+/** A linked Slack channel for a project */
+export interface SlackChannelLinkResponse {
+  id: string;
+  workspace_integration_id: string;
+  project_id: string;
+  workspace_id: string;
+  channel_id: string;
+  channel_name: string;
+  events: Record<string, boolean>;
+  actor_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 /** Cycle as returned by the API */

@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspaceViewsState } from '../contexts/WorkspaceViewsStateContext';
@@ -150,6 +151,7 @@ function isCustomViewId(viewId: string | undefined): boolean {
 }
 
 export function WorkspaceViewsPage() {
+  const { t } = useTranslation();
   const { workspaceSlug, viewId } = useParams<{
     workspaceSlug?: string;
     viewId?: string;
@@ -174,7 +176,7 @@ export function WorkspaceViewsPage() {
   const [loading, setLoading] = useState(true);
   const { user: currentUser } = useAuth();
 
-  useDocumentTitle('Views');
+  useDocumentTitle(t('views.documentTitle', 'Views'));
 
   // When viewing a saved view, fetch it and apply its filters/display to state once (not driven by URL).
   useEffect(() => {
@@ -473,13 +475,13 @@ export function WorkspaceViewsPage() {
     labels.find((l) => l.id === labelId);
 
   const getMemberLabel = (memberId: string): string => {
-    if (currentUser?.id && memberId === currentUser.id) return 'You';
+    if (currentUser?.id && memberId === currentUser.id) return t('common.you', 'You');
     const m = getMember(memberId);
     const display = m?.member_display_name ?? m?.member_email;
     if (display) return display;
     const emailUser = m?.member_email?.split('@')[0]?.trim();
     if (emailUser) return emailUser;
-    return 'Member';
+    return t('common.member', 'Member');
   };
 
   const updateIssue = useCallback(
@@ -543,16 +545,18 @@ export function WorkspaceViewsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-        Loading…
+        {t('common.loading', 'Loading…')}
       </div>
     );
   }
   if (!workspace) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
-        <p className="text-(--txt-secondary)">Workspace not found.</p>
+        <p className="text-(--txt-secondary)">
+          {t('common.workspaceNotFound', 'Workspace not found.')}
+        </p>
         <Link to="/" className="text-sm font-medium text-(--txt-accent-primary) hover:underline">
-          Go to home
+          {t('common.goToHome', 'Go to home')}
         </Link>
       </div>
     );
@@ -560,22 +564,27 @@ export function WorkspaceViewsPage() {
   if (viewLoading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-        Loading view…
+        {t('views.loadingView', 'Loading view…')}
       </div>
     );
   }
   if (viewNotFound && workspaceSlug) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <p className="text-lg font-medium text-(--txt-primary)">View does not exist</p>
+        <p className="text-lg font-medium text-(--txt-primary)">
+          {t('views.viewDoesNotExist', 'View does not exist')}
+        </p>
         <p className="text-sm text-(--txt-secondary)">
-          The view you are looking for does not exist or you don&apos;t have permission to view it.
+          {t(
+            'views.viewNotFoundDescription',
+            "The view you are looking for does not exist or you don't have permission to view it.",
+          )}
         </p>
         <Link
           to={`/${workspace.slug}/views`}
           className="inline-flex items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
         >
-          All work items
+          {t('views.allWorkItems', 'All work items')}
         </Link>
       </div>
     );
@@ -657,14 +666,16 @@ export function WorkspaceViewsPage() {
         ) : (
           <span className="inline-flex items-center gap-2 text-(--txt-tertiary)">
             <IconTag className="size-3.5 shrink-0 opacity-70" />
-            Select labels
+            {t('views.selectLabels', 'Select labels')}
           </span>
         );
       case 'priority':
         return (
           <span className="inline-flex items-center gap-2 text-(--txt-secondary)">
             <IconBarChart className="size-3.5 shrink-0 text-amber-500" />
-            {issue.priority === 'none' || !issue.priority ? 'None' : issue.priority}
+            {issue.priority === 'none' || !issue.priority
+              ? t('common.none', 'None')
+              : issue.priority}
           </span>
         );
       case 'state':
@@ -675,25 +686,39 @@ export function WorkspaceViewsPage() {
           </span>
         );
       case 'link':
-        return <span className="text-(--txt-tertiary)">0 links</span>;
+        return <span className="text-(--txt-tertiary)">{t('views.zeroLinks', '0 links')}</span>;
       case 'attachment_count':
-        return <span className="text-(--txt-tertiary)">0 attachments</span>;
+        return (
+          <span className="text-(--txt-tertiary)">
+            {t('views.zeroAttachments', '0 attachments')}
+          </span>
+        );
       case 'sub_work_item_count':
-        return <span className="text-(--txt-tertiary)">0 sub-work items</span>;
+        return (
+          <span className="text-(--txt-tertiary)">
+            {t('views.zeroSubWorkItems', '0 sub-work items')}
+          </span>
+        );
       case 'estimate':
-        return <span className="text-(--txt-tertiary)">Estimate</span>;
+        return <span className="text-(--txt-tertiary)">{t('views.estimate', 'Estimate')}</span>;
       case 'module':
-        return <span className="text-(--txt-tertiary)">Select modules</span>;
+        return (
+          <span className="text-(--txt-tertiary)">
+            {t('views.selectModules', 'Select modules')}
+          </span>
+        );
       case 'cycle':
-        return <span className="text-(--txt-tertiary)">Select cycle</span>;
+        return (
+          <span className="text-(--txt-tertiary)">{t('views.selectCycle', 'Select cycle')}</span>
+        );
       default:
         return null;
     }
   };
 
   const headerLabel = (key: (typeof scrollableColumns)[number]): string => {
-    if (key === 'created_at') return 'Created on';
-    if (key === 'updated_at') return 'Updated on';
+    if (key === 'created_at') return t('views.createdOn', 'Created on');
+    if (key === 'updated_at') return t('views.updatedOn', 'Updated on');
     return DISPLAY_PROPERTY_LABELS[key as DisplayPropertyKey];
   };
   const totalCols = 1 + scrollableColumns.length;
@@ -752,8 +777,10 @@ export function WorkspaceViewsPage() {
       return (
         <div className="-mt-(--padding-page) -mr-(--padding-page) -mb-(--padding-page) flex min-h-0 flex-1 flex-col">
           <div className="px-4 py-16 text-center text-sm text-(--txt-tertiary)">
-            No work items yet. Create one from a project&apos;s Work items section or add a view to
-            get started.
+            {t(
+              'views.emptyWorkItems',
+              "No work items yet. Create one from a project's Work items section or add a view to get started.",
+            )}
           </div>
         </div>
       );
@@ -796,8 +823,10 @@ export function WorkspaceViewsPage() {
         <div className="min-h-0 flex-1 overflow-y-auto">
           {sortedIssues.length === 0 ? (
             <div className="px-4 py-16 text-center text-sm text-(--txt-tertiary)">
-              No work items yet. Create one from a project&apos;s Work items section or add a view
-              to get started.
+              {t(
+                'views.emptyWorkItems',
+                "No work items yet. Create one from a project's Work items section or add a view to get started.",
+              )}
             </div>
           ) : (
             <ul className="divide-y divide-(--border-subtle)">
@@ -879,7 +908,9 @@ export function WorkspaceViewsPage() {
   const renderTableCell = (issue: IssueApiResponse, key: (typeof scrollableColumns)[number]) => {
     if (key === 'priority') {
       const displayValue =
-        issue.priority === 'none' || !issue.priority ? 'None' : (issue.priority as string);
+        issue.priority === 'none' || !issue.priority
+          ? t('common.none', 'None')
+          : (issue.priority as string);
       const priorityTriggerContent = (
         <span className="inline-flex min-w-0 items-center gap-2 text-(--txt-secondary)">
           <IconBarChart className="size-3.5 shrink-0 text-amber-500" />
@@ -891,7 +922,7 @@ export function WorkspaceViewsPage() {
           id={`${issue.id}-priority`}
           openId={openCellId}
           onOpen={setOpenCellId}
-          label="Priority"
+          label={t('views.priority', 'Priority')}
           icon={<IconBarChart className="size-3.5 text-amber-500" />}
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
@@ -947,7 +978,7 @@ export function WorkspaceViewsPage() {
           id={`${issue.id}-assignee`}
           openId={openCellId}
           onOpen={setOpenCellId}
-          label="Assignees"
+          label={t('views.assignees', 'Assignees')}
           icon={<IconUser className="size-3.5 text-(--txt-icon-tertiary)" />}
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
@@ -978,7 +1009,7 @@ export function WorkspaceViewsPage() {
                   {currentUser.name?.charAt(0) ?? '?'}
                 </span>
               )}
-              <span className="truncate text-(--txt-primary)">You</span>
+              <span className="truncate text-(--txt-primary)">{t('common.you', 'You')}</span>
               {assigneeIds.includes(currentUser.id) && (
                 <span className="ml-auto text-(--txt-tertiary)">✓</span>
               )}
@@ -1025,7 +1056,7 @@ export function WorkspaceViewsPage() {
       const labelIds = issue.label_ids ?? [];
       const firstLabelId = labelIds[0];
       const firstLabel = firstLabelId ? getLabel(firstLabelId) : undefined;
-      const displayValue = firstLabel ? firstLabel.name : 'Select labels';
+      const displayValue = firstLabel ? firstLabel.name : t('views.selectLabels', 'Select labels');
       const labelsTriggerContent = firstLabel ? (
         <span className="inline-flex min-w-0 items-center gap-2 text-(--txt-secondary)">
           <span
@@ -1039,7 +1070,7 @@ export function WorkspaceViewsPage() {
       ) : (
         <span className="inline-flex min-w-0 items-center gap-2 text-(--txt-tertiary)">
           <IconTag className="size-3.5 shrink-0 opacity-70" />
-          <span className="truncate">Select labels</span>
+          <span className="truncate">{t('views.selectLabels', 'Select labels')}</span>
         </span>
       );
       return (
@@ -1047,7 +1078,7 @@ export function WorkspaceViewsPage() {
           id={`${issue.id}-labels`}
           openId={openCellId}
           onOpen={setOpenCellId}
-          label="Labels"
+          label={t('views.labels', 'Labels')}
           icon={<IconTag className="size-3.5 text-(--txt-icon-tertiary)" />}
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
@@ -1056,7 +1087,9 @@ export function WorkspaceViewsPage() {
           panelClassName="max-h-72 min-w-[220px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
         >
           {labels.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-(--txt-tertiary)">No labels.</div>
+            <div className="px-3 py-2 text-sm text-(--txt-tertiary)">
+              {t('views.noLabels', 'No labels.')}
+            </div>
           ) : (
             labels.map((l) => {
               const checked = labelIds.includes(l.id);
@@ -1092,7 +1125,7 @@ export function WorkspaceViewsPage() {
           id={`${issue.id}-start_date`}
           openId={openCellId}
           onOpen={setOpenCellId}
-          label="Start date"
+          label={t('views.startDate', 'Start date')}
           icon={<IconCalendar className="size-3.5 text-(--txt-icon-tertiary)" />}
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
@@ -1119,7 +1152,7 @@ export function WorkspaceViewsPage() {
           id={`${issue.id}-due_date`}
           openId={openCellId}
           onOpen={setOpenCellId}
-          label="Due date"
+          label={t('views.dueDate', 'Due date')}
           icon={<IconCalendar className="size-3.5 text-(--txt-icon-tertiary)" />}
           displayValue={displayValue}
           triggerClassName={CELL_TRIGGER_CLASS}
@@ -1157,7 +1190,7 @@ export function WorkspaceViewsPage() {
                       onClick={() => handleSort('name')}
                       className="inline-flex items-center gap-1.5 hover:text-(--txt-primary) font-medium text-(--txt-secondary)"
                     >
-                      Work items
+                      {t('views.workItems', 'Work items')}
                       <IconChevronDown
                         className={`size-4 shrink-0 opacity-60 ${isActive ? 'opacity-100' : ''}`}
                         style={
@@ -1180,8 +1213,10 @@ export function WorkspaceViewsPage() {
                   colSpan={totalCols}
                   className="px-4 py-16 text-center text-sm text-(--txt-tertiary)"
                 >
-                  No work items yet. Create one from a project&apos;s Work items section or add a
-                  view to get started.
+                  {t(
+                    'views.emptyWorkItems',
+                    "No work items yet. Create one from a project's Work items section or add a view to get started.",
+                  )}
                 </td>
               </tr>
             ) : (

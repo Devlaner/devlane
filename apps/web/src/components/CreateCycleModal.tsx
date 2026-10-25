@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Modal, Button, Input } from './ui';
 import { Dropdown } from './work-item';
 import { DateRangeModal } from './workspace-views/DateRangeModal';
@@ -56,14 +58,14 @@ const IconCheck = () => (
   </svg>
 );
 
-function formatDateRangeDisplay(start: string | null, end: string | null): string {
-  if (!start && !end) return 'Start date → End date';
+function formatDateRangeDisplay(start: string | null, end: string | null, t: TFunction): string {
+  if (!start && !end) return t('common.dateRangePlaceholder', 'Start date → End date');
   if (start && end) return `${formatISODateDisplay(start)} → ${formatISODateDisplay(end)}`;
   return start
     ? formatISODateDisplay(start)
     : end
       ? formatISODateDisplay(end)
-      : 'Start date → End date';
+      : t('common.dateRangePlaceholder', 'Start date → End date');
 }
 
 export interface CreateCycleModalProps {
@@ -81,6 +83,7 @@ export function CreateCycleModal({
   projectId,
   onCreated,
 }: CreateCycleModalProps) {
+  const { t } = useTranslation();
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [projectDropdownOpen, setProjectDropdownOpen] = useState<string | null>(null);
   const [projectSearch, setProjectSearch] = useState('');
@@ -156,7 +159,7 @@ export function CreateCycleModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!workspaceSlug || !selectedProjectId || !title.trim()) {
-      setError('Title is required.');
+      setError(t('common.titleRequired', 'Title is required.'));
       return;
     }
     setError(null);
@@ -171,7 +174,7 @@ export function CreateCycleModal({
       onClose();
       onCreated?.(created, selectedProjectId);
     } catch (err) {
-      setError(apiErrorMessage(err, 'Failed to create cycle.'));
+      setError(apiErrorMessage(err, t('cycle.create.error', 'Failed to create cycle.')));
     } finally {
       setSubmitting(false);
     }
@@ -182,15 +185,15 @@ export function CreateCycleModal({
       <Modal
         open={open}
         onClose={onClose}
-        title="Create cycle"
+        title={t('cycle.create.title', 'Create cycle')}
         className="max-w-[680px]"
         footer={
           <>
             <Button type="button" variant="secondary" onClick={onClose}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button type="submit" form="create-cycle-form" disabled={submitting || !title.trim()}>
-              Create cycle
+              {t('cycle.create.submit', 'Create cycle')}
             </Button>
           </>
         }
@@ -200,7 +203,7 @@ export function CreateCycleModal({
             id="create-cycle-project"
             openId={projectDropdownOpen}
             onOpen={setProjectDropdownOpen}
-            label="Project"
+            label={t('common.project', 'Project')}
             icon={null}
             displayValue=""
             triggerClassName="inline-flex items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
@@ -215,7 +218,7 @@ export function CreateCycleModal({
                   />
                 </span>
                 <span className="max-w-[220px] truncate">
-                  {selectedProject?.name ?? 'Select project'}
+                  {selectedProject?.name ?? t('common.selectProject', 'Select project')}
                 </span>
               </span>
             }
@@ -229,7 +232,7 @@ export function CreateCycleModal({
                 </span>
                 <input
                   type="text"
-                  placeholder="Search"
+                  placeholder={t('common.search', 'Search')}
                   value={projectSearch}
                   onChange={(e) => setProjectSearch(e.target.value)}
                   className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -267,21 +270,21 @@ export function CreateCycleModal({
           </Dropdown>
 
           <Input
-            label="Title"
+            label={t('common.title', 'Title')}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Title"
+            placeholder={t('common.title', 'Title')}
             autoFocus
           />
 
           <div>
             <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-              Description
+              {t('common.description', 'Description')}
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Description"
+              placeholder={t('common.description', 'Description')}
               rows={4}
               className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
             />
@@ -295,13 +298,18 @@ export function CreateCycleModal({
             <span className="text-(--txt-icon-tertiary)" aria-hidden>
               <IconCalendar />
             </span>
-            {formatDateRangeDisplay(startDate, endDate)}
+            {formatDateRangeDisplay(startDate, endDate, t)}
           </button>
 
           {overlapNames.length > 0 && (
             <p className="text-sm text-(--txt-warning-primary)">
-              These dates overlap {overlapNames.length === 1 ? 'the cycle' : 'cycles'}{' '}
-              {overlapNames.join(', ')}.
+              {overlapNames.length === 1
+                ? t('cycle.overlapWarningOne', 'These dates overlap the cycle {{names}}.', {
+                    names: overlapNames.join(', '),
+                  })
+                : t('cycle.overlapWarningOther', 'These dates overlap cycles {{names}}.', {
+                    names: overlapNames.join(', '),
+                  })}
             </p>
           )}
 
@@ -312,7 +320,7 @@ export function CreateCycleModal({
       <DateRangeModal
         open={dateModalOpen}
         onClose={() => setDateModalOpen(false)}
-        title="Cycle date range"
+        title={t('cycle.dateRangeTitle', 'Cycle date range')}
         after={startDate}
         before={endDate}
         onApply={(after, before) => {

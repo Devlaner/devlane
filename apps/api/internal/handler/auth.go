@@ -19,6 +19,7 @@ import (
 	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/queue"
 	"github.com/Devlaner/devlane/api/internal/redis"
+	"github.com/Devlaner/devlane/api/internal/service"
 	"github.com/Devlaner/devlane/api/internal/store"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -27,6 +28,7 @@ import (
 
 type AuthHandler struct {
 	Auth              *auth.Service
+	Account           *service.AccountService
 	Settings          *store.InstanceSettingStore
 	Winv              *store.WorkspaceInviteStore
 	Ws                *store.WorkspaceStore
@@ -339,13 +341,7 @@ func (h *AuthHandler) GetNotificationPreferences(c *gin.Context) {
 		return
 	}
 	if h.NotifPrefs == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"property_change": true,
-			"state_change":    true,
-			"comment":         true,
-			"mention":         true,
-			"issue_completed": true,
-		})
+		c.JSON(http.StatusOK, notifPrefResponse(model.DefaultNotificationPreference()))
 		return
 	}
 	p, err := h.NotifPrefs.GetGlobal(c.Request.Context(), user.ID)
@@ -354,31 +350,10 @@ func (h *AuthHandler) GetNotificationPreferences(c *gin.Context) {
 		return
 	}
 	if p == nil {
-		c.JSON(http.StatusOK, gin.H{
-			"property_change": true,
-			"state_change":    true,
-			"comment":         true,
-			"mention":         true,
-			"issue_completed": true,
-		})
+		c.JSON(http.StatusOK, notifPrefResponse(model.DefaultNotificationPreference()))
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"property_change": p.PropertyChange,
-		"state_change":    p.StateChange,
-		"comment":         p.Comment,
-		"mention":         p.Mention,
-		"issue_completed": p.IssueCompleted,
-	})
-}
-
-// UpdateNotificationPreferencesRequest is the body for PUT /api/users/me/notification-preferences/
-type UpdateNotificationPreferencesRequest struct {
-	PropertyChange *bool `json:"property_change"`
-	StateChange    *bool `json:"state_change"`
-	Comment        *bool `json:"comment"`
-	Mention        *bool `json:"mention"`
-	IssueCompleted *bool `json:"issue_completed"`
+	c.JSON(http.StatusOK, notifPrefResponse(*p))
 }
 
 // UpdateNotificationPreferences updates account-level notification preferences.
@@ -393,7 +368,7 @@ func (h *AuthHandler) UpdateNotificationPreferences(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Not configured"})
 		return
 	}
-	var req UpdateNotificationPreferencesRequest
+	var req NotifPrefBody
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
 		return
@@ -404,39 +379,131 @@ func (h *AuthHandler) UpdateNotificationPreferences(c *gin.Context) {
 		return
 	}
 	if p == nil {
-		p = &model.UserNotificationPreference{UserID: user.ID}
-		p.PropertyChange = true
-		p.StateChange = true
-		p.Comment = true
-		p.Mention = true
-		p.IssueCompleted = true
+		def := model.DefaultNotificationPreference()
+		def.UserID = user.ID
+		p = &def
 	}
-	if req.PropertyChange != nil {
-		p.PropertyChange = *req.PropertyChange
-	}
-	if req.StateChange != nil {
-		p.StateChange = *req.StateChange
-	}
-	if req.Comment != nil {
-		p.Comment = *req.Comment
-	}
-	if req.Mention != nil {
-		p.Mention = *req.Mention
-	}
-	if req.IssueCompleted != nil {
-		p.IssueCompleted = *req.IssueCompleted
-	}
+	applyNotifPrefBody(p, req)
 	if err := h.NotifPrefs.UpsertGlobal(c.Request.Context(), p); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save preferences"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"property_change": p.PropertyChange,
-		"state_change":    p.StateChange,
-		"comment":         p.Comment,
-		"mention":         p.Mention,
-		"issue_completed": p.IssueCompleted,
-	})
+	c.JSON(http.StatusOK, notifPrefResponse(*p))
+}
+
+// DeactivateMe deactivates the authenticated user's account and signs them out
+// everywhere. Reactivation is an admin/support action, not self-service.
+// POST /api/users/me/deactivate/
+func (h *AuthHandler) DeactivateMe(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	if h.Account == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Not configured"})
+		return
+	}
+	if err := h.Account.Deactivate(c.Request.Context(), user.ID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to deactivate account"})
+		return
+	}
+	clearSessionCookie(c)
+	c.Status(http.StatusNoContent)
+}
+
+// RequestEmailChange starts a verified email change: it stores a pending change
+// and emails a one-time code to the new address.
+// POST /api/users/me/change-email/
+func (h *AuthHandler) RequestEmailChange(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	if h.Account == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Not configured"})
+		return
+	}
+	var body struct {
+		NewEmail string `json:"new_email" binding:"required,email"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
+	ctx := c.Request.Context()
+	if !h.smtpConfigured(ctx) {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Outbound email is not configured. Set SMTP (host) in Instance admin → Email."})
+		return
+	}
+	if h.Queue == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Email queue unavailable. Start RabbitMQ and check RABBITMQ_URL."})
+		return
+	}
+	code, err := h.Account.RequestEmailChange(ctx, user.ID, body.NewEmail)
+	if err != nil {
+		switch err {
+		case service.ErrSameEmail, service.ErrEmailInUse:
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			h.log().Error("request email change", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start email change"})
+		}
+		return
+	}
+	to := strings.ToLower(strings.TrimSpace(body.NewEmail))
+	bodyText := fmt.Sprintf(
+		"Use this code to confirm your new Devlane email address: %s\n\nThis code expires in 15 minutes. If you did not request it, you can ignore this email.\n",
+		code,
+	)
+	if err := h.Queue.PublishSendEmail(ctx, queue.SendEmailPayload{
+		To:      to,
+		Subject: "Confirm your new Devlane email",
+		Body:    bodyText,
+		Kind:    "email_change",
+		Extra:   map[string]string{"user_id": user.ID.String()},
+	}); err != nil {
+		h.log().Error("email change enqueue", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send code"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "A confirmation code has been sent to the new address."})
+}
+
+// VerifyEmailChange confirms a pending email change with the emailed code.
+// POST /api/users/me/change-email/verify/
+func (h *AuthHandler) VerifyEmailChange(c *gin.Context) {
+	user := middleware.GetUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	if h.Account == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Not configured"})
+		return
+	}
+	var body struct {
+		Code string `json:"code" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request", "detail": err.Error()})
+		return
+	}
+	newEmail, err := h.Account.ConfirmEmailChange(c.Request.Context(), user.ID, body.Code)
+	if err != nil {
+		switch err {
+		case service.ErrInvalidEmailCode, service.ErrNoPendingEmailChange:
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired code"})
+		case service.ErrEmailInUse:
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			h.log().Error("verify email change", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to change email"})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"email": newEmail})
 }
 
 // ListTokens returns the current user's API tokens (without secret values).

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../ui';
 import { Dropdown } from '../work-item';
@@ -290,6 +291,7 @@ export function ModuleDetailHeader({
   moduleRouteParam,
   issueCountBadge,
 }: ModuleDetailHeaderProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const baseUrl = `/${workspaceSlug}/projects/${projectId}`;
   const modulePath = `${baseUrl}/modules/${encodeURIComponent(moduleRouteParam)}`;
@@ -466,7 +468,7 @@ export function ModuleDetailHeader({
             type="button"
             onClick={() => setProjectDropdownOpen((o) => !o)}
             className="flex size-8 shrink-0 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
-            aria-label="Select project"
+            aria-label={t('common.selectProject', 'Select project')}
           >
             <IconChevronDown />
           </button>
@@ -478,7 +480,7 @@ export function ModuleDetailHeader({
                 </span>
                 <input
                   type="text"
-                  placeholder="Search"
+                  placeholder={t('common.search', 'Search')}
                   value={projectSearch}
                   onChange={(e) => setProjectSearch(e.target.value)}
                   className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -514,7 +516,7 @@ export function ModuleDetailHeader({
           <span className="flex size-5 shrink-0 items-center justify-center text-(--txt-icon-secondary)">
             <IconLayoutGrid />
           </span>
-          Modules
+          {t('common.modules', 'Modules')}
         </Link>
         <span className="shrink-0 px-0.5 text-(--txt-icon-tertiary)" aria-hidden>
           &gt;
@@ -534,7 +536,7 @@ export function ModuleDetailHeader({
             </span>
             <span
               className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-sky-100 px-1.5 text-[11px] font-semibold text-sky-800 dark:bg-sky-950 dark:text-sky-200"
-              title="Work items in this module"
+              title={t('header.module.workItemsBadge', 'Work items in this module')}
             >
               {issueCountBadge}
             </span>
@@ -546,7 +548,7 @@ export function ModuleDetailHeader({
                 className="block px-3 py-2 text-left text-sm text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
                 onClick={() => setModuleDropdownOpen(false)}
               >
-                All modules
+                {t('header.module.allModules', 'All modules')}
               </Link>
             </div>
           )}
@@ -556,7 +558,7 @@ export function ModuleDetailHeader({
         <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-1) p-0.5">
           <button
             type="button"
-            title="List"
+            title={t('common.layout.list', 'List')}
             aria-pressed
             className="flex size-7 items-center justify-center rounded-md bg-(--bg-layer-2) text-(--txt-primary) shadow-sm"
           >
@@ -564,7 +566,7 @@ export function ModuleDetailHeader({
           </button>
           <button
             type="button"
-            title="Board"
+            title={t('common.layout.board', 'Board')}
             className="flex size-7 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-secondary)"
             onClick={() => navigate(`${baseUrl}/board`)}
           >
@@ -572,7 +574,7 @@ export function ModuleDetailHeader({
           </button>
           <button
             type="button"
-            title="Calendar (coming soon)"
+            title={t('common.layout.calendarComingSoon', 'Calendar (coming soon)')}
             disabled
             className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
           >
@@ -580,7 +582,7 @@ export function ModuleDetailHeader({
           </button>
           <button
             type="button"
-            title="Spreadsheet (coming soon)"
+            title={t('common.layout.spreadsheetComingSoon', 'Spreadsheet (coming soon)')}
             disabled
             className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
           >
@@ -588,7 +590,7 @@ export function ModuleDetailHeader({
           </button>
           <button
             type="button"
-            title="Timeline (coming soon)"
+            title={t('common.layout.timelineComingSoon', 'Timeline (coming soon)')}
             disabled
             className="flex size-7 cursor-not-allowed items-center justify-center rounded-md opacity-40"
           >
@@ -601,7 +603,7 @@ export function ModuleDetailHeader({
             id="module-filters"
             openId={toolbarOpen}
             onOpen={setToolbarOpen}
-            label="Filters"
+            label={t('header.filters', 'Filters')}
             icon={<IconFilter />}
             displayValue=""
             align="right"
@@ -612,7 +614,7 @@ export function ModuleDetailHeader({
               <span className="relative inline-flex">
                 <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 text-[13px] font-medium text-(--txt-secondary) shadow-sm hover:bg-(--bg-layer-1-hover)">
                   <IconFilter />
-                  Filters
+                  {t('header.filters', 'Filters')}
                   {filtersMenuOpen ? <IconChevronUp /> : <IconChevronDown />}
                 </span>
                 {filtersActive ? (
@@ -632,7 +634,7 @@ export function ModuleDetailHeader({
               cycles={cycles}
               labels={labels}
               currentUserId={authUser?.id}
-              currentUserName={authUser?.name ?? 'You'}
+              currentUserName={authUser?.name ?? t('common.you', 'You')}
               currentUserAvatarUrl={authUser?.avatarUrl}
               onRequestDueCustom={() => {
                 setToolbarOpen(null);
@@ -650,7 +652,7 @@ export function ModuleDetailHeader({
           id="module-display"
           openId={toolbarOpen}
           onOpen={setToolbarOpen}
-          label="Display"
+          label={t('header.display', 'Display')}
           icon={<IconSliders />}
           displayValue=""
           align="right"
@@ -660,25 +662,29 @@ export function ModuleDetailHeader({
           triggerContent={
             <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)">
               <IconSliders />
-              Display
+              {t('header.display', 'Display')}
               {displayMenuOpen ? <IconChevronUp /> : <IconChevronDown />}
             </span>
           }
         >
-          <ProjectIssuesDisplayPanel display={display} setDisplay={setDisplay} />
+          <ProjectIssuesDisplayPanel
+            display={display}
+            setDisplay={setDisplay}
+            enableSubGroup={false}
+          />
         </Dropdown>
 
         <Link
           to={`/${workspaceSlug}/analytics/work-items`}
           className="inline-flex h-8 items-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
         >
-          Analytics
+          {t('common.analytics', 'Analytics')}
         </Link>
 
         <Link to={`${modulePath}?create=1`}>
           <Button size="sm" className="gap-1.5 text-[13px] font-medium">
             <IconPlus />
-            Add work item
+            {t('common.addWorkItem', 'Add work item')}
           </Button>
         </Link>
 
@@ -686,7 +692,7 @@ export function ModuleDetailHeader({
           <button
             type="button"
             className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
-            aria-label="More options"
+            aria-label={t('common.moreOptions', 'More options')}
             aria-expanded={moreOpen}
             onClick={() => setMoreOpen((o) => !o)}
           >
@@ -699,21 +705,21 @@ export function ModuleDetailHeader({
                 className="block w-full px-3 py-2 text-left text-sm text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
                 onClick={openAddExisting}
               >
-                Add an existing work item
+                {t('header.module.addExistingWorkItem', 'Add an existing work item')}
               </button>
               <button
                 type="button"
                 className="block w-full px-3 py-2 text-left text-sm text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
                 onClick={copyLink}
               >
-                Copy link
+                {t('common.copyLink', 'Copy link')}
               </button>
               <button
                 type="button"
                 className="block w-full px-3 py-2 text-left text-sm text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
                 onClick={openNewTab}
               >
-                Open in new tab
+                {t('common.openInNewTab', 'Open in new tab')}
               </button>
             </div>
           )}
@@ -723,7 +729,7 @@ export function ModuleDetailHeader({
       <DateRangeModal
         open={dateModal === 'due'}
         onClose={() => setDateModal(null)}
-        title="Due date range"
+        title={t('common.dueDateRange', 'Due date range')}
         after={filters.dueAfter}
         before={filters.dueBefore}
         onApply={(after, before) => {
@@ -741,7 +747,7 @@ export function ModuleDetailHeader({
       <DateRangeModal
         open={dateModal === 'start'}
         onClose={() => setDateModal(null)}
-        title="Start date range"
+        title={t('common.startDateRange', 'Start date range')}
         after={filters.startAfter}
         before={filters.startBefore}
         onApply={(after, before) => {

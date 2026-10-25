@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { Button, IconEye, IconEyeOff, Skeleton } from '../../components/ui';
 import { instanceSettingsService } from '../../services/instanceService';
 import { getApiErrorMessage } from '../../api/client';
@@ -6,6 +7,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import type { InstanceImageSection } from '../../api/types';
 
 export function InstanceAdminImagePage() {
+  const { t } = useTranslation();
   const [image, setImage] = useState<InstanceImageSection>({
     unsplash_access_key_set: false,
   });
@@ -14,7 +16,7 @@ export function InstanceAdminImagePage() {
   const [showAccessKey, setShowAccessKey] = useState(false);
   const [accessKeyLocal, setAccessKeyLocal] = useState<string | undefined>(undefined);
   const [error, setError] = useState('');
-  useDocumentTitle('Images');
+  useDocumentTitle(t('instanceAdmin.image.documentTitle', 'Images'));
 
   const accessKeyDisplay =
     accessKeyLocal !== undefined ? accessKeyLocal : (image.unsplash_access_key ?? '');
@@ -84,10 +86,13 @@ export function InstanceAdminImagePage() {
     <div className="w-full max-w-6xl space-y-6">
       <div>
         <h1 className="text-base font-semibold text-(--txt-primary)">
-          Third-party image libraries
+          {t('instanceAdmin.image.title', 'Third-party image libraries')}
         </h1>
         <p className="mt-0.5 text-xs text-(--txt-secondary)">
-          Let your users search and choose images from third-party libraries.
+          {t(
+            'instanceAdmin.image.subtitle',
+            'Let your users search and choose images from third-party libraries.',
+          )}
         </p>
       </div>
 
@@ -95,7 +100,7 @@ export function InstanceAdminImagePage() {
 
       <section className="space-y-3">
         <label className="block text-xs font-medium text-(--txt-secondary)">
-          Access key from your Unsplash account
+          {t('instanceAdmin.image.accessKeyLabel', 'Access key from your Unsplash account')}
           <div className="relative mt-0.5">
             <input
               type={showAccessKey ? 'text' : 'password'}
@@ -104,34 +109,47 @@ export function InstanceAdminImagePage() {
               onFocus={() => {
                 if (accessKeyLocal === undefined) setAccessKeyLocal(accessKeyDisplay);
               }}
-              placeholder={!accessKeyDisplay ? 'Enter access key' : ''}
+              placeholder={
+                !accessKeyDisplay
+                  ? t('instanceAdmin.image.accessKeyPlaceholder', 'Enter access key')
+                  : ''
+              }
               className="block w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 pr-9 text-xs text-(--txt-primary) focus:outline-none"
             />
             <button
               type="button"
               onClick={() => setShowAccessKey((v) => !v)}
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-              aria-label={showAccessKey ? 'Hide access key' : 'Show access key'}
+              aria-label={
+                showAccessKey
+                  ? t('instanceAdmin.image.hideAccessKey', 'Hide access key')
+                  : t('instanceAdmin.image.showAccessKey', 'Show access key')
+              }
             >
               {showAccessKey ? <IconEyeOff /> : <IconEye />}
             </button>
           </div>
           <p className="mt-0.5 text-[11px] text-(--txt-tertiary)">
-            You will find your access key in your Unsplash developer console.{' '}
-            <a
-              href="https://unsplash.com/developers/docs/api-reference/access-key"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-(--txt-accent-primary) underline hover:no-underline"
-            >
-              Learn more.
-            </a>
+            <Trans
+              i18nKey="instanceAdmin.image.accessKeyHint"
+              defaults="You will find your access key in your Unsplash developer console. <a>Learn more.</a>"
+              components={{
+                a: (
+                  <a
+                    href="https://unsplash.com/developers/docs/api-reference/access-key"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-(--txt-accent-primary) underline hover:no-underline"
+                  />
+                ),
+              }}
+            />
           </p>
         </label>
       </section>
 
       <Button size="sm" className="text-xs" onClick={handleSave} disabled={saving}>
-        {saving ? 'Saving…' : 'Save changes'}
+        {saving ? t('common.saving', 'Saving…') : t('common.saveChanges', 'Save changes')}
       </Button>
     </div>
   );

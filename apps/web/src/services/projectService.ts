@@ -61,12 +61,18 @@ export const projectService = {
       /** When present, use empty string to clear; omit to leave unchanged. */
       default_assignee_id?: string;
       guest_view_all_features?: boolean;
+      /** 2 = public (any workspace member), 0 = secret (members only). */
+      network?: number;
       module_view?: boolean;
       cycle_view?: boolean;
       issue_views_view?: boolean;
       page_view?: boolean;
       intake_view?: boolean;
       is_time_tracking_enabled?: boolean;
+      /** Auto-archive: months of inactivity after which settled items archive (0 = off). */
+      archive_in?: number;
+      /** Auto-close: months of inactivity after which active items are closed (0 = off). */
+      close_in?: number;
     },
   ): Promise<ProjectApiResponse> {
     const { data } = await apiClient.patch<ProjectApiResponse>(
@@ -74,6 +80,28 @@ export const projectService = {
       payload,
     );
     return data;
+  },
+
+  /** List the workspace's archived projects. */
+  async listArchived(workspaceSlug: string): Promise<ProjectApiResponse[]> {
+    const { data } = await apiClient.get<ProjectApiResponse[]>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/archived-projects/`,
+    );
+    return Array.isArray(data) ? data : [];
+  },
+
+  /** Archive a project (hides it from active lists; not deleted). */
+  async archive(workspaceSlug: string, projectId: string): Promise<void> {
+    await apiClient.post(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/archive/`,
+    );
+  },
+
+  /** Restore an archived project. */
+  async restore(workspaceSlug: string, projectId: string): Promise<void> {
+    await apiClient.delete(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/archive/`,
+    );
   },
 
   async listMembers(workspaceSlug: string, projectId: string): Promise<ProjectMemberApiResponse[]> {

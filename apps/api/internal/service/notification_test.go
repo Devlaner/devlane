@@ -216,3 +216,38 @@ func TestHumanFieldName(t *testing.T) {
 		}
 	}
 }
+
+// channelAllows must gate the email and in-app channels independently per type,
+// so a receiver can mute one without losing the other. Covers #203.
+func TestChannelAllows(t *testing.T) {
+	p := model.DefaultNotificationPreference()
+	// Comment: in-app on, email off.
+	p.Comment = true
+	p.EmailComment = false
+	if !channelAllows(p, model.NotificationSenderCommented, false) {
+		t.Error("in-app comment should be allowed")
+	}
+	if channelAllows(p, model.NotificationSenderCommented, true) {
+		t.Error("email comment should be muted")
+	}
+	// Mention: in-app off, email on.
+	p.Mention = false
+	p.EmailMention = true
+	if channelAllows(p, model.NotificationSenderMentioned, false) {
+		t.Error("in-app mention should be muted")
+	}
+	if !channelAllows(p, model.NotificationSenderMentioned, true) {
+		t.Error("email mention should be allowed")
+	}
+	// Subscribed + Assigned both fall back to the property-change toggle.
+	p.PropertyChange = false
+	p.EmailPropertyChange = true
+	for _, sender := range []string{model.NotificationSenderSubscribed, model.NotificationSenderAssigned} {
+		if channelAllows(p, sender, false) {
+			t.Errorf("in-app %s should follow property_change (off)", sender)
+		}
+		if !channelAllows(p, sender, true) {
+			t.Errorf("email %s should follow email_property_change (on)", sender)
+		}
+	}
+}

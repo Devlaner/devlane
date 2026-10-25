@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ALargeSmall, Ban, ChevronDown } from 'lucide-react';
 import type { Editor } from '@tiptap/react';
 import { cn } from '../../lib/utils';
@@ -29,6 +30,7 @@ interface Props {
  * a row of swatches for background, plus a "clear" affordance for each.
  */
 export function ColorDropdown({ editor, stateTick }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -67,9 +69,9 @@ export function ColorDropdown({ editor, stateTick }: Props) {
             ? 'bg-(--bg-layer-1) text-(--txt-primary)'
             : 'text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)',
         )}
-        aria-label="Color"
+        aria-label={t('editor.color', 'Color')}
       >
-        Color
+        {t('editor.color', 'Color')}
         <span
           className="grid size-5 place-items-center rounded border border-(--border-subtle)"
           style={{ backgroundColor: activeBg?.bg ?? 'transparent' }}
@@ -82,7 +84,7 @@ export function ColorDropdown({ editor, stateTick }: Props) {
         <div className="absolute top-full left-0 z-20 mt-1 w-72 space-y-3 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-3 shadow-(--shadow-raised)">
           <div>
             <p className="mb-1.5 text-[11px] font-semibold tracking-wide text-(--txt-tertiary) uppercase">
-              Text color
+              {t('editor.textColor', 'Text color')}
             </p>
             <div className="flex items-center gap-1.5">
               {COLORS.map((c) => (
@@ -90,7 +92,7 @@ export function ColorDropdown({ editor, stateTick }: Props) {
                   key={c.key}
                   type="button"
                   onClick={() => setText(c.text)}
-                  title={c.key}
+                  title={t(`editor.colorName.${c.key}`, c.key)}
                   className={cn(
                     'size-6 rounded border border-(--border-subtle) transition-opacity hover:opacity-70',
                     activeText?.key === c.key && 'ring-2 ring-(--brand-default)',
@@ -101,7 +103,7 @@ export function ColorDropdown({ editor, stateTick }: Props) {
               <button
                 type="button"
                 onClick={() => setText(null)}
-                title="Clear text color"
+                title={t('editor.clearTextColor', 'Clear text color')}
                 className="grid size-6 place-items-center rounded border border-(--border-subtle) text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
               >
                 <Ban size={12} />
@@ -110,7 +112,7 @@ export function ColorDropdown({ editor, stateTick }: Props) {
           </div>
           <div>
             <p className="mb-1.5 text-[11px] font-semibold tracking-wide text-(--txt-tertiary) uppercase">
-              Background
+              {t('editor.background', 'Background')}
             </p>
             <div className="flex items-center gap-1.5">
               {COLORS.map((c) => (
@@ -118,7 +120,7 @@ export function ColorDropdown({ editor, stateTick }: Props) {
                   key={c.key}
                   type="button"
                   onClick={() => setBg(c.bg)}
-                  title={c.key}
+                  title={t(`editor.colorName.${c.key}`, c.key)}
                   className={cn(
                     'size-6 rounded border border-(--border-subtle) transition-opacity hover:opacity-70',
                     activeBg?.key === c.key && 'ring-2 ring-(--brand-default)',
@@ -129,7 +131,7 @@ export function ColorDropdown({ editor, stateTick }: Props) {
               <button
                 type="button"
                 onClick={() => setBg(null)}
-                title="Clear background"
+                title={t('editor.clearBackground', 'Clear background')}
                 className="grid size-6 place-items-center rounded border border-(--border-subtle) text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
               >
                 <Ban size={12} />

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Calendar, GripVertical } from 'lucide-react';
 import { IssuePRBadge } from '../IssuePRBadge';
@@ -20,12 +21,17 @@ import { isOverdue, membersFromAssigneeIds } from '../../../lib/issueRowHelpers'
 import { cn } from '../../../lib/utils';
 import type { IssueApiResponse, LabelApiResponse } from '../../../api/types';
 import type { Priority } from '../../../types';
-import type { GroupedIssuesResult } from '../../../lib/issueListGroupAndSort';
+import type {
+  GroupedIssuesResult,
+  SubGroupedIssuesResult,
+} from '../../../lib/issueListGroupAndSort';
 import type { IssueLayoutProps } from './IssueLayoutTypes';
 
 interface IssueLayoutListProps extends IssueLayoutProps {
   /** Pre-built grouping result from the parent (state/priority/cycle/etc. groupings). */
   groupedIssues: GroupedIssuesResult;
+  /** Optional second-level grouping; when present, sections are nested. */
+  subGroupedIssues?: SubGroupedIssuesResult | null;
   /**
    * Filter columns (display properties) — true means render. Accepts the same
    * narrow `SavedViewDisplayPropertyId` keys the parent's `hasCol` checks; we
@@ -63,6 +69,7 @@ export function IssueLayoutList({
   issueHref,
   now,
   groupedIssues,
+  subGroupedIssues,
   hasCol,
   showEmptyGroups,
   subWorkCountByParentId,
@@ -72,6 +79,7 @@ export function IssueLayoutList({
   onReorder,
   onUpdateIssue,
 }: IssueLayoutListProps) {
+  const { t } = useTranslation();
   const stateById = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
   const labelById = useMemo(() => new Map(labels.map((l) => [l.id, l])), [labels]);
   const [openCell, setOpenCell] = useState<string | null>(null);
@@ -172,8 +180,15 @@ export function IssueLayoutList({
               list !== undefined && idx !== undefined ? keyboardMove(issue, idx, list) : undefined
             }
             className="flex shrink-0 cursor-grab items-center rounded-sm pl-2 text-(--txt-icon-tertiary) opacity-0 transition-opacity hover:text-(--txt-icon-secondary) focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--border-focus) active:cursor-grabbing group-hover/row:opacity-100"
-            aria-label={`Reorder ${displayId}. Use Arrow Up or Arrow Down to move.`}
-            title="Drag, or focus and use arrow keys, to reorder"
+            aria-label={t(
+              'workItem.list.reorderAria',
+              'Reorder {{id}}. Use Arrow Up or Arrow Down to move.',
+              { id: displayId },
+            )}
+            title={t(
+              'workItem.list.reorderTooltip',
+              'Drag, or focus and use arrow keys, to reorder',
+            )}
           >
             <GripVertical className="size-4" />
           </button>
@@ -185,7 +200,7 @@ export function IssueLayoutList({
               className="h-3.5 w-3.5 cursor-pointer align-middle"
               checked={selection.selectedIds.has(issue.id)}
               onChange={() => selection.onToggle(issue.id)}
-              aria-label={`Select ${displayId}`}
+              aria-label={t('workItem.list.selectAria', 'Select {{id}}', { id: displayId })}
             />
           </span>
         ) : null}
@@ -234,10 +249,10 @@ export function IssueLayoutList({
           {hasCol('start_date') ? (
             onUpdateIssue ? (
               <DatePickerTrigger
-                label="Start date"
+                label={t('common.startDate', 'Start date')}
                 icon={<Calendar />}
                 value={issue.start_date ?? ''}
-                placeholder="Start"
+                placeholder={t('common.start', 'Start')}
                 onChange={(v) => onUpdateIssue(issue.id, { start_date: v || null })}
               />
             ) : (
@@ -252,10 +267,10 @@ export function IssueLayoutList({
           {hasCol('due_date') ? (
             onUpdateIssue ? (
               <DatePickerTrigger
-                label="Due date"
+                label={t('common.dueDate', 'Due date')}
                 icon={<Calendar />}
                 value={issue.target_date ?? ''}
-                placeholder="Due"
+                placeholder={t('common.due', 'Due')}
                 className={
                   isOverdue(issue.target_date, issueState?.group, now)
                     ? 'border-(--border-danger-strong) text-(--txt-danger-primary)'
@@ -300,7 +315,7 @@ export function IssueLayoutList({
           {hasCol('sub_work_count') && subN > 0 ? (
             <span
               className="inline-flex h-5 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-1.5 text-[11px] text-(--txt-secondary)"
-              title="Sub-work items"
+              title={t('common.subWorkItems', 'Sub-work items')}
             >
               {subN}
             </span>
@@ -308,7 +323,7 @@ export function IssueLayoutList({
           {hasCol('cycle') && cycleName(issue) !== '—' ? (
             <span
               className="max-w-[6rem] truncate text-[11px] text-(--txt-secondary)"
-              title={`Cycle: ${cycleName(issue)}`}
+              title={t('workItem.list.cycleTooltip', 'Cycle: {{name}}', { name: cycleName(issue) })}
             >
               {cycleName(issue)}
             </span>
@@ -316,7 +331,9 @@ export function IssueLayoutList({
           {hasCol('module') && moduleName(issue) !== '—' ? (
             <span
               className="max-w-[6rem] truncate text-[11px] text-(--txt-secondary)"
-              title={`Module: ${moduleName(issue)}`}
+              title={t('workItem.list.moduleTooltip', 'Module: {{name}}', {
+                name: moduleName(issue),
+              })}
             >
               {moduleName(issue)}
             </span>
@@ -332,6 +349,50 @@ export function IssueLayoutList({
       <ul className="w-full divide-y divide-(--border-subtle)">
         {flatList.map((issue, idx) => renderRow(issue, idx, flatList))}
       </ul>
+    );
+  }
+
+  // Nested (sub-grouped) rendering: each primary group holds sub-group sections.
+  if (subGroupedIssues) {
+    const sg = subGroupedIssues;
+    return (
+      <div className="space-y-8 px-4 py-4">
+        {sg.primaryOrder.map((primaryKey) => {
+          const bySub = sg.cells.get(primaryKey);
+          const primaryCount = sg.subOrder.reduce(
+            (n, subKey) => n + (bySub?.get(subKey)?.length ?? 0),
+            0,
+          );
+          if (primaryCount === 0 && !showEmptyGroups) return null;
+          return (
+            <section key={primaryKey} className="space-y-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-(--txt-primary)">
+                {sg.primaryTitle(primaryKey)}
+                <span className="font-normal text-(--txt-tertiary)">{primaryCount}</span>
+              </h3>
+              <div className="space-y-3 border-l-2 border-(--border-subtle) pl-3">
+                {sg.subOrder.map((subKey) => {
+                  const cellIssues = bySub?.get(subKey) ?? [];
+                  if (cellIssues.length === 0 && !showEmptyGroups) return null;
+                  return (
+                    <section key={subKey} className="space-y-1.5">
+                      <h4 className="flex items-center gap-2 text-xs font-medium text-(--txt-secondary)">
+                        {sg.subTitle(subKey)}
+                        <span className="font-normal text-(--txt-tertiary)">
+                          {cellIssues.length}
+                        </span>
+                      </h4>
+                      <ul className="w-full divide-y divide-(--border-subtle) rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
+                        {cellIssues.map((issue) => renderRow(issue))}
+                      </ul>
+                    </section>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
+      </div>
     );
   }
 

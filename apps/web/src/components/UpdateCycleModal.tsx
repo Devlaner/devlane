@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Modal, Button, Input } from './ui';
 import { DateRangeModal } from './workspace-views/DateRangeModal';
 import { cycleService } from '../services/cycleService';
@@ -24,14 +26,14 @@ const IconCalendar = () => (
   </svg>
 );
 
-function formatDateRangeDisplay(start: string | null, end: string | null): string {
-  if (!start && !end) return 'Start date → End date';
+function formatDateRangeDisplay(start: string | null, end: string | null, t: TFunction): string {
+  if (!start && !end) return t('common.dateRangePlaceholder', 'Start date → End date');
   if (start && end) return `${formatISODateDisplay(start)} → ${formatISODateDisplay(end)}`;
   return start
     ? formatISODateDisplay(start)
     : end
       ? formatISODateDisplay(end)
-      : 'Start date → End date';
+      : t('common.dateRangePlaceholder', 'Start date → End date');
 }
 
 export interface UpdateCycleModalProps {
@@ -51,6 +53,7 @@ export function UpdateCycleModal({
   cycle,
   onUpdated,
 }: UpdateCycleModalProps) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState<string | null>(null);
@@ -98,7 +101,7 @@ export function UpdateCycleModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!workspaceSlug || !projectId || !cycle || !title.trim()) {
-      setError('Title is required.');
+      setError(t('common.titleRequired', 'Title is required.'));
       return;
     }
     setError(null);
@@ -113,7 +116,7 @@ export function UpdateCycleModal({
       onClose();
       onUpdated?.(updated);
     } catch (err) {
-      setError(apiErrorMessage(err, 'Failed to update cycle.'));
+      setError(apiErrorMessage(err, t('cycle.update.error', 'Failed to update cycle.')));
     } finally {
       setSubmitting(false);
     }
@@ -126,36 +129,36 @@ export function UpdateCycleModal({
       <Modal
         open={open}
         onClose={onClose}
-        title="Edit cycle"
+        title={t('cycle.update.title', 'Edit cycle')}
         className="max-w-[680px]"
         footer={
           <>
             <Button type="button" variant="secondary" onClick={onClose}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button type="submit" form="update-cycle-form" disabled={submitting || !title.trim()}>
-              Save
+              {t('common.save', 'Save')}
             </Button>
           </>
         }
       >
         <form id="update-cycle-form" onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label="Title"
+            label={t('common.title', 'Title')}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Title"
+            placeholder={t('common.title', 'Title')}
             autoFocus
           />
 
           <div>
             <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-              Description
+              {t('common.description', 'Description')}
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Description"
+              placeholder={t('common.description', 'Description')}
               rows={4}
               className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
             />
@@ -169,13 +172,18 @@ export function UpdateCycleModal({
             <span className="text-(--txt-icon-tertiary)" aria-hidden>
               <IconCalendar />
             </span>
-            {formatDateRangeDisplay(startDate, endDate)}
+            {formatDateRangeDisplay(startDate, endDate, t)}
           </button>
 
           {overlapNames.length > 0 && (
             <p className="text-sm text-(--txt-warning-primary)">
-              These dates overlap {overlapNames.length === 1 ? 'the cycle' : 'cycles'}{' '}
-              {overlapNames.join(', ')}.
+              {overlapNames.length === 1
+                ? t('cycle.overlapWarningOne', 'These dates overlap the cycle {{names}}.', {
+                    names: overlapNames.join(', '),
+                  })
+                : t('cycle.overlapWarningOther', 'These dates overlap cycles {{names}}.', {
+                    names: overlapNames.join(', '),
+                  })}
             </p>
           )}
 
@@ -186,7 +194,7 @@ export function UpdateCycleModal({
       <DateRangeModal
         open={dateModalOpen}
         onClose={() => setDateModalOpen(false)}
-        title="Cycle date range"
+        title={t('cycle.dateRangeTitle', 'Cycle date range')}
         after={startDate}
         before={endDate}
         onApply={(after, before) => {

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, Button, Input } from '../ui';
 import type { ModuleLinkApiResponse } from '../../services/moduleService';
 
@@ -12,6 +13,7 @@ interface ModuleLinkModalProps {
 
 /** Add / edit a module link. Mirrors the create-update link modal layout. */
 export function ModuleLinkModal({ open, onClose, initial, onSubmit }: ModuleLinkModalProps) {
+  const { t } = useTranslation();
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -40,27 +42,31 @@ export function ModuleLinkModal({ open, onClose, initial, onSubmit }: ModuleLink
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={initial ? 'Update link' : 'Add link'}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={initial ? t('module.updateLink', 'Update link') : t('module.addLink', 'Add link')}
+    >
       <form onSubmit={submit} className="space-y-4">
         <Input
-          label="URL"
+          label={t('module.url', 'URL')}
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="Type or paste a URL"
+          placeholder={t('module.urlPlaceholder', 'Type or paste a URL')}
           autoFocus
         />
         <Input
-          label="Display title"
+          label={t('module.displayTitle', 'Display title')}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="What you'd like to see this link as"
+          placeholder={t('module.displayTitlePlaceholder', "What you'd like to see this link as")}
         />
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button type="submit" variant="primary" disabled={!url.trim() || submitting}>
-            {initial ? 'Update link' : 'Add link'}
+            {initial ? t('module.updateLink', 'Update link') : t('module.addLink', 'Add link')}
           </Button>
         </div>
       </form>

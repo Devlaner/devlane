@@ -48,6 +48,7 @@ type IssueService struct {
 	reactions *store.IssueReactionStore   // optional — per-issue emoji reactions
 	states    *store.StateStore           // optional — validates state ownership
 	labels    *store.LabelStore           // optional — validates label ownership
+	webhooks  *WebhookService             // optional — dispatches issue events to webhooks
 }
 
 func NewIssueService(is *store.IssueStore, ps *store.ProjectStore, ws *store.WorkspaceStore) *IssueService {
@@ -74,6 +75,23 @@ func (s *IssueService) SetStateStore(st *store.StateStore) { s.states = st }
 
 // SetLabelStore wires label-ownership validation. Optional.
 func (s *IssueService) SetLabelStore(l *store.LabelStore) { s.labels = l }
+
+// SetWebhookService wires outbound webhook dispatch for issue events. Optional.
+func (s *IssueService) SetWebhookService(w *WebhookService) { s.webhooks = w }
+
+// dispatchIssueWebhook fires an "issue" webhook event (best-effort).
+func (s *IssueService) dispatchIssueWebhook(ctx context.Context, issue *model.Issue, action string) {
+	if s.webhooks == nil || issue == nil || issue.IsDraft {
+		return
+	}
+	s.webhooks.Dispatch(ctx, issue.WorkspaceID, "issue", map[string]interface{}{
+		"action":       action,
+		"event":        "issue",
+		"workspace_id": issue.WorkspaceID.String(),
+		"project_id":   issue.ProjectID.String(),
+		"data":         issue,
+	})
+}
 
 // validateRelations rejects related ids that fall outside the allowed scope:
 // state and labels must belong to the same project, a parent must be another
@@ -207,6 +225,9 @@ func (s *IssueService) ensureProjectAccess(ctx context.Context, workspaceSlug st
 	inWorkspace, _ := s.ps.IsInWorkspace(ctx, projectID, wrk.ID)
 	if !inWorkspace {
 		return ErrProjectNotFound
+	}
+	if err := enforceProjectVisibility(ctx, s.ps, s.ws, wrk.ID, projectID, userID); err != nil {
+		return err
 	}
 	return nil
 }
@@ -571,6 +592,12 @@ func (s *IssueService) Create(ctx context.Context, workspaceSlug string, project
 	}
 	if stateID != nil {
 		issue.StateID = stateID
+	} else if s.states != nil {
+		// No state chosen: fall back to the project's default state so new work
+		// items land in the configured starting state instead of no state.
+		if def, derr := s.states.GetDefaultByProjectID(ctx, projectID); derr == nil && def != nil {
+			issue.StateID = &def.ID
+		}
 	}
 	if startDate != nil {
 		issue.StartDate = startDate
@@ -622,6 +649,10 @@ func (s *IssueService) Create(ctx context.Context, workspaceSlug string, project
 			}
 		}
 	}
+	if s.notify != nil {
+		s.notify.IssueCreated(ctx, issue, userID)
+	}
+	s.dispatchIssueWebhook(ctx, issue, "created")
 	return issue, nil
 }
 
@@ -814,6 +845,7 @@ func (s *IssueService) Update(ctx context.Context, workspaceSlug string, project
 			}
 		}
 	}
+	s.dispatchIssueWebhook(ctx, issue, "updated")
 	return issue, nil
 }
 
@@ -840,7 +872,7 @@ func uuidSet(ids []uuid.UUID) map[uuid.UUID]bool {
 }
 
 func (s *IssueService) Delete(ctx context.Context, workspaceSlug string, projectID, issueID uuid.UUID, userID uuid.UUID) error {
-	_, err := s.GetByID(ctx, workspaceSlug, projectID, issueID, userID)
+	issue, err := s.GetByID(ctx, workspaceSlug, projectID, issueID, userID)
 	if err != nil {
 		return err
 	}
@@ -850,6 +882,7 @@ func (s *IssueService) Delete(ctx context.Context, workspaceSlug string, project
 	if s.notify != nil {
 		s.notify.IssueDeleted(ctx, issueID)
 	}
+	s.dispatchIssueWebhook(ctx, issue, "deleted")
 	return nil
 }
 

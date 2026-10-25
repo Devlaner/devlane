@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   CartesianGrid,
   Line,
@@ -50,6 +51,7 @@ export function CycleBurndownChart({
   startDate,
   endDate,
 }: CycleBurndownChartProps) {
+  const { t } = useTranslation();
   const data = useMemo<BurndownPoint[]>(() => {
     const start = startDate?.slice(0, 10);
     const end = endDate?.slice(0, 10);
@@ -84,7 +86,10 @@ export function CycleBurndownChart({
   if (data.length === 0) {
     return (
       <p className="text-xs text-(--txt-tertiary)">
-        Add start and due dates to the cycle to see the burndown.
+        {t(
+          'cycles.burndown.needDates',
+          'Add start and due dates to the cycle to see the burndown.',
+        )}
       </p>
     );
   }

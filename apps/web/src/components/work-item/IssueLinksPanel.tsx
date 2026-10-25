@@ -1,4 +1,5 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader } from '../ui';
 import { issueService } from '../../services/issueService';
 import { safeUrl } from '../../lib/sanitize';
@@ -21,6 +22,7 @@ export function IssueLinksPanel({
   links,
   onLinksChange,
 }: IssueLinksPanelProps) {
+  const { t } = useTranslation();
   const [addLinkOpen, setAddLinkOpen] = useState(false);
   const [addLinkUrl, setAddLinkUrl] = useState('');
   const [addLinkTitle, setAddLinkTitle] = useState('');
@@ -31,7 +33,7 @@ export function IssueLinksPanel({
       <CardHeader className="flex items-center justify-between text-sm font-medium text-(--txt-secondary)">
         <span className="flex items-center gap-1.5">
           <IconLink />
-          Links
+          {t('workItem.links.title', 'Links')}
         </span>
         <button
           type="button"
@@ -41,7 +43,7 @@ export function IssueLinksPanel({
             setAddLinkTitle('');
           }}
           className="rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover)"
-          title="Add link"
+          title={t('workItem.links.add', 'Add link')}
         >
           <IconPlus />
         </button>
@@ -69,7 +71,7 @@ export function IssueLinksPanel({
           >
             <input
               type="url"
-              placeholder="https://..."
+              placeholder={t('workItem.links.urlPlaceholder', 'https://...')}
               value={addLinkUrl}
               onChange={(e) => setAddLinkUrl(e.target.value)}
               required
@@ -77,7 +79,7 @@ export function IssueLinksPanel({
             />
             <input
               type="text"
-              placeholder="Title (optional)"
+              placeholder={t('workItem.links.titlePlaceholder', 'Title (optional)')}
               value={addLinkTitle}
               onChange={(e) => setAddLinkTitle(e.target.value)}
               className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-canvas) px-2 py-1 text-xs text-(--txt-primary) focus:outline-none focus:ring-1 focus:ring-(--border-focus)"
@@ -88,20 +90,22 @@ export function IssueLinksPanel({
                 disabled={addingLink}
                 className="rounded-(--radius-md) bg-(--bg-accent-primary) px-2 py-1 text-xs text-white disabled:opacity-50"
               >
-                {addingLink ? 'Adding…' : 'Add'}
+                {addingLink ? t('workItem.links.adding', 'Adding…') : t('common.add', 'Add')}
               </button>
               <button
                 type="button"
                 onClick={() => setAddLinkOpen(false)}
                 className="rounded-(--radius-md) px-2 py-1 text-xs text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)"
               >
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </button>
             </div>
           </form>
         )}
         {links.length === 0 && !addLinkOpen ? (
-          <p className="text-xs text-(--txt-tertiary)">No links yet.</p>
+          <p className="text-xs text-(--txt-tertiary)">
+            {t('workItem.links.empty', 'No links yet.')}
+          </p>
         ) : (
           links.map((l) => (
             <div key={l.id} className="flex items-center gap-1 group">
@@ -124,7 +128,7 @@ export function IssueLinksPanel({
                   onLinksChange((prev) => prev.filter((x) => x.id !== l.id));
                 }}
                 className="shrink-0 opacity-0 group-hover:opacity-100 rounded p-0.5 text-(--txt-tertiary) hover:text-(--txt-danger-primary)"
-                title="Remove link"
+                title={t('workItem.links.remove', 'Remove link')}
               >
                 ×
               </button>

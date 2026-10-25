@@ -83,7 +83,7 @@ func (s *AgentService) ensureWorkspaceAdmin(ctx context.Context, wrk *model.Work
 	return nil
 }
 
-func (s *AgentService) ensureProjectScope(ctx context.Context, workspaceID uuid.UUID, projectID *uuid.UUID) error {
+func (s *AgentService) ensureProjectScope(ctx context.Context, workspaceID uuid.UUID, projectID *uuid.UUID, userID uuid.UUID) error {
 	if projectID == nil {
 		return nil
 	}
@@ -91,7 +91,7 @@ func (s *AgentService) ensureProjectScope(ctx context.Context, workspaceID uuid.
 	if !inWorkspace {
 		return ErrProjectNotFound
 	}
-	return nil
+	return enforceProjectVisibility(ctx, s.ps, s.ws, workspaceID, *projectID, userID)
 }
 
 func (s *AgentService) ensureProjectAccess(ctx context.Context, workspaceSlug string, projectID, userID uuid.UUID) (*model.Workspace, error) {
@@ -102,6 +102,9 @@ func (s *AgentService) ensureProjectAccess(ctx context.Context, workspaceSlug st
 	inWorkspace, _ := s.ps.IsInWorkspace(ctx, projectID, wrk.ID)
 	if !inWorkspace {
 		return nil, ErrProjectNotFound
+	}
+	if err := enforceProjectVisibility(ctx, s.ps, s.ws, wrk.ID, projectID, userID); err != nil {
+		return nil, err
 	}
 	return wrk, nil
 }
@@ -171,7 +174,7 @@ func (s *AgentService) ListAgents(ctx context.Context, workspaceSlug string, pro
 	if err != nil {
 		return nil, err
 	}
-	if err := s.ensureProjectScope(ctx, wrk.ID, projectID); err != nil {
+	if err := s.ensureProjectScope(ctx, wrk.ID, projectID, userID); err != nil {
 		return nil, err
 	}
 	return s.as.ListAgents(ctx, wrk.ID, projectID)
@@ -185,7 +188,7 @@ func (s *AgentService) CreateAgent(ctx context.Context, workspaceSlug string, us
 	if err := s.ensureWorkspaceAdmin(ctx, wrk, userID); err != nil {
 		return nil, err
 	}
-	if err := s.ensureProjectScope(ctx, wrk.ID, params.ProjectID); err != nil {
+	if err := s.ensureProjectScope(ctx, wrk.ID, params.ProjectID, userID); err != nil {
 		return nil, err
 	}
 	name := strings.TrimSpace(params.Name)

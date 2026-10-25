@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   CheckCircle2,
   Calendar,
@@ -34,6 +36,7 @@ interface IssueActivityFeedProps {
  * — extend the switch below to add new field types.
  */
 export function IssueActivityFeed({ activities, members, states, labels }: IssueActivityFeedProps) {
+  const { t } = useTranslation();
   const stateById = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
   const labelById = useMemo(() => new Map(labels.map((l) => [l.id, l])), [labels]);
   const memberById = useMemo(() => new Map(members.map((m) => [m.member_id, m])), [members]);
@@ -44,8 +47,8 @@ export function IssueActivityFeed({ activities, members, states, labels }: Issue
     <ul className="space-y-2.5">
       {activities.map((a) => {
         const actor = a.actor_id ? memberById.get(a.actor_id) : null;
-        const actorName = memberLabel(actor);
-        const { icon, sentence } = renderActivity(a, stateById, labelById, memberById);
+        const actorName = memberLabel(actor, t);
+        const { icon, sentence } = renderActivity(a, stateById, labelById, memberById, t);
         if (!sentence) return null;
         return (
           <li key={a.id} className="flex items-center gap-2 text-xs text-(--txt-secondary)">
@@ -83,102 +86,132 @@ function renderActivity(
   stateById: Map<string, StateApiResponse>,
   labelById: Map<string, LabelApiResponse>,
   memberById: Map<string, WorkspaceMemberApiResponse>,
+  t: TFunction,
 ): { icon: React.ReactNode; sentence: React.ReactNode | null } {
   if (a.verb === 'created') {
-    return { icon: <PlusCircle className="h-3.5 w-3.5" />, sentence: <>created this work item</> };
+    return {
+      icon: <PlusCircle className="h-3.5 w-3.5" />,
+      sentence: <>{t('workItem.activity.created', 'created this work item')}</>,
+    };
   }
   switch (a.field ?? '') {
     case 'name':
       return {
         icon: <Pencil className="h-3.5 w-3.5" />,
         sentence: (
-          <>
-            renamed the work item to{' '}
-            <strong className="text-(--txt-primary)">{a.new_value || '—'}</strong>
-          </>
+          <Trans
+            i18nKey="workItem.activity.renamed"
+            defaults="renamed the work item to <0>{{value}}</0>"
+            values={{ value: a.new_value || '—' }}
+            components={[<strong className="text-(--txt-primary)" />]}
+          />
         ),
       };
     case 'state':
       return {
         icon: <CheckCircle2 className="h-3.5 w-3.5" />,
         sentence: (
-          <>
-            changed state from <StateRef id={a.old_value} stateById={stateById} /> to{' '}
-            <StateRef id={a.new_value} stateById={stateById} />
-          </>
+          <Trans
+            i18nKey="workItem.activity.stateChanged"
+            defaults="changed state from <0></0> to <1></1>"
+            components={[
+              <StateRef id={a.old_value} stateById={stateById} />,
+              <StateRef id={a.new_value} stateById={stateById} />,
+            ]}
+          />
         ),
       };
     case 'priority':
       return {
         icon: <Flag className="h-3.5 w-3.5" />,
         sentence: (
-          <>
-            set priority to{' '}
-            <span className="capitalize text-(--txt-primary)">{a.new_value || 'none'}</span>
-          </>
+          <Trans
+            i18nKey="workItem.activity.prioritySet"
+            defaults="set priority to <0>{{priority}}</0>"
+            values={{ priority: a.new_value || 'none' }}
+            components={[<span className="capitalize text-(--txt-primary)" />]}
+          />
         ),
       };
     case 'start_date':
       return {
         icon: <Calendar className="h-3.5 w-3.5" />,
         sentence: a.new_value ? (
-          <>
-            set start date to <span className="text-(--txt-primary)">{a.new_value}</span>
-          </>
+          <Trans
+            i18nKey="workItem.activity.startDateSet"
+            defaults="set start date to <0>{{date}}</0>"
+            values={{ date: a.new_value }}
+            components={[<span className="text-(--txt-primary)" />]}
+          />
         ) : (
-          <>cleared the start date</>
+          <>{t('workItem.activity.startDateCleared', 'cleared the start date')}</>
         ),
       };
     case 'target_date':
       return {
         icon: <Calendar className="h-3.5 w-3.5" />,
         sentence: a.new_value ? (
-          <>
-            set due date to <span className="text-(--txt-primary)">{a.new_value}</span>
-          </>
+          <Trans
+            i18nKey="workItem.activity.dueDateSet"
+            defaults="set due date to <0>{{date}}</0>"
+            values={{ date: a.new_value }}
+            components={[<span className="text-(--txt-primary)" />]}
+          />
         ) : (
-          <>cleared the due date</>
+          <>{t('workItem.activity.dueDateCleared', 'cleared the due date')}</>
         ),
       };
     case 'parent':
       return {
         icon: <LinkIcon className="h-3.5 w-3.5" />,
-        sentence: a.new_value ? <>set the parent work item</> : <>removed the parent work item</>,
+        sentence: a.new_value ? (
+          <>{t('workItem.activity.parentSet', 'set the parent work item')}</>
+        ) : (
+          <>{t('workItem.activity.parentRemoved', 'removed the parent work item')}</>
+        ),
       };
     case 'assignees_added':
       return {
         icon: <UserPlus className="h-3.5 w-3.5" />,
         sentence: (
-          <>
-            assigned <MemberRef id={a.new_value} memberById={memberById} />
-          </>
+          <Trans
+            i18nKey="workItem.activity.assigned"
+            defaults="assigned <0></0>"
+            components={[<MemberRef id={a.new_value} memberById={memberById} />]}
+          />
         ),
       };
     case 'assignees_removed':
       return {
         icon: <UserMinus className="h-3.5 w-3.5" />,
         sentence: (
-          <>
-            unassigned <MemberRef id={a.old_value} memberById={memberById} />
-          </>
+          <Trans
+            i18nKey="workItem.activity.unassigned"
+            defaults="unassigned <0></0>"
+            components={[<MemberRef id={a.old_value} memberById={memberById} />]}
+          />
         ),
       };
     case 'labels_added':
       return {
         icon: <Tag className="h-3.5 w-3.5" />,
         sentence: (
-          <>
-            added label <LabelRef id={a.new_value} labelById={labelById} />
-          </>
+          <Trans
+            i18nKey="workItem.activity.labelAdded"
+            defaults="added label <0></0>"
+            components={[<LabelRef id={a.new_value} labelById={labelById} />]}
+          />
         ),
       };
     case 'labels_removed':
       return {
         icon: <Tag className="h-3.5 w-3.5" />,
         sentence: (
-          <>
-            removed label <LabelRef id={a.old_value} labelById={labelById} />
-          </>
+          <Trans
+            i18nKey="workItem.activity.labelRemoved"
+            defaults="removed label <0></0>"
+            components={[<LabelRef id={a.old_value} labelById={labelById} />]}
+          />
         ),
       };
     case 'link_added':
@@ -186,7 +219,7 @@ function renderActivity(
         icon: <LinkIcon className="h-3.5 w-3.5" />,
         sentence: (
           <>
-            added a link{' '}
+            {t('workItem.activity.linkAdded', 'added a link')}{' '}
             {a.new_value ? <strong className="text-(--txt-primary)">{a.new_value}</strong> : null}
           </>
         ),
@@ -196,7 +229,7 @@ function renderActivity(
         icon: <LinkIcon className="h-3.5 w-3.5" />,
         sentence: (
           <>
-            updated a link{' '}
+            {t('workItem.activity.linkUpdated', 'updated a link')}{' '}
             {a.new_value ? <strong className="text-(--txt-primary)">{a.new_value}</strong> : null}
           </>
         ),
@@ -206,23 +239,26 @@ function renderActivity(
         icon: <LinkIcon className="h-3.5 w-3.5" />,
         sentence: (
           <>
-            removed a link{' '}
+            {t('workItem.activity.linkRemoved', 'removed a link')}{' '}
             {a.old_value ? <strong className="text-(--txt-primary)">{a.old_value}</strong> : null}
           </>
         ),
       };
     case 'relation_removed':
-      return { icon: <LinkIcon className="h-3.5 w-3.5" />, sentence: <>removed a relation</> };
+      return {
+        icon: <LinkIcon className="h-3.5 w-3.5" />,
+        sentence: <>{t('workItem.activity.relationRemoved', 'removed a relation')}</>,
+      };
     case 'attachment_added':
       return {
         icon: <Paperclip className="h-3.5 w-3.5" />,
         sentence: (
           <>
-            attached{' '}
+            {t('workItem.activity.attached', 'attached')}{' '}
             {a.new_value ? (
               <strong className="text-(--txt-primary)">{a.new_value}</strong>
             ) : (
-              'a file'
+              t('workItem.activity.aFile', 'a file')
             )}
           </>
         ),
@@ -232,17 +268,26 @@ function renderActivity(
         icon: <Paperclip className="h-3.5 w-3.5" />,
         sentence: (
           <>
-            removed attachment{' '}
+            {t('workItem.activity.attachmentRemoved', 'removed attachment')}{' '}
             {a.old_value ? <strong className="text-(--txt-primary)">{a.old_value}</strong> : null}
           </>
         ),
       };
     case 'comment_added':
-      return { icon: <MessageSquare className="h-3.5 w-3.5" />, sentence: <>added a comment</> };
+      return {
+        icon: <MessageSquare className="h-3.5 w-3.5" />,
+        sentence: <>{t('workItem.activity.commentAdded', 'added a comment')}</>,
+      };
     case 'comment_updated':
-      return { icon: <MessageSquare className="h-3.5 w-3.5" />, sentence: <>edited a comment</> };
+      return {
+        icon: <MessageSquare className="h-3.5 w-3.5" />,
+        sentence: <>{t('workItem.activity.commentUpdated', 'edited a comment')}</>,
+      };
     case 'comment_removed':
-      return { icon: <MessageSquare className="h-3.5 w-3.5" />, sentence: <>deleted a comment</> };
+      return {
+        icon: <MessageSquare className="h-3.5 w-3.5" />,
+        sentence: <>{t('workItem.activity.commentRemoved', 'deleted a comment')}</>,
+      };
     default:
       return { icon: <Pencil className="h-3.5 w-3.5" />, sentence: null };
   }
@@ -299,18 +344,19 @@ function MemberRef({
   id?: string | null;
   memberById: Map<string, WorkspaceMemberApiResponse>;
 }) {
-  if (!id) return <span className="text-(--txt-primary)">someone</span>;
+  const { t } = useTranslation();
+  if (!id) return <span className="text-(--txt-primary)">{t('common.someone', 'someone')}</span>;
   const m = memberById.get(id);
-  return <span className="text-(--txt-primary)">@{memberLabel(m)}</span>;
+  return <span className="text-(--txt-primary)">@{memberLabel(m, t)}</span>;
 }
 
-function memberLabel(m: WorkspaceMemberApiResponse | null | undefined): string {
-  if (!m) return 'someone';
+function memberLabel(m: WorkspaceMemberApiResponse | null | undefined, t: TFunction): string {
+  if (!m) return t('common.someone', 'someone');
   const display = m.member_display_name?.trim();
   if (display) return display;
   const email = m.member_email?.split('@')[0]?.trim();
   if (email) return email;
-  return 'someone';
+  return t('common.someone', 'someone');
 }
 
 function formatRelative(iso: string): string {

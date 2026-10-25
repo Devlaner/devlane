@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Calendar } from 'lucide-react';
 import { IssuePRBadge } from '../IssuePRBadge';
@@ -18,6 +19,14 @@ import {
 import { DatePickerTrigger } from '../DatePickerTrigger';
 import { isOverdue, membersFromAssigneeIds } from '../../../lib/issueRowHelpers';
 import type {
+  GroupedIssuesResult,
+  SubGroupedIssuesResult,
+} from '../../../lib/issueListGroupAndSort';
+import type {
+  SavedViewDisplayPropertyId,
+  SavedViewGroupBy,
+} from '../../../lib/projectSavedViewDisplay';
+import type {
   IssueApiResponse,
   LabelApiResponse,
   StateApiResponse,
@@ -31,13 +40,20 @@ import {
   type IssueLayoutProps,
 } from './IssueLayoutTypes';
 
-/**
- * Kanban board grouped by state. One column per state, ordered by `sequence`,
- * cards reuse the same cells the list rows use.
- *
- * Issues with no state_id (or whose state was deleted) bucket into a synthetic
- * "No state" column at the end.
- */
+interface IssueLayoutBoardProps extends IssueLayoutProps {
+  groupedIssues?: GroupedIssuesResult;
+  /** Optional second-level grouping; when present the board renders swimlanes. */
+  subGroupedIssues?: SubGroupedIssuesResult | null;
+  hasCol?: (key: SavedViewDisplayPropertyId) => boolean;
+  groupBy?: SavedViewGroupBy;
+  showEmptyGroups?: boolean;
+  subWorkCountByParentId?: Map<string, number>;
+  cycleName?: (issue: IssueApiResponse) => string;
+  moduleName?: (issue: IssueApiResponse) => string;
+}
+
+const defaultHasCol = () => true;
+
 export function IssueLayoutBoard({
   project,
   states,
@@ -48,15 +64,24 @@ export function IssueLayoutBoard({
   issueHref,
   now,
   projectsById,
+  groupedIssues,
+  subGroupedIssues,
+  hasCol: hasColProp,
+  groupBy,
+  showEmptyGroups = false,
+  subWorkCountByParentId,
+  cycleName,
+  moduleName,
   groupByStateGroup,
   onCardMove,
   onUpdateIssue,
-}: IssueLayoutProps) {
+}: IssueLayoutBoardProps) {
+  const { t } = useTranslation();
   const labelById = useMemo(() => new Map(labels.map((l) => [l.id, l])), [labels]);
   const stateById = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
   const issueById = useMemo(() => new Map(issues.map((i) => [i.id, i])), [issues]);
+  const hasCol = hasColProp ?? defaultHasCol;
 
-  const dndEnabled = Boolean(onCardMove);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropKey, setDropKey] = useState<string | null>(null);
   const [openCell, setOpenCell] = useState<string | null>(null);
@@ -65,7 +90,7 @@ export function IssueLayoutBoard({
   // columns the key is already a state id; for grouped columns we pick a state
   // in the issue's own project that belongs to that group (default first).
   const resolveTargetStateId = (columnKey: string, issue: IssueApiResponse): string | null => {
-    if (!groupByStateGroup) return columnKey;
+    if (!groupByStateGroup) return stateById.has(columnKey) ? columnKey : null;
     const candidates = states.filter(
       (s) => s.group === columnKey && s.project_id === issue.project_id,
     );
@@ -89,6 +114,23 @@ export function IssueLayoutBoard({
   // board doesn't repeat "Todo/In Progress/Done" once per project); otherwise
   // one column per individual state.
   const { columns, orphans } = useMemo(() => {
+    if (groupedIssues) {
+      const columns = groupedIssues.order
+        .map((key) => {
+          const items = groupedIssues.groups.get(key) ?? [];
+          return {
+            key,
+            title: groupedIssues.isFlat
+              ? t('workItem.board.allWorkItems', 'All work items')
+              : groupedIssues.title(key),
+            color: stateById.get(key)?.color ?? labelById.get(key)?.color ?? undefined,
+            items,
+          };
+        })
+        .filter((col) => groupedIssues.isFlat || showEmptyGroups || col.items.length > 0);
+      return { columns, orphans: [] as IssueApiResponse[] };
+    }
+
     const orphans: IssueApiResponse[] = [];
 
     if (groupByStateGroup) {
@@ -108,7 +150,7 @@ export function IssueLayoutBoard({
         (g) => presentGroups.has(g) || (buckets.get(g)?.length ?? 0) > 0,
       ).map((g) => ({
         key: g,
-        title: STATE_GROUP_LABELS[g] ?? g,
+        title: t(`stateGroup.${g}`, STATE_GROUP_LABELS[g] ?? g),
         color: undefined as string | undefined,
         items: buckets.get(g) ?? [],
       }));
@@ -134,7 +176,14 @@ export function IssueLayoutBoard({
       items: buckets.get(s.id) ?? [],
     }));
     return { columns, orphans };
-  }, [groupByStateGroup, states, issues, stateById]);
+  }, [groupedIssues, groupByStateGroup, states, issues, stateById, labelById, showEmptyGroups, t]);
+
+  // Drag-and-drop is disabled in swimlane mode to keep the cross-dimension
+  // interaction unambiguous (a drop would otherwise be both a column and a lane).
+  const dndEnabled =
+    Boolean(onCardMove) &&
+    !subGroupedIssues &&
+    (groupByStateGroup || !groupedIssues || groupBy === 'states');
 
   const renderCard = (issue: IssueApiResponse) => (
     <BoardCard
@@ -163,6 +212,10 @@ export function IssueLayoutBoard({
       onUpdateIssue={onUpdateIssue}
       openId={openCell}
       onOpenCell={setOpenCell}
+      hasCol={hasCol}
+      subWorkCount={subWorkCountByParentId?.get(issue.id) ?? 0}
+      cycleName={cycleName?.(issue) ?? '—'}
+      moduleName={moduleName?.(issue) ?? '—'}
     />
   );
 
@@ -174,6 +227,52 @@ export function IssueLayoutBoard({
     const target = resolveTargetStateId(columnKey, issue);
     return Boolean(target) && target !== issue.state_id;
   };
+
+  // Swimlanes: one horizontal band of columns (primary groups) per sub-group.
+  if (subGroupedIssues) {
+    const sg = subGroupedIssues;
+    return (
+      <div className="space-y-6 px-4 py-4">
+        {sg.subOrder.map((subKey) => {
+          const laneCount = sg.primaryOrder.reduce(
+            (n, pk) => n + (sg.cells.get(pk)?.get(subKey)?.length ?? 0),
+            0,
+          );
+          if (laneCount === 0 && !showEmptyGroups) return null;
+          return (
+            <section key={subKey} className="space-y-2">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-(--txt-primary)">
+                {sg.subTitle(subKey)}
+                <span className="font-normal text-(--txt-tertiary)">{laneCount}</span>
+              </h3>
+              <div className="flex gap-3 overflow-x-auto">
+                {sg.primaryOrder.map((pk) => {
+                  const items = sg.cells.get(pk)?.get(subKey) ?? [];
+                  if (items.length === 0 && !showEmptyGroups) return null;
+                  const color = stateById.get(pk)?.color ?? labelById.get(pk)?.color ?? undefined;
+                  return (
+                    <BoardColumn
+                      key={pk}
+                      title={sg.primaryTitle(pk)}
+                      color={color}
+                      count={items.length}
+                    >
+                      {items.map(renderCard)}
+                      {items.length === 0 && (
+                        <p className="px-2 py-6 text-center text-xs text-(--txt-tertiary)">
+                          {t('common.noWorkItems', 'No work items')}
+                        </p>
+                      )}
+                    </BoardColumn>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="flex gap-3 overflow-x-auto px-4 py-4">
@@ -206,13 +305,19 @@ export function IssueLayoutBoard({
         >
           {col.items.map(renderCard)}
           {col.items.length === 0 && (
-            <p className="px-2 py-6 text-center text-xs text-(--txt-tertiary)">No work items</p>
+            <p className="px-2 py-6 text-center text-xs text-(--txt-tertiary)">
+              {t('common.noWorkItems', 'No work items')}
+            </p>
           )}
         </BoardColumn>
       ))}
 
       {orphans.length > 0 && (
-        <BoardColumn title="No state" color={undefined} count={orphans.length}>
+        <BoardColumn
+          title={t('common.noState', 'No state')}
+          color={undefined}
+          count={orphans.length}
+        >
           {orphans.map(renderCard)}
         </BoardColumn>
       )}
@@ -287,6 +392,10 @@ interface BoardCardProps {
   onUpdateIssue?: IssueLayoutProps['onUpdateIssue'];
   openId: string | null;
   onOpenCell: (id: string | null) => void;
+  hasCol: (key: SavedViewDisplayPropertyId) => boolean;
+  subWorkCount: number;
+  cycleName: string;
+  moduleName: string;
 }
 
 // Wraps an interactive control inside the card's navigating Link so clicking it
@@ -326,9 +435,28 @@ function BoardCard({
   onUpdateIssue,
   openId,
   onOpenCell,
+  hasCol,
+  subWorkCount,
+  cycleName,
+  moduleName,
 }: BoardCardProps) {
+  const { t } = useTranslation();
   const displayId = issueDisplayId(issue, project, projectsById);
   const editable = Boolean(onUpdateIssue);
+  const startStr = formatShort(issue.start_date);
+  const showPriority = hasCol('priority');
+  const showId = hasCol('id');
+  const showState = hasCol('state');
+  const showStart = hasCol('start_date');
+  const showDue = hasCol('due_date');
+  const showLabels = hasCol('labels');
+  const showAssignee = hasCol('assignee');
+  const showSubWorkCount = hasCol('sub_work_count') && subWorkCount > 0;
+  const showCycle = hasCol('cycle') && cycleName !== '—';
+  const showModule = hasCol('module') && moduleName !== '—';
+  const showProperties =
+    showState || showStart || showDue || showLabels || showSubWorkCount || showCycle || showModule;
+
   return (
     <Link
       to={href}
@@ -344,95 +472,150 @@ function BoardCard({
       } ${isDragging ? 'opacity-50' : ''}`}
     >
       <div className="flex items-start gap-2">
-        {editable && onUpdateIssue ? (
-          <CellGuard>
-            <EditablePriorityCell
-              issueId={issue.id}
-              priority={issue.priority}
-              openId={openId}
-              onOpen={onOpenCell}
-              onChange={(priority) => onUpdateIssue(issue.id, { priority })}
-            />
-          </CellGuard>
-        ) : (
-          <PriorityIcon priority={issue.priority as Priority | null | undefined} />
-        )}
+        {showPriority ? (
+          editable && onUpdateIssue ? (
+            <CellGuard>
+              <EditablePriorityCell
+                issueId={issue.id}
+                priority={issue.priority}
+                openId={openId}
+                onOpen={onOpenCell}
+                onChange={(priority) => onUpdateIssue(issue.id, { priority })}
+              />
+            </CellGuard>
+          ) : (
+            <PriorityIcon priority={issue.priority as Priority | null | undefined} />
+          )
+        ) : null}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 text-[11px] text-(--txt-tertiary)">
-            <span className="font-medium text-(--txt-accent-primary)">{displayId}</span>
-            <IssuePRBadge summary={prSummary} />
-          </div>
+          {(showId || prSummary) && (
+            <div className="flex items-center gap-1.5 text-[11px] text-(--txt-tertiary)">
+              {showId ? (
+                <span className="font-medium text-(--txt-accent-primary)">{displayId}</span>
+              ) : null}
+              <IssuePRBadge summary={prSummary} />
+            </div>
+          )}
           <p className="mt-0.5 line-clamp-2 text-sm font-medium text-(--txt-primary)">
             {issue.name}
           </p>
         </div>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        {editable && onUpdateIssue ? (
-          <>
-            {state && (
-              <CellGuard>
-                <EditableStateCell
-                  issueId={issue.id}
-                  state={state}
-                  states={allStates}
-                  openId={openId}
-                  onOpen={onOpenCell}
-                  onChange={(state_id) => onUpdateIssue(issue.id, { state_id })}
-                />
-              </CellGuard>
-            )}
+      {showProperties ? (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {editable && onUpdateIssue ? (
+            <>
+              {showState ? (
+                <CellGuard>
+                  <EditableStateCell
+                    issueId={issue.id}
+                    state={state}
+                    states={allStates}
+                    openId={openId}
+                    onOpen={onOpenCell}
+                    onChange={(state_id) => onUpdateIssue(issue.id, { state_id })}
+                  />
+                </CellGuard>
+              ) : null}
+              {showStart ? (
+                <CellGuard>
+                  <DatePickerTrigger
+                    label={t('common.startDate', 'Start date')}
+                    icon={<Calendar />}
+                    value={issue.start_date ?? ''}
+                    placeholder={t('common.start', 'Start')}
+                    onChange={(v) => onUpdateIssue(issue.id, { start_date: v || null })}
+                  />
+                </CellGuard>
+              ) : null}
+              {showDue ? (
+                <CellGuard>
+                  <DatePickerTrigger
+                    label={t('common.dueDate', 'Due date')}
+                    icon={<Calendar />}
+                    value={issue.target_date ?? ''}
+                    placeholder={t('common.due', 'Due')}
+                    className={
+                      isOverdue(issue.target_date, state?.group, now)
+                        ? 'border-(--border-danger-strong) text-(--txt-danger-primary)'
+                        : undefined
+                    }
+                    onChange={(v) => onUpdateIssue(issue.id, { target_date: v || null })}
+                  />
+                </CellGuard>
+              ) : null}
+              {showLabels ? (
+                <CellGuard>
+                  <EditableLabelCell
+                    issueId={issue.id}
+                    labelIds={issue.label_ids ?? []}
+                    labels={allLabels}
+                    openId={openId}
+                    onOpen={onOpenCell}
+                    onChange={(label_ids) => onUpdateIssue(issue.id, { label_ids })}
+                  />
+                </CellGuard>
+              ) : null}
+            </>
+          ) : (
+            <>
+              {showLabels && labels.length > 0 ? <LabelChips labels={labels} max={2} /> : null}
+              {showStart && startStr ? (
+                <span className="rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-1.5 py-0.5 text-[11px] text-(--txt-secondary)">
+                  {startStr}
+                </span>
+              ) : null}
+              {showDue ? <DueDateCell issue={issue} state={state} now={now} /> : null}
+              {showState ? <StatePill state={state} /> : null}
+            </>
+          )}
+          {showSubWorkCount ? (
+            <span
+              className="inline-flex h-5 items-center rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-1.5 text-[11px] text-(--txt-secondary)"
+              title={t('common.subWorkItems', 'Sub-work items')}
+            >
+              {subWorkCount}
+            </span>
+          ) : null}
+          {showCycle ? (
+            <span className="max-w-[7rem] truncate text-[11px] text-(--txt-secondary)">
+              {cycleName}
+            </span>
+          ) : null}
+          {showModule ? (
+            <span className="max-w-[7rem] truncate text-[11px] text-(--txt-secondary)">
+              {moduleName}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
+      {showAssignee ? (
+        <div className="mt-2 flex items-center justify-between">
+          {editable && onUpdateIssue ? (
             <CellGuard>
-              <DatePickerTrigger
-                label="Due date"
-                icon={<Calendar />}
-                value={issue.target_date ?? ''}
-                placeholder="Due"
-                className={
-                  isOverdue(issue.target_date, state?.group, now)
-                    ? 'border-(--border-danger-strong) text-(--txt-danger-primary)'
-                    : undefined
-                }
-                onChange={(v) => onUpdateIssue(issue.id, { target_date: v || null })}
-              />
-            </CellGuard>
-            <CellGuard>
-              <EditableLabelCell
+              <EditableAssigneeCell
                 issueId={issue.id}
-                labelIds={issue.label_ids ?? []}
-                labels={allLabels}
+                assigneeIds={issue.assignee_ids ?? []}
+                members={allMembers}
                 openId={openId}
                 onOpen={onOpenCell}
-                onChange={(label_ids) => onUpdateIssue(issue.id, { label_ids })}
+                onChange={(assignee_ids) => onUpdateIssue(issue.id, { assignee_ids })}
               />
             </CellGuard>
-          </>
-        ) : (
-          <>
-            {labels.length > 0 && <LabelChips labels={labels} max={2} />}
-            <DueDateCell issue={issue} state={state} now={now} />
-            {state && <StatePill state={state} />}
-          </>
-        )}
-      </div>
-
-      <div className="mt-2 flex items-center justify-between">
-        {editable && onUpdateIssue ? (
-          <CellGuard>
-            <EditableAssigneeCell
-              issueId={issue.id}
-              assigneeIds={issue.assignee_ids ?? []}
-              members={allMembers}
-              openId={openId}
-              onOpen={onOpenCell}
-              onChange={(assignee_ids) => onUpdateIssue(issue.id, { assignee_ids })}
-            />
-          </CellGuard>
-        ) : (
-          <WorkItemAvatarGroup members={assignees} max={3} />
-        )}
-      </div>
+          ) : (
+            <WorkItemAvatarGroup members={assignees} max={3} />
+          )}
+        </div>
+      ) : null}
     </Link>
   );
+}
+
+function formatShort(iso: string | null | undefined): string | null {
+  if (!iso?.trim()) return null;
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return null;
+  return new Date(t).toLocaleDateString();
 }

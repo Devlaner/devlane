@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FolderInput } from 'lucide-react';
 import { Modal } from '../ui';
 import { projectService } from '../../services/projectService';
@@ -24,6 +25,7 @@ export function MoveWorkItemModal({
   issueId,
   onMoved,
 }: MoveWorkItemModalProps) {
+  const { t } = useTranslation();
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveProjects, setMoveProjects] = useState<ProjectApiResponse[]>([]);
   const [moveLoading, setMoveLoading] = useState(false);
@@ -72,13 +74,15 @@ export function MoveWorkItemModal({
         className="inline-flex shrink-0 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-secondary) transition-colors hover:bg-(--bg-layer-1-hover)"
       >
         <FolderInput className="h-3.5 w-3.5" />
-        Move
+        {t('common.move', 'Move')}
       </button>
       <Modal open={moveOpen} onClose={() => setMoveOpen(false)} title="Move work item to project">
         <div className="space-y-3">
           <p className="text-sm text-(--txt-tertiary)">
-            Choose a destination project. The work item gets a new ID there; its state, parent,
-            labels, and cycle/module links are cleared, and any sub-items are detached.
+            {t(
+              'views.move.description',
+              'Choose a destination project. The work item gets a new ID there; its state, parent, labels, and cycle/module links are cleared, and any sub-items are detached.',
+            )}
           </p>
           {moveError ? (
             <p className="rounded-(--radius-md) bg-(--bg-danger-subtle) px-3 py-2 text-sm text-(--txt-danger)">
@@ -86,10 +90,12 @@ export function MoveWorkItemModal({
             </p>
           ) : null}
           {moveLoading ? (
-            <p className="py-6 text-center text-sm text-(--txt-tertiary)">Loading projects…</p>
+            <p className="py-6 text-center text-sm text-(--txt-tertiary)">
+              {t('views.move.loading', 'Loading projects…')}
+            </p>
           ) : moveProjects.length === 0 ? (
             <p className="py-6 text-center text-sm text-(--txt-tertiary)">
-              No other projects available.
+              {t('views.move.noProjects', 'No other projects available.')}
             </p>
           ) : (
             <ul className="max-h-72 space-y-1 overflow-y-auto">

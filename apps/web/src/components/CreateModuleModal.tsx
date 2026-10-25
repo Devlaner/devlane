@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Modal, Button, Input, Avatar } from './ui';
 import { DateRangeModal } from './workspace-views/DateRangeModal';
 import { getImageUrl } from '../lib/utils';
@@ -10,14 +12,14 @@ import { formatISODateDisplay } from '../lib/dateOnly';
 import { MODULE_STATUSES } from '../lib/moduleStatuses';
 import { apiErrorMessage } from '../lib/apiError';
 
-function formatDateRangeDisplay(start: string | null, end: string | null): string {
-  if (!start && !end) return 'Start date → End date';
+function formatDateRangeDisplay(start: string | null, end: string | null, t: TFunction): string {
+  if (!start && !end) return t('common.dateRangePlaceholder', 'Start date → End date');
   if (start && end) return `${formatISODateDisplay(start)} → ${formatISODateDisplay(end)}`;
   return start
     ? formatISODateDisplay(start)
     : end
       ? formatISODateDisplay(end)
-      : 'Start date → End date';
+      : t('common.dateRangePlaceholder', 'Start date → End date');
 }
 
 export interface CreateModuleModalProps {
@@ -37,6 +39,7 @@ export function CreateModuleModal({
   projectName,
   onCreated,
 }: CreateModuleModalProps) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState<string | null>(null);
@@ -108,7 +111,7 @@ export function CreateModuleModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      setError('Title is required.');
+      setError(t('common.titleRequired', 'Title is required.'));
       return;
     }
     setError(null);
@@ -126,7 +129,7 @@ export function CreateModuleModal({
       onClose();
       onCreated?.(created);
     } catch (err) {
-      setError(apiErrorMessage(err, 'Failed to create module.'));
+      setError(apiErrorMessage(err, t('module.create.error', 'Failed to create module.')));
     } finally {
       setSubmitting(false);
     }
@@ -143,15 +146,15 @@ export function CreateModuleModal({
       <Modal
         open={open}
         onClose={onClose}
-        title="Create module"
+        title={t('module.create.title', 'Create module')}
         className="max-w-lg"
         footer={
           <>
             <Button type="button" variant="secondary" onClick={onClose}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button type="submit" form="create-module-form" disabled={submitting || !title.trim()}>
-              Create Module
+              {t('module.create.submit', 'Create Module')}
             </Button>
           </>
         }
@@ -159,20 +162,20 @@ export function CreateModuleModal({
         <div className="mb-3 text-sm text-(--txt-secondary)">{projectName}</div>
         <form id="create-module-form" onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label="Title"
+            label={t('common.title', 'Title')}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Title"
+            placeholder={t('common.title', 'Title')}
             autoFocus
           />
           <div>
             <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-              Description
+              {t('common.description', 'Description')}
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Description"
+              placeholder={t('common.description', 'Description')}
               rows={3}
               className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
             />
@@ -187,7 +190,7 @@ export function CreateModuleModal({
               <span className="text-(--txt-icon-tertiary)" aria-hidden>
                 <CalendarIcon />
               </span>
-              {formatDateRangeDisplay(startDate, endDate)}
+              {formatDateRangeDisplay(startDate, endDate, t)}
             </button>
 
             <div className="relative" ref={statusRef}>
@@ -199,7 +202,7 @@ export function CreateModuleModal({
                 <span className="text-(--txt-icon-tertiary)" aria-hidden>
                   <BacklogIcon />
                 </span>
-                {statusLabel}
+                {t(`module.status.${status}`, statusLabel)}
                 <ChevronDownIcon />
               </button>
               {statusDropdownOpen && (
@@ -214,7 +217,7 @@ export function CreateModuleModal({
                       }}
                       className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                     >
-                      {opt.label}
+                      {t(`module.status.${opt.id}`, opt.label)}
                       {status === opt.id && (
                         <span className="text-(--txt-primary)">
                           <CheckIcon />
@@ -246,7 +249,7 @@ export function CreateModuleModal({
                 ) : (
                   <LeadIcon />
                 )}
-                Lead
+                {t('common.lead', 'Lead')}
                 <ChevronDownIcon />
               </button>
               {leadDropdownOpen && (
@@ -255,7 +258,7 @@ export function CreateModuleModal({
                     <SearchIcon />
                     <input
                       type="text"
-                      placeholder="Search"
+                      placeholder={t('common.search', 'Search')}
                       value={leadSearch}
                       onChange={(e) => setLeadSearch(e.target.value)}
                       className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -298,7 +301,7 @@ export function CreateModuleModal({
                 className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
               >
                 <MembersIcon />
-                Members
+                {t('common.members', 'Members')}
                 {selectedMembers.length > 0 && (
                   <span className="flex -space-x-1.5">
                     {selectedMembers.map((m) => (
@@ -320,7 +323,7 @@ export function CreateModuleModal({
                     <SearchIcon />
                     <input
                       type="text"
-                      placeholder="Search"
+                      placeholder={t('common.search', 'Search')}
                       value={membersSearch}
                       onChange={(e) => setMembersSearch(e.target.value)}
                       className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -370,7 +373,7 @@ export function CreateModuleModal({
       <DateRangeModal
         open={dateModalOpen}
         onClose={() => setDateModalOpen(false)}
-        title="Start date → End date"
+        title={t('common.dateRangePlaceholder', 'Start date → End date')}
         after={startDate}
         before={endDate}
         onApply={(after, before) => {

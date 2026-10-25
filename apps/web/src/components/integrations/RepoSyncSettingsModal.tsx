@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Button, Modal } from '../ui';
 import { integrationService } from '../../services/integrationService';
 import { stateService } from '../../services/stateService';
@@ -38,6 +39,7 @@ export function RepoSyncSettingsModal({
   initialSync,
   onSaved,
 }: RepoSyncSettingsModalProps) {
+  const { t } = useTranslation();
   const [autoLink, setAutoLink] = useState(initialSync?.sync.auto_link ?? true);
   const [autoCloseOnMerge, setAutoCloseOnMerge] = useState(
     initialSync?.sync.auto_close_on_merge ?? true,
@@ -114,7 +116,7 @@ export function RepoSyncSettingsModal({
             }}
             disabled={saving}
           >
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button onClick={() => void handleSave()} disabled={saving || loadingStates}>
             {saving ? 'Saving…' : 'Save'}
@@ -145,10 +147,11 @@ export function RepoSyncSettingsModal({
 
         <div>
           <label className="mb-1 block text-xs font-medium text-(--txt-secondary)">
-            “In progress” state
-            <span className="ml-1 text-(--txt-tertiary)">
-              — applied when a PR opens or is reopened
-            </span>
+            <Trans
+              i18nKey="integrations.repoSync.inProgressLabel"
+              defaults="“In progress” state <hint>— applied when a PR opens or is reopened</hint>"
+              components={{ hint: <span className="ml-1 text-(--txt-tertiary)" /> }}
+            />
           </label>
           <select
             value={inProgressStateID}
@@ -156,7 +159,9 @@ export function RepoSyncSettingsModal({
             disabled={loadingStates}
             className="block w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 text-sm text-(--txt-primary) focus:outline-none"
           >
-            <option value="">— none (don't move on open) —</option>
+            <option value="">
+              {t('integrations.repoSync.noneOnOpen', "— none (don't move on open) —")}
+            </option>
             {startedStates.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -167,8 +172,11 @@ export function RepoSyncSettingsModal({
 
         <div>
           <label className="mb-1 block text-xs font-medium text-(--txt-secondary)">
-            “Done” state
-            <span className="ml-1 text-(--txt-tertiary)">— applied when a closing PR merges</span>
+            <Trans
+              i18nKey="integrations.repoSync.doneLabel"
+              defaults="“Done” state <hint>— applied when a closing PR merges</hint>"
+              components={{ hint: <span className="ml-1 text-(--txt-tertiary)" /> }}
+            />
           </label>
           <select
             value={doneStateID}
@@ -176,7 +184,9 @@ export function RepoSyncSettingsModal({
             disabled={loadingStates}
             className="block w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 text-sm text-(--txt-primary) focus:outline-none"
           >
-            <option value="">— none (don't move on merge) —</option>
+            <option value="">
+              {t('integrations.repoSync.noneOnMerge', "— none (don't move on merge) —")}
+            </option>
             {completedStates.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}

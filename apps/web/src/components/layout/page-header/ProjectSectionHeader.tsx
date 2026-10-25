@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Tooltip } from '../../ui';
 import { Dropdown } from '../../work-item';
@@ -79,6 +80,7 @@ export function ProjectSectionHeader({
   section: ProjectSection;
   issueCount: number;
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const modulesFilter = useModulesFilter();
@@ -373,11 +375,19 @@ export function ProjectSectionHeader({
         <>
           {(() => {
             const layouts: { key: string; label: string; icon: React.ReactNode }[] = [
-              { key: 'list', label: 'List', icon: <IconList /> },
-              { key: 'board', label: 'Board', icon: <IconColumns /> },
-              { key: 'calendar', label: 'Calendar', icon: <IconCalendar /> },
-              { key: 'spreadsheet', label: 'Spreadsheet', icon: <IconSpreadsheet /> },
-              { key: 'gantt', label: 'Timeline', icon: <IconGantt /> },
+              { key: 'list', label: t('common.layout.list', 'List'), icon: <IconList /> },
+              { key: 'board', label: t('common.layout.board', 'Board'), icon: <IconColumns /> },
+              {
+                key: 'calendar',
+                label: t('common.layout.calendar', 'Calendar'),
+                icon: <IconCalendar />,
+              },
+              {
+                key: 'spreadsheet',
+                label: t('common.layout.spreadsheet', 'Spreadsheet'),
+                icon: <IconSpreadsheet />,
+              },
+              { key: 'gantt', label: t('common.layout.timeline', 'Timeline'), icon: <IconGantt /> },
             ];
             const activeLayout = (() => {
               const v = searchParams.get('layout') ?? '';
@@ -420,9 +430,9 @@ export function ProjectSectionHeader({
               id="project-issues-filters"
               openId={issuesFiltersOpen}
               onOpen={setIssuesFiltersOpen}
-              label="Filters"
+              label={t('header.filters', 'Filters')}
               icon={<IconFilter />}
-              displayValue="Filters"
+              displayValue={t('header.filters', 'Filters')}
               panelClassName="flex w-[min(400px,calc(100vw-24px))] max-h-[min(calc(100dvh-96px),36rem)] flex-col overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
               align="right"
               triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
@@ -431,7 +441,7 @@ export function ProjectSectionHeader({
                   <span className="shrink-0 text-(--txt-icon-tertiary)">
                     <IconFilter />
                   </span>
-                  <span className="truncate">Filters</span>
+                  <span className="truncate">{t('header.filters', 'Filters')}</span>
                   <span className="shrink-0 text-(--txt-icon-tertiary)">
                     {issuesFiltersOpen === 'project-issues-filters' ? (
                       <IconChevronUp />
@@ -451,7 +461,7 @@ export function ProjectSectionHeader({
                 cycles={issuesCycles}
                 labels={issuesLabels}
                 currentUserId={authUser?.id}
-                currentUserName={authUser?.name ?? 'You'}
+                currentUserName={authUser?.name ?? t('common.you', 'You')}
                 currentUserAvatarUrl={authUser?.avatarUrl}
                 onOpenCustomStart={() => {
                   setIssuesFiltersOpen(null);
@@ -485,9 +495,9 @@ export function ProjectSectionHeader({
             id="project-issues-display"
             openId={issuesDisplayOpen}
             onOpen={setIssuesDisplayOpen}
-            label="Display"
+            label={t('header.display', 'Display')}
             icon={<IconSliders />}
-            displayValue="Display"
+            displayValue={t('header.display', 'Display')}
             panelClassName="w-[min(400px,calc(100vw-24px))] max-h-[min(calc(100dvh-96px),50rem)] overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
             align="right"
             triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
@@ -496,7 +506,7 @@ export function ProjectSectionHeader({
                 <span className="shrink-0 text-(--txt-icon-tertiary)">
                   <IconSliders />
                 </span>
-                <span className="truncate">Display</span>
+                <span className="truncate">{t('header.display', 'Display')}</span>
                 <span className="shrink-0 text-(--txt-icon-tertiary)">
                   {issuesDisplayOpen === 'project-issues-display' ? (
                     <IconChevronUp />
@@ -513,11 +523,11 @@ export function ProjectSectionHeader({
             to={`/${workspaceSlug}/analytics/work-items`}
             className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-2-hover)"
           >
-            <IconBarChart /> Analytics
+            <IconBarChart /> {t('common.analytics', 'Analytics')}
           </Link>
           <Link to={`${issuesUrl}?create=1`}>
             <Button size="sm" className="gap-1.5 text-[13px] font-medium">
-              <IconPlus /> Add work item
+              <IconPlus /> {t('common.addWorkItem', 'Add work item')}
             </Button>
           </Link>
         </>
@@ -540,16 +550,16 @@ export function ProjectSectionHeader({
                 onBlur={() => {
                   if (cyclesSearch.length === 0) setCyclesSearchExpanded(false);
                 }}
-                placeholder="Search"
+                placeholder={t('common.search', 'Search')}
                 className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
-                aria-label="Search cycles"
+                aria-label={t('header.cycles.searchCycles', 'Search cycles')}
               />
               {cyclesSearch.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setCyclesSearch('')}
                   className="shrink-0 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
-                  aria-label="Clear search"
+                  aria-label={t('common.clearSearch', 'Clear search')}
                 >
                   <IconX />
                 </button>
@@ -560,7 +570,7 @@ export function ProjectSectionHeader({
               type="button"
               onClick={() => setCyclesSearchExpanded(true)}
               className="flex h-8 w-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
-              aria-label="Search cycles"
+              aria-label={t('header.cycles.searchCycles', 'Search cycles')}
             >
               <IconSearch />
             </button>
@@ -569,13 +579,13 @@ export function ProjectSectionHeader({
             id="cycles-filters"
             openId={cyclesFiltersDropdownOpen}
             onOpen={setCyclesFiltersDropdownOpen}
-            label="Filters"
+            label={t('header.filters', 'Filters')}
             icon={<IconFilter />}
-            displayValue="Filters"
+            displayValue={t('header.filters', 'Filters')}
             triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
             triggerContent={
               <span className="flex items-center gap-1.5">
-                <IconFilter /> Filters <IconChevronDown />
+                <IconFilter /> {t('header.filters', 'Filters')} <IconChevronDown />
               </span>
             }
             panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
@@ -588,7 +598,7 @@ export function ProjectSectionHeader({
                 </span>
                 <input
                   type="text"
-                  placeholder="Search"
+                  placeholder={t('common.search', 'Search')}
                   value={cyclesFiltersSearch}
                   onChange={(e) => setCyclesFiltersSearch(e.target.value)}
                   className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -603,7 +613,7 @@ export function ProjectSectionHeader({
                   className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
                   onClick={() => setCyclesStatusSectionOpen((o) => !o)}
                 >
-                  <span>Status of the cycle</span>
+                  <span>{t('header.cycles.statusTitle', 'Status of the cycle')}</span>
                   <span className="text-(--txt-icon-tertiary)">
                     {cyclesStatusSectionOpen ? <IconChevronUp /> : <IconChevronDown />}
                   </span>
@@ -611,10 +621,16 @@ export function ProjectSectionHeader({
                 {cyclesStatusSectionOpen && (
                   <div className="pb-1">
                     {[
-                      { key: 'in_progress', label: 'In progress' },
-                      { key: 'yet_to_start', label: 'Yet to start' },
-                      { key: 'completed', label: 'Completed' },
-                      { key: 'draft', label: 'Draft' },
+                      {
+                        key: 'in_progress',
+                        label: t('header.cycles.status.inProgress', 'In progress'),
+                      },
+                      {
+                        key: 'yet_to_start',
+                        label: t('header.cycles.status.yetToStart', 'Yet to start'),
+                      },
+                      { key: 'completed', label: t('header.cycles.status.completed', 'Completed') },
+                      { key: 'draft', label: t('header.cycles.status.draft', 'Draft') },
                     ]
                       .filter(
                         (s) =>
@@ -651,7 +667,7 @@ export function ProjectSectionHeader({
                   className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
                   onClick={() => setCyclesStartSectionOpen((o) => !o)}
                 >
-                  <span>Start date</span>
+                  <span>{t('common.startDate', 'Start date')}</span>
                   <span className="text-(--txt-icon-tertiary)">
                     {cyclesStartSectionOpen ? <IconChevronUp /> : <IconChevronDown />}
                   </span>
@@ -659,11 +675,23 @@ export function ProjectSectionHeader({
                 {cyclesStartSectionOpen && (
                   <div className="pb-1">
                     {[
-                      { key: '1_week', label: '1 week from now' },
-                      { key: '2_weeks', label: '2 weeks from now' },
-                      { key: '1_month', label: '1 month from now' },
-                      { key: '2_months', label: '2 months from now' },
-                      { key: 'custom', label: 'Custom' },
+                      {
+                        key: '1_week',
+                        label: t('common.datePreset.oneWeekFromNow', '1 week from now'),
+                      },
+                      {
+                        key: '2_weeks',
+                        label: t('common.datePreset.twoWeeksFromNow', '2 weeks from now'),
+                      },
+                      {
+                        key: '1_month',
+                        label: t('common.datePreset.oneMonthFromNow', '1 month from now'),
+                      },
+                      {
+                        key: '2_months',
+                        label: t('common.datePreset.twoMonthsFromNow', '2 months from now'),
+                      },
+                      { key: 'custom', label: t('common.custom', 'Custom') },
                     ].map((p) => {
                       const checked = cyclesSelectedStartDatePresets.includes(p.key);
                       return (
@@ -712,7 +740,7 @@ export function ProjectSectionHeader({
                   className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
                   onClick={() => setCyclesDueSectionOpen((o) => !o)}
                 >
-                  <span>Due date</span>
+                  <span>{t('common.dueDate', 'Due date')}</span>
                   <span className="text-(--txt-icon-tertiary)">
                     {cyclesDueSectionOpen ? <IconChevronUp /> : <IconChevronDown />}
                   </span>
@@ -720,11 +748,23 @@ export function ProjectSectionHeader({
                 {cyclesDueSectionOpen && (
                   <div className="pb-1">
                     {[
-                      { key: '1_week', label: '1 week from now' },
-                      { key: '2_weeks', label: '2 weeks from now' },
-                      { key: '1_month', label: '1 month from now' },
-                      { key: '2_months', label: '2 months from now' },
-                      { key: 'custom', label: 'Custom' },
+                      {
+                        key: '1_week',
+                        label: t('common.datePreset.oneWeekFromNow', '1 week from now'),
+                      },
+                      {
+                        key: '2_weeks',
+                        label: t('common.datePreset.twoWeeksFromNow', '2 weeks from now'),
+                      },
+                      {
+                        key: '1_month',
+                        label: t('common.datePreset.oneMonthFromNow', '1 month from now'),
+                      },
+                      {
+                        key: '2_months',
+                        label: t('common.datePreset.twoMonthsFromNow', '2 months from now'),
+                      },
+                      { key: 'custom', label: t('common.custom', 'Custom') },
                     ].map((p) => {
                       const checked = cyclesSelectedDueDatePresets.includes(p.key);
                       return (
@@ -773,7 +813,7 @@ export function ProjectSectionHeader({
             className="gap-1.5 text-[13px] font-medium"
             onClick={() => setCreateCycleOpen(true)}
           >
-            <IconPlus /> Add cycle
+            <IconPlus /> {t('header.cycles.addCycle', 'Add cycle')}
           </Button>
         </>
       );
@@ -802,9 +842,9 @@ export function ProjectSectionHeader({
                 onBlur={() => {
                   if (modulesSearch.length === 0) setModulesSearchExpanded(false);
                 }}
-                placeholder="Search"
+                placeholder={t('common.search', 'Search')}
                 className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
-                aria-label="Search modules"
+                aria-label={t('header.modules.searchModules', 'Search modules')}
               />
               {modulesSearch.length > 0 && (
                 <button
@@ -813,7 +853,7 @@ export function ProjectSectionHeader({
                     modulesFilter.setSearch('');
                   }}
                   className="shrink-0 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
-                  aria-label="Clear search"
+                  aria-label={t('common.clearSearch', 'Clear search')}
                 >
                   <IconX />
                 </button>
@@ -824,7 +864,7 @@ export function ProjectSectionHeader({
               type="button"
               onClick={() => setModulesSearchExpanded(true)}
               className="flex h-8 w-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
-              aria-label="Search modules"
+              aria-label={t('header.modules.searchModules', 'Search modules')}
             >
               <IconSearch />
             </button>
@@ -833,19 +873,19 @@ export function ProjectSectionHeader({
             id="modules-sort"
             openId={modulesSortOpen}
             onOpen={setModulesSortOpen}
-            label="Sort by"
+            label={t('common.sortBy', 'Sort by')}
             icon={<IconArrowUpDown />}
             displayValue={(() => {
               const sort = modulesFilter.sort || 'progress';
               const labels: Record<string, string> = {
-                name: 'Name',
-                progress: 'Progress',
-                work_items: 'Number of work items',
-                due_date: 'Due date',
-                created_date: 'Created date',
-                manual: 'Manual',
+                name: t('common.name', 'Name'),
+                progress: t('common.progress', 'Progress'),
+                work_items: t('header.modules.numberOfWorkItems', 'Number of work items'),
+                due_date: t('common.dueDate', 'Due date'),
+                created_date: t('common.createdDate', 'Created date'),
+                manual: t('common.manual', 'Manual'),
               };
-              return labels[sort] ?? 'Progress';
+              return labels[sort] ?? t('common.progress', 'Progress');
             })()}
             panelClassName="min-w-[200px] rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
             align="left"
@@ -858,14 +898,14 @@ export function ProjectSectionHeader({
                   {(() => {
                     const sort = modulesFilter.sort || 'progress';
                     const labels: Record<string, string> = {
-                      name: 'Name',
-                      progress: 'Progress',
-                      work_items: 'Number of work items',
-                      due_date: 'Due date',
-                      created_date: 'Created date',
-                      manual: 'Manual',
+                      name: t('common.name', 'Name'),
+                      progress: t('common.progress', 'Progress'),
+                      work_items: t('header.modules.numberOfWorkItems', 'Number of work items'),
+                      due_date: t('common.dueDate', 'Due date'),
+                      created_date: t('common.createdDate', 'Created date'),
+                      manual: t('common.manual', 'Manual'),
                     };
-                    return labels[sort] ?? 'Progress';
+                    return labels[sort] ?? t('common.progress', 'Progress');
                   })()}
                 </span>
                 <span className="shrink-0 text-(--txt-icon-tertiary)">
@@ -876,12 +916,15 @@ export function ProjectSectionHeader({
             triggerClassName="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             {[
-              { value: 'name', label: 'Name' },
-              { value: 'progress', label: 'Progress' },
-              { value: 'work_items', label: 'Number of work items' },
-              { value: 'due_date', label: 'Due date' },
-              { value: 'created_date', label: 'Created date' },
-              { value: 'manual', label: 'Manual' },
+              { value: 'name', label: t('common.name', 'Name') },
+              { value: 'progress', label: t('common.progress', 'Progress') },
+              {
+                value: 'work_items',
+                label: t('header.modules.numberOfWorkItems', 'Number of work items'),
+              },
+              { value: 'due_date', label: t('common.dueDate', 'Due date') },
+              { value: 'created_date', label: t('common.createdDate', 'Created date') },
+              { value: 'manual', label: t('common.manual', 'Manual') },
             ].map((opt) => {
               const current = modulesFilter.sort || 'progress';
               return (
@@ -907,7 +950,10 @@ export function ProjectSectionHeader({
             <div className="my-1 border-t border-(--border-subtle)" />
             {['asc', 'desc'].map((orderValue) => {
               const currentOrder = modulesFilter.order || 'asc';
-              const label = orderValue === 'asc' ? 'Ascending' : 'Descending';
+              const label =
+                orderValue === 'asc'
+                  ? t('common.ascending', 'Ascending')
+                  : t('common.descending', 'Descending');
               return (
                 <button
                   key={orderValue}
@@ -933,9 +979,9 @@ export function ProjectSectionHeader({
               id="modules-filters"
               openId={modulesFiltersOpen}
               onOpen={setModulesFiltersOpen}
-              label="Filters"
+              label={t('header.filters', 'Filters')}
               icon={<IconFilter />}
-              displayValue="Filters"
+              displayValue={t('header.filters', 'Filters')}
               panelClassName="flex w-[280px] max-h-[min(70vh,28rem)] flex-col rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised) overflow-hidden"
               align="right"
               triggerContent={
@@ -943,7 +989,7 @@ export function ProjectSectionHeader({
                   <span className="shrink-0 text-(--txt-icon-tertiary)">
                     <IconFilter />
                   </span>
-                  <span className="truncate">Filters</span>
+                  <span className="truncate">{t('header.filters', 'Filters')}</span>
                   <span className="shrink-0 text-(--txt-icon-tertiary)">
                     <IconChevronDown />
                   </span>
@@ -975,7 +1021,7 @@ export function ProjectSectionHeader({
             )}
           </div>
           <div className="flex h-8 overflow-hidden rounded-lg border border-(--border-subtle) bg-(--bg-layer-1) p-0.5">
-            <Tooltip content="List layout">
+            <Tooltip content={t('header.modules.listLayout', 'List layout')}>
               <button
                 type="button"
                 onClick={() => modulesFilter.setLayout('list')}
@@ -989,7 +1035,7 @@ export function ProjectSectionHeader({
                 <IconList />
               </button>
             </Tooltip>
-            <Tooltip content="Gallery layout">
+            <Tooltip content={t('header.modules.galleryLayout', 'Gallery layout')}>
               <button
                 type="button"
                 onClick={() => modulesFilter.setLayout('gallery')}
@@ -1003,7 +1049,7 @@ export function ProjectSectionHeader({
                 <IconLayoutGrid />
               </button>
             </Tooltip>
-            <Tooltip content="Timeline layout">
+            <Tooltip content={t('header.modules.timelineLayout', 'Timeline layout')}>
               <button
                 type="button"
                 onClick={() => modulesFilter.setLayout('timeline')}
@@ -1024,7 +1070,7 @@ export function ProjectSectionHeader({
             type="button"
             onClick={() => setCreateModuleOpen(true)}
           >
-            <IconPlus /> Add Module
+            <IconPlus /> {t('header.modules.addModule', 'Add Module')}
           </Button>
         </>
       );
@@ -1037,7 +1083,7 @@ export function ProjectSectionHeader({
           type="button"
           onClick={() => window.dispatchEvent(new CustomEvent(PROJECT_PAGES_CREATE_EVENT))}
         >
-          <IconPlus /> Add page
+          <IconPlus /> {t('header.pages.addPage', 'Add page')}
         </Button>
       );
     }
@@ -1050,10 +1096,10 @@ export function ProjectSectionHeader({
         viewsCreatedBy.length > 0;
       const sortLabel =
         viewsDisplay.sortBy === 'name'
-          ? 'Name'
+          ? t('common.name', 'Name')
           : viewsDisplay.sortBy === 'created_at'
-            ? 'Created at'
-            : 'Updated at';
+            ? t('common.createdAt', 'Created at')
+            : t('common.updatedAt', 'Updated at');
       return (
         <>
           <div className="flex items-center">
@@ -1061,7 +1107,7 @@ export function ProjectSectionHeader({
               <button
                 type="button"
                 className="flex size-8 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
-                aria-label="Search views"
+                aria-label={t('header.views.searchViews', 'Search views')}
                 onClick={() => setViewsSearchOpen(true)}
               >
                 <IconSearch />
@@ -1094,9 +1140,9 @@ export function ProjectSectionHeader({
                       }
                     }
                   }}
-                  placeholder="Search"
+                  placeholder={t('common.search', 'Search')}
                   className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
-                  aria-label="Search"
+                  aria-label={t('common.search', 'Search')}
                 />
                 {viewsSearchOpen && (
                   <button
@@ -1107,7 +1153,7 @@ export function ProjectSectionHeader({
                       setViewsSearchOpen(false);
                     }}
                     className="shrink-0 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
-                    aria-label="Clear search"
+                    aria-label={t('common.clearSearch', 'Clear search')}
                   >
                     <IconX />
                   </button>
@@ -1119,7 +1165,7 @@ export function ProjectSectionHeader({
             id="project-views-sort"
             openId={viewsSortOpen}
             onOpen={setViewsSortOpen}
-            label="Sort by"
+            label={t('common.sortBy', 'Sort by')}
             icon={<IconArrowUpDown />}
             displayValue={sortLabel}
             align="right"
@@ -1138,9 +1184,9 @@ export function ProjectSectionHeader({
             triggerClassName="flex h-8 items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
             {[
-              { value: 'updated_at', label: 'Updated at' },
-              { value: 'created_at', label: 'Created at' },
-              { value: 'name', label: 'Name' },
+              { value: 'updated_at', label: t('common.updatedAt', 'Updated at') },
+              { value: 'created_at', label: t('common.createdAt', 'Created at') },
+              { value: 'name', label: t('common.name', 'Name') },
             ].map((opt) => (
               <button
                 key={opt.value}
@@ -1173,7 +1219,9 @@ export function ProjectSectionHeader({
                 }}
                 className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
               >
-                {orderValue === 'desc' ? 'Descending' : 'Ascending'}
+                {orderValue === 'desc'
+                  ? t('common.descending', 'Descending')
+                  : t('common.ascending', 'Ascending')}
                 {viewsDisplay.sortOrder === orderValue && (
                   <span className="shrink-0 text-(--txt-primary)">
                     <IconCheck />
@@ -1187,9 +1235,9 @@ export function ProjectSectionHeader({
               id="project-views-filters"
               openId={viewsFiltersOpen}
               onOpen={setViewsFiltersOpen}
-              label="Filters"
+              label={t('header.filters', 'Filters')}
               icon={<IconFilter />}
-              displayValue="Filters"
+              displayValue={t('header.filters', 'Filters')}
               align="right"
               panelClassName="flex w-[300px] max-h-[min(70vh,28rem)] flex-col overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
               triggerContent={
@@ -1197,7 +1245,7 @@ export function ProjectSectionHeader({
                   <span className="shrink-0 text-(--txt-icon-tertiary)">
                     <IconFilter />
                   </span>
-                  <span className="truncate">Filters</span>
+                  <span className="truncate">{t('header.filters', 'Filters')}</span>
                   <span className="shrink-0 text-(--txt-icon-tertiary)">
                     <IconChevronDown />
                   </span>
@@ -1218,7 +1266,7 @@ export function ProjectSectionHeader({
                       setViewsSearchQuery(v);
                       dispatchViewsFilters({ query: v });
                     }}
-                    placeholder="Search"
+                    placeholder={t('common.search', 'Search')}
                     className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
                   />
                 </div>
@@ -1237,18 +1285,18 @@ export function ProjectSectionHeader({
                     }}
                     className="rounded border-(--border-subtle)"
                   />
-                  <span>Favorites</span>
+                  <span>{t('common.favorites', 'Favorites')}</span>
                 </label>
 
                 <div className="mt-2">
                   <div className="flex items-center justify-between px-3 py-2 text-xs font-medium text-(--txt-tertiary)">
-                    <span>Created date</span>
+                    <span>{t('common.createdDate', 'Created date')}</span>
                   </div>
                   {[
-                    { id: '1_week', label: '1 week ago' },
-                    { id: '2_weeks', label: '2 weeks ago' },
-                    { id: '1_month', label: '1 month ago' },
-                    { id: 'custom', label: 'Custom range' },
+                    { id: '1_week', label: t('common.datePreset.oneWeekAgo', '1 week ago') },
+                    { id: '2_weeks', label: t('common.datePreset.twoWeeksAgo', '2 weeks ago') },
+                    { id: '1_month', label: t('common.datePreset.oneMonthAgo', '1 month ago') },
+                    { id: 'custom', label: t('common.customRange', 'Custom range') },
                   ].map((opt) => (
                     <label
                       key={opt.id}
@@ -1290,13 +1338,15 @@ export function ProjectSectionHeader({
                       });
                     }}
                   >
-                    Clear created date
+                    {t('header.views.clearCreatedDate', 'Clear created date')}
                   </button>
                   {viewsCreatedDate === 'custom' && (
                     <div className="px-3 pb-2 pt-1">
                       <div className="grid grid-cols-2 gap-2">
                         <div className="min-w-0">
-                          <label className="mb-1 block text-xs text-(--txt-tertiary)">After</label>
+                          <label className="mb-1 block text-xs text-(--txt-tertiary)">
+                            {t('common.after', 'After')}
+                          </label>
                           <input
                             type="date"
                             value={viewsCreatedAfter ?? ''}
@@ -1313,7 +1363,9 @@ export function ProjectSectionHeader({
                           />
                         </div>
                         <div className="min-w-0">
-                          <label className="mb-1 block text-xs text-(--txt-tertiary)">Before</label>
+                          <label className="mb-1 block text-xs text-(--txt-tertiary)">
+                            {t('common.before', 'Before')}
+                          </label>
                           <input
                             type="date"
                             value={viewsCreatedBefore ?? ''}
@@ -1336,7 +1388,7 @@ export function ProjectSectionHeader({
 
                 <div className="mt-2">
                   <div className="flex items-center justify-between px-3 py-2 text-xs font-medium text-(--txt-tertiary)">
-                    <span>Created by</span>
+                    <span>{t('common.createdBy', 'Created by')}</span>
                   </div>
                   {viewsMembers.map((m) => {
                     const checked = viewsCreatedBy.includes(m.member_id);
@@ -1393,7 +1445,7 @@ export function ProjectSectionHeader({
               window.dispatchEvent(new CustomEvent('project-views-create-open'));
             }}
           >
-            <IconPlus /> Add view
+            <IconPlus /> {t('common.addView', 'Add view')}
           </Button>
         </>
       );
@@ -1422,7 +1474,7 @@ export function ProjectSectionHeader({
           type="button"
           onClick={() => setProjectDropdownOpen((o) => !o)}
           className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-icon-secondary)"
-          aria-label="Select project"
+          aria-label={t('common.selectProject', 'Select project')}
         >
           <IconChevronDown />
         </button>
@@ -1434,7 +1486,7 @@ export function ProjectSectionHeader({
               </span>
               <input
                 type="text"
-                placeholder="Search"
+                placeholder={t('common.search', 'Search')}
                 value={projectSearch}
                 onChange={(e) => setProjectSearch(e.target.value)}
                 className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -1485,7 +1537,11 @@ export function ProjectSectionHeader({
           <DateRangeModal
             open={modulesDateRangeModal !== null}
             onClose={() => setModulesDateRangeModal(null)}
-            title={modulesDateRangeModal === 'start' ? 'Start date range' : 'Due date range'}
+            title={
+              modulesDateRangeModal === 'start'
+                ? t('common.startDateRange', 'Start date range')
+                : t('common.dueDateRange', 'Due date range')
+            }
             after={
               modulesDateRangeModal === 'start'
                 ? (modulesFilter.startAfter ?? null)
@@ -1515,7 +1571,11 @@ export function ProjectSectionHeader({
         <DateRangeModal
           open={issuesDateRangeModal !== null}
           onClose={() => setIssuesDateRangeModal(null)}
-          title={issuesDateRangeModal === 'start' ? 'Start date range' : 'Due date range'}
+          title={
+            issuesDateRangeModal === 'start'
+              ? t('common.startDateRange', 'Start date range')
+              : t('common.dueDateRange', 'Due date range')
+          }
           after={
             issuesDateRangeModal === 'start' ? issuesFilters.startAfter : issuesFilters.dueAfter
           }
@@ -1551,7 +1611,11 @@ export function ProjectSectionHeader({
           <DateRangeModal
             open={cyclesDateRangeModal !== null}
             onClose={() => setCyclesDateRangeModal(null)}
-            title={cyclesDateRangeModal === 'start' ? 'Start date range' : 'Due date range'}
+            title={
+              cyclesDateRangeModal === 'start'
+                ? t('common.startDateRange', 'Start date range')
+                : t('common.dueDateRange', 'Due date range')
+            }
             after={cyclesDateRangeModal === 'start' ? cyclesStartAfter : cyclesDueAfter}
             before={cyclesDateRangeModal === 'start' ? cyclesStartBefore : cyclesDueBefore}
             onApply={(after, before) => {

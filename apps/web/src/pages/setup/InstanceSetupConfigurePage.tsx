@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
 import { Button, Input } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
 import { instanceService } from '../../services/instanceService';
@@ -110,6 +111,7 @@ function PasswordRequirement({ met, label }: { met: boolean; label: string }) {
 
 export function InstanceSetupConfigurePage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { setUserFromApi } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -122,7 +124,7 @@ export function InstanceSetupConfigurePage() {
   const [allowUsageData, setAllowUsageData] = useState(true);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  useDocumentTitle('Configure your instance');
+  useDocumentTitle(t('setup.configure.documentTitle', 'Configure your instance'));
 
   const req = usePasswordRequirements(password);
   const allMet = req.minLength && req.upper && req.lower && req.number && req.special;
@@ -132,23 +134,25 @@ export function InstanceSetupConfigurePage() {
     e.preventDefault();
     setError('');
     if (!firstName.trim() || !lastName.trim()) {
-      setError('Please enter your first and last name.');
+      setError(t('setup.configure.errorName', 'Please enter your first and last name.'));
       return;
     }
     if (!email.trim()) {
-      setError('Please enter your email.');
+      setError(t('setup.configure.errorEmail', 'Please enter your email.'));
       return;
     }
     if (!companyName.trim()) {
-      setError('Please enter your company name.');
+      setError(t('setup.configure.errorCompany', 'Please enter your company name.'));
       return;
     }
     if (!allMet) {
-      setError('Please meet all password requirements.');
+      setError(
+        t('setup.configure.errorPasswordRequirements', 'Please meet all password requirements.'),
+      );
       return;
     }
     if (!passwordsMatch) {
-      setError('Passwords do not match.');
+      setError(t('setup.configure.errorPasswordMismatch', 'Passwords do not match.'));
       return;
     }
     setIsSubmitting(true);
@@ -181,45 +185,48 @@ export function InstanceSetupConfigurePage() {
       <main className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-8">
         <div className="w-full max-w-md">
           <h1 className="text-center text-xl font-semibold text-(--txt-primary)">
-            Setup your Devlane instance
+            {t('setup.configure.title', 'Setup your Devlane instance')}
           </h1>
           <p className="mt-2 text-center text-sm text-(--txt-secondary)">
-            Post setup you will be able to manage this Devlane instance.
+            {t(
+              'setup.configure.subtitle',
+              'Post setup you will be able to manage this Devlane instance.',
+            )}
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-4">
               <Input
-                label="First name *"
+                label={t('setup.configure.firstNameLabel', 'First name *')}
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Wilber"
+                placeholder={t('setup.configure.firstNamePlaceholder', 'Wilber')}
                 required
                 autoComplete="given-name"
               />
               <Input
-                label="Last name *"
+                label={t('setup.configure.lastNameLabel', 'Last name *')}
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                placeholder="Wright"
+                placeholder={t('setup.configure.lastNamePlaceholder', 'Wright')}
                 required
                 autoComplete="family-name"
               />
             </div>
             <Input
-              label="Email *"
+              label={t('setup.configure.emailLabel', 'Email *')}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@company.com"
+              placeholder={t('setup.configure.emailPlaceholder', 'name@company.com')}
               required
               autoComplete="email"
             />
             <Input
-              label="Company name *"
+              label={t('setup.configure.companyNameLabel', 'Company name *')}
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="Company name"
+              placeholder={t('setup.configure.companyNamePlaceholder', 'Company name')}
               required
               autoComplete="organization"
             />
@@ -229,7 +236,7 @@ export function InstanceSetupConfigurePage() {
                 htmlFor="setup-password"
                 className="text-sm font-medium text-(--txt-secondary)"
               >
-                Set a password *
+                {t('setup.configure.passwordLabel', 'Set a password *')}
               </label>
               <div className="relative">
                 <input
@@ -237,7 +244,7 @@ export function InstanceSetupConfigurePage() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="New password..."
+                  placeholder={t('setup.configure.passwordPlaceholder', 'New password...')}
                   required
                   autoComplete="new-password"
                   className="h-9 w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-2 pl-3 pr-10 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -246,17 +253,36 @@ export function InstanceSetupConfigurePage() {
                   type="button"
                   onClick={() => setShowPassword((p) => !p)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={
+                    showPassword
+                      ? t('setup.configure.hidePassword', 'Hide password')
+                      : t('setup.configure.showPassword', 'Show password')
+                  }
                 >
                   {showPassword ? <IconEyeOff /> : <IconEye />}
                 </button>
               </div>
               <div className="mt-2 flex flex-col gap-1.5">
-                <PasswordRequirement met={req.minLength} label="Min 8 characters" />
-                <PasswordRequirement met={req.upper} label="Min 1 upper-case letter" />
-                <PasswordRequirement met={req.lower} label="Min 1 lower-case letter" />
-                <PasswordRequirement met={req.number} label="Min 1 number" />
-                <PasswordRequirement met={req.special} label="Min 1 special character" />
+                <PasswordRequirement
+                  met={req.minLength}
+                  label={t('setup.configure.reqMinLength', 'Min 8 characters')}
+                />
+                <PasswordRequirement
+                  met={req.upper}
+                  label={t('setup.configure.reqUpper', 'Min 1 upper-case letter')}
+                />
+                <PasswordRequirement
+                  met={req.lower}
+                  label={t('setup.configure.reqLower', 'Min 1 lower-case letter')}
+                />
+                <PasswordRequirement
+                  met={req.number}
+                  label={t('setup.configure.reqNumber', 'Min 1 number')}
+                />
+                <PasswordRequirement
+                  met={req.special}
+                  label={t('setup.configure.reqSpecial', 'Min 1 special character')}
+                />
               </div>
             </div>
 
@@ -265,7 +291,7 @@ export function InstanceSetupConfigurePage() {
                 htmlFor="setup-confirm-password"
                 className="text-sm font-medium text-(--txt-secondary)"
               >
-                Confirm password *
+                {t('setup.configure.confirmPasswordLabel', 'Confirm password *')}
               </label>
               <div className="relative">
                 <input
@@ -273,7 +299,7 @@ export function InstanceSetupConfigurePage() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm password"
+                  placeholder={t('setup.configure.confirmPasswordPlaceholder', 'Confirm password')}
                   required
                   autoComplete="new-password"
                   className="h-9 w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-2 pl-3 pr-10 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -282,7 +308,11 @@ export function InstanceSetupConfigurePage() {
                   type="button"
                   onClick={() => setShowConfirmPassword((p) => !p)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  aria-label={
+                    showConfirmPassword
+                      ? t('setup.configure.hidePassword', 'Hide password')
+                      : t('setup.configure.showPassword', 'Show password')
+                  }
                 >
                   {showConfirmPassword ? <IconEyeOff /> : <IconEye />}
                 </button>
@@ -297,17 +327,21 @@ export function InstanceSetupConfigurePage() {
                 className="mt-0.5 size-4 rounded border-(--border-subtle) bg-(--bg-surface-1) text-(--bg-accent-primary) focus:ring-(--border-accent-strong)"
               />
               <span className="text-(--txt-secondary)">
-                Allow Devlane to anonymously collect usage events.{' '}
-                <a href="#" className="text-(--txt-accent-primary) underline hover:no-underline">
-                  See more
-                </a>
+                <Trans i18nKey="setup.configure.usageDataConsent">
+                  Allow Devlane to anonymously collect usage events.{' '}
+                  <a href="#" className="text-(--txt-accent-primary) underline hover:no-underline">
+                    See more
+                  </a>
+                </Trans>
               </span>
             </label>
 
             {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Setting up…' : 'Continue'}
+              {isSubmitting
+                ? t('setup.configure.submitting', 'Setting up…')
+                : t('common.continue', 'Continue')}
             </Button>
           </form>
         </div>

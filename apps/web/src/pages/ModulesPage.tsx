@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { Avatar } from '../components/ui';
 import { UpdateModuleModal } from '../components/UpdateModuleModal';
@@ -6,8 +7,8 @@ import { DateRangeModal } from '../components/workspace-views/DateRangeModal';
 import { useModulesFilter } from '../contexts/ModulesFilterContext';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
-import { moduleService } from '../services/moduleService';
-import { useModuleFavorites } from '../hooks/useModuleFavorites';
+import { moduleService, type ModuleProgress } from '../services/moduleService';
+import { useWorkspaceFavorites } from '../hooks/useWorkspaceFavorites';
 import type {
   WorkspaceApiResponse,
   ProjectApiResponse,
@@ -157,6 +158,7 @@ function ModuleProgressCircle({ progress }: { progress: number }) {
 }
 
 export function ModulesPage() {
+  const { t } = useTranslation();
   const { workspaceSlug, projectId } = useParams<{
     workspaceSlug: string;
     projectId: string;
@@ -165,6 +167,7 @@ export function ModulesPage() {
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [modules, setModules] = useState<ModuleApiResponse[]>([]);
+  const [moduleProgress, setModuleProgress] = useState<Record<string, ModuleProgress>>({});
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [timelineTimeframe, setTimelineTimeframe] = useState<'week' | 'month' | 'quarter'>('week');
@@ -176,11 +179,22 @@ export function ModulesPage() {
   const [editModule, setEditModule] = useState<ModuleApiResponse | null>(null);
   const [editOpenDatePicker, setEditOpenDatePicker] = useState(false);
   const [quickDateModule, setQuickDateModule] = useState<ModuleApiResponse | null>(null);
-  const { favoriteModuleIds, toggleFavorite, isFavorite } = useModuleFavorites(
-    workspaceSlug,
-    projectId,
+  const { favorites, isFavorited, toggleEntity } = useWorkspaceFavorites(workspaceSlug);
+  const favoriteModuleIds = useMemo(
+    () => favorites.filter((f) => f.entity_type === 'module').map((f) => f.entity_identifier),
+    [favorites],
   );
-  useDocumentTitle('Modules');
+  const isFavorite = (id: string) => isFavorited('module', id);
+  const toggleFavorite = (mod: { id: string; name: string }) => {
+    if (!projectId) return;
+    void toggleEntity({
+      entity_type: 'module',
+      entity_id: mod.id,
+      project_id: projectId,
+      name: mod.name,
+    });
+  };
+  useDocumentTitle(t('modules.documentTitle', 'Modules'));
 
   const searchQuery = (filter.search ?? '').trim().toLowerCase();
   const favoritesFilter = filter.favorites;
@@ -268,13 +282,10 @@ export function ModulesPage() {
   const order = filter.order || 'asc';
   const sortedModules = [...filteredModules].sort((a, b) => {
     const getProgress = (mod: ModuleApiResponse) => {
-      const total = mod.issue_count ?? 0;
+      const pr = moduleProgress[mod.id];
+      const total = pr?.total ?? mod.issue_count ?? 0;
       if (!total) return 0;
-
-      // We don't have a completed/cancelled issue breakdown on the module payload.
-      // Use module status as a simple proxy for sorting and the progress badge.
-      const done = mod.status === 'completed' || mod.status === 'cancelled' ? total : 0;
-      return Math.round((done / total) * 100);
+      return Math.round(((pr?.completed ?? 0) / total) * 100);
     };
     let cmp = 0;
     switch (sortBy) {
@@ -312,6 +323,23 @@ export function ModulesPage() {
     };
     window.addEventListener('modules-refresh', handler);
     return () => window.removeEventListener('modules-refresh', handler);
+  }, [workspaceSlug, projectId]);
+
+  // Real per-module completion progress (completed / total by state group).
+  useEffect(() => {
+    if (!workspaceSlug || !projectId) return;
+    let cancelled = false;
+    moduleService
+      .listProgress(workspaceSlug, projectId)
+      .then((pr) => {
+        if (!cancelled) setModuleProgress(pr);
+      })
+      .catch(() => {
+        if (!cancelled) setModuleProgress({});
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [workspaceSlug, projectId]);
 
   useEffect(() => {
@@ -365,21 +393,25 @@ export function ModulesPage() {
   }, [workspaceSlug, projectId]);
 
   const getProgress = (mod: ModuleApiResponse) => {
-    const total = mod.issue_count ?? 0;
+    const pr = moduleProgress[mod.id];
+    const total = pr?.total ?? mod.issue_count ?? 0;
     if (!total) return 0;
-    const done = mod.status === 'completed' || mod.status === 'cancelled' ? total : 0;
-    return Math.round((done / total) * 100);
+    return Math.round(((pr?.completed ?? 0) / total) * 100);
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-        Loading…
+        {t('common.loading', 'Loading…')}
       </div>
     );
   }
   if (!workspace || !project) {
-    return <div className="text-(--txt-secondary)">Project not found.</div>;
+    return (
+      <div className="text-(--txt-secondary)">
+        {t('common.projectNotFound', 'Project not found.')}
+      </div>
+    );
   }
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
@@ -428,11 +460,11 @@ export function ModulesPage() {
                 setStatusMenuOpenId(null);
                 setEllipsisMenuOpenId(null);
               }}
-              aria-label="Edit module dates"
+              aria-label={t('modules.editDates', 'Edit module dates')}
             >
               <span className="flex items-center gap-1.5">
                 <IconCalendar />
-                {dateRange ?? 'Start date → End date'}
+                {dateRange ?? t('modules.dateRangePlaceholder', 'Start date → End date')}
               </span>
             </button>
             <div className="relative shrink-0" data-module-status-menu>
@@ -449,7 +481,7 @@ export function ModulesPage() {
                 aria-expanded={statusMenuOpenId === mod.id}
               >
                 <StatusDot statusId={mod.status} />
-                <span>{statusLabel}</span>
+                <span>{t(`module.status.${mod.status}`, statusLabel)}</span>
                 <span className="text-(--txt-icon-tertiary)" aria-hidden>
                   ▾
                 </span>
@@ -482,7 +514,7 @@ export function ModulesPage() {
                     >
                       <span className="flex items-center gap-2">
                         <StatusDot statusId={s.id} />
-                        {s.label}
+                        {t(`module.status.${s.id}`, s.label)}
                       </span>
                       {mod.status === s.id && <span className="text-(--txt-icon-tertiary)">✓</span>}
                     </button>
@@ -519,11 +551,15 @@ export function ModulesPage() {
             <button
               type="button"
               className="flex size-8 shrink-0 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-              aria-label={fav ? 'Remove from favorites' : 'Add to favorites'}
+              aria-label={
+                fav
+                  ? t('common.removeFromFavorites', 'Remove from favorites')
+                  : t('common.addToFavorites', 'Add to favorites')
+              }
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                void toggleFavorite(mod.id);
+                void toggleFavorite(mod);
               }}
             >
               {fav ? (
@@ -538,7 +574,7 @@ export function ModulesPage() {
               <button
                 type="button"
                 className="flex size-8 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-                aria-label="More options"
+                aria-label={t('common.moreOptions', 'More options')}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -560,7 +596,7 @@ export function ModulesPage() {
                       setEditModule(mod);
                     }}
                   >
-                    Edit
+                    {t('common.edit', 'Edit')}
                   </button>
                   <button
                     type="button"
@@ -572,7 +608,7 @@ export function ModulesPage() {
                       setEllipsisMenuOpenId(null);
                     }}
                   >
-                    Open in new tab
+                    {t('common.openInNewTab', 'Open in new tab')}
                   </button>
                   <button
                     type="button"
@@ -590,7 +626,7 @@ export function ModulesPage() {
                       setEllipsisMenuOpenId(null);
                     }}
                   >
-                    Copy link
+                    {t('common.copyLink', 'Copy link')}
                   </button>
                   <div className="my-1 border-t border-(--border-subtle)" />
                   <button
@@ -598,9 +634,12 @@ export function ModulesPage() {
                     disabled
                     className="flex w-full cursor-not-allowed flex-col gap-0.5 px-3 py-2 text-left text-sm text-(--txt-tertiary)"
                   >
-                    <span>Archive</span>
+                    <span>{t('common.archive', 'Archive')}</span>
                     <span className="text-[11px] leading-tight">
-                      Only completed or canceled module can be archived.
+                      {t(
+                        'modules.onlyCompletedArchivable',
+                        'Only completed or canceled module can be archived.',
+                      )}
                     </span>
                   </button>
                   <button
@@ -608,7 +647,7 @@ export function ModulesPage() {
                     disabled
                     className="flex w-full cursor-not-allowed items-center gap-2 px-3 py-2 text-left text-sm text-(--txt-tertiary)"
                   >
-                    Delete
+                    {t('common.delete', 'Delete')}
                   </button>
                 </div>
               )}
@@ -737,7 +776,10 @@ export function ModulesPage() {
       >
         <div className="flex items-center justify-between border-b border-(--border-subtle) bg-(--bg-layer-2) px-4 py-2">
           <span className="text-sm font-medium text-(--txt-secondary)">
-            {sortedModules.length} Module{sortedModules.length !== 1 ? 's' : ''}
+            {t('modules.moduleCount', '{{count}} Module{{plural}}', {
+              count: sortedModules.length,
+              plural: sortedModules.length !== 1 ? 's' : '',
+            })}
           </span>
           <div className="flex items-center gap-1">
             {(['week', 'month', 'quarter'] as const).map((tf) => (
@@ -766,13 +808,13 @@ export function ModulesPage() {
               }}
               className="rounded px-2.5 py-1.5 text-sm font-medium text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
             >
-              Today
+              {t('modules.today', 'Today')}
             </button>
             <button
               type="button"
               onClick={() => setTimelineFullscreen((v) => !v)}
               className="flex size-8 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-              aria-label="Full screen"
+              aria-label={t('modules.fullScreen', 'Full screen')}
             >
               <svg
                 width="16"
@@ -800,10 +842,10 @@ export function ModulesPage() {
               <thead>
                 <tr className="border-b border-(--border-subtle)">
                   <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-(--txt-secondary)">
-                    Modules
+                    {t('modules.columnModules', 'Modules')}
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-(--txt-secondary)">
-                    Duration
+                    {t('modules.columnDuration', 'Duration')}
                   </th>
                 </tr>
               </thead>
@@ -844,7 +886,9 @@ export function ModulesPage() {
                         </Link>
                       </td>
                       <td className="px-3 py-2 text-sm text-(--txt-secondary)">
-                        {durationDays > 0 ? `${durationDays} days` : '—'}
+                        {durationDays > 0
+                          ? t('modules.durationDays', '{{count}} days', { count: durationDays })
+                          : '—'}
                       </td>
                     </tr>
                   );
@@ -888,7 +932,7 @@ export function ModulesPage() {
                         className="shrink-0 border-r border-(--border-subtle) px-0.5 py-0.5 text-[10px] text-(--txt-tertiary)"
                         style={{ width: 7 * DAY_WIDTH }}
                       >
-                        Week {weekNum(d)}
+                        {t('modules.week', 'Week {{number}}', { number: weekNum(d) })}
                       </div>
                     ))}
                 </div>
@@ -938,7 +982,7 @@ export function ModulesPage() {
                           <button
                             type="button"
                             className="pointer-events-auto inline-flex h-5 w-5 items-center justify-center rounded hover:bg-white/10"
-                            aria-label="Edit module dates"
+                            aria-label={t('modules.editDates', 'Edit module dates')}
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
@@ -966,10 +1010,10 @@ export function ModulesPage() {
     return (
       <p className="py-8 text-center text-sm text-(--txt-tertiary)">
         {favoritesFilter
-          ? 'No favorite modules. Star modules to add them here.'
+          ? t('modules.emptyFavorites', 'No favorite modules. Star modules to add them here.')
           : searchQuery
-            ? 'No modules match your search.'
-            : 'No modules yet.'}
+            ? t('modules.emptySearch', 'No modules match your search.')
+            : t('modules.empty', 'No modules yet.')}
       </p>
     );
   }
@@ -1002,7 +1046,7 @@ export function ModulesPage() {
       <DateRangeModal
         open={quickDateModule !== null}
         onClose={() => setQuickDateModule(null)}
-        title="Date range"
+        title={t('modules.dateRangeModalTitle', 'Date range')}
         after={quickDateModule?.start_date ?? null}
         before={quickDateModule?.target_date ?? null}
         onApply={(after, before) => {

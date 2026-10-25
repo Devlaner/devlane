@@ -7,6 +7,7 @@ import (
 	"errors"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/Devlaner/devlane/api/internal/store"
@@ -21,6 +22,11 @@ var (
 	ErrSlugTaken          = errors.New("slug already in use")
 	ErrInviteNotFound     = errors.New("invite not found")
 	ErrMemberNotFound     = errors.New("member not found")
+	// ErrTokenNotFound is returned when a workspace service token to revoke does not exist.
+	ErrTokenNotFound = errors.New("token not found")
+	// ErrApiTokensNotConfigured is returned when the token store was never wired
+	// on the service (a configuration gap, not a client error).
+	ErrApiTokensNotConfigured = errors.New("api token store not configured")
 )
 
 var (
@@ -30,13 +36,68 @@ var (
 
 // WorkspaceService handles workspace business logic.
 type WorkspaceService struct {
-	ws   *store.WorkspaceStore
-	winv *store.WorkspaceInviteStore
-	us   *store.UserStore
+	ws        *store.WorkspaceStore
+	winv      *store.WorkspaceInviteStore
+	us        *store.UserStore
+	apiTokens *store.ApiTokenStore // optional: workspace-scoped service tokens
 }
 
 func NewWorkspaceService(ws *store.WorkspaceStore, winv *store.WorkspaceInviteStore, us *store.UserStore) *WorkspaceService {
 	return &WorkspaceService{ws: ws, winv: winv, us: us}
+}
+
+// SetApiTokenStore wires workspace-scoped service API tokens. Optional.
+func (s *WorkspaceService) SetApiTokenStore(ts *store.ApiTokenStore) { s.apiTokens = ts }
+
+// ListTokens returns a workspace's service tokens. Admin-only (they're secrets).
+func (s *WorkspaceService) ListTokens(ctx context.Context, slug string, userID uuid.UUID) ([]model.ApiToken, error) {
+	w, err := s.ws.GetBySlug(ctx, slug)
+	if err != nil {
+		return nil, ErrWorkspaceNotFound
+	}
+	if _, err := s.requireAdmin(ctx, w.ID, userID); err != nil {
+		return nil, err
+	}
+	if s.apiTokens == nil {
+		return nil, ErrApiTokensNotConfigured
+	}
+	return s.apiTokens.ListByWorkspaceID(ctx, w.ID)
+}
+
+// CreateToken mints a workspace service token and returns the secret once.
+func (s *WorkspaceService) CreateToken(ctx context.Context, slug string, userID uuid.UUID, label, description string, expiredAt *time.Time) (string, error) {
+	w, err := s.ws.GetBySlug(ctx, slug)
+	if err != nil {
+		return "", ErrWorkspaceNotFound
+	}
+	if _, err := s.requireAdmin(ctx, w.ID, userID); err != nil {
+		return "", err
+	}
+	if s.apiTokens == nil {
+		return "", ErrApiTokensNotConfigured
+	}
+	return s.apiTokens.CreateForWorkspace(ctx, userID, w.ID, label, description, expiredAt)
+}
+
+// RevokeToken deletes a workspace service token.
+func (s *WorkspaceService) RevokeToken(ctx context.Context, slug string, tokenID uuid.UUID, userID uuid.UUID) error {
+	w, err := s.ws.GetBySlug(ctx, slug)
+	if err != nil {
+		return ErrWorkspaceNotFound
+	}
+	if _, err := s.requireAdmin(ctx, w.ID, userID); err != nil {
+		return err
+	}
+	if s.apiTokens == nil {
+		return ErrApiTokensNotConfigured
+	}
+	if err := s.apiTokens.DeleteByWorkspace(ctx, tokenID, w.ID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrTokenNotFound
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *WorkspaceService) ListForUser(ctx context.Context, userID uuid.UUID) ([]model.Workspace, error) {

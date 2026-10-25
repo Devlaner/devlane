@@ -13,6 +13,7 @@ import (
 type FavoriteHandler struct {
 	Project   *service.ProjectService
 	Favorites *store.UserFavoriteStore
+	Fav       *service.FavoriteService
 }
 
 // ListFavoriteProjects returns the list of favorited project IDs for the current user.

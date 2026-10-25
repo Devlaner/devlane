@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type SVGProps } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Avatar, Button, Input, Modal } from '../components/ui';
 import { Dropdown } from '../components/work-item';
@@ -256,6 +257,7 @@ function resolveViewCreator(
 }
 
 export function ViewsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { workspaceSlug, projectId } = useParams<{
@@ -293,7 +295,7 @@ export function ViewsPage() {
   });
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
-  useDocumentTitle('Views');
+  useDocumentTitle(t('views.documentTitle', 'Views'));
 
   const loadPageData = useCallback(() => {
     if (!workspaceSlug || !projectId) {
@@ -337,12 +339,17 @@ export function ViewsPage() {
         setProject(null);
         setViews([]);
         setMembers([]);
-        setLoadError('Unable to load project views right now. Please refresh and try again.');
+        setLoadError(
+          t(
+            'views.loadError',
+            'Unable to load project views right now. Please refresh and try again.',
+          ),
+        );
       })
       .finally(() => {
         setLoading(false);
       });
-  }, [workspaceSlug, projectId]);
+  }, [workspaceSlug, projectId, t]);
 
   const openEdit = useCallback((view: IssueViewApiResponse) => {
     setEditOpenId(view.id);
@@ -439,7 +446,9 @@ export function ViewsPage() {
       );
     } catch {
       // Roll back optimistic UI if the server update fails.
-      setFavoriteActionError('Unable to update favorite. Please try again.');
+      setFavoriteActionError(
+        t('views.favoriteError', 'Unable to update favorite. Please try again.'),
+      );
       setFavoriteIds(prevFavoriteIds);
       setViews((prev) =>
         prev.map((v) => (v.id === viewId ? { ...v, is_favorite: wasFavorited } : v)),
@@ -531,7 +540,9 @@ export function ViewsPage() {
       await loadPageData();
       window.dispatchEvent(new CustomEvent(PROJECT_VIEWS_REFRESH_EVENT));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create view.');
+      setError(
+        err instanceof Error ? err.message : t('views.createFailed', 'Failed to create view.'),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -560,7 +571,9 @@ export function ViewsPage() {
       await loadPageData();
       window.dispatchEvent(new CustomEvent(PROJECT_VIEWS_REFRESH_EVENT));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update view.');
+      setError(
+        err instanceof Error ? err.message : t('views.updateFailed', 'Failed to update view.'),
+      );
     } finally {
       setEditing(false);
     }
@@ -576,7 +589,9 @@ export function ViewsPage() {
       await loadPageData();
       window.dispatchEvent(new CustomEvent(PROJECT_VIEWS_REFRESH_EVENT));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete view.');
+      setError(
+        err instanceof Error ? err.message : t('views.deleteFailed', 'Failed to delete view.'),
+      );
     } finally {
       setDeleting(false);
     }
@@ -621,14 +636,14 @@ export function ViewsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-        Loading…
+        {t('common.loading', 'Loading…')}
       </div>
     );
   }
   if (!workspace || !project) {
     return (
       <div className="px-6 py-8 text-sm text-(--txt-secondary)">
-        {loadError ?? 'Project not found.'}
+        {loadError ?? t('common.projectNotFound', 'Project not found.')}
       </div>
     );
   }
@@ -637,10 +652,13 @@ export function ViewsPage() {
       <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-10">
         <div className="max-w-xl rounded-lg border border-(--border-subtle) bg-(--bg-layer-1) p-6 text-center">
           <h2 className="text-lg font-semibold text-(--txt-primary)">
-            Views are disabled for this project
+            {t('views.disabledTitle', 'Views are disabled for this project')}
           </h2>
           <p className="mt-2 text-sm text-(--txt-secondary)">
-            Enable the Views feature in project settings to create and manage project views.
+            {t(
+              'views.disabledDescription',
+              'Enable the Views feature in project settings to create and manage project views.',
+            )}
           </p>
         </div>
       </div>
@@ -653,7 +671,7 @@ export function ViewsPage() {
   if (filters.query.trim()) {
     filterPills.push({
       key: 'query',
-      label: 'Search',
+      label: t('common.search', 'Search'),
       value: filters.query,
       onClear: () => setFilters((p) => ({ ...p, query: '' })),
     });
@@ -661,23 +679,26 @@ export function ViewsPage() {
   if (filters.favoritesOnly) {
     filterPills.push({
       key: 'favorites',
-      label: 'Favorites',
-      value: 'only',
+      label: t('views.favorites', 'Favorites'),
+      value: t('views.favoritesOnly', 'only'),
       onClear: () => setFilters((p) => ({ ...p, favoritesOnly: false })),
     });
   }
   if (filters.createdDatePreset) {
     const presetLabel =
       filters.createdDatePreset === '1_week'
-        ? 'Last 1 week'
+        ? t('views.lastWeek', 'Last 1 week')
         : filters.createdDatePreset === '2_weeks'
-          ? 'Last 2 weeks'
+          ? t('views.lastTwoWeeks', 'Last 2 weeks')
           : filters.createdDatePreset === '1_month'
-            ? 'Last 1 month'
-            : `Custom · ${filters.createdAfter ?? '…'} → ${filters.createdBefore ?? '…'}`;
+            ? t('views.lastMonth', 'Last 1 month')
+            : t('views.customDateRange', 'Custom · {{after}} → {{before}}', {
+                after: filters.createdAfter ?? '…',
+                before: filters.createdBefore ?? '…',
+              });
     filterPills.push({
       key: 'createdDate',
-      label: 'Created',
+      label: t('views.created', 'Created'),
       value: presetLabel,
       onClear: () =>
         setFilters((p) => ({
@@ -697,7 +718,7 @@ export function ViewsPage() {
       .join(', ');
     filterPills.push({
       key: 'createdBy',
-      label: 'Created by',
+      label: t('views.createdBy', 'Created by'),
       value: names,
       onClear: () => setFilters((p) => ({ ...p, createdByIds: [] })),
     });
@@ -731,7 +752,7 @@ export function ViewsPage() {
                 <span className="max-w-[260px] truncate">{p.value}</span>
                 <button
                   type="button"
-                  aria-label={`Clear ${p.label} filter`}
+                  aria-label={t('views.clearFilter', 'Clear {{label}} filter', { label: p.label })}
                   onClick={p.onClear}
                   className="-mr-0.5 inline-flex size-4 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
                 >
@@ -757,7 +778,7 @@ export function ViewsPage() {
               onClick={clearAllFilters}
               className="ml-1 text-xs text-(--txt-secondary) hover:text-(--txt-primary) hover:underline"
             >
-              Clear all
+              {t('views.clearAll', 'Clear all')}
             </button>
           </div>
         ) : null}
@@ -765,24 +786,30 @@ export function ViewsPage() {
           <div className="flex min-h-0 flex-1 items-start justify-center overflow-auto px-8 py-10">
             <div className="w-full max-w-5xl">
               <h2 className="text-2xl font-semibold text-(--txt-primary)">
-                Save filtered views for your project. Create as many as you need
+                {t(
+                  'views.emptyTitle',
+                  'Save filtered views for your project. Create as many as you need',
+                )}
               </h2>
               <p className="mt-2 max-w-4xl text-sm text-(--txt-secondary)">
-                Views are a set of saved filters that you use frequently or want easy access to. All
-                your colleagues in a project can see everyone&apos;s views and choose whichever
-                suits their needs best.
+                {t(
+                  'views.emptyDescription',
+                  "Views are a set of saved filters that you use frequently or want easy access to. All your colleagues in a project can see everyone's views and choose whichever suits their needs best.",
+                )}
               </p>
               <div className="mt-6 rounded-lg border border-(--border-subtle) bg-(--bg-layer-1) p-6">
                 <div className="mx-auto flex h-80 w-full max-w-4xl items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-surface-1)">
                   <div className="space-y-3 text-center">
                     <div className="mx-auto h-12 w-12 rounded-md border border-(--border-subtle) bg-(--bg-layer-1)" />
-                    <p className="text-sm text-(--txt-tertiary)">No project views yet</p>
+                    <p className="text-sm text-(--txt-tertiary)">
+                      {t('views.noProjectViews', 'No project views yet')}
+                    </p>
                   </div>
                 </div>
               </div>
               <div className="mt-7 flex justify-center">
                 <Button size="sm" onClick={() => setCreateOpen(true)} disabled={!canCreateViews}>
-                  Create your first view
+                  {t('views.createFirst', 'Create your first view')}
                 </Button>
               </div>
             </div>
@@ -791,11 +818,13 @@ export function ViewsPage() {
           <div className="flex min-h-0 flex-1 items-center justify-center px-8 py-10">
             <div className="max-w-lg text-center">
               <h3 className="text-lg font-semibold text-(--txt-primary)">
-                No views match your filters
+                {t('views.noMatchTitle', 'No views match your filters')}
               </h3>
               <p className="mt-2 text-sm text-(--txt-secondary)">
-                Try clearing or relaxing your search, created date, favorites, or created-by
-                filters.
+                {t(
+                  'views.noMatchDescription',
+                  'Try clearing or relaxing your search, created date, favorites, or created-by filters.',
+                )}
               </p>
             </div>
           </div>
@@ -805,7 +834,10 @@ export function ViewsPage() {
               {sortedViews.map((v) => {
                 const accessMeta = getViewAccessMeta(v);
                 const filterCount = countSavedViewFilters(v);
-                const filterLabel = filterCount === 1 ? '1 filter' : `${filterCount} filters`;
+                const filterLabel =
+                  filterCount === 1
+                    ? t('views.oneFilter', '1 filter')
+                    : t('views.filterCount', '{{count}} filters', { count: filterCount });
                 const { label: creatorLabel, avatarSrc: creatorAvatarSrc } = resolveViewCreator(
                   members,
                   v,
@@ -850,12 +882,12 @@ export function ViewsPage() {
                         className="shrink-0 text-(--txt-icon-tertiary)"
                         title={
                           isPublic
-                            ? 'Public'
+                            ? t('views.public', 'Public')
                             : accessMeta
                               ? accessMeta.tone === 'restricted'
-                                ? 'Restricted'
-                                : 'Private'
-                              : 'Access'
+                                ? t('views.restricted', 'Restricted')
+                                : t('views.private', 'Private')
+                              : t('views.access', 'Access')
                         }
                       >
                         {isPublic ? (
@@ -875,7 +907,11 @@ export function ViewsPage() {
                       <button
                         type="button"
                         className="inline-flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
-                        aria-label={isFav ? 'Unfavorite view' : 'Favorite view'}
+                        aria-label={
+                          isFav
+                            ? t('views.unfavoriteView', 'Unfavorite view')
+                            : t('views.favoriteView', 'Favorite view')
+                        }
                         onClick={(e) => {
                           e.stopPropagation();
                           void toggleFavorite(v.id);
@@ -887,14 +923,16 @@ export function ViewsPage() {
                         id={`project-view-row-${v.id}`}
                         openId={viewMenuOpenId}
                         onOpen={setViewMenuOpenId}
-                        label="View actions"
+                        label={t('views.viewActions', 'View actions')}
                         icon={<IconMoreVertical className="size-4" />}
                         displayValue=""
                         align="right"
                         triggerClassName="inline-flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
                         triggerContent={
                           <>
-                            <span className="sr-only">View actions</span>
+                            <span className="sr-only">
+                              {t('views.viewActions', 'View actions')}
+                            </span>
                             <IconMoreVertical className="size-4" />
                           </>
                         }
@@ -909,7 +947,7 @@ export function ViewsPage() {
                           }}
                         >
                           <IconPencil className="shrink-0 text-(--txt-icon-tertiary)" />
-                          Edit
+                          {t('common.edit', 'Edit')}
                         </button>
                         <button
                           type="button"
@@ -923,7 +961,7 @@ export function ViewsPage() {
                           }}
                         >
                           <IconExternalTab className="shrink-0 text-(--txt-icon-tertiary)" />
-                          Open in new tab
+                          {t('common.openInNewTab', 'Open in new tab')}
                         </button>
                         <button
                           type="button"
@@ -934,7 +972,9 @@ export function ViewsPage() {
                           }}
                         >
                           <IconLinkChain className="shrink-0 text-(--txt-icon-tertiary)" />
-                          {copyingId === v.id ? 'Copied!' : 'Copy link'}
+                          {copyingId === v.id
+                            ? t('views.copied', 'Copied!')
+                            : t('common.copyLink', 'Copy link')}
                         </button>
                         <div className="my-0.5 h-px bg-(--border-subtle)" role="separator" />
                         <button
@@ -947,7 +987,7 @@ export function ViewsPage() {
                           }}
                         >
                           <IconTrash className="shrink-0" />
-                          Delete
+                          {t('common.delete', 'Delete')}
                         </button>
                       </Dropdown>
                     </div>
@@ -964,7 +1004,7 @@ export function ViewsPage() {
           setCreateOpen(false);
           setError(null);
         }}
-        title="New view"
+        title={t('views.newView', 'New view')}
         className="max-w-lg"
         footer={
           <>
@@ -974,34 +1014,34 @@ export function ViewsPage() {
               onClick={() => setCreateOpen(false)}
               disabled={submitting}
             >
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button
               type="submit"
               form="project-create-view-form"
               disabled={submitting || !title.trim() || !canCreateViews}
             >
-              {submitting ? 'Creating...' : 'Add view'}
+              {submitting ? t('views.creating', 'Creating...') : t('views.addView', 'Add view')}
             </Button>
           </>
         }
       >
         <form id="project-create-view-form" onSubmit={handleCreate} className="space-y-4">
           <Input
-            label="Name"
+            label={t('views.name', 'Name')}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="View name"
+            placeholder={t('views.viewNamePlaceholder', 'View name')}
             autoFocus
           />
           <div>
             <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-              Description
+              {t('views.description', 'Description')}
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional description"
+              placeholder={t('views.optionalDescription', 'Optional description')}
               rows={3}
               className="w-full rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
             />
@@ -1015,7 +1055,7 @@ export function ViewsPage() {
           setEditOpenId(null);
           setError(null);
         }}
-        title="Edit view"
+        title={t('views.editView', 'Edit view')}
         className="max-w-lg"
         footer={
           <>
@@ -1025,34 +1065,34 @@ export function ViewsPage() {
               onClick={() => setEditOpenId(null)}
               disabled={editing}
             >
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button
               type="submit"
               form="project-edit-view-form"
               disabled={editing || !editTitle.trim()}
             >
-              {editing ? 'Saving...' : 'Save changes'}
+              {editing ? t('views.saving', 'Saving…') : t('views.saveChanges', 'Save changes')}
             </Button>
           </>
         }
       >
         <form id="project-edit-view-form" onSubmit={handleEdit} className="space-y-4">
           <Input
-            label="Name"
+            label={t('views.name', 'Name')}
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
-            placeholder="View name"
+            placeholder={t('views.viewNamePlaceholder', 'View name')}
             autoFocus
           />
           <div>
             <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-              Description
+              {t('views.description', 'Description')}
             </label>
             <textarea
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
-              placeholder="Optional description"
+              placeholder={t('views.optionalDescription', 'Optional description')}
               rows={3}
               className="w-full rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
             />
@@ -1066,7 +1106,7 @@ export function ViewsPage() {
           setDeleteOpenId(null);
           setError(null);
         }}
-        title="Delete view"
+        title={t('views.deleteView', 'Delete view')}
         className="max-w-md"
         footer={
           <>
@@ -1076,20 +1116,21 @@ export function ViewsPage() {
               onClick={() => setDeleteOpenId(null)}
               disabled={deleting}
             >
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button type="button" onClick={() => void handleDelete()} disabled={deleting}>
-              {deleting ? 'Deleting...' : 'Delete'}
+              {deleting ? t('views.deleting', 'Deleting...') : t('common.delete', 'Delete')}
             </Button>
           </>
         }
       >
         <p className="text-sm text-(--txt-secondary)">
-          Delete view{' '}
-          <span className="font-medium text-(--txt-primary)">
-            {deleteView?.name ?? 'this view'}
-          </span>
-          ? This action cannot be undone.
+          <Trans
+            i18nKey="views.deleteConfirm"
+            defaults="Delete view <bold>{{name}}</bold>? This action cannot be undone."
+            values={{ name: deleteView?.name ?? t('views.thisView', 'this view') }}
+            components={{ bold: <span className="font-medium text-(--txt-primary)" /> }}
+          />
         </p>
         {error && <p className="mt-3 text-sm text-(--txt-danger-primary)">{error}</p>}
       </Modal>

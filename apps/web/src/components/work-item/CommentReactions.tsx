@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SmilePlus } from 'lucide-react';
 import { commentService } from '../../services/commentService';
 import type { CommentReactionApiResponse } from '../../api/types';
@@ -10,7 +11,6 @@ interface CommentReactionsProps {
   projectId: string;
   issueId: string;
   commentId: string;
-  /** ID of the current user — needed to know which reactions are "mine" so we can toggle. */
   currentUserId?: string | null;
 }
 
@@ -28,6 +28,7 @@ export function CommentReactions({
   commentId,
   currentUserId,
 }: CommentReactionsProps) {
+  const { t } = useTranslation();
   const [reactions, setReactions] = useState<CommentReactionApiResponse[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -92,7 +93,7 @@ export function CommentReactions({
           type="button"
           className="inline-flex items-center gap-1 rounded-(--radius-md) px-1.5 py-0.5 text-[11px] text-(--txt-tertiary) opacity-0 transition-opacity hover:bg-(--bg-layer-1-hover) hover:text-(--txt-secondary) group-hover/comment:opacity-100"
           onClick={() => setPickerOpen(true)}
-          aria-label="Add reaction"
+          aria-label={t('workItem.addReaction', 'Add reaction')}
         >
           <SmilePlus className="h-3.5 w-3.5" />
         </button>
@@ -122,7 +123,7 @@ export function CommentReactions({
         type="button"
         className="inline-flex h-6 w-6 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
         onClick={() => setPickerOpen((v) => !v)}
-        aria-label="Add reaction"
+        aria-label={t('workItem.addReaction', 'Add reaction')}
       >
         <SmilePlus className="h-3.5 w-3.5" />
       </button>
@@ -134,7 +135,7 @@ export function CommentReactions({
               type="button"
               onClick={() => void toggle(e)}
               className="inline-flex h-7 w-7 items-center justify-center rounded text-base hover:bg-(--bg-layer-1-hover)"
-              aria-label={`React with ${e}`}
+              aria-label={t('workItem.reactWith', 'React with {{emoji}}', { emoji: e })}
             >
               {e}
             </button>

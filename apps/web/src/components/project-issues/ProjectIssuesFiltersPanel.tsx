@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Avatar } from '../ui';
 import {
   CollapsibleSection,
@@ -25,10 +26,6 @@ import type {
   WorkspaceMemberApiResponse,
 } from '../../api/types';
 import { getImageUrl, normalizeUuidKey } from '../../lib/utils';
-
-const emptyFilterHint = (
-  <div className="px-3 py-1.5 text-sm italic text-(--txt-tertiary)">No matches found</div>
-);
 
 export interface ProjectIssuesFiltersPanelProps {
   search: string;
@@ -59,6 +56,12 @@ export function ProjectIssuesFiltersPanel({
   onOpenCustomStart,
   onOpenCustomDue,
 }: ProjectIssuesFiltersPanelProps) {
+  const { t } = useTranslation();
+  const emptyFilterHint = (
+    <div className="px-3 py-1.5 text-sm italic text-(--txt-tertiary)">
+      {t('common.noMatchesFound', 'No matches found')}
+    </div>
+  );
   const [sectionOpen, setSectionOpen] = useState({
     priority: true,
     state: true,
@@ -135,7 +138,7 @@ export function ProjectIssuesFiltersPanel({
           </span>
           <input
             type="text"
-            placeholder="Search"
+            placeholder={t('common.search', 'Search')}
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -144,7 +147,7 @@ export function ProjectIssuesFiltersPanel({
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto py-1">
         <CollapsibleSection
-          title="Priority"
+          title={t('filters.priority', 'Priority')}
           open={sectionOpen.priority}
           onToggle={() => toggleSection('priority')}
           titleClassName="text-(--txt-tertiary)"
@@ -168,7 +171,7 @@ export function ProjectIssuesFiltersPanel({
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="State"
+          title={t('filters.state', 'State')}
           open={sectionOpen.state}
           onToggle={() => toggleSection('state')}
           titleClassName="text-(--txt-tertiary)"
@@ -186,13 +189,13 @@ export function ProjectIssuesFiltersPanel({
                 }));
               }}
               icon={STATE_GROUP_ICONS[g]}
-              label={STATE_GROUP_LABELS[g]}
+              label={t(`stateGroup.${g}`, STATE_GROUP_LABELS[g])}
             />
           ))}
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Assignee"
+          title={t('filters.assignee', 'Assignee')}
           open={sectionOpen.assignee}
           onToggle={() => toggleSection('assignee')}
           titleClassName="text-(--txt-tertiary)"
@@ -222,7 +225,7 @@ export function ProjectIssuesFiltersPanel({
                     });
                   }}
                   icon={youRowIcon}
-                  label="You"
+                  label={t('common.you', 'You')}
                 />
               )}
               {filteredMembers
@@ -264,7 +267,7 @@ export function ProjectIssuesFiltersPanel({
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Cycle"
+          title={t('filters.cycle', 'Cycle')}
           open={sectionOpen.cycle}
           onToggle={() => toggleSection('cycle')}
           titleClassName="text-(--txt-tertiary)"
@@ -301,7 +304,7 @@ export function ProjectIssuesFiltersPanel({
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Mention"
+          title={t('filters.mention', 'Mention')}
           open={sectionOpen.mention}
           onToggle={() => toggleSection('mention')}
           titleClassName="text-(--txt-tertiary)"
@@ -331,7 +334,7 @@ export function ProjectIssuesFiltersPanel({
                     });
                   }}
                   icon={youRowIcon}
-                  label="You"
+                  label={t('common.you', 'You')}
                 />
               )}
               {filteredMembers
@@ -373,7 +376,7 @@ export function ProjectIssuesFiltersPanel({
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Created by"
+          title={t('filters.createdBy', 'Created by')}
           open={sectionOpen.created_by}
           onToggle={() => toggleSection('created_by')}
           titleClassName="text-(--txt-tertiary)"
@@ -415,7 +418,7 @@ export function ProjectIssuesFiltersPanel({
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Label"
+          title={t('filters.label', 'Label')}
           open={sectionOpen.label}
           onToggle={() => toggleSection('label')}
           titleClassName="text-(--txt-tertiary)"
@@ -460,7 +463,7 @@ export function ProjectIssuesFiltersPanel({
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Work item Grouping"
+          title={t('filters.workItemGrouping', 'Work item Grouping')}
           open={sectionOpen.work_item_grouping}
           onToggle={() => toggleSection('work_item_grouping')}
           titleClassName="text-(--txt-tertiary)"
@@ -468,25 +471,25 @@ export function ProjectIssuesFiltersPanel({
           <FiltersPanelOptionRow
             checked={filters.workItemGrouping === 'all'}
             onToggle={() => setFilters((prev) => ({ ...prev, workItemGrouping: 'all' }))}
-            label="All Work items"
+            label={t('filters.allWorkItems', 'All Work items')}
             radio
           />
           <FiltersPanelOptionRow
             checked={filters.workItemGrouping === 'active'}
             onToggle={() => setFilters((prev) => ({ ...prev, workItemGrouping: 'active' }))}
-            label="Active Work items"
+            label={t('filters.activeWorkItems', 'Active Work items')}
             radio
           />
           <FiltersPanelOptionRow
             checked={filters.workItemGrouping === 'backlog'}
             onToggle={() => setFilters((prev) => ({ ...prev, workItemGrouping: 'backlog' }))}
-            label="Backlog Work items"
+            label={t('filters.backlogWorkItems', 'Backlog Work items')}
             radio
           />
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Start date"
+          title={t('filters.startDate', 'Start date')}
           open={sectionOpen.start_date}
           onToggle={() => toggleSection('start_date')}
           titleClassName="text-(--txt-tertiary)"
@@ -528,7 +531,7 @@ export function ProjectIssuesFiltersPanel({
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Due date"
+          title={t('filters.dueDate', 'Due date')}
           open={sectionOpen.due_date}
           onToggle={() => toggleSection('due_date')}
           titleClassName="text-(--txt-tertiary)"

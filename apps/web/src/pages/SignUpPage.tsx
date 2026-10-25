@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
 import { Button, Input } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
@@ -34,15 +35,16 @@ function isPasswordStrong(pw: string): boolean {
 }
 
 function PasswordStrengthIndicator({ password }: { password: string }) {
+  const { t } = useTranslation();
   const criteria = getPasswordCriteria(password);
   if (!password) return null;
 
   const items: [string, boolean][] = [
-    ['At least 8 characters', criteria.minLength],
-    ['Uppercase letter', criteria.hasUpper],
-    ['Lowercase letter', criteria.hasLower],
-    ['Number', criteria.hasDigit],
-    ['Special character', criteria.hasSpecial],
+    [t('auth.password.min8', 'At least 8 characters'), criteria.minLength],
+    [t('auth.password.upper', 'Uppercase letter'), criteria.hasUpper],
+    [t('auth.password.lower', 'Lowercase letter'), criteria.hasLower],
+    [t('auth.password.number', 'Number'), criteria.hasDigit],
+    [t('auth.password.special', 'Special character'), criteria.hasSpecial],
   ];
 
   return (
@@ -62,6 +64,7 @@ function PasswordStrengthIndicator({ password }: { password: string }) {
 }
 
 export function SignUpPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { setUserFromApi } = useAuth();
@@ -104,7 +107,7 @@ export function SignUpPage() {
     gitlab: false,
   });
 
-  useDocumentTitle('Sign up');
+  useDocumentTitle(t('auth.signUp.documentTitle', 'Sign up'));
 
   useEffect(() => {
     if (oauthError) {
@@ -160,7 +163,7 @@ export function SignUpPage() {
           return;
         }
         if (!resp.allow_public_signup && !inviteToken) {
-          setError('Sign-up is by invite only.');
+          setError(t('auth.signUp.inviteOnly', 'Sign-up is by invite only.'));
           setIsSubmitting(false);
           return;
         }
@@ -171,7 +174,10 @@ export function SignUpPage() {
             await sendMagicCode();
             setStep('code');
           } catch (err: unknown) {
-            setError(getApiErrorMessage(err) || 'Could not send sign-up code.');
+            setError(
+              getApiErrorMessage(err) ||
+                t('auth.signUp.sendCodeError', 'Could not send sign-up code.'),
+            );
           } finally {
             setIsSubmitting(false);
           }
@@ -193,6 +199,7 @@ export function SignUpPage() {
       isSmtpConfigured,
       sendMagicCode,
       navigate,
+      t,
     ],
   );
 
@@ -203,11 +210,13 @@ export function SignUpPage() {
       await sendMagicCode();
       setStep('code');
     } catch (err: unknown) {
-      setError(getApiErrorMessage(err) || 'Could not send sign-up code.');
+      setError(
+        getApiErrorMessage(err) || t('auth.signUp.sendCodeError', 'Could not send sign-up code.'),
+      );
     } finally {
       setIsSubmitting(false);
     }
-  }, [sendMagicCode]);
+  }, [sendMagicCode, t]);
 
   const handlePasswordSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -215,11 +224,11 @@ export function SignUpPage() {
       setError('');
 
       if (!isPasswordStrong(password)) {
-        setError('Password does not meet strength requirements.');
+        setError(t('auth.password.strengthError', 'Password does not meet strength requirements.'));
         return;
       }
       if (password !== confirmPassword) {
-        setError('Passwords do not match.');
+        setError(t('auth.password.mismatch', 'Passwords do not match.'));
         return;
       }
 
@@ -235,7 +244,10 @@ export function SignUpPage() {
         setUserFromApi(user);
         navigate(returnPath, { replace: true });
       } catch (err: unknown) {
-        setError(getApiErrorMessage(err) || 'Something went wrong. Please try again.');
+        setError(
+          getApiErrorMessage(err) ||
+            t('common.genericError', 'Something went wrong. Please try again.'),
+        );
       } finally {
         setIsSubmitting(false);
       }
@@ -250,6 +262,7 @@ export function SignUpPage() {
       setUserFromApi,
       navigate,
       returnPath,
+      t,
     ],
   );
 
@@ -259,7 +272,7 @@ export function SignUpPage() {
       setError('');
       const code = magicCode.replace(/\D/g, '');
       if (code.length !== 6) {
-        setError('Enter the 6-digit code from your email.');
+        setError(t('auth.signUp.codeLengthError', 'Enter the 6-digit code from your email.'));
         return;
       }
       setIsSubmitting(true);
@@ -274,12 +287,14 @@ export function SignUpPage() {
         setUserFromApi(user);
         navigate(returnPath, { replace: true });
       } catch (err: unknown) {
-        setError(getApiErrorMessage(err) || 'Invalid or expired code.');
+        setError(
+          getApiErrorMessage(err) || t('auth.signUp.invalidCode', 'Invalid or expired code.'),
+        );
       } finally {
         setIsSubmitting(false);
       }
     },
-    [magicCode, email, firstName, lastName, inviteToken, setUserFromApi, navigate, returnPath],
+    [magicCode, email, firstName, lastName, inviteToken, setUserFromApi, navigate, returnPath, t],
   );
 
   const goBackToEmail = useCallback(() => {
@@ -302,12 +317,17 @@ export function SignUpPage() {
     return (
       <AuthPageShell mode="sign-up" enableSignup={false}>
         <div className="w-full max-w-[22.5rem]">
-          <h1 className="mb-1 text-2xl font-semibold text-(--txt-primary)">Sign up is disabled</h1>
+          <h1 className="mb-1 text-2xl font-semibold text-(--txt-primary)">
+            {t('auth.signUp.disabledTitle', 'Sign up is disabled')}
+          </h1>
           <p className="mb-6 text-sm text-(--txt-secondary)">
-            Public sign-up is currently disabled. Please contact your administrator.
+            {t(
+              'auth.signUp.disabledBody',
+              'Public sign-up is currently disabled. Please contact your administrator.',
+            )}
           </p>
           <Link to="/login" className="text-sm font-medium text-(--txt-accent) hover:underline">
-            Go to sign in
+            {t('common.goToSignIn', 'Go to sign in')}
           </Link>
         </div>
       </AuthPageShell>
@@ -316,16 +336,19 @@ export function SignUpPage() {
 
   const title =
     step === 'email'
-      ? 'Create your account'
+      ? t('auth.signUp.title', 'Create your account')
       : step === 'code'
-        ? 'Verify your email'
-        : 'Create your account';
+        ? t('auth.signUp.titleCode', 'Verify your email')
+        : t('auth.signUp.title', 'Create your account');
   const subtitle =
     step === 'email'
-      ? 'Enter your email to get started.'
+      ? t('auth.signUp.subtitleEmail', 'Enter your email to get started.')
       : step === 'code'
-        ? 'We sent a 6-digit code to your inbox. It expires in 10 minutes.'
-        : 'Set up your account to get started.';
+        ? t(
+            'auth.signUp.subtitleCode',
+            'We sent a 6-digit code to your inbox. It expires in 10 minutes.',
+          )
+        : t('auth.signUp.subtitlePassword', 'Set up your account to get started.');
 
   return (
     <AuthPageShell mode="sign-up" enableSignup={allowSignup}>
@@ -368,7 +391,7 @@ export function SignUpPage() {
                         fill="#EA4335"
                       />
                     </svg>
-                    Sign up with Google
+                    {t('auth.signUp.signUpWithGoogle', 'Sign up with Google')}
                   </button>
                 )}
                 {oauthProviders.github && (
@@ -380,7 +403,7 @@ export function SignUpPage() {
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
                     </svg>
-                    Sign up with GitHub
+                    {t('auth.signUp.signUpWithGithub', 'Sign up with GitHub')}
                   </button>
                 )}
                 {oauthProviders.gitlab && (
@@ -392,7 +415,7 @@ export function SignUpPage() {
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M23.955 13.587l-1.342-4.135-2.664-8.189a.455.455 0 0 0-.867 0L16.418 9.45H7.582L4.918 1.263a.455.455 0 0 0-.867 0L1.386 9.452.044 13.587a.924.924 0 0 0 .331 1.023L12 23.054l11.625-8.443a.92.92 0 0 0 .33-1.024" />
                     </svg>
-                    Sign up with GitLab
+                    {t('auth.signUp.signUpWithGitlab', 'Sign up with GitLab')}
                   </button>
                 )}
                 <div className="relative my-2">
@@ -400,24 +423,28 @@ export function SignUpPage() {
                     <div className="w-full border-t border-(--border-primary)" />
                   </div>
                   <div className="relative flex justify-center text-xs">
-                    <span className="bg-(--bg-primary) px-2 text-(--txt-tertiary)">or</span>
+                    <span className="bg-(--bg-primary) px-2 text-(--txt-tertiary)">
+                      {t('common.or', 'or')}
+                    </span>
                   </div>
                 </div>
               </div>
             )}
             <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
               <Input
-                label="Email"
+                label={t('common.email', 'Email')}
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder={t('common.emailPlaceholder', 'you@example.com')}
                 required
                 autoComplete="email"
                 autoFocus
               />
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Checking…' : 'Continue with email'}
+                {isSubmitting
+                  ? t('common.checking', 'Checking…')
+                  : t('auth.signUp.continueWithEmail', 'Continue with email')}
               </Button>
             </form>
           </>
@@ -438,14 +465,14 @@ export function SignUpPage() {
 
             <div className="flex gap-3">
               <Input
-                label="First name"
+                label={t('common.firstName', 'First name')}
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 autoComplete="given-name"
                 autoFocus
               />
               <Input
-                label="Last name"
+                label={t('common.lastName', 'Last name')}
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 autoComplete="family-name"
@@ -454,11 +481,11 @@ export function SignUpPage() {
 
             <div className="relative">
               <Input
-                label="Password"
+                label={t('common.password', 'Password')}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
+                placeholder={t('auth.signUp.passwordPlaceholder', 'Enter password')}
                 required
                 autoComplete="new-password"
               />
@@ -466,7 +493,11 @@ export function SignUpPage() {
                 type="button"
                 className="absolute top-[2.1rem] right-3 text-(--txt-tertiary) hover:text-(--txt-primary)"
                 onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={
+                  showPassword
+                    ? t('common.hidePassword', 'Hide password')
+                    : t('common.showPassword', 'Show password')
+                }
                 aria-pressed={showPassword}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -477,11 +508,11 @@ export function SignUpPage() {
 
             <div className="relative">
               <Input
-                label="Confirm password"
+                label={t('common.confirmPassword', 'Confirm password')}
                 type={showConfirm ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter password"
+                placeholder={t('auth.signUp.confirmPasswordPlaceholder', 'Re-enter password')}
                 required
                 autoComplete="new-password"
               />
@@ -489,17 +520,24 @@ export function SignUpPage() {
                 type="button"
                 className="absolute top-[2.1rem] right-3 text-(--txt-tertiary) hover:text-(--txt-primary)"
                 onClick={() => setShowConfirm((v) => !v)}
-                aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
+                aria-label={
+                  showConfirm
+                    ? t('common.hideConfirmPassword', 'Hide confirm password')
+                    : t('common.showConfirmPassword', 'Show confirm password')
+                }
                 aria-pressed={showConfirm}
               >
                 {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
               {confirmPassword && password !== confirmPassword && (
-                <p className="mt-1 text-xs text-red-500">Passwords do not match</p>
+                <p className="mt-1 text-xs text-red-500">
+                  {t('common.passwordsDoNotMatchInline', 'Passwords do not match')}
+                </p>
               )}
               {confirmPassword && password === confirmPassword && (
                 <p className="mt-1 flex items-center gap-1 text-xs text-green-600">
-                  <CircleCheck className="h-3 w-3" /> Passwords match
+                  <CircleCheck className="h-3 w-3" />{' '}
+                  {t('common.passwordsMatch', 'Passwords match')}
                 </p>
               )}
             </div>
@@ -511,12 +549,14 @@ export function SignUpPage() {
                 disabled={isSubmitting}
                 className="w-full text-center text-xs font-medium text-(--txt-accent) hover:underline disabled:opacity-50"
               >
-                Sign up with email code instead
+                {t('auth.signUp.useMagicCode', 'Sign up with email code instead')}
               </button>
             )}
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Creating account…' : 'Create account'}
+              {isSubmitting
+                ? t('common.creatingAccount', 'Creating account…')
+                : t('common.createAccount', 'Create account')}
             </Button>
           </form>
         )}
@@ -536,14 +576,14 @@ export function SignUpPage() {
 
             <div className="flex gap-3">
               <Input
-                label="First name"
+                label={t('common.firstName', 'First name')}
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 autoComplete="given-name"
                 autoFocus
               />
               <Input
-                label="Last name"
+                label={t('common.lastName', 'Last name')}
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 autoComplete="family-name"
@@ -551,7 +591,7 @@ export function SignUpPage() {
             </div>
 
             <Input
-              label="6-digit code"
+              label={t('auth.signUp.codeLabel', '6-digit code')}
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
@@ -563,7 +603,9 @@ export function SignUpPage() {
             />
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Verifying…' : 'Continue'}
+              {isSubmitting
+                ? t('common.verifying', 'Verifying…')
+                : t('common.continue', 'Continue')}
             </Button>
 
             <button
@@ -572,7 +614,7 @@ export function SignUpPage() {
               disabled={isSubmitting}
               className="w-full text-center text-xs text-(--txt-accent) hover:underline disabled:opacity-50"
             >
-              Resend code
+              {t('auth.signUp.resendCode', 'Resend code')}
             </button>
 
             {isPasswordEnabled && (
@@ -581,7 +623,7 @@ export function SignUpPage() {
                 onClick={goBackToPassword}
                 className="w-full text-center text-xs text-(--txt-tertiary) hover:text-(--txt-primary)"
               >
-                Use password instead
+                {t('auth.signUp.usePassword', 'Use password instead')}
               </button>
             )}
           </form>

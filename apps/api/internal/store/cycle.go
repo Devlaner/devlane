@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/Devlaner/devlane/api/internal/model"
@@ -44,7 +45,33 @@ func (s *CycleStore) Delete(ctx context.Context, id uuid.UUID) error {
 
 // CycleIssue
 func (s *CycleStore) AddCycleIssue(ctx context.Context, ci *model.CycleIssue) error {
-	return s.db.WithContext(ctx).Create(ci).Error
+	return upsertCycleIssue(ctx, s.db, ci)
+}
+
+// upsertCycleIssue adds a cycle_issue link, reviving a soft-deleted row for the
+// same (cycle_id, issue_id) rather than colliding with the UNIQUE constraint
+// (which ignores deleted_at). Without this, removing an issue from a cycle and
+// re-adding it would fail with a unique violation. Pass tx to run inside a
+// transaction.
+func upsertCycleIssue(ctx context.Context, db *gorm.DB, ci *model.CycleIssue) error {
+	var existing model.CycleIssue
+	err := db.WithContext(ctx).Unscoped().
+		Where("cycle_id = ? AND issue_id = ?", ci.CycleID, ci.IssueID).
+		First(&existing).Error
+	if err == nil {
+		if !existing.DeletedAt.Valid {
+			return nil // already an active member of the cycle
+		}
+		existing.ProjectID = ci.ProjectID
+		existing.WorkspaceID = ci.WorkspaceID
+		existing.CreatedByID = ci.CreatedByID
+		existing.DeletedAt = gorm.DeletedAt{}
+		return db.WithContext(ctx).Unscoped().Save(&existing).Error
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	return db.WithContext(ctx).Create(ci).Error
 }
 
 func (s *CycleStore) RemoveCycleIssue(ctx context.Context, cycleID, issueID uuid.UUID) error {
@@ -64,6 +91,54 @@ func (s *CycleStore) ListCycleIssueIDs(ctx context.Context, cycleID uuid.UUID) (
 		ids = append(ids, r.IssueID)
 	}
 	return ids, nil
+}
+
+// TransferIncompleteIssues moves every incomplete work item (state group
+// backlog/unstarted/started, or no state) from the source cycle to the target
+// cycle in a single transaction, and returns how many were moved. Items already
+// in the target keep a single active link; the source link is soft-deleted.
+func (s *CycleStore) TransferIncompleteIssues(ctx context.Context, sourceCycleID uuid.UUID, target *model.Cycle, userID uuid.UUID) (int, error) {
+	var rows []struct {
+		IssueID uuid.UUID `gorm:"column:issue_id"`
+	}
+	err := s.db.WithContext(ctx).Raw(`
+		SELECT ci.issue_id
+		FROM cycle_issues ci
+		JOIN issues i ON i.id = ci.issue_id AND i.deleted_at IS NULL
+		LEFT JOIN states st ON st.id = i.state_id
+		WHERE ci.cycle_id = ? AND ci.deleted_at IS NULL
+		  AND COALESCE(st.group, 'backlog') IN ('backlog', 'unstarted', 'started')
+	`, sourceCycleID).Scan(&rows).Error
+	if err != nil {
+		return 0, err
+	}
+
+	moved := 0
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, r := range rows {
+			if err := tx.Where("cycle_id = ? AND issue_id = ?", sourceCycleID, r.IssueID).
+				Delete(&model.CycleIssue{}).Error; err != nil {
+				return err
+			}
+			cb := userID
+			ci := &model.CycleIssue{
+				CycleID:     target.ID,
+				IssueID:     r.IssueID,
+				ProjectID:   target.ProjectID,
+				WorkspaceID: target.WorkspaceID,
+				CreatedByID: &cb,
+			}
+			if err := upsertCycleIssue(ctx, tx, ci); err != nil {
+				return err
+			}
+			moved++
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return moved, nil
 }
 
 func (s *CycleStore) CountIssuesByCycleIDs(ctx context.Context, cycleIDs []uuid.UUID) (map[uuid.UUID]int, error) {
@@ -116,6 +191,42 @@ func (s *CycleStore) CycleStateDistribution(ctx context.Context, cycleID uuid.UU
 	}
 	for _, r := range rows {
 		out[r.Group] = r.Count
+	}
+	return out, nil
+}
+
+// StateDistributionByProject returns, per cycle in the project, issue counts
+// grouped by state group. Used to compute real completion progress on the
+// cycles list without a query per cycle.
+func (s *CycleStore) StateDistributionByProject(ctx context.Context, projectID uuid.UUID) (map[uuid.UUID]map[string]int, error) {
+	var rows []struct {
+		Owner uuid.UUID `gorm:"column:owner"`
+		Group string    `gorm:"column:grp"`
+		Count int       `gorm:"column:count"`
+	}
+	err := s.db.WithContext(ctx).Raw(`
+		SELECT ci.cycle_id AS owner, COALESCE(st."group", 'backlog') AS grp, COUNT(i.id) AS count
+		FROM cycle_issues ci
+		JOIN issues i ON i.id = ci.issue_id AND i.deleted_at IS NULL
+		LEFT JOIN states st ON st.id = i.state_id
+		WHERE ci.project_id = ? AND ci.deleted_at IS NULL
+		GROUP BY ci.cycle_id, COALESCE(st."group", 'backlog')
+	`, projectID).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[uuid.UUID]map[string]int)
+	for _, r := range rows {
+		m := out[r.Owner]
+		if m == nil {
+			m = map[string]int{"backlog": 0, "unstarted": 0, "started": 0, "completed": 0, "cancelled": 0}
+			out[r.Owner] = m
+		}
+		if _, ok := m[r.Group]; ok {
+			m[r.Group] += r.Count
+		} else {
+			m["backlog"] += r.Count
+		}
 	}
 	return out, nil
 }

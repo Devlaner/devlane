@@ -1,4 +1,5 @@
 import { type Dispatch, type SetStateAction, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   CollapsibleSection,
   FiltersPanelOptionRow,
@@ -30,13 +31,6 @@ import {
   PRIORITIES,
   type StateGroup,
 } from '../../types/workspaceViewFilters';
-
-const DUE_PRESETS: { id: ModuleDueDatePreset; label: string }[] = [
-  { id: 'overdue', label: 'Overdue' },
-  { id: 'this_week', label: 'Due this week' },
-  { id: 'no_due', label: 'No due date' },
-  { id: 'custom', label: 'Custom' },
-];
 
 const SECTION_TITLE_CLASS = 'text-[13px] font-medium text-(--txt-tertiary)';
 
@@ -82,6 +76,13 @@ export function ModuleWorkItemsFiltersPanel({
   onRequestDueCustom,
   onRequestStartCustom,
 }: ModuleWorkItemsFiltersPanelProps) {
+  const { t } = useTranslation();
+  const DUE_PRESETS: { id: ModuleDueDatePreset; label: string }[] = [
+    { id: 'overdue', label: t('filters.dueOverdue', 'Overdue') },
+    { id: 'this_week', label: t('filters.dueThisWeek', 'Due this week') },
+    { id: 'no_due', label: t('filters.noDueDate', 'No due date') },
+    { id: 'custom', label: t('filters.custom', 'Custom') },
+  ];
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState({
     priority: true,
@@ -107,7 +108,9 @@ export function ModuleWorkItemsFiltersPanel({
   );
 
   const emptyFilterHint = (
-    <div className="px-3 py-1.5 text-sm italic text-(--txt-tertiary)">No matches found</div>
+    <div className="px-3 py-1.5 text-sm italic text-(--txt-tertiary)">
+      {t('common.noMatchesFound', 'No matches found')}
+    </div>
   );
 
   const filteredCycles = cycles.filter((c) => filterSearch(c.name));
@@ -183,7 +186,7 @@ export function ModuleWorkItemsFiltersPanel({
   const memberDisplayName = (m: WorkspaceMemberApiResponse) =>
     m.member_display_name?.trim() ||
     m.member_email?.split('@')[0]?.trim() ||
-    (m.member_id ? m.member_id.slice(0, 12) : 'Member');
+    (m.member_id ? m.member_id.slice(0, 12) : t('common.member', 'Member'));
 
   const hasCustomStart = filters.startDatePresets.includes('custom');
   const toggleStartPreset = (d: Exclude<DatePreset, 'custom'>) => {
@@ -204,7 +207,7 @@ export function ModuleWorkItemsFiltersPanel({
           </span>
           <input
             type="text"
-            placeholder="Search"
+            placeholder={t('common.search', 'Search')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -213,7 +216,7 @@ export function ModuleWorkItemsFiltersPanel({
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto py-1">
         <CollapsibleSection
-          title="Priority"
+          title={t('filters.priority', 'Priority')}
           open={open.priority}
           onToggle={() => toggle('priority')}
           titleClassName={SECTION_TITLE_CLASS}
@@ -230,7 +233,7 @@ export function ModuleWorkItemsFiltersPanel({
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="State"
+          title={t('filters.state', 'State')}
           open={open.state}
           onToggle={() => toggle('state')}
           titleClassName={SECTION_TITLE_CLASS}
@@ -251,7 +254,7 @@ export function ModuleWorkItemsFiltersPanel({
                       checked={checked}
                       onToggle={() => toggleStateGroup(g)}
                       icon={STATE_GROUP_ICONS[g]}
-                      label={STATE_GROUP_LABELS[g]}
+                      label={t(`stateGroup.${g}`, STATE_GROUP_LABELS[g])}
                     />
                   );
                 })}
@@ -261,7 +264,7 @@ export function ModuleWorkItemsFiltersPanel({
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Assignee"
+          title={t('filters.assignee', 'Assignee')}
           open={open.assignee}
           onToggle={() => toggle('assignee')}
           titleClassName={SECTION_TITLE_CLASS}
@@ -299,7 +302,7 @@ export function ModuleWorkItemsFiltersPanel({
                         </span>
                       )
                     }
-                    label="You"
+                    label={t('common.you', 'You')}
                   />
                 ) : null}
                 {excludingYou.map((m) => {
@@ -330,7 +333,7 @@ export function ModuleWorkItemsFiltersPanel({
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Cycle"
+          title={t('filters.cycle', 'Cycle')}
           open={open.cycle}
           onToggle={() => toggle('cycle')}
           titleClassName={SECTION_TITLE_CLASS}
@@ -360,7 +363,7 @@ export function ModuleWorkItemsFiltersPanel({
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Mention"
+          title={t('filters.mention', 'Mention')}
           open={open.mention}
           onToggle={() => toggle('mention')}
           titleClassName={SECTION_TITLE_CLASS}
@@ -397,7 +400,7 @@ export function ModuleWorkItemsFiltersPanel({
                         </span>
                       )
                     }
-                    label="You"
+                    label={t('common.you', 'You')}
                   />
                 ) : null}
                 {excludingYou.map((m) => {
@@ -428,7 +431,7 @@ export function ModuleWorkItemsFiltersPanel({
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Created by"
+          title={t('filters.createdBy', 'Created by')}
           open={open.created_by}
           onToggle={() => toggle('created_by')}
           titleClassName={SECTION_TITLE_CLASS}
@@ -464,7 +467,7 @@ export function ModuleWorkItemsFiltersPanel({
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Label"
+          title={t('filters.label', 'Label')}
           open={open.label}
           onToggle={() => toggle('label')}
           titleClassName={SECTION_TITLE_CLASS}
@@ -498,7 +501,7 @@ export function ModuleWorkItemsFiltersPanel({
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Work item Grouping"
+          title={t('filters.workItemGrouping', 'Work item Grouping')}
           open={open.work_item_grouping}
           onToggle={() => toggle('work_item_grouping')}
           titleClassName={SECTION_TITLE_CLASS}
@@ -506,25 +509,25 @@ export function ModuleWorkItemsFiltersPanel({
           <FiltersPanelOptionRow
             checked={filters.workItemGrouping === 'all'}
             onToggle={() => setFilters((prev) => ({ ...prev, workItemGrouping: 'all' }))}
-            label="All Work items"
+            label={t('filters.allWorkItems', 'All Work items')}
             radio
           />
           <FiltersPanelOptionRow
             checked={filters.workItemGrouping === 'active'}
             onToggle={() => setFilters((prev) => ({ ...prev, workItemGrouping: 'active' }))}
-            label="Active Work items"
+            label={t('filters.activeWorkItems', 'Active Work items')}
             radio
           />
           <FiltersPanelOptionRow
             checked={filters.workItemGrouping === 'backlog'}
             onToggle={() => setFilters((prev) => ({ ...prev, workItemGrouping: 'backlog' }))}
-            label="Backlog Work items"
+            label={t('filters.backlogWorkItems', 'Backlog Work items')}
             radio
           />
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Start date"
+          title={t('filters.startDate', 'Start date')}
           open={open.start}
           onToggle={() => toggle('start')}
           titleClassName={SECTION_TITLE_CLASS}
@@ -568,7 +571,7 @@ export function ModuleWorkItemsFiltersPanel({
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Due date"
+          title={t('filters.dueDate', 'Due date')}
           open={open.due}
           onToggle={() => toggle('due')}
           titleClassName={SECTION_TITLE_CLASS}

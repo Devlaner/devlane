@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { Button, Input } from './ui';
 import { Dropdown, DatePickerTrigger, SelectParentModal } from './work-item';
 import { stateService } from '../services/stateService';
@@ -157,6 +158,7 @@ export function CreateWorkItemModal({
   draftOnly = false,
   onSave,
 }: CreateWorkItemModalProps) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [projectId, setProjectId] = useState(defaultProjectId ?? projects[0]?.id ?? '');
@@ -262,7 +264,7 @@ export function CreateWorkItemModal({
             name:
               (m.member_display_name && m.member_display_name.trim()) ||
               (m.member_email && m.member_email.split('@')[0]) ||
-              'Member',
+              t('common.member', 'Member'),
           })),
         );
       })
@@ -272,7 +274,7 @@ export function CreateWorkItemModal({
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug]);
+  }, [workspaceSlug, t]);
 
   const stateName = stateId ? (states.find((s) => s.id === stateId)?.name ?? '') : '';
   const showModules = selectedProject?.module_view ?? true;
@@ -421,7 +423,11 @@ export function CreateWorkItemModal({
       setLabelSearch('');
       setOpenDropdown(null);
     } catch (err) {
-      setCreateLabelError(err instanceof Error ? err.message : 'Failed to create label.');
+      setCreateLabelError(
+        err instanceof Error
+          ? err.message
+          : t('workItem.create.labelError', 'Failed to create label.'),
+      );
     } finally {
       setCreateLabelLoading(false);
     }
@@ -444,7 +450,9 @@ export function CreateWorkItemModal({
         >
           <div className="px-5 pt-5 pb-2">
             <h2 id="create-work-item-title" className="text-xl font-bold text-(--txt-primary)">
-              {draftOnly ? 'Create draft work item' : 'Create new work item'}
+              {draftOnly
+                ? t('workItem.create.titleDraft', 'Create draft work item')
+                : t('workItem.create.title', 'Create new work item')}
             </h2>
             <div className="mt-2">
               <Dropdown
@@ -452,7 +460,7 @@ export function CreateWorkItemModal({
                 openId={openDropdown}
                 onOpen={setOpenDropdown}
                 allowDismissInsideDialog
-                label="Select project"
+                label={t('common.selectProject', 'Select project')}
                 icon={
                   selectedProject?.name.includes('Logistics') ? <IconTruck /> : <IconBuilding />
                 }
@@ -462,7 +470,7 @@ export function CreateWorkItemModal({
                 <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
                   <input
                     type="text"
-                    placeholder="Search..."
+                    placeholder={t('common.searchEllipsis', 'Search...')}
                     value={projectSearch}
                     onChange={(e) => setProjectSearch(e.target.value)}
                     className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
@@ -489,13 +497,13 @@ export function CreateWorkItemModal({
 
           <div className="px-5 py-4">
             <Input
-              placeholder="Title"
+              placeholder={t('common.title', 'Title')}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="mb-3 border-(--border-subtle)"
             />
             <textarea
-              placeholder="Click to add description"
+              placeholder={t('workItem.create.descriptionPlaceholder', 'Click to add description')}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={5}
@@ -506,9 +514,9 @@ export function CreateWorkItemModal({
                 id="state"
                 openId={openDropdown}
                 onOpen={setOpenDropdown}
-                label="Backlog"
+                label={t('workItem.create.backlog', 'Backlog')}
                 icon={<IconCog />}
-                displayValue={stateName || 'Backlog'}
+                displayValue={stateName || t('workItem.create.backlog', 'Backlog')}
                 compact
                 allowDismissInsideDialog
                 panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
@@ -516,7 +524,7 @@ export function CreateWorkItemModal({
                 <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
                   <input
                     type="text"
-                    placeholder="Search..."
+                    placeholder={t('common.searchEllipsis', 'Search...')}
                     value={stateSearch}
                     onChange={(e) => setStateSearch(e.target.value)}
                     className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
@@ -524,7 +532,9 @@ export function CreateWorkItemModal({
                 </div>
                 <div className="overflow-auto py-0.5 [&_button]:px-2 [&_button]:py-1 [&_button]:text-xs">
                   {filteredStates.length === 0 ? (
-                    <div className="px-2 py-1 text-xs text-(--txt-tertiary)">No states</div>
+                    <div className="px-2 py-1 text-xs text-(--txt-tertiary)">
+                      {t('workItem.create.noStates', 'No states')}
+                    </div>
                   ) : (
                     filteredStates.map((s) => (
                       <button
@@ -547,11 +557,11 @@ export function CreateWorkItemModal({
                 openId={openDropdown}
                 onOpen={setOpenDropdown}
                 allowDismissInsideDialog
-                label="None"
+                label={t('common.none', 'None')}
                 icon={<IconCircleSlash />}
                 displayValue={
                   priority === 'none'
-                    ? 'None'
+                    ? t('common.none', 'None')
                     : priority.charAt(0).toUpperCase() + priority.slice(1)
                 }
                 compact
@@ -576,16 +586,16 @@ export function CreateWorkItemModal({
                 openId={openDropdown}
                 onOpen={setOpenDropdown}
                 allowDismissInsideDialog
-                label="Assignees"
+                label={t('workItem.create.assignees', 'Assignees')}
                 icon={<IconUsers />}
-                displayValue={assigneeNames || 'Add assignees'}
+                displayValue={assigneeNames || t('workItem.create.addAssignees', 'Add assignees')}
                 compact
                 panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
               >
                 <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
                   <input
                     type="text"
-                    placeholder="Search..."
+                    placeholder={t('common.searchEllipsis', 'Search...')}
                     value={assigneeSearch}
                     onChange={(e) => setAssigneeSearch(e.target.value)}
                     className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
@@ -600,7 +610,7 @@ export function CreateWorkItemModal({
                     }}
                     className="w-full text-left text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
                   >
-                    No assignee
+                    {t('workItem.create.noAssignee', 'No assignee')}
                   </button>
                   {filteredUsers.map((u) => (
                     <button
@@ -623,7 +633,7 @@ export function CreateWorkItemModal({
                 openId={openDropdown}
                 onOpen={setOpenDropdown}
                 allowDismissInsideDialog
-                label="Labels"
+                label={t('workItem.create.labels', 'Labels')}
                 icon={<IconTag />}
                 displayValue={labelNames}
                 compact
@@ -632,7 +642,7 @@ export function CreateWorkItemModal({
                 <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
                   <input
                     type="text"
-                    placeholder="Search..."
+                    placeholder={t('common.searchEllipsis', 'Search...')}
                     value={labelSearch}
                     onChange={(e) => setLabelSearch(e.target.value)}
                     className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
@@ -664,8 +674,10 @@ export function CreateWorkItemModal({
                           className="w-full text-left text-(--brand-default) hover:bg-(--bg-layer-1-hover) disabled:opacity-50"
                         >
                           {createLabelLoading
-                            ? 'Creating…'
-                            : `Create label "${labelSearch.trim()}"`}
+                            ? t('common.creating', 'Creating…')
+                            : t('workItem.create.createLabel', 'Create label "{{name}}"', {
+                                name: labelSearch.trim(),
+                              })}
                         </button>
                         {createLabelError && (
                           <p className="px-2 py-1 text-xs text-red-600">{createLabelError}</p>
@@ -675,18 +687,18 @@ export function CreateWorkItemModal({
                 </div>
               </Dropdown>
               <DatePickerTrigger
-                label="Start date"
+                label={t('common.startDate', 'Start date')}
                 icon={<IconCalendar />}
                 value={startDate}
                 onChange={setStartDate}
-                placeholder="Start date"
+                placeholder={t('common.startDate', 'Start date')}
               />
               <DatePickerTrigger
-                label="Due date"
+                label={t('common.dueDate', 'Due date')}
                 icon={<IconCalendar />}
                 value={dueDate}
                 onChange={setDueDate}
-                placeholder="Due date"
+                placeholder={t('common.dueDate', 'Due date')}
               />
               {showCycles ? (
                 <Dropdown
@@ -694,16 +706,16 @@ export function CreateWorkItemModal({
                   openId={openDropdown}
                   onOpen={setOpenDropdown}
                   allowDismissInsideDialog
-                  label="Cycle"
+                  label={t('common.cycle', 'Cycle')}
                   icon={<IconCycle />}
-                  displayValue={cycleName || 'No cycle'}
+                  displayValue={cycleName || t('workItem.create.noCycle', 'No cycle')}
                   compact
                   panelClassName="flex min-w-[120px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
                 >
                   <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
                     <input
                       type="text"
-                      placeholder="Search..."
+                      placeholder={t('common.searchEllipsis', 'Search...')}
                       value={cycleSearch}
                       onChange={(e) => setCycleSearch(e.target.value)}
                       className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
@@ -718,7 +730,7 @@ export function CreateWorkItemModal({
                       }}
                       className="w-full text-left text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
                     >
-                      No cycle
+                      {t('workItem.create.noCycle', 'No cycle')}
                     </button>
                     {filteredCycles.map((c) => (
                       <button
@@ -742,7 +754,7 @@ export function CreateWorkItemModal({
                   openId={openDropdown}
                   onOpen={setOpenDropdown}
                   allowDismissInsideDialog
-                  label="Modules"
+                  label={t('common.modules', 'Modules')}
                   icon={<IconGrid />}
                   displayValue={moduleName ?? ''}
                   compact
@@ -751,7 +763,7 @@ export function CreateWorkItemModal({
                   <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
                     <input
                       type="text"
-                      placeholder="Search..."
+                      placeholder={t('common.searchEllipsis', 'Search...')}
                       value={moduleSearch}
                       onChange={(e) => setModuleSearch(e.target.value)}
                       className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
@@ -766,7 +778,7 @@ export function CreateWorkItemModal({
                       }}
                       className="w-full text-left text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover)"
                     >
-                      No module
+                      {t('workItem.create.noModule', 'No module')}
                     </button>
                     {filteredModules.map((m) => (
                       <button
@@ -792,7 +804,9 @@ export function CreateWorkItemModal({
                 <span className="shrink-0 text-(--txt-icon-tertiary)">
                   <IconLink2 />
                 </span>
-                <span className="truncate">{parentTitle || 'Add parent'}</span>
+                <span className="truncate">
+                  {parentTitle || t('workItem.create.addParent', 'Add parent')}
+                </span>
               </button>
             </div>
           </div>
@@ -808,16 +822,16 @@ export function CreateWorkItemModal({
                     className="sr-only"
                   />
                 </span>
-                Create more
+                {t('workItem.create.createMore', 'Create more')}
               </label>
               {createError && <p className="text-sm text-(--txt-danger-primary)">{createError}</p>}
             </div>
             <div className="flex items-center gap-2">
               <Button variant="secondary" onClick={handleDiscard} disabled={submitting}>
-                Discard
+                {t('common.discard', 'Discard')}
               </Button>
               <Button variant="primary" onClick={handleSave} disabled={!title.trim() || submitting}>
-                {submitting ? 'Creating…' : 'Save'}
+                {submitting ? t('common.creating', 'Creating…') : t('common.save', 'Save')}
               </Button>
             </div>
           </div>

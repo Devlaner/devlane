@@ -152,6 +152,46 @@ export function serializeSettings(s: SavedViewDisplaySettings): string {
   });
 }
 
+/**
+ * Split display settings into the backend's two JSON columns: `display_properties`
+ * carries the visible columns, `display_filters` carries grouping/ordering. This is
+ * the shape written by the saved-view "Save changes" action and read back by
+ * {@link parseSavedViewDisplayFromRecords}.
+ */
+export function savedViewDisplayToRecords(s: SavedViewDisplaySettings): {
+  displayFilters: Record<string, unknown>;
+  displayProperties: Record<string, unknown>;
+} {
+  return {
+    displayFilters: {
+      groupBy: s.groupBy,
+      orderBy: s.orderBy,
+      orderDirection: s.orderDirection,
+      showSubWorkItems: s.showSubWorkItems,
+    },
+    displayProperties: {
+      displayProperties: [...s.displayProperties],
+    },
+  };
+}
+
+/**
+ * Rebuild display settings from a saved view's `display_filters` + `display_properties`
+ * records. Returns null when the view has no stored display settings, so callers can
+ * fall back to localStorage/defaults. Reuses {@link parsePersistedSavedViewDisplay}, so
+ * unknown or partial values are validated and defaulted the same way as the local cache.
+ */
+export function parseSavedViewDisplayFromRecords(
+  displayFilters: Record<string, unknown> | null | undefined,
+  displayProperties: Record<string, unknown> | null | undefined,
+): SavedViewDisplaySettings | null {
+  const hasFilters = Boolean(displayFilters) && Object.keys(displayFilters ?? {}).length > 0;
+  const hasProps = Boolean(displayProperties) && Object.keys(displayProperties ?? {}).length > 0;
+  if (!hasFilters && !hasProps) return null;
+  const combined = { ...(displayFilters ?? {}), ...(displayProperties ?? {}) };
+  return parsePersistedSavedViewDisplay(JSON.stringify(combined));
+}
+
 export const SAVED_VIEW_DISPLAY_PROPERTY_LABELS: Record<SavedViewDisplayPropertyId, string> = {
   id: 'ID',
   assignee: 'Assignee',

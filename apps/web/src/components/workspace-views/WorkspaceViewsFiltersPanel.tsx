@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DateRangeModal } from './DateRangeModal';
 import { CollapsibleSection } from './WorkspaceViewsFiltersShared';
 import {
@@ -47,6 +48,7 @@ export function WorkspaceViewsFiltersPanel({
   compact = false,
 }: WorkspaceViewsFiltersPanelProps) {
   void onCloseParent; // kept for compatibility; Custom date modal intentionally keeps dropdown open
+  const { t } = useTranslation();
   const { user: currentUser } = useAuth();
   const [search, setSearch] = useState('');
   const [members, setMembers] = useState<WorkspaceMemberApiResponse[]>([]);
@@ -130,7 +132,7 @@ export function WorkspaceViewsFiltersPanel({
   const content = (
     <div className={compact ? 'min-h-0 flex-1 overflow-y-auto py-1' : 'space-y-0'}>
       <CollapsibleSection
-        title="Priority"
+        title={t('filters.priority', 'Priority')}
         open={sectionOpen.priority}
         onToggle={() => toggleSection('priority')}
       >
@@ -161,7 +163,7 @@ export function WorkspaceViewsFiltersPanel({
       </CollapsibleSection>
 
       <CollapsibleSection
-        title="State"
+        title={t('filters.state', 'State')}
         open={sectionOpen.state_group}
         onToggle={() => toggleSection('state_group')}
       >
@@ -186,13 +188,13 @@ export function WorkspaceViewsFiltersPanel({
             <span className="flex size-4 shrink-0 items-center justify-center">
               {STATE_GROUP_ICONS[g]}
             </span>
-            <span>{STATE_GROUP_LABELS[g]}</span>
+            <span>{t(`stateGroup.${g}`, STATE_GROUP_LABELS[g])}</span>
           </label>
         ))}
       </CollapsibleSection>
 
       <CollapsibleSection
-        title="Assignee"
+        title={t('filters.assignee', 'Assignee')}
         open={sectionOpen.assignee}
         onToggle={() => toggleSection('assignee')}
       >
@@ -222,7 +224,7 @@ export function WorkspaceViewsFiltersPanel({
                 {currentUser.name?.charAt(0) ?? '?'}
               </span>
             )}
-            <span>You</span>
+            <span>{t('common.you', 'You')}</span>
           </label>
         )}
         {members
@@ -268,7 +270,7 @@ export function WorkspaceViewsFiltersPanel({
       </CollapsibleSection>
 
       <CollapsibleSection
-        title="Created by"
+        title={t('filters.createdBy', 'Created by')}
         open={sectionOpen.created_by}
         onToggle={() => toggleSection('created_by')}
       >
@@ -298,7 +300,7 @@ export function WorkspaceViewsFiltersPanel({
                 {currentUser.name?.charAt(0) ?? '?'}
               </span>
             )}
-            <span>You</span>
+            <span>{t('common.you', 'You')}</span>
           </label>
         )}
         {members
@@ -344,13 +346,16 @@ export function WorkspaceViewsFiltersPanel({
       </CollapsibleSection>
 
       <CollapsibleSection
-        title="Label"
+        title={t('filters.label', 'Label')}
         open={sectionOpen.label}
         onToggle={() => toggleSection('label')}
       >
         {allLabels.length === 0 ? (
           <p className="px-3 py-2 text-sm text-(--txt-tertiary)">
-            No labels in workspace. Add labels in a project to filter by them.
+            {t(
+              'filters.noLabelsInWorkspace',
+              'No labels in workspace. Add labels in a project to filter by them.',
+            )}
           </p>
         ) : (
           allLabels
@@ -386,7 +391,7 @@ export function WorkspaceViewsFiltersPanel({
       </CollapsibleSection>
 
       <CollapsibleSection
-        title="Project"
+        title={t('filters.project', 'Project')}
         open={sectionOpen.project}
         onToggle={() => toggleSection('project')}
       >
@@ -419,7 +424,7 @@ export function WorkspaceViewsFiltersPanel({
       </CollapsibleSection>
 
       <CollapsibleSection
-        title="Work item Grouping"
+        title={t('filters.workItemGrouping', 'Work item Grouping')}
         open={sectionOpen.grouping}
         onToggle={() => toggleSection('grouping')}
       >
@@ -437,17 +442,17 @@ export function WorkspaceViewsFiltersPanel({
             />
             <span>
               {g === 'all'
-                ? 'All Work items'
+                ? t('filters.allWorkItems', 'All Work items')
                 : g === 'active'
-                  ? 'Active Work items'
-                  : 'Backlog Work items'}
+                  ? t('filters.activeWorkItems', 'Active Work items')
+                  : t('filters.backlogWorkItems', 'Backlog Work items')}
             </span>
           </label>
         ))}
       </CollapsibleSection>
 
       <CollapsibleSection
-        title="Start date"
+        title={t('filters.startDate', 'Start date')}
         open={sectionOpen.start_date}
         onToggle={() => toggleSection('start_date')}
       >
@@ -495,7 +500,7 @@ export function WorkspaceViewsFiltersPanel({
       </CollapsibleSection>
 
       <CollapsibleSection
-        title="Due date"
+        title={t('filters.dueDate', 'Due date')}
         open={sectionOpen.due_date}
         onToggle={() => toggleSection('due_date')}
       >
@@ -554,7 +559,7 @@ export function WorkspaceViewsFiltersPanel({
             </span>
             <input
               type="text"
-              placeholder="Search"
+              placeholder={t('common.search', 'Search')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -566,7 +571,11 @@ export function WorkspaceViewsFiltersPanel({
       <DateRangeModal
         open={dateRangeModal !== null}
         onClose={() => setDateRangeModal(null)}
-        title={dateRangeModal === 'start' ? 'Start date range' : 'Due date range'}
+        title={
+          dateRangeModal === 'start'
+            ? t('filters.startDateRange', 'Start date range')
+            : t('filters.dueDateRange', 'Due date range')
+        }
         after={dateRangeModal === 'start' ? filters.startAfter : filters.dueAfter}
         before={dateRangeModal === 'start' ? filters.startBefore : filters.dueBefore}
         onApply={(after, before) => {

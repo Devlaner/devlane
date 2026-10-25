@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,15 +33,16 @@ function isPasswordStrong(pw: string): boolean {
 }
 
 function PasswordStrengthIndicator({ password }: { password: string }) {
+  const { t } = useTranslation();
   const criteria = getPasswordCriteria(password);
   if (!password) return null;
 
   const items: [string, boolean][] = [
-    ['At least 8 characters', criteria.minLength],
-    ['Uppercase letter', criteria.hasUpper],
-    ['Lowercase letter', criteria.hasLower],
-    ['Number', criteria.hasDigit],
-    ['Special character', criteria.hasSpecial],
+    [t('auth.password.min8', 'At least 8 characters'), criteria.minLength],
+    [t('auth.password.upper', 'Uppercase letter'), criteria.hasUpper],
+    [t('auth.password.lower', 'Lowercase letter'), criteria.hasLower],
+    [t('auth.password.number', 'Number'), criteria.hasDigit],
+    [t('auth.password.special', 'Special character'), criteria.hasSpecial],
   ];
 
   return (
@@ -60,6 +62,7 @@ function PasswordStrengthIndicator({ password }: { password: string }) {
 }
 
 export function SetPasswordPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, setUserFromApi } = useAuth();
 
@@ -75,7 +78,7 @@ export function SetPasswordPage() {
     [password, confirmPassword],
   );
 
-  useDocumentTitle('Set password');
+  useDocumentTitle(t('auth.setPassword.documentTitle', 'Set password'));
 
   const isDisabled = !isPasswordStrong(password) || !passwordsMatch || isSubmitting;
 
@@ -85,11 +88,11 @@ export function SetPasswordPage() {
       setError('');
 
       if (!isPasswordStrong(password)) {
-        setError('Password does not meet strength requirements.');
+        setError(t('auth.password.strengthError', 'Password does not meet strength requirements.'));
         return;
       }
       if (!passwordsMatch) {
-        setError('Passwords do not match.');
+        setError(t('auth.password.mismatch', 'Passwords do not match.'));
         return;
       }
 
@@ -99,19 +102,26 @@ export function SetPasswordPage() {
         setUserFromApi(updated);
         navigate('/', { replace: true });
       } catch (err: unknown) {
-        setError(getApiErrorMessage(err) || 'Something went wrong. Please try again.');
+        setError(
+          getApiErrorMessage(err) ||
+            t('common.genericError', 'Something went wrong. Please try again.'),
+        );
       } finally {
         setIsSubmitting(false);
       }
     },
-    [password, passwordsMatch, setUserFromApi, navigate],
+    [password, passwordsMatch, setUserFromApi, navigate, t],
   );
 
   return (
     <AuthPageShell mode="sign-in" enableSignup={false}>
       <div className="w-full max-w-[22.5rem]">
-        <h1 className="mb-1 text-2xl font-semibold text-(--txt-primary)">Set password</h1>
-        <p className="mb-6 text-sm text-(--txt-secondary)">Create a new password.</p>
+        <h1 className="mb-1 text-2xl font-semibold text-(--txt-primary)">
+          {t('auth.setPassword.title', 'Set password')}
+        </h1>
+        <p className="mb-6 text-sm text-(--txt-secondary)">
+          {t('auth.setPassword.subtitle', 'Create a new password.')}
+        </p>
 
         {error && (
           <div className="mb-4 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -121,15 +131,21 @@ export function SetPasswordPage() {
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input label="Email" type="email" value={user?.email ?? ''} disabled autoComplete="off" />
+          <Input
+            label={t('common.email', 'Email')}
+            type="email"
+            value={user?.email ?? ''}
+            disabled
+            autoComplete="off"
+          />
 
           <div className="relative">
             <Input
-              label="Password"
+              label={t('common.password', 'Password')}
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
+              placeholder={t('auth.setPassword.passwordPlaceholder', 'Enter password')}
               required
               autoComplete="new-password"
               autoFocus
@@ -138,7 +154,11 @@ export function SetPasswordPage() {
               type="button"
               className="absolute top-[2.1rem] right-3 text-(--txt-tertiary) hover:text-(--txt-primary)"
               onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-label={
+                showPassword
+                  ? t('common.hidePassword', 'Hide password')
+                  : t('common.showPassword', 'Show password')
+              }
               aria-pressed={showPassword}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -149,11 +169,11 @@ export function SetPasswordPage() {
 
           <div className="relative">
             <Input
-              label="Confirm password"
+              label={t('common.confirmPassword', 'Confirm password')}
               type={showConfirm ? 'text' : 'password'}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Re-enter password"
+              placeholder={t('auth.setPassword.confirmPasswordPlaceholder', 'Re-enter password')}
               required
               autoComplete="new-password"
             />
@@ -161,23 +181,31 @@ export function SetPasswordPage() {
               type="button"
               className="absolute top-[2.1rem] right-3 text-(--txt-tertiary) hover:text-(--txt-primary)"
               onClick={() => setShowConfirm((v) => !v)}
-              aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
+              aria-label={
+                showConfirm
+                  ? t('common.hideConfirmPassword', 'Hide confirm password')
+                  : t('common.showConfirmPassword', 'Show confirm password')
+              }
               aria-pressed={showConfirm}
             >
               {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
             {confirmPassword && !passwordsMatch && (
-              <p className="mt-1 text-xs text-red-500">Passwords do not match</p>
+              <p className="mt-1 text-xs text-red-500">
+                {t('common.passwordsDoNotMatchInline', 'Passwords do not match')}
+              </p>
             )}
             {passwordsMatch && (
               <p className="mt-1 flex items-center gap-1 text-xs text-green-600">
-                <CircleCheck className="h-3 w-3" /> Passwords match
+                <CircleCheck className="h-3 w-3" /> {t('common.passwordsMatch', 'Passwords match')}
               </p>
             )}
           </div>
 
           <Button type="submit" className="w-full" disabled={isDisabled}>
-            {isSubmitting ? 'Setting password…' : 'Continue'}
+            {isSubmitting
+              ? t('auth.setPassword.setting', 'Setting password…')
+              : t('common.continue', 'Continue')}
           </Button>
         </form>
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { ArchiveRestore } from 'lucide-react';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -20,11 +21,14 @@ function formatArchivedAt(iso: string | null | undefined): string {
 }
 
 export function ArchivesPage() {
+  const { t } = useTranslation();
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
-  useDocumentTitle('Archives');
+  useDocumentTitle(t('archives.documentTitle', 'Archives'));
 
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
+  const [archivedProjects, setArchivedProjects] = useState<ProjectApiResponse[]>([]);
+  const [restoringProjectId, setRestoringProjectId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -43,18 +47,20 @@ export function ArchivesPage() {
       // Fetch one extra to detect whether more pages exist.
       issueService.listWorkspaceArchived(workspaceSlug, { limit: ARCHIVES_PAGE_SIZE + 1 }),
       projectService.list(workspaceSlug).catch(() => [] as ProjectApiResponse[]),
+      projectService.listArchived(workspaceSlug).catch(() => [] as ProjectApiResponse[]),
     ])
-      .then(([archived, projs]) => {
+      .then(([archived, projs, archProjs]) => {
         if (cancelled) return;
         const page = archived.slice(0, ARCHIVES_PAGE_SIZE);
         setHasMore(archived.length > ARCHIVES_PAGE_SIZE);
         setIssues(page);
         setFetchedCount(page.length);
         setProjects(projs ?? []);
+        setArchivedProjects(archProjs ?? []);
         setError(null);
       })
       .catch(() => {
-        if (!cancelled) setError('Could not load archived work items.');
+        if (!cancelled) setError(t('archives.loadError', 'Could not load archived work items.'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -62,7 +68,7 @@ export function ArchivesPage() {
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug]);
+  }, [workspaceSlug, t]);
 
   const loadMore = async () => {
     if (!workspaceSlug || loadingMore) return;
@@ -81,7 +87,7 @@ export function ArchivesPage() {
         return [...prev, ...page.filter((i) => !seen.has(i.id))];
       });
     } catch {
-      setError('Could not load more archived work items.');
+      setError(t('archives.loadMoreError', 'Could not load more archived work items.'));
     } finally {
       setLoadingMore(false);
     }
@@ -96,9 +102,22 @@ export function ArchivesPage() {
       await issueService.restore(workspaceSlug, issue.project_id, issue.id);
       setIssues((prev) => prev.filter((i) => i.id !== issue.id));
     } catch {
-      setError('Could not restore that work item.');
+      setError(t('archives.restoreItemError', 'Could not restore that work item.'));
     } finally {
       setRestoringId(null);
+    }
+  };
+
+  const restoreProject = async (project: ProjectApiResponse) => {
+    if (!workspaceSlug || restoringProjectId) return;
+    setRestoringProjectId(project.id);
+    try {
+      await projectService.restore(workspaceSlug, project.id);
+      setArchivedProjects((prev) => prev.filter((p) => p.id !== project.id));
+    } catch {
+      setError(t('archives.restoreProjectError', 'Could not restore that project.'));
+    } finally {
+      setRestoringProjectId(null);
     }
   };
 
@@ -111,9 +130,14 @@ export function ArchivesPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6 pb-8">
       <div>
-        <h1 className="text-2xl font-semibold text-(--txt-primary)">Archives</h1>
+        <h1 className="text-2xl font-semibold text-(--txt-primary)">
+          {t('archives.title', 'Archives')}
+        </h1>
         <p className="mt-0.5 text-sm text-(--txt-secondary)">
-          Archived work items across this workspace. Restore one to bring it back to its project.
+          {t(
+            'archives.subtitle',
+            'Archived work items across this workspace. Restore one to bring it back to its project.',
+          )}
         </p>
       </div>
 
@@ -123,13 +147,53 @@ export function ArchivesPage() {
         </p>
       )}
 
+      {!loading && archivedProjects.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-sm font-medium text-(--txt-secondary)">
+            {t('archives.archivedProjects', 'Archived projects')}
+          </h2>
+          <ul className="divide-y divide-(--border-subtle) overflow-hidden rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1)">
+            {archivedProjects.map((project) => (
+              <li
+                key={project.id}
+                className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-(--bg-layer-1-hover)"
+              >
+                <span className="min-w-0 flex-1 truncate font-medium text-(--txt-primary)">
+                  {project.name}
+                </span>
+                <span className="shrink-0 text-xs text-(--txt-tertiary)">
+                  {t('archives.archivedOn', 'Archived {{date}}', {
+                    date: formatArchivedAt(project.archived_at),
+                  })}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void restoreProject(project)}
+                  disabled={restoringProjectId === project.id}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-secondary) transition-colors hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary) disabled:opacity-50"
+                >
+                  <ArchiveRestore className="size-3.5" />
+                  {restoringProjectId === project.id
+                    ? t('archives.restoring', 'Restoring…')
+                    : t('common.restore', 'Restore')}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {loading ? (
-        <p className="px-1 py-10 text-center text-sm text-(--txt-tertiary)">Loading archives…</p>
+        <p className="px-1 py-10 text-center text-sm text-(--txt-tertiary)">
+          {t('archives.loading', 'Loading archives…')}
+        </p>
       ) : issues.length === 0 ? (
         <div className="rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-4 py-16 text-center">
-          <p className="text-sm font-medium text-(--txt-secondary)">No archived work items</p>
+          <p className="text-sm font-medium text-(--txt-secondary)">
+            {t('archives.empty', 'No archived work items')}
+          </p>
           <p className="mt-1 text-xs text-(--txt-tertiary)">
-            Archive a work item from its menu and it will show up here.
+            {t('archives.emptyHint', 'Archive a work item from its menu and it will show up here.')}
           </p>
         </div>
       ) : (
@@ -149,7 +213,9 @@ export function ArchivesPage() {
                 <span className="truncate font-medium">{issue.name}</span>
               </Link>
               <span className="shrink-0 text-xs text-(--txt-tertiary)">
-                Archived {formatArchivedAt(issue.archived_at)}
+                {t('archives.archivedOn', 'Archived {{date}}', {
+                  date: formatArchivedAt(issue.archived_at),
+                })}
               </span>
               <button
                 type="button"
@@ -158,7 +224,9 @@ export function ArchivesPage() {
                 className="inline-flex shrink-0 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-secondary) transition-colors hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary) disabled:opacity-50"
               >
                 <ArchiveRestore className="size-3.5" />
-                {restoringId === issue.id ? 'Restoring…' : 'Restore'}
+                {restoringId === issue.id
+                  ? t('archives.restoring', 'Restoring…')
+                  : t('common.restore', 'Restore')}
               </button>
             </li>
           ))}
@@ -173,7 +241,7 @@ export function ArchivesPage() {
             disabled={loadingMore}
             className="rounded-(--radius-md) border border-(--border-subtle) px-3 py-1.5 text-sm text-(--txt-secondary) transition-colors hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary) disabled:opacity-50"
           >
-            {loadingMore ? 'Loading…' : 'Load more'}
+            {loadingMore ? t('common.loading', 'Loading…') : t('common.loadMore', 'Load more')}
           </button>
         </div>
       )}

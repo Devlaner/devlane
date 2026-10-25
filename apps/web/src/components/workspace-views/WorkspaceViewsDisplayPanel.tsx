@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   type DisplayPropertyKey,
   type WorkspaceViewDisplay,
@@ -14,6 +15,7 @@ export function WorkspaceViewsDisplayPanel({
   display,
   onDisplayChange,
 }: WorkspaceViewsDisplayPanelProps) {
+  const { t } = useTranslation();
   const toggleProperty = (key: DisplayPropertyKey) => {
     onDisplayChange((prev) => ({
       ...prev,
@@ -26,7 +28,9 @@ export function WorkspaceViewsDisplayPanel({
   return (
     <div className="flex flex-col">
       <div className="border-b border-(--border-subtle) bg-(--bg-surface-1) p-3">
-        <p className="text-xs font-medium text-(--txt-secondary)">Display Properties</p>
+        <p className="text-xs font-medium text-(--txt-secondary)">
+          {t('views.displayProperties', 'Display Properties')}
+        </p>
       </div>
       <div className="flex flex-1 flex-wrap content-start gap-2 overflow-y-auto p-3">
         {DISPLAY_PROPERTY_KEYS.map((key) => {
@@ -60,7 +64,7 @@ export function WorkspaceViewsDisplayPanel({
             }
             className="rounded border-(--border-subtle)"
           />
-          <span>Show sub-work items</span>
+          <span>{t('views.showSubWorkItems', 'Show sub-work items')}</span>
         </label>
       </div>
     </div>

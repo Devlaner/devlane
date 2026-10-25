@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   type SavedViewDisplayPropertyId,
   type SavedViewGroupBy,
@@ -64,31 +65,6 @@ const IconCheck = () => (
 
 type SectionId = 'properties' | 'group' | 'order';
 
-const GROUP_OPTIONS: { value: SavedViewGroupBy; label: string }[] = [
-  { value: 'states', label: 'States' },
-  { value: 'priority', label: 'Priority' },
-  { value: 'cycle', label: 'Cycle' },
-  { value: 'module', label: 'Module' },
-  { value: 'labels', label: 'Labels' },
-  { value: 'assignees', label: 'Assignees' },
-  { value: 'created_by', label: 'Created by' },
-  { value: 'none', label: 'None' },
-];
-
-const ORDER_OPTIONS: { value: SavedViewOrderBy; label: string }[] = [
-  { value: 'manual', label: 'Manual' },
-  { value: 'last_created', label: 'Last created' },
-  { value: 'last_updated', label: 'Last updated' },
-  { value: 'start_date', label: 'Start date' },
-  { value: 'due_date', label: 'Due date' },
-  { value: 'priority', label: 'Priority' },
-];
-
-const DIRECTION_OPTIONS: { value: SavedViewOrderDirection; label: string }[] = [
-  { value: 'asc', label: 'Ascending' },
-  { value: 'desc', label: 'Descending' },
-];
-
 function CollapsibleSection(props: {
   id: SectionId;
   title: string;
@@ -144,7 +120,30 @@ function RadioRow<T extends string>(props: {
 }
 
 export function ProjectSavedViewDisplayDropdown() {
+  const { t } = useTranslation();
   const { settings, setSettings } = useProjectSavedViewDisplay();
+  const GROUP_OPTIONS: { value: SavedViewGroupBy; label: string }[] = [
+    { value: 'states', label: t('header.display.groupBy.states', 'States') },
+    { value: 'priority', label: t('header.display.groupBy.priority', 'Priority') },
+    { value: 'cycle', label: t('header.display.groupBy.cycle', 'Cycle') },
+    { value: 'module', label: t('header.display.groupBy.module', 'Module') },
+    { value: 'labels', label: t('header.display.groupBy.labels', 'Labels') },
+    { value: 'assignees', label: t('header.display.groupBy.assignees', 'Assignees') },
+    { value: 'created_by', label: t('header.display.groupBy.createdBy', 'Created by') },
+    { value: 'none', label: t('common.none', 'None') },
+  ];
+  const ORDER_OPTIONS: { value: SavedViewOrderBy; label: string }[] = [
+    { value: 'manual', label: t('common.manual', 'Manual') },
+    { value: 'last_created', label: t('header.display.orderBy.lastCreated', 'Last created') },
+    { value: 'last_updated', label: t('header.display.orderBy.lastUpdated', 'Last updated') },
+    { value: 'start_date', label: t('common.startDate', 'Start date') },
+    { value: 'due_date', label: t('common.dueDate', 'Due date') },
+    { value: 'priority', label: t('header.display.orderBy.priority', 'Priority') },
+  ];
+  const DIRECTION_OPTIONS: { value: SavedViewOrderDirection; label: string }[] = [
+    { value: 'asc', label: t('common.ascending', 'Ascending') },
+    { value: 'desc', label: t('common.descending', 'Descending') },
+  ];
   const [open, setOpen] = useState(false);
   const [sections, setSections] = useState<Record<SectionId, boolean>>({
     properties: true,
@@ -190,7 +189,7 @@ export function ProjectSavedViewDisplayDropdown() {
         <span className="shrink-0 text-(--txt-icon-tertiary)">
           <IconSliders />
         </span>
-        Display
+        {t('header.display', 'Display')}
         <IconChevronDown />
       </Button>
       {open ? (
@@ -201,7 +200,7 @@ export function ProjectSavedViewDisplayDropdown() {
           <div className="max-h-[min(70vh,560px)] overflow-y-auto py-1">
             <CollapsibleSection
               id="properties"
-              title="Display properties"
+              title={t('header.display.properties', 'Display properties')}
               expanded={sections.properties}
               onToggle={toggleSection}
             >
@@ -219,7 +218,7 @@ export function ProjectSavedViewDisplayDropdown() {
                           : 'border-(--border-subtle) bg-(--bg-layer-1) text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)'
                       }`}
                     >
-                      {SAVED_VIEW_DISPLAY_PROPERTY_LABELS[prop]}
+                      {t(`display.property.${prop}`, SAVED_VIEW_DISPLAY_PROPERTY_LABELS[prop])}
                     </button>
                   );
                 })}
@@ -228,7 +227,7 @@ export function ProjectSavedViewDisplayDropdown() {
 
             <CollapsibleSection
               id="group"
-              title="Group by"
+              title={t('header.display.groupByTitle', 'Group by')}
               expanded={sections.group}
               onToggle={toggleSection}
             >
@@ -247,7 +246,7 @@ export function ProjectSavedViewDisplayDropdown() {
 
             <CollapsibleSection
               id="order"
-              title="Order by"
+              title={t('header.display.orderByTitle', 'Order by')}
               expanded={sections.order}
               onToggle={toggleSection}
             >
@@ -265,7 +264,7 @@ export function ProjectSavedViewDisplayDropdown() {
               <div
                 className="mx-2 mt-2 flex items-center gap-1"
                 role="group"
-                aria-label="Order direction"
+                aria-label={t('header.display.orderDirection', 'Order direction')}
               >
                 {DIRECTION_OPTIONS.map((opt) => (
                   <button
@@ -296,7 +295,7 @@ export function ProjectSavedViewDisplayDropdown() {
                     }))
                   }
                 />
-                Show sub-work items
+                {t('header.display.showSubWorkItems', 'Show sub-work items')}
               </label>
             </CollapsibleSection>
           </div>

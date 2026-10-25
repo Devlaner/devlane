@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input } from '../../components/ui';
 import { InstanceAdminCopyRow, InstanceAdminToggleSwitch } from '../../components/instance-admin';
@@ -31,6 +32,7 @@ const IconGoogle = () => (
 );
 
 export function InstanceAdminAuthGooglePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
@@ -49,7 +51,7 @@ export function InstanceAdminAuthGooglePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  useDocumentTitle('Google authentication');
+  useDocumentTitle(t('instanceAdmin.auth.google.documentTitle', 'Google authentication'));
 
   useEffect(() => {
     let cancelled = false;
@@ -107,7 +109,12 @@ export function InstanceAdminAuthGooglePage() {
       instanceSettingsService.updateSection('auth', authPayload),
     ])
       .then(([oauthRes]) => {
-        setSuccess('Your Google authentication is configured. You should test it now.');
+        setSuccess(
+          t(
+            'instanceAdmin.auth.google.success',
+            'Your Google authentication is configured. You should test it now.',
+          ),
+        );
         if (oauthRes.value) {
           const v = oauthRes.value as InstanceOAuthSection;
           setClientId(v.google_client_id ?? '');
@@ -145,7 +152,10 @@ export function InstanceAdminAuthGooglePage() {
           <div>
             <h1 className="text-base font-semibold text-(--txt-primary)">Google</h1>
             <p className="text-xs text-(--txt-secondary)">
-              Allow members to login or sign up for Devlane with their Google accounts.
+              {t(
+                'instanceAdmin.auth.google.subtitle',
+                'Allow members to login or sign up for Devlane with their Google accounts.',
+              )}
             </p>
           </div>
         </div>
@@ -162,72 +172,99 @@ export function InstanceAdminAuthGooglePage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="rounded border border-(--border-subtle) bg-(--bg-surface-1) p-4">
           <h2 className="mb-4 text-sm font-semibold text-(--txt-primary)">
-            Google-provided details for Devlane
+            {t('instanceAdmin.auth.google.providedDetails', 'Google-provided details for Devlane')}
           </h2>
           <div className="space-y-3">
             <Input
-              label="Client ID"
+              label={t('instanceAdmin.auth.clientId', 'Client ID')}
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
               autoComplete="off"
-              placeholder="Your client ID lives in your Google API Console."
+              placeholder={t(
+                'instanceAdmin.auth.google.clientIdPlaceholder',
+                'Your client ID lives in your Google API Console.',
+              )}
             />
             <p className="text-[11px] text-(--txt-tertiary)">
-              Your client ID lives in your Google API Console.{' '}
-              <a
-                href="https://console.cloud.google.com/apis/credentials"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-(--txt-accent) hover:underline"
-              >
-                Learn more
-              </a>
+              <Trans
+                i18nKey="instanceAdmin.auth.google.clientIdHint"
+                defaults="Your client ID lives in your Google API Console. <a>Learn more</a>"
+                components={{
+                  a: (
+                    <a
+                      href="https://console.cloud.google.com/apis/credentials"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-(--txt-accent) hover:underline"
+                    />
+                  ),
+                }}
+              />
             </p>
             <div className="relative">
               <Input
-                label="Client secret"
+                label={t('instanceAdmin.auth.clientSecret', 'Client secret')}
                 type={showSecret ? 'text' : 'password'}
                 value={clientSecret}
                 onChange={(e) => setClientSecret(e.target.value)}
                 autoComplete="new-password"
-                placeholder={secretSet ? '(unchanged if left blank)' : 'Enter client secret'}
+                placeholder={
+                  secretSet
+                    ? t('instanceAdmin.auth.unchangedIfBlank', '(unchanged if left blank)')
+                    : t('instanceAdmin.auth.enterClientSecret', 'Enter client secret')
+                }
               />
               <button
                 type="button"
                 onClick={() => setShowSecret(!showSecret)}
                 className="absolute top-7 right-2 p-1 text-(--txt-icon-tertiary) hover:text-(--txt-icon-secondary)"
-                aria-label={showSecret ? 'Hide secret' : 'Show secret'}
+                aria-label={
+                  showSecret
+                    ? t('instanceAdmin.auth.hideSecret', 'Hide secret')
+                    : t('instanceAdmin.auth.showSecret', 'Show secret')
+                }
               >
                 {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             <p className="text-[11px] text-(--txt-tertiary)">
-              Your client secret should also be in your Google API Console.{' '}
-              <a
-                href="https://console.cloud.google.com/apis/credentials"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-(--txt-accent) hover:underline"
-              >
-                Learn more
-              </a>
+              <Trans
+                i18nKey="instanceAdmin.auth.google.clientSecretHint"
+                defaults="Your client secret should also be in your Google API Console. <a>Learn more</a>"
+                components={{
+                  a: (
+                    <a
+                      href="https://console.cloud.google.com/apis/credentials"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-(--txt-accent) hover:underline"
+                    />
+                  ),
+                }}
+              />
             </p>
           </div>
         </div>
 
         <div className="rounded border border-(--border-subtle) bg-(--bg-surface-1) p-4">
           <h2 className="mb-4 text-sm font-semibold text-(--txt-primary)">
-            Devlane-provided details for Google
+            {t('instanceAdmin.auth.google.devlaneDetails', 'Devlane-provided details for Google')}
           </h2>
           <div className="space-y-3">
             <InstanceAdminCopyRow
-              label="Origin URL"
-              hint="We will auto-generate this. Paste this into your Authorized JavaScript origins field. For this OAuth client here."
+              label={t('instanceAdmin.auth.google.originUrl', 'Origin URL')}
+              hint={t(
+                'instanceAdmin.auth.google.originUrlHint',
+                'We will auto-generate this. Paste this into your Authorized JavaScript origins field. For this OAuth client here.',
+              )}
               value={oauthJsOrigin}
             />
             <InstanceAdminCopyRow
-              label="Callback URI"
-              hint="We will auto-generate this. Paste this into your Authorized Redirect URI field. For this OAuth client here."
+              label={t('instanceAdmin.auth.google.callbackUri', 'Callback URI')}
+              hint={t(
+                'instanceAdmin.auth.google.callbackUriHint',
+                'We will auto-generate this. Paste this into your Authorized Redirect URI field. For this OAuth client here.',
+              )}
               value={callbackUrl}
             />
           </div>
@@ -235,14 +272,14 @@ export function InstanceAdminAuthGooglePage() {
 
         <div className="flex items-center gap-2">
           <Button type="submit" disabled={saving || !isDirty}>
-            {saving ? 'Saving…' : 'Save changes'}
+            {saving ? t('common.saving', 'Saving…') : t('common.saveChanges', 'Save changes')}
           </Button>
           <Button
             type="button"
             onClick={() => void navigate('/instance-admin/authentication')}
             className="bg-transparent text-(--txt-secondary) shadow-none hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
           >
-            Go back
+            {t('common.goBack', 'Go back')}
           </Button>
         </div>
       </form>

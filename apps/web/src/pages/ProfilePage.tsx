@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useState, useMemo, useEffect } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { Avatar, Card, CardContent } from '../components/ui';
 import { getImageUrl } from '../lib/utils';
@@ -41,6 +42,7 @@ function formatJoinedDate(iso: string): string {
 }
 
 export function ProfilePage() {
+  const { t } = useTranslation();
   const { workspaceSlug, userId } = useParams<{
     workspaceSlug: string;
     userId: string;
@@ -107,7 +109,11 @@ export function ProfilePage() {
     return user ?? null; // Only current user supported until user-by-id API exists
   }, [userId, user]);
 
-  useDocumentTitle(loading ? 'Profile' : (profileUser?.name ?? 'Profile'));
+  useDocumentTitle(
+    loading
+      ? t('profile.documentTitle', 'Profile')
+      : (profileUser?.name ?? t('profile.documentTitle', 'Profile')),
+  );
 
   const member = profileUser ? (members.find((m) => m.member_id === profileUser.id) ?? null) : null;
   const joinedAt = member?.created_at ?? new Date().toISOString();
@@ -139,33 +145,38 @@ export function ProfilePage() {
     const completed = states.filter((s) => s.name === 'Done').map((s) => s.id);
     const canceled: string[] = [];
     return [
-      { id: 'backlog', label: 'Backlog', color: '#94a3b8', stateIds: backlog },
+      {
+        id: 'backlog',
+        label: t('profile.workload.backlog', 'Backlog'),
+        color: '#94a3b8',
+        stateIds: backlog,
+      },
       {
         id: 'not-started',
-        label: 'Not started',
+        label: t('profile.workload.notStarted', 'Not started'),
         color: '#3b82f6',
         stateIds: notStarted,
       },
       {
         id: 'working-on',
-        label: 'Working on',
+        label: t('profile.workload.workingOn', 'Working on'),
         color: '#f59e0b',
         stateIds: workingOn,
       },
       {
         id: 'completed',
-        label: 'Completed',
+        label: t('profile.workload.completed', 'Completed'),
         color: '#22c55e',
         stateIds: completed,
       },
       {
         id: 'canceled',
-        label: 'Canceled',
+        label: t('profile.workload.canceled', 'Canceled'),
         color: '#ef4444',
         stateIds: canceled,
       },
     ];
-  }, [states]);
+  }, [states, t]);
 
   const priorityCounts = useMemo(() => {
     const counts: Record<string, number> = {
@@ -248,21 +259,25 @@ export function ProfilePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-        Loading…
+        {t('common.loading', 'Loading…')}
       </div>
     );
   }
   if (!workspace) {
-    return <div className="p-4 text-(--txt-secondary)">Workspace not found.</div>;
+    return (
+      <div className="p-4 text-(--txt-secondary)">
+        {t('common.workspaceNotFound', 'Workspace not found.')}
+      </div>
+    );
   }
 
   const baseUrl = `/${workspace.slug}`;
   const tabs: { id: TabId; label: string }[] = [
-    { id: 'summary', label: 'Summary' },
-    { id: 'assigned', label: 'Assigned' },
-    { id: 'created', label: 'Created' },
-    { id: 'subscribed', label: 'Subscribed' },
-    { id: 'activity', label: 'Activity' },
+    { id: 'summary', label: t('profile.tab.summary', 'Summary') },
+    { id: 'assigned', label: t('profile.tab.assigned', 'Assigned') },
+    { id: 'created', label: t('profile.tab.created', 'Created') },
+    { id: 'subscribed', label: t('profile.tab.subscribed', 'Subscribed') },
+    { id: 'activity', label: t('profile.tab.activity', 'Activity') },
   ];
 
   return (
@@ -293,7 +308,9 @@ export function ProfilePage() {
           <>
             {/* Overview */}
             <section>
-              <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">Overview</h2>
+              <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">
+                {t('profile.overview', 'Overview')}
+              </h2>
               <div className="grid gap-4 sm:grid-cols-3">
                 <button
                   type="button"
@@ -321,7 +338,9 @@ export function ProfilePage() {
                         <p className="text-2xl font-semibold text-(--txt-primary)">
                           {issuesCreated.length}
                         </p>
-                        <p className="text-sm text-(--txt-secondary)">Work items created</p>
+                        <p className="text-sm text-(--txt-secondary)">
+                          {t('profile.workItemsCreated', 'Work items created')}
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -352,7 +371,9 @@ export function ProfilePage() {
                         <p className="text-2xl font-semibold text-(--txt-primary)">
                           {issuesAssigned.length}
                         </p>
-                        <p className="text-sm text-(--txt-secondary)">Work items assigned</p>
+                        <p className="text-sm text-(--txt-secondary)">
+                          {t('profile.workItemsAssigned', 'Work items assigned')}
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -381,7 +402,9 @@ export function ProfilePage() {
                         <p className="text-2xl font-semibold text-(--txt-primary)">
                           {issuesSubscribed}
                         </p>
-                        <p className="text-sm text-(--txt-secondary)">Work items subscribed</p>
+                        <p className="text-sm text-(--txt-secondary)">
+                          {t('profile.workItemsSubscribed', 'Work items subscribed')}
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -391,7 +414,9 @@ export function ProfilePage() {
 
             {/* Workload */}
             <section>
-              <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">Workload</h2>
+              <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">
+                {t('profile.workload.title', 'Workload')}
+              </h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 {workloadCategories.map((cat) => {
                   const count = cat.stateIds.reduce(
@@ -425,7 +450,7 @@ export function ProfilePage() {
             <div className="grid gap-6 lg:grid-cols-2">
               <section>
                 <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">
-                  Work items by Priority
+                  {t('profile.workItemsByPriority', 'Work items by Priority')}
                 </h2>
                 <Card
                   variant="outlined"
@@ -450,7 +475,7 @@ export function ProfilePage() {
                         return (
                           <div key={p} className="flex items-center gap-3">
                             <span className="w-16 shrink-0 capitalize text-sm text-(--txt-secondary)">
-                              {p}
+                              {t(`profile.priority.${p}`, p)}
                             </span>
                             <div className="min-w-0 flex-1">
                               <div className="h-6 overflow-hidden rounded bg-(--bg-layer-1)">
@@ -477,7 +502,7 @@ export function ProfilePage() {
               </section>
               <section>
                 <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">
-                  Work items by state
+                  {t('profile.workItemsByState', 'Work items by state')}
                 </h2>
                 <Card
                   variant="outlined"
@@ -506,7 +531,9 @@ export function ProfilePage() {
 
             {/* Recent activity */}
             <section>
-              <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">Recent activity</h2>
+              <h2 className="mb-3 text-sm font-semibold text-(--txt-primary)">
+                {t('profile.recentActivity', 'Recent activity')}
+              </h2>
               <Card
                 variant="outlined"
                 className="border border-(--border-subtle) bg-(--bg-surface-1)"
@@ -515,7 +542,7 @@ export function ProfilePage() {
                   <ul className="divide-y divide-(--border-subtle)">
                     {recentActivity.length === 0 ? (
                       <li className="px-4 py-6 text-center text-sm text-(--txt-tertiary)">
-                        No recent activity
+                        {t('profile.noRecentActivity', 'No recent activity')}
                       </li>
                     ) : (
                       recentActivity.map((act) => {
@@ -531,36 +558,57 @@ export function ProfilePage() {
                         let text: React.ReactNode = '';
                         if (act.type === 'label' && act.labelName) {
                           text = (
-                            <>
+                            <Trans
+                              i18nKey="profile.activity.label"
+                              values={{
+                                label: act.labelName,
+                                ref: issueRef,
+                                title: issueTitle,
+                                time: formatTimeAgo(act.createdAt),
+                              }}
+                            >
                               You added a new label{' '}
                               <span className="rounded bg-(--bg-warning-subtle) px-1.5 py-0.5 text-(--txt-warning-primary)">
-                                {act.labelName}
+                                {'{{label}}'}
                               </span>{' '}
-                              to {issueRef} {issueTitle} {formatTimeAgo(act.createdAt)}
-                            </>
+                              to {'{{ref}}'} {'{{title}}'} {'{{time}}'}
+                            </Trans>
                           );
                         } else if (act.type === 'cycle' && act.cycleName) {
-                          text = (
-                            <>
-                              You added {issueRef} {issueTitle} to the cycle {act.cycleName}{' '}
-                              {formatTimeAgo(act.createdAt)}
-                            </>
+                          text = t(
+                            'profile.activity.cycle',
+                            'You added {{ref}} {{title}} to the cycle {{cycle}} {{time}}',
+                            {
+                              ref: issueRef,
+                              title: issueTitle,
+                              cycle: act.cycleName,
+                              time: formatTimeAgo(act.createdAt),
+                            },
                           );
                         } else if (act.type === 'assignee' && act.assigneeName) {
-                          text = (
-                            <>
-                              You added a new assignee {act.assigneeName} to {issueRef}{' '}
-                              {formatTimeAgo(act.createdAt)}
-                            </>
+                          text = t(
+                            'profile.activity.assignee',
+                            'You added a new assignee {{assignee}} to {{ref}} {{time}}',
+                            {
+                              assignee: act.assigneeName,
+                              ref: issueRef,
+                              time: formatTimeAgo(act.createdAt),
+                            },
                           );
                         } else if (act.type === 'created') {
-                          text = (
-                            <>
-                              You created {issueRef} {issueTitle} {formatTimeAgo(act.createdAt)}
-                            </>
+                          text = t(
+                            'profile.activity.created',
+                            'You created {{ref}} {{title}} {{time}}',
+                            {
+                              ref: issueRef,
+                              title: issueTitle,
+                              time: formatTimeAgo(act.createdAt),
+                            },
                           );
                         } else {
-                          text = <>Activity {formatTimeAgo(act.createdAt)}</>;
+                          text = t('profile.activity.generic', 'Activity {{time}}', {
+                            time: formatTimeAgo(act.createdAt),
+                          });
                         }
                         return (
                           <li key={act.id} className="flex gap-3 px-4 py-3">
@@ -644,7 +692,7 @@ export function ProfilePage() {
             <Link
               to={`${baseUrl}/settings/account`}
               className="absolute right-2 top-2 rounded p-1.5 text-white/80 hover:bg-white/20 hover:text-white"
-              aria-label="Edit profile"
+              aria-label={t('profile.editProfile', 'Edit profile')}
             >
               <svg
                 width="16"
@@ -675,17 +723,17 @@ export function ProfilePage() {
               {profileUser?.name ?? '—'}
             </h3>
             <p className="text-center text-sm text-(--txt-tertiary) shrink-0">
-              ({profileUser?.email?.split('@')[0] ?? 'user'})
+              ({profileUser?.email?.split('@')[0] ?? t('profile.usernameFallback', 'user')})
             </p>
             <p className="mt-2 text-center text-xs text-(--txt-secondary) shrink-0">
-              Joined on {formatJoinedDate(joinedAt)}
+              {t('profile.joinedOn', 'Joined on {{date}}', { date: formatJoinedDate(joinedAt) })}
             </p>
             <p className="text-center text-xs text-(--txt-secondary) shrink-0">
-              Timezone 23:10 UTC
+              {t('profile.timezone', 'Timezone 23:10 UTC')}
             </p>
             <div className="mt-4 flex min-h-0 flex-1 flex-col pt-4">
               <p className="mb-2 shrink-0 text-xs font-medium uppercase tracking-wide text-(--txt-tertiary)">
-                Projects
+                {t('profile.projects', 'Projects')}
               </p>
               <ul className="min-h-0 flex-1 overflow-auto">
                 {projectStateBreakdown.map(({ project: p, states }, index) => {
@@ -802,8 +850,14 @@ export function ProfilePage() {
                                   />
                                   <span className="text-(--txt-secondary)">{s.name}</span>
                                   <span className="text-(--txt-primary)">
-                                    — {s.count} Work item
-                                    {s.count === 1 ? '' : 's'}
+                                    —{' '}
+                                    {s.count === 1
+                                      ? t('profile.workItemCountOne', '{{count}} Work item', {
+                                          count: s.count,
+                                        })
+                                      : t('profile.workItemCountOther', '{{count}} Work items', {
+                                          count: s.count,
+                                        })}
                                   </span>
                                 </li>
                               ))}
@@ -849,6 +903,7 @@ function WorkItemsList({
   baseUrl: string;
   workspaceSlug: string;
 }) {
+  const { t } = useTranslation();
   void workspaceSlug; // reserved for future use (e.g. links)
   const getStateName = (stateId: string) =>
     statesList.find((s) => s.id === stateId)?.name ?? stateId;
@@ -857,7 +912,7 @@ function WorkItemsList({
     const m = membersList.find((x) => x.member_id === userId);
     const display = m?.member_display_name?.trim();
     const emailUser = m?.member_email?.split('@')[0]?.trim();
-    const name = display || emailUser || 'Member';
+    const name = display || emailUser || t('profile.memberFallback', 'Member');
     const avatarUrl = m?.member_avatar ?? null;
     return { name, avatarUrl };
   };
@@ -875,12 +930,12 @@ function WorkItemsList({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-(--border-subtle) pb-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-(--txt-primary)">
-            All work items {issues.length}
+            {t('profile.allWorkItems', 'All work items {{count}}', { count: issues.length })}
           </span>
           <button
             type="button"
             className="rounded p-1.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-            aria-label="Refresh"
+            aria-label={t('common.refresh', 'Refresh')}
           >
             <svg
               width="16"
@@ -901,7 +956,7 @@ function WorkItemsList({
           <button
             type="button"
             className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover)"
-            aria-label="List view"
+            aria-label={t('profile.listView', 'List view')}
           >
             <svg
               width="16"
@@ -922,7 +977,7 @@ function WorkItemsList({
           <button
             type="button"
             className="flex size-8 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover)"
-            aria-label="Chart view"
+            aria-label={t('profile.chartView', 'Chart view')}
           >
             <svg
               width="16"
@@ -941,7 +996,7 @@ function WorkItemsList({
             type="button"
             className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-sm text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
-            Filters
+            {t('profile.filters', 'Filters')}
             <svg
               width="14"
               height="14"
@@ -957,7 +1012,7 @@ function WorkItemsList({
             type="button"
             className="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-sm text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
           >
-            Display
+            {t('profile.display', 'Display')}
             <svg
               width="14"
               height="14"
@@ -977,7 +1032,9 @@ function WorkItemsList({
       >
         <CardContent className="p-0">
           {issues.length === 0 ? (
-            <div className="py-12 text-center text-sm text-(--txt-tertiary)">No work items</div>
+            <div className="py-12 text-center text-sm text-(--txt-tertiary)">
+              {t('profile.noWorkItems', 'No work items')}
+            </div>
           ) : (
             <ul className="divide-y divide-(--border-subtle)">
               {issues.map((issue) => {
@@ -1086,7 +1143,7 @@ function WorkItemsList({
                           e.stopPropagation();
                         }}
                         className="shrink-0 rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover)"
-                        aria-label="More options"
+                        aria-label={t('common.moreOptions', 'More options')}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                           <circle cx="12" cy="5" r="1.5" />
@@ -1132,16 +1189,19 @@ function ActivityTab({
   profileUser: { name: string; avatarUrl?: string | null } | null;
   formatTimeAgo: (iso: string) => string;
 }) {
+  const { t } = useTranslation();
   void profileUser; // reserved for future use
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-(--txt-primary)">Recent activity</h2>
+        <h2 className="text-sm font-semibold text-(--txt-primary)">
+          {t('profile.recentActivity', 'Recent activity')}
+        </h2>
         <button
           type="button"
           className="rounded-md bg-(--brand-default) px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
         >
-          Download today&apos;s activity
+          {t('profile.downloadTodaysActivity', "Download today's activity")}
         </button>
       </div>
       <Card variant="outlined" className="border border-(--border-subtle) bg-(--bg-surface-1)">
@@ -1149,7 +1209,7 @@ function ActivityTab({
           <ul className="divide-y divide-(--border-subtle)">
             {activities.length === 0 ? (
               <li className="px-4 py-8 text-center text-sm text-(--txt-tertiary)">
-                No recent activity
+                {t('profile.noRecentActivity', 'No recent activity')}
               </li>
             ) : (
               activities.map((act) => {
@@ -1190,17 +1250,25 @@ function ActivityTab({
                     </svg>
                   );
                   text = (
-                    <>
+                    <Trans
+                      i18nKey="profile.activityTab.label"
+                      values={{
+                        label: act.labelName,
+                        ref: issueRef,
+                        title: issueTitle,
+                        time: formatTimeAgo(act.createdAt),
+                      }}
+                    >
                       You added a new label{' '}
                       <span className="inline-flex rounded bg-(--bg-warning-subtle) px-1.5 py-0.5 text-(--txt-warning-primary)">
-                        {act.labelName}
+                        {'{{label}}'}
                       </span>{' '}
                       to{' '}
                       <strong>
-                        {issueRef} {issueTitle}
+                        {'{{ref}}'} {'{{title}}'}
                       </strong>{' '}
-                      {formatTimeAgo(act.createdAt)}.
-                    </>
+                      {'{{time}}'}.
+                    </Trans>
                   );
                 } else if (act.type === 'cycle' && act.cycleName) {
                   icon = (
@@ -1217,13 +1285,21 @@ function ActivityTab({
                     </svg>
                   );
                   text = (
-                    <>
+                    <Trans
+                      i18nKey="profile.activityTab.cycle"
+                      values={{
+                        ref: issueRef,
+                        title: issueTitle,
+                        cycle: act.cycleName,
+                        time: formatTimeAgo(act.createdAt),
+                      }}
+                    >
                       You added{' '}
                       <strong>
-                        {issueRef} {issueTitle}
+                        {'{{ref}}'} {'{{title}}'}
                       </strong>{' '}
-                      to the cycle <strong>{act.cycleName}</strong> {formatTimeAgo(act.createdAt)}.
-                    </>
+                      to the cycle <strong>{'{{cycle}}'}</strong> {'{{time}}'}.
+                    </Trans>
                   );
                 } else if (act.type === 'assignee' && act.assigneeName) {
                   icon = (
@@ -1242,23 +1318,39 @@ function ActivityTab({
                     </svg>
                   );
                   text = (
-                    <>
-                      You added a new assignee <strong>{act.assigneeName}</strong> to{' '}
-                      <strong>{issueRef}</strong> {formatTimeAgo(act.createdAt)}.
-                    </>
+                    <Trans
+                      i18nKey="profile.activityTab.assignee"
+                      values={{
+                        assignee: act.assigneeName,
+                        ref: issueRef,
+                        time: formatTimeAgo(act.createdAt),
+                      }}
+                    >
+                      You added a new assignee <strong>{'{{assignee}}'}</strong> to{' '}
+                      <strong>{'{{ref}}'}</strong> {'{{time}}'}.
+                    </Trans>
                   );
                 } else if (act.type === 'created') {
                   text = (
-                    <>
+                    <Trans
+                      i18nKey="profile.activityTab.created"
+                      values={{
+                        ref: issueRef,
+                        title: issueTitle,
+                        time: formatTimeAgo(act.createdAt),
+                      }}
+                    >
                       You created{' '}
                       <strong>
-                        {issueRef} {issueTitle}
+                        {'{{ref}}'} {'{{title}}'}
                       </strong>{' '}
-                      {formatTimeAgo(act.createdAt)}.
-                    </>
+                      {'{{time}}'}.
+                    </Trans>
                   );
                 } else {
-                  text = <>Activity {formatTimeAgo(act.createdAt)}.</>;
+                  text = t('profile.activityTab.generic', 'Activity {{time}}.', {
+                    time: formatTimeAgo(act.createdAt),
+                  });
                 }
                 return (
                   <li key={act.id} className="flex gap-3 px-4 py-3">

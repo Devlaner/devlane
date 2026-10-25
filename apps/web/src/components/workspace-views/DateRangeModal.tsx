@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from '../ui';
 import { parseISODateLocal, toISODateLocal } from '../../lib/dateOnly';
 
@@ -42,6 +43,7 @@ export function DateRangeModal({
   before,
   onApply,
 }: DateRangeModalProps) {
+  const { t } = useTranslation();
   const now = new Date();
   const defaultStart = after
     ? parseISODateLocal(after)
@@ -150,7 +152,7 @@ export function DateRangeModal({
                 setLeftMonth((m) => (m === 0 ? 11 : m - 1));
               }}
               className="rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2)"
-              aria-label="Previous month"
+              aria-label={t('views.dateRange.previousMonth', 'Previous month')}
             >
               ←
             </button>
@@ -161,7 +163,7 @@ export function DateRangeModal({
                 setLeftMonth((m) => (m === 11 ? 0 : m + 1));
               }}
               className="rounded p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2)"
-              aria-label="Next month"
+              aria-label={t('views.dateRange.nextMonth', 'Next month')}
             >
               →
             </button>
@@ -199,14 +201,14 @@ export function DateRangeModal({
             onClick={onClose}
             className="rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
           >
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </button>
           <button
             type="button"
             onClick={handleApply}
             className="rounded-md bg-(--brand-default) px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
           >
-            Apply
+            {t('common.apply', 'Apply')}
           </button>
         </div>
       }
@@ -217,7 +219,10 @@ export function DateRangeModal({
           <div className="min-w-[14rem]">{renderCalendar(rightYear, rightMonth, false)}</div>
         </div>
         <p className="mt-4 text-sm text-(--txt-secondary)">
-          After: {formatDisplay(startDate)} Before: {formatDisplay(endDate)}
+          {t('views.dateRange.summary', 'After: {{after}} Before: {{before}}', {
+            after: formatDisplay(startDate),
+            before: formatDisplay(endDate),
+          })}
         </p>
       </div>
     </Modal>

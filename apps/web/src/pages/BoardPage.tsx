@@ -1,4 +1,5 @@
 import { Navigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 /**
@@ -7,11 +8,12 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
  * canonical URL.
  */
 export function BoardPage() {
+  const { t } = useTranslation();
   const { workspaceSlug, projectId } = useParams<{
     workspaceSlug: string;
     projectId: string;
   }>();
-  useDocumentTitle('Board');
+  useDocumentTitle(t('workItem.board.documentTitle', 'Board'));
   if (!workspaceSlug || !projectId) {
     return <Navigate to="/" replace />;
   }

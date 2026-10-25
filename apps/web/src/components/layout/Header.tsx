@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { Button } from '../ui';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,6 +10,7 @@ import { NotificationBell } from '../notifications/NotificationBell';
 import type { WorkspaceApiResponse, ProjectApiResponse, PageApiResponse } from '../../api/types';
 
 export function Header() {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const { workspaceSlug, projectId, pageId } = useParams<{
     workspaceSlug?: string;
@@ -76,11 +78,11 @@ export function Header() {
       });
       if (pageId) {
         breadcrumbs.push({
-          label: 'Pages',
+          label: t('header.pages', 'Pages'),
           href: `/${workspace.slug}/projects/${project.id}/pages`,
         });
         if (page) {
-          breadcrumbs.push({ label: page.name || 'Untitled' });
+          breadcrumbs.push({ label: page.name || t('common.untitled', 'Untitled') });
         }
       }
     }
@@ -121,7 +123,7 @@ export function Header() {
         {workspace ? <NotificationBell workspaceSlug={workspace.slug} /> : null}
         <span className="text-sm text-(--txt-secondary)">{user?.name}</span>
         <Button variant="ghost" size="sm" onClick={logout}>
-          Log out
+          {t('common.logOut', 'Log out')}
         </Button>
       </div>
     </header>

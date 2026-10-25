@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { Avatar, Button, Modal, Skeleton } from '../../components/ui';
 import { instanceAdminService } from '../../services/instanceService';
 import { getApiErrorMessage } from '../../api/client';
@@ -7,6 +8,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import type { InstanceAdminApiResponse } from '../../api/types';
 
 export function InstanceAdminAdminsPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [admins, setAdmins] = useState<InstanceAdminApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +17,7 @@ export function InstanceAdminAdminsPage() {
   const [adding, setAdding] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
   const [removing, setRemoving] = useState(false);
-  useDocumentTitle('Admins');
+  useDocumentTitle(t('instanceAdmin.admins.documentTitle', 'Admins'));
 
   useEffect(() => {
     let cancelled = false;
@@ -95,9 +97,11 @@ export function InstanceAdminAdminsPage() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h1 className="text-base font-semibold text-(--txt-primary)">Instance admins</h1>
+        <h1 className="text-base font-semibold text-(--txt-primary)">
+          {t('instanceAdmin.admins.title', 'Instance admins')}
+        </h1>
         <p className="mt-0.5 text-xs text-(--txt-secondary)">
-          People who can manage this instance&apos;s settings.
+          {t('instanceAdmin.admins.subtitle', "People who can manage this instance's settings.")}
         </p>
       </div>
 
@@ -109,26 +113,34 @@ export function InstanceAdminAdminsPage() {
             type="email"
             value={addEmail}
             onChange={(e) => setAddEmail(e.target.value)}
-            placeholder="person@example.com"
-            aria-label="New admin email"
+            placeholder={t('instanceAdmin.admins.emailPlaceholder', 'person@example.com')}
+            aria-label={t('instanceAdmin.admins.emailAriaLabel', 'New admin email')}
             className="block w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2.5 py-1.5 text-xs text-(--txt-primary) focus:border-(--border-strong) focus:outline-none"
           />
           <p className="mt-0.5 text-[11px] text-(--txt-tertiary)">
-            The person must already have a Devlane account.
+            {t(
+              'instanceAdmin.admins.accountHint',
+              'The person must already have a Devlane account.',
+            )}
           </p>
         </div>
         <Button size="sm" type="submit" className="text-xs" disabled={adding || !addEmail.trim()}>
-          {adding ? 'Adding…' : 'Add admin'}
+          {adding
+            ? t('instanceAdmin.admins.adding', 'Adding…')
+            : t('instanceAdmin.admins.addAdmin', 'Add admin')}
         </Button>
       </form>
 
       <section>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-(--txt-secondary)">
-          Admins • {admins.length}
+          {t('instanceAdmin.admins.listHeading', 'Admins • {{count}}', { count: admins.length })}
         </h2>
         <ul className="space-y-2">
           {admins.map((a) => {
-            const name = a.user_display_name || a.user_email || 'Unknown user';
+            const name =
+              a.user_display_name ||
+              a.user_email ||
+              t('instanceAdmin.admins.unknownUser', 'Unknown user');
             const isSelf = user?.id === a.user_id;
             return (
               <li
@@ -142,7 +154,7 @@ export function InstanceAdminAdminsPage() {
                       {name}
                       {isSelf && (
                         <span className="ml-1.5 text-xs font-normal text-(--txt-tertiary)">
-                          (you)
+                          {t('instanceAdmin.admins.you', '(you)')}
                         </span>
                       )}
                     </p>
@@ -151,17 +163,24 @@ export function InstanceAdminAdminsPage() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="rounded bg-(--bg-layer-2) px-1.5 py-0.5 text-[11px] font-medium text-(--txt-secondary)">
-                    Admin
+                    {t('instanceAdmin.admins.roleBadge', 'Admin')}
                   </span>
                   <Button
                     variant="danger"
                     size="sm"
                     className="text-xs"
                     disabled={admins.length <= 1}
-                    title={admins.length <= 1 ? 'The last admin cannot be removed' : undefined}
+                    title={
+                      admins.length <= 1
+                        ? t(
+                            'instanceAdmin.admins.lastAdminTooltip',
+                            'The last admin cannot be removed',
+                          )
+                        : undefined
+                    }
                     onClick={() => setRemoveTarget({ id: a.id, name })}
                   >
-                    Remove
+                    {t('instanceAdmin.admins.remove', 'Remove')}
                   </Button>
                 </div>
               </li>
@@ -175,7 +194,7 @@ export function InstanceAdminAdminsPage() {
         onClose={() => {
           if (!removing) setRemoveTarget(null);
         }}
-        title="Remove instance admin"
+        title={t('instanceAdmin.admins.removeModalTitle', 'Remove instance admin')}
         footer={
           <>
             <Button
@@ -185,7 +204,7 @@ export function InstanceAdminAdminsPage() {
               onClick={() => setRemoveTarget(null)}
               disabled={removing}
             >
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button
               variant="danger"
@@ -194,17 +213,21 @@ export function InstanceAdminAdminsPage() {
               onClick={handleRemove}
               disabled={removing}
             >
-              {removing ? 'Removing…' : 'Remove admin'}
+              {removing
+                ? t('instanceAdmin.admins.removing', 'Removing…')
+                : t('instanceAdmin.admins.removeAdmin', 'Remove admin')}
             </Button>
           </>
         }
       >
         <p className="text-sm text-(--txt-secondary)">
           {removeTarget && (
-            <>
-              Remove <span className="font-medium text-(--txt-primary)">{removeTarget.name}</span>{' '}
-              as an instance admin? They will lose access to instance settings.
-            </>
+            <Trans
+              i18nKey="instanceAdmin.admins.removeConfirm"
+              defaults="Remove <b>{{name}}</b> as an instance admin? They will lose access to instance settings."
+              values={{ name: removeTarget.name }}
+              components={{ b: <span className="font-medium text-(--txt-primary)" /> }}
+            />
           )}
         </p>
       </Modal>

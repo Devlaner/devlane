@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button, Input } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { workspaceService } from '../services/workspaceService';
@@ -26,6 +27,7 @@ const IconChevronDown = () => (
 
 export function CreateWorkspacePage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { isAuthenticated, user } = useAuth();
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -33,7 +35,7 @@ export function CreateWorkspacePage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useDocumentTitle('Create workspace');
+  useDocumentTitle(t('workspace.create.documentTitle', 'Create workspace'));
 
   const baseUrl = typeof window !== 'undefined' ? `${window.location.origin}/` : '';
 
@@ -52,15 +54,22 @@ export function CreateWorkspacePage() {
     const trimmedSlug = slug.trim().toLowerCase() || slugFromName(trimmedName);
 
     if (!trimmedName) {
-      setError('Please enter a workspace name.');
+      setError(t('workspace.create.errorName', 'Please enter a workspace name.'));
       return;
     }
     if (!validateWorkspaceSlug(trimmedSlug)) {
-      setError('Workspace URL must be lowercase letters, numbers, and hyphens only.');
+      setError(
+        t(
+          'workspace.create.errorSlug',
+          'Workspace URL must be lowercase letters, numbers, and hyphens only.',
+        ),
+      );
       return;
     }
     if (!isAuthenticated || !user) {
-      setError('You need to be signed in to create a workspace.');
+      setError(
+        t('workspace.create.errorNotSignedIn', 'You need to be signed in to create a workspace.'),
+      );
       return;
     }
 
@@ -83,24 +92,32 @@ export function CreateWorkspacePage() {
     <div className="flex min-h-screen items-center justify-center bg-(--bg-surface-0) p-8">
       <div className="w-full max-w-lg space-y-6">
         <div>
-          <h1 className="text-xl font-semibold text-(--txt-primary)">Create your workspace</h1>
+          <h1 className="text-xl font-semibold text-(--txt-primary)">
+            {t('workspace.create.title', 'Create your workspace')}
+          </h1>
           <p className="mt-1 text-sm text-(--txt-secondary)">
-            Workspaces are shared environments where teams manage their projects.
+            {t(
+              'workspace.create.subtitle',
+              'Workspaces are shared environments where teams manage their projects.',
+            )}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <Input
-            label="Name your workspace"
+            label={t('workspace.create.nameLabel', 'Name your workspace')}
             value={name}
             onChange={handleNameChange}
-            placeholder="Something familiar and recognizable is always best."
+            placeholder={t(
+              'workspace.create.namePlaceholder',
+              'Something familiar and recognizable is always best.',
+            )}
             autoComplete="organization"
           />
 
           <div className="flex flex-col gap-1">
             <label htmlFor="workspace-url" className="text-sm font-medium text-(--txt-secondary)">
-              Set your workspace&apos;s URL
+              {t('workspace.create.urlLabel', "Set your workspace's URL")}
             </label>
             <div className="flex flex-1 items-center gap-0 overflow-hidden rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) text-sm">
               <span className="shrink-0 truncate border-r border-(--border-subtle) bg-(--bg-layer-1) px-3 py-2 text-(--txt-tertiary)">
@@ -111,7 +128,7 @@ export function CreateWorkspacePage() {
                 type="text"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                placeholder="workspace-name"
+                placeholder={t('workspace.create.urlPlaceholder', 'workspace-name')}
                 className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
               />
             </div>
@@ -122,7 +139,7 @@ export function CreateWorkspacePage() {
               htmlFor="organization-size"
               className="text-sm font-medium text-(--txt-secondary)"
             >
-              How many people will use this workspace?
+              {t('workspace.create.orgSizeLabel', 'How many people will use this workspace?')}
             </label>
             <div className="relative">
               <select
@@ -133,7 +150,7 @@ export function CreateWorkspacePage() {
               >
                 {ORGANIZATION_SIZE_OPTIONS.map((opt) => (
                   <option key={opt.value || 'empty'} value={opt.value}>
-                    {opt.label}
+                    {opt.value === '' ? t('workspace.orgSize.selectRange', opt.label) : opt.label}
                   </option>
                 ))}
               </select>
@@ -146,7 +163,9 @@ export function CreateWorkspacePage() {
           {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
 
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating…' : 'Create workspace'}
+            {isSubmitting
+              ? t('workspace.create.submitting', 'Creating…')
+              : t('workspace.create.submit', 'Create workspace')}
           </Button>
         </form>
       </div>

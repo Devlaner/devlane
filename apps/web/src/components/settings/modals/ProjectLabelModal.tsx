@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, Modal } from '../../ui';
 import { labelService } from '../../../services/labelService';
 import type { LabelApiResponse } from '../../../api/types';
@@ -33,6 +34,7 @@ export function ProjectLabelModal({
   setProjectLabels,
   setProjectLabelModalOpen,
 }: ProjectLabelModalProps) {
+  const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,11 +42,15 @@ export function ProjectLabelModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={projectLabelEdit ? 'Edit label' : 'Add label'}
+      title={
+        projectLabelEdit
+          ? t('settings.labels.editTitle', 'Edit label')
+          : t('settings.labels.addTitle', 'Add label')
+      }
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button
             disabled={!projectLabelName.trim() || saving}
@@ -69,13 +75,19 @@ export function ProjectLabelModal({
                 setProjectLabelModalOpen(false);
                 setProjectLabelEdit(null);
               } catch {
-                setError('Failed to save label. Please try again.');
+                setError(
+                  t('settings.labels.error.save', 'Failed to save label. Please try again.'),
+                );
               } finally {
                 setSaving(false);
               }
             }}
           >
-            {saving ? 'Saving…' : projectLabelEdit ? 'Save' : 'Create'}
+            {saving
+              ? t('common.saving', 'Saving…')
+              : projectLabelEdit
+                ? t('common.save', 'Save')
+                : t('common.create', 'Create')}
           </Button>
         </>
       }
@@ -87,17 +99,21 @@ export function ProjectLabelModal({
           </p>
         ) : null}
         <div>
-          <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">Name</label>
+          <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
+            {t('common.name', 'Name')}
+          </label>
           <input
             type="text"
             value={projectLabelName}
             onChange={(e) => setProjectLabelName(e.target.value)}
             className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
-            placeholder="e.g. Bug"
+            placeholder={t('settings.labels.namePlaceholder', 'e.g. Bug')}
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">Color</label>
+          <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
+            {t('common.color', 'Color')}
+          </label>
           <div className="flex items-center gap-2">
             <input
               type="color"

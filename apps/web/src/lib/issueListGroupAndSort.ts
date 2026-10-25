@@ -403,3 +403,95 @@ export function buildGroupedIssues(params: {
     isFlat: true,
   };
 }
+
+// subGroupKey returns the bucket key an issue falls into for a given dimension,
+// mirroring the key derivation in buildGroupedIssues exactly (including the
+// sentinel "none" keys) so a sub-grouping lines up with the same dimension's
+// primary grouping.
+export function subGroupKey(
+  dimension: SavedViewGroupBy,
+  issue: IssueApiResponse,
+  labels: LabelApiResponse[],
+): string {
+  switch (dimension) {
+    case 'states':
+      return issue.state_id?.trim() ? issue.state_id : NONE_STATE_KEY;
+    case 'priority':
+      return issue.priority?.trim() || 'none';
+    case 'cycle':
+      return issue.cycle_ids?.[0]?.trim() ?? NONE_CYCLE_KEY;
+    case 'module':
+      return issue.module_ids?.[0]?.trim() ?? NONE_MODULE_KEY;
+    case 'labels': {
+      const ids = [...(issue.label_ids ?? [])].sort((a, b) => {
+        const na = labels.find((l) => l.id === a)?.name ?? a;
+        const nb = labels.find((l) => l.id === b)?.name ?? b;
+        return na.localeCompare(nb);
+      });
+      return ids[0] ?? NONE_LABEL_KEY;
+    }
+    case 'assignees':
+      return issue.assignee_ids?.[0]?.trim() ?? NONE_ASSIGNEE_KEY;
+    case 'created_by':
+      return issue.created_by_id?.trim() ?? NONE_CREATOR_KEY;
+    default:
+      return ALL_GROUP_KEY;
+  }
+}
+
+// A two-level grouping: a primary group-by nested under (or crossed with) a
+// secondary sub-group-by. Cells are keyed cells[primaryKey][subKey].
+export interface SubGroupedIssuesResult {
+  primaryOrder: string[];
+  primaryTitle: (key: string) => string;
+  subOrder: string[];
+  subTitle: (key: string) => string;
+  cells: Map<string, Map<string, IssueApiResponse[]>>;
+}
+
+// buildSubGroupedIssues layers a secondary dimension on top of the primary
+// grouping. Returns null when sub-grouping doesn't apply (no primary group, no
+// sub-group, or the two dimensions are equal), so callers fall back to the
+// normal single-level grouping. It reuses buildGroupedIssues for both
+// dimensions' order + titles so behavior stays consistent.
+export function buildSubGroupedIssues(params: {
+  baseForGrouping: IssueApiResponse[];
+  groupBy: SavedViewGroupBy;
+  subGroupBy: SavedViewGroupBy;
+  orderBy: SavedViewOrderBy;
+  orderDirection?: SavedViewOrderDirection;
+  showEmptyGroups: boolean;
+  states: StateApiResponse[];
+  cycles: CycleApiResponse[];
+  modules: ModuleApiResponse[];
+  labels: LabelApiResponse[];
+  members: WorkspaceMemberApiResponse[];
+}): SubGroupedIssuesResult | null {
+  const { groupBy, subGroupBy, labels } = params;
+  if (groupBy === 'none' || subGroupBy === 'none' || subGroupBy === groupBy) {
+    return null;
+  }
+  const primary = buildGroupedIssues({ ...params, groupBy });
+  const sub = buildGroupedIssues({ ...params, groupBy: subGroupBy });
+  if (primary.isFlat || sub.isFlat) return null;
+
+  const cells = new Map<string, Map<string, IssueApiResponse[]>>();
+  for (const primaryKey of primary.order) {
+    const issues = primary.groups.get(primaryKey) ?? [];
+    const bySub = new Map<string, IssueApiResponse[]>();
+    for (const issue of issues) {
+      const sk = subGroupKey(subGroupBy, issue, labels);
+      const arr = bySub.get(sk) ?? [];
+      arr.push(issue);
+      bySub.set(sk, arr);
+    }
+    cells.set(primaryKey, bySub);
+  }
+  return {
+    primaryOrder: primary.order,
+    primaryTitle: primary.title,
+    subOrder: sub.order,
+    subTitle: sub.title,
+    cells,
+  };
+}

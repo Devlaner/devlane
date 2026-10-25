@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Settings2 } from 'lucide-react';
 import { Skeleton } from '../../components/ui';
@@ -80,48 +81,6 @@ interface AuthMode {
   editPath?: string;
 }
 
-const AUTH_MODES: AuthMode[] = [
-  {
-    key: 'magic_code',
-    Icon: IconEnvelope,
-    name: 'Unique codes',
-    desc: 'Log in or sign up for Devlane using codes sent via email. You need to have set up SMTP to use this method.',
-  },
-  {
-    key: 'password',
-    Icon: IconKey,
-    name: 'Passwords',
-    desc: 'Allow members to create accounts with passwords and use it with their email addresses to sign in.',
-  },
-  {
-    key: 'google',
-    Icon: IconGoogle,
-    name: 'Google',
-    desc: 'Allow members to log in or sign up for Devlane with their Google accounts.',
-    isOAuth: true,
-    oauthKey: 'google',
-    editPath: '/instance-admin/authentication/google',
-  },
-  {
-    key: 'github',
-    Icon: IconGitHub,
-    name: 'GitHub',
-    desc: 'Allow members to log in or sign up for Devlane with their GitHub accounts.',
-    isOAuth: true,
-    oauthKey: 'github',
-    editPath: '/instance-admin/authentication/github',
-  },
-  {
-    key: 'gitlab',
-    Icon: IconGitLab,
-    name: 'GitLab',
-    desc: 'Allow members to log in or sign up for Devlane with their GitLab accounts.',
-    isOAuth: true,
-    oauthKey: 'gitlab',
-    editPath: '/instance-admin/authentication/gitlab',
-  },
-];
-
 function isOAuthConfigured(oauthKey: OAuthProviderKey, oauth: InstanceOAuthSection): boolean {
   switch (oauthKey) {
     case 'google':
@@ -146,6 +105,63 @@ function countEnabledAuthMethods(auth: InstanceAuthSection): number {
 }
 
 export function InstanceAdminAuthenticationPage() {
+  const { t } = useTranslation();
+  const AUTH_MODES: AuthMode[] = [
+    {
+      key: 'magic_code',
+      Icon: IconEnvelope,
+      name: t('instanceAdmin.auth.methods.magicCode.name', 'Unique codes'),
+      desc: t(
+        'instanceAdmin.auth.methods.magicCode.desc',
+        'Log in or sign up for Devlane using codes sent via email. You need to have set up SMTP to use this method.',
+      ),
+    },
+    {
+      key: 'password',
+      Icon: IconKey,
+      name: t('instanceAdmin.auth.methods.password.name', 'Passwords'),
+      desc: t(
+        'instanceAdmin.auth.methods.password.desc',
+        'Allow members to create accounts with passwords and use it with their email addresses to sign in.',
+      ),
+    },
+    {
+      key: 'google',
+      Icon: IconGoogle,
+      name: 'Google',
+      desc: t(
+        'instanceAdmin.auth.methods.google.desc',
+        'Allow members to log in or sign up for Devlane with their Google accounts.',
+      ),
+      isOAuth: true,
+      oauthKey: 'google',
+      editPath: '/instance-admin/authentication/google',
+    },
+    {
+      key: 'github',
+      Icon: IconGitHub,
+      name: 'GitHub',
+      desc: t(
+        'instanceAdmin.auth.methods.github.desc',
+        'Allow members to log in or sign up for Devlane with their GitHub accounts.',
+      ),
+      isOAuth: true,
+      oauthKey: 'github',
+      editPath: '/instance-admin/authentication/github',
+    },
+    {
+      key: 'gitlab',
+      Icon: IconGitLab,
+      name: 'GitLab',
+      desc: t(
+        'instanceAdmin.auth.methods.gitlab.desc',
+        'Allow members to log in or sign up for Devlane with their GitLab accounts.',
+      ),
+      isOAuth: true,
+      oauthKey: 'gitlab',
+      editPath: '/instance-admin/authentication/gitlab',
+    },
+  ];
   const [auth, setAuth] = useState<InstanceAuthSection>({
     allow_public_signup: true,
     magic_code: true,
@@ -158,7 +174,7 @@ export function InstanceAdminAuthenticationPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  useDocumentTitle('Authentication');
+  useDocumentTitle(t('instanceAdmin.auth.documentTitle', 'Authentication'));
 
   useEffect(() => {
     let cancelled = false;
@@ -193,7 +209,10 @@ export function InstanceAdminAuthenticationPage() {
     if (!value && key !== 'allow_public_signup') {
       if (countEnabledAuthMethods(auth) <= 1) {
         setError(
-          'At least one authentication method must remain enabled. Please enable another method before disabling this one.',
+          t(
+            'instanceAdmin.auth.minMethodError',
+            'At least one authentication method must remain enabled. Please enable another method before disabling this one.',
+          ),
         );
         return;
       }
@@ -255,10 +274,13 @@ export function InstanceAdminAuthenticationPage() {
     <div className="w-full max-w-3xl space-y-6">
       <div>
         <h1 className="text-base font-semibold text-(--txt-primary)">
-          Manage authentication modes for your instance
+          {t('instanceAdmin.auth.title', 'Manage authentication modes for your instance')}
         </h1>
         <p className="mt-0.5 text-xs text-(--txt-secondary)">
-          Configure authentication modes for your team and restrict sign-ups to be invite only.
+          {t(
+            'instanceAdmin.auth.subtitle',
+            'Configure authentication modes for your team and restrict sign-ups to be invite only.',
+          )}
         </p>
       </div>
 
@@ -267,10 +289,16 @@ export function InstanceAdminAuthenticationPage() {
       <section className="flex items-start justify-between gap-3 rounded border border-(--border-subtle) bg-(--bg-surface-1) p-3">
         <div>
           <p className="text-xs font-medium text-(--txt-primary)">
-            Allow anyone to sign up even without an invite
+            {t(
+              'instanceAdmin.auth.publicSignup.title',
+              'Allow anyone to sign up even without an invite',
+            )}
           </p>
           <p className="mt-0.5 text-xs text-(--txt-secondary)">
-            Toggling this off will only let users sign up when they are invited.
+            {t(
+              'instanceAdmin.auth.publicSignup.desc',
+              'Toggling this off will only let users sign up when they are invited.',
+            )}
           </p>
         </div>
         <InstanceAdminToggleSwitch
@@ -282,7 +310,7 @@ export function InstanceAdminAuthenticationPage() {
 
       <section>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-(--txt-secondary)">
-          Available authentication modes
+          {t('instanceAdmin.auth.availableModes', 'Available authentication modes')}
         </h2>
         <ul className="space-y-2">
           {AUTH_MODES.map((item) => {
@@ -317,11 +345,11 @@ export function InstanceAdminAuthenticationPage() {
                         }
                       >
                         {configured ? (
-                          'Edit'
+                          t('common.edit', 'Edit')
                         ) : (
                           <>
                             <Settings2 className="h-3.5 w-3.5" />
-                            Configure
+                            {t('common.configure', 'Configure')}
                           </>
                         )}
                       </Link>
@@ -329,9 +357,15 @@ export function InstanceAdminAuthenticationPage() {
                         className="inline-flex"
                         title={
                           !configured && !on
-                            ? 'Add OAuth client credentials on the configuration page before enabling this provider.'
+                            ? t(
+                                'instanceAdmin.auth.tooltip.missingBeforeEnable',
+                                'Add OAuth client credentials on the configuration page before enabling this provider.',
+                              )
                             : on && !configured
-                              ? 'OAuth credentials are missing or invalid. Open Configure to fix or turn this off.'
+                              ? t(
+                                  'instanceAdmin.auth.tooltip.invalidCredentials',
+                                  'OAuth credentials are missing or invalid. Open Configure to fix or turn this off.',
+                                )
                               : undefined
                         }
                       >

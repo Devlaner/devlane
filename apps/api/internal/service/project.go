@@ -18,6 +18,9 @@ var (
 	ErrProjectNotFound          = errors.New("project not found")
 	ErrProjectForbidden         = errors.New("no access to this project")
 	ErrProjectIdentifierTooLong = errors.New("project identifier must be at most 7 characters")
+	ErrInvalidNetwork           = errors.New("network must be public or secret")
+	ErrInvalidArchiveIn         = errors.New("archive_in must be zero or a positive number of months")
+	ErrInvalidCloseIn           = errors.New("close_in must be zero or a positive number of months")
 )
 
 // ProjectService handles project business logic.
@@ -32,6 +35,13 @@ func NewProjectService(ps *store.ProjectStore, pinv *store.ProjectInviteStore, w
 	return &ProjectService{ps: ps, pinv: pinv, ws: ws, us: us}
 }
 
+// isWorkspaceAdmin reports whether the user is an admin/owner of the workspace,
+// who can see and manage every project regardless of its network visibility.
+func (s *ProjectService) isWorkspaceAdmin(ctx context.Context, workspaceID, userID uuid.UUID) bool {
+	wm, err := s.ws.GetMember(ctx, workspaceID, userID)
+	return err == nil && wm != nil && wm.Role >= model.RoleAdmin
+}
+
 func (s *ProjectService) ListByWorkspace(ctx context.Context, workspaceSlug string, userID uuid.UUID) ([]model.Project, error) {
 	wrk, err := s.ws.GetBySlug(context.Background(), workspaceSlug)
 	if err != nil {
@@ -41,7 +51,12 @@ func (s *ProjectService) ListByWorkspace(ctx context.Context, workspaceSlug stri
 	if !ok {
 		return nil, ErrProjectForbidden
 	}
-	return s.ps.ListByWorkspaceID(ctx, wrk.ID)
+	// Workspace admins see everything; everyone else sees public projects plus
+	// the secret ones they belong to.
+	if s.isWorkspaceAdmin(ctx, wrk.ID, userID) {
+		return s.ps.ListByWorkspaceID(ctx, wrk.ID)
+	}
+	return s.ps.ListVisibleByWorkspaceID(ctx, wrk.ID, userID)
 }
 
 func (s *ProjectService) GetByID(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID) (*model.Project, error) {
@@ -57,7 +72,18 @@ func (s *ProjectService) GetByID(ctx context.Context, workspaceSlug string, proj
 	if !inWorkspace {
 		return nil, ErrProjectNotFound
 	}
-	return s.ps.GetByID(ctx, projectID)
+	p, err := s.ps.GetByID(ctx, projectID)
+	if err != nil {
+		return nil, err
+	}
+	// A secret project is reachable only by its members (or a workspace admin).
+	if p.Network != model.NetworkPublic && !s.isWorkspaceAdmin(ctx, wrk.ID, userID) {
+		pm, _ := s.ps.GetProjectMember(ctx, projectID, userID)
+		if pm == nil {
+			return nil, ErrProjectNotFound
+		}
+	}
+	return p, nil
 }
 
 // projectCallerRole returns the caller's effective role for admin actions on
@@ -110,7 +136,7 @@ func (s *ProjectService) Create(ctx context.Context, workspaceSlug, name, identi
 	return p, nil
 }
 
-func (s *ProjectService) Update(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID, name, identifier, description, timezone, coverImage *string, emoji *string, iconProp *model.JSONMap, projectLeadIDSet bool, projectLeadID *uuid.UUID, defaultAssigneeIDSet bool, defaultAssigneeID *uuid.UUID, guestViewAllFeatures *bool, moduleView, cycleView, issueViewsView, pageView, intakeView, isTimeTrackingEnabled *bool) (*model.Project, error) {
+func (s *ProjectService) Update(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID, name, identifier, description, timezone, coverImage *string, emoji *string, iconProp *model.JSONMap, projectLeadIDSet bool, projectLeadID *uuid.UUID, defaultAssigneeIDSet bool, defaultAssigneeID *uuid.UUID, guestViewAllFeatures *bool, network *int16, moduleView, cycleView, issueViewsView, pageView, intakeView, isTimeTrackingEnabled *bool, archiveIn *int, closeIn *int) (*model.Project, error) {
 	p, err := s.GetByID(ctx, workspaceSlug, projectID, userID)
 	if err != nil {
 		return nil, err
@@ -154,6 +180,12 @@ func (s *ProjectService) Update(ctx context.Context, workspaceSlug string, proje
 	if guestViewAllFeatures != nil {
 		p.GuestViewAllFeatures = *guestViewAllFeatures
 	}
+	if network != nil {
+		if *network != model.NetworkPublic && *network != model.NetworkSecret {
+			return nil, ErrInvalidNetwork
+		}
+		p.Network = *network
+	}
 	if moduleView != nil {
 		p.ModuleView = *moduleView
 	}
@@ -172,6 +204,18 @@ func (s *ProjectService) Update(ctx context.Context, workspaceSlug string, proje
 	if isTimeTrackingEnabled != nil {
 		p.IsTimeTrackingEnabled = *isTimeTrackingEnabled
 	}
+	if archiveIn != nil {
+		if *archiveIn < 0 {
+			return nil, ErrInvalidArchiveIn
+		}
+		p.ArchiveIn = *archiveIn
+	}
+	if closeIn != nil {
+		if *closeIn < 0 {
+			return nil, ErrInvalidCloseIn
+		}
+		p.CloseIn = *closeIn
+	}
 	if err := s.ps.Update(ctx, p); err != nil {
 		return nil, err
 	}
@@ -187,6 +231,47 @@ func (s *ProjectService) Delete(ctx context.Context, workspaceSlug string, proje
 		return err
 	}
 	return s.ps.Delete(ctx, projectID)
+}
+
+// Archive hides a project from the active lists without deleting it. Requires
+// project admin, like Delete.
+func (s *ProjectService) Archive(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID) error {
+	p, err := s.GetByID(ctx, workspaceSlug, projectID, userID)
+	if err != nil {
+		return err
+	}
+	if err := s.requireProjectAdmin(ctx, p.WorkspaceID, p.ID, userID); err != nil {
+		return err
+	}
+	return s.ps.SetArchived(ctx, projectID, true)
+}
+
+// Restore brings an archived project back into the active lists.
+func (s *ProjectService) Restore(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID) error {
+	p, err := s.GetByID(ctx, workspaceSlug, projectID, userID)
+	if err != nil {
+		return err
+	}
+	if err := s.requireProjectAdmin(ctx, p.WorkspaceID, p.ID, userID); err != nil {
+		return err
+	}
+	return s.ps.SetArchived(ctx, projectID, false)
+}
+
+// ListArchived returns the workspace's archived projects the user may see.
+func (s *ProjectService) ListArchived(ctx context.Context, workspaceSlug string, userID uuid.UUID) ([]model.Project, error) {
+	wrk, err := s.ws.GetBySlug(ctx, workspaceSlug)
+	if err != nil {
+		return nil, ErrProjectNotFound
+	}
+	ok, _ := s.ws.IsMember(ctx, wrk.ID, userID)
+	if !ok {
+		return nil, ErrProjectForbidden
+	}
+	if s.isWorkspaceAdmin(ctx, wrk.ID, userID) {
+		return s.ps.ListArchivedByWorkspaceID(ctx, wrk.ID)
+	}
+	return s.ps.ListArchivedVisibleByWorkspaceID(ctx, wrk.ID, userID)
 }
 
 func (s *ProjectService) ListMembers(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID) ([]model.ProjectMember, error) {

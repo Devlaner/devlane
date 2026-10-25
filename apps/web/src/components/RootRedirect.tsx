@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Navigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { instanceService } from '../services/instanceService';
 import { workspaceService } from '../services/workspaceService';
 
-const PageFallback = () => (
-  <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-    Loading...
-  </div>
-);
+const PageFallback = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
+      {t('common.loading', 'Loading…')}
+    </div>
+  );
+};
 
 /**
  * At root "/", checks setup status then redirects:
@@ -18,6 +22,7 @@ const PageFallback = () => (
  * - authenticated + no workspaces + creation restricted → info message
  */
 export function RootRedirect() {
+  const { t } = useTranslation();
   const [setupRequired, setSetupRequired] = useState<boolean | null>(null);
   const [firstSlug, setFirstSlug] = useState<string | null>(null);
   const [noWorkspaces, setNoWorkspaces] = useState(false);
@@ -69,9 +74,14 @@ export function RootRedirect() {
     }
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <p className="text-(--txt-secondary)">You don&apos;t have any workspaces yet.</p>
+        <p className="text-(--txt-secondary)">
+          {t('workspaces.empty.title', "You don't have any workspaces yet.")}
+        </p>
         <p className="text-sm text-(--txt-tertiary)">
-          Workspace creation is restricted. Ask your instance admin to invite you to a workspace.
+          {t(
+            'workspaces.empty.restricted',
+            'Workspace creation is restricted. Ask your instance admin to invite you to a workspace.',
+          )}
         </p>
       </div>
     );

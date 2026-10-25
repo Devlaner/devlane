@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,6 +12,32 @@ import (
 
 	"github.com/Devlaner/devlane/api/internal/middleware"
 )
+
+// DoMultipart posts a single-file multipart/form-data request (field "file")
+// through the router, for endpoints that accept uploads.
+func (ts *TestServer) DoMultipart(method, path, filename, content, sessionKey string) *httptest.ResponseRecorder {
+	ts.T.Helper()
+	var buf bytes.Buffer
+	w := multipart.NewWriter(&buf)
+	fw, err := w.CreateFormFile("file", filename)
+	if err != nil {
+		ts.T.Fatalf("create form file: %v", err)
+	}
+	if _, err := fw.Write([]byte(content)); err != nil {
+		ts.T.Fatalf("write form file: %v", err)
+	}
+	if err := w.Close(); err != nil {
+		ts.T.Fatalf("close multipart: %v", err)
+	}
+	req := httptest.NewRequest(method, path, &buf)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	if sessionKey != "" {
+		req.AddCookie(&http.Cookie{Name: middleware.SessionCookieName, Value: sessionKey})
+	}
+	rr := httptest.NewRecorder()
+	ts.Router.ServeHTTP(rr, req)
+	return rr
+}
 
 // Do dispatches an HTTP request through the gin router and returns the recorder.
 // body may be nil (no body), a string, []byte, io.Reader, or any JSON-marshallable value.

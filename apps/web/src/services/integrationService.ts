@@ -6,7 +6,11 @@ import type {
   GitHubRepositorySyncResponse,
   IntegrationApiResponse,
   WorkspaceIntegrationApiResponse,
+  SlackChannel,
+  SlackChannelLinkResponse,
 } from '../api/types';
+
+const GITHUB_ISSUE_SUMMARY_BATCH_SIZE = 100;
 
 /**
  * Integration API service.
@@ -172,6 +176,7 @@ export const integrationService = {
    * GET .../integrations/github/issue-summary/?ids=a,b,c
    * Returns aggregated PR counts per issue ID for badges on the issues list page.
    * Pass an empty array to get an empty map (no request made).
+   * Requests are chunked because this endpoint currently accepts IDs via query string.
    */
   async githubIssueSummary(
     workspaceSlug: string,
@@ -179,10 +184,83 @@ export const integrationService = {
     issueIds: string[],
   ): Promise<GitHubIssueSummaryResponse['summary']> {
     if (issueIds.length === 0) return {};
-    const { data } = await apiClient.get<GitHubIssueSummaryResponse>(
-      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/integrations/github/issue-summary/`,
-      { params: { ids: issueIds.join(',') } },
+
+    const summary: GitHubIssueSummaryResponse['summary'] = {};
+    for (let i = 0; i < issueIds.length; i += GITHUB_ISSUE_SUMMARY_BATCH_SIZE) {
+      const batch = issueIds.slice(i, i + GITHUB_ISSUE_SUMMARY_BATCH_SIZE);
+      const { data } = await apiClient.get<GitHubIssueSummaryResponse>(
+        `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/integrations/github/issue-summary/`,
+        { params: { ids: batch.join(',') } },
+      );
+      Object.assign(summary, data.summary ?? {});
+    }
+    return summary;
+  },
+
+  /**
+   * Build the URL to start the Slack App install flow.
+   */
+  slackInstallUrl(workspaceSlug: string): string {
+    const base = API_BASE || '';
+    return `${base}/auth/slack/install?workspace=${encodeURIComponent(workspaceSlug)}`;
+  },
+
+  /** GET /api/workspaces/:slug/integrations/slack/channels/ */
+  async slackListChannels(workspaceSlug: string): Promise<SlackChannel[]> {
+    const { data } = await apiClient.get<SlackChannel[]>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/integrations/slack/channels/`,
     );
-    return data.summary ?? {};
+    return data;
+  },
+
+  /** GET /api/workspaces/:slug/projects/:projectId/integrations/slack/channel/ */
+  async slackGetProjectChannel(
+    workspaceSlug: string,
+    projectId: string,
+  ): Promise<SlackChannelLinkResponse | null> {
+    try {
+      const { data } = await apiClient.get<SlackChannelLinkResponse>(
+        `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/integrations/slack/channel/`,
+      );
+      // Backend answers 200 + null body when no channel is linked.
+      return data ?? null;
+    } catch (err) {
+      const e = err as { response?: { status?: number } };
+      if (e?.response?.status === 404) return null;
+      throw err;
+    }
+  },
+
+  /** POST /api/workspaces/:slug/projects/:projectId/integrations/slack/channel/ */
+  async slackLinkProjectChannel(
+    workspaceSlug: string,
+    projectId: string,
+    payload: { channel_id: string; channel_name: string },
+  ): Promise<SlackChannelLinkResponse> {
+    const { data } = await apiClient.post<SlackChannelLinkResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/integrations/slack/channel/`,
+      payload,
+    );
+    return data;
+  },
+
+  /** PATCH /api/workspaces/:slug/projects/:projectId/integrations/slack/channel/ */
+  async slackUpdateProjectChannel(
+    workspaceSlug: string,
+    projectId: string,
+    events: Record<string, boolean>,
+  ): Promise<SlackChannelLinkResponse> {
+    const { data } = await apiClient.patch<SlackChannelLinkResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/integrations/slack/channel/`,
+      { events },
+    );
+    return data;
+  },
+
+  /** DELETE /api/workspaces/:slug/projects/:projectId/integrations/slack/channel/ */
+  async slackUnlinkProjectChannel(workspaceSlug: string, projectId: string): Promise<void> {
+    await apiClient.delete(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/integrations/slack/channel/`,
+    );
   },
 };

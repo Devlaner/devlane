@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button, Input } from '../../components/ui';
 import { CreateWorkspaceSetupHint } from '../../components/instance-admin/CreateWorkspaceSetupHint';
@@ -26,6 +27,7 @@ const IconChevronDown = () => (
 );
 
 export function InstanceAdminCreateWorkspacePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated } = useAuth();
@@ -35,7 +37,7 @@ export function InstanceAdminCreateWorkspacePage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSetupHint, setShowSetupHint] = useState(false);
-  useDocumentTitle('Create workspace');
+  useDocumentTitle(t('instanceAdmin.createWorkspace.documentTitle', 'Create workspace'));
 
   const baseUrl = typeof window !== 'undefined' ? `${window.location.origin}/` : '';
 
@@ -59,16 +61,24 @@ export function InstanceAdminCreateWorkspacePage() {
     const trimmedSlug = slug.trim().toLowerCase() || slugFromName(trimmedName);
 
     if (!trimmedName) {
-      setError('Please enter a workspace name.');
+      setError(t('instanceAdmin.createWorkspace.errorName', 'Please enter a workspace name.'));
       return;
     }
     if (!validateWorkspaceSlug(trimmedSlug)) {
-      setError('Workspace URL must be lowercase letters, numbers, and hyphens only.');
+      setError(
+        t(
+          'instanceAdmin.createWorkspace.errorSlug',
+          'Workspace URL must be lowercase letters, numbers, and hyphens only.',
+        ),
+      );
       return;
     }
     if (!isAuthenticated || !user) {
       setError(
-        'You need to be signed in to the app to create a workspace. Sign in from the main app, then return here.',
+        t(
+          'instanceAdmin.createWorkspace.errorSignIn',
+          'You need to be signed in to the app to create a workspace. Sign in from the main app, then return here.',
+        ),
       );
       return;
     }
@@ -93,25 +103,31 @@ export function InstanceAdminCreateWorkspacePage() {
     <div className="w-full space-y-6">
       <div>
         <h1 className="text-base font-semibold text-(--txt-primary)">
-          Create a new workspace on this instance.
+          {t('instanceAdmin.createWorkspace.title', 'Create a new workspace on this instance.')}
         </h1>
         <p className="mt-1 text-sm text-(--txt-secondary)">
-          You will need to invite users from Workspace Settings after you create this workspace.
+          {t(
+            'instanceAdmin.createWorkspace.subtitle',
+            'You will need to invite users from Workspace Settings after you create this workspace.',
+          )}
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="flex max-w-xl flex-col gap-5">
         <Input
-          label="Name your workspace"
+          label={t('instanceAdmin.createWorkspace.nameLabel', 'Name your workspace')}
           value={name}
           onChange={handleNameChange}
-          placeholder="Something familiar and recognizable is always best."
+          placeholder={t(
+            'instanceAdmin.createWorkspace.namePlaceholder',
+            'Something familiar and recognizable is always best.',
+          )}
           autoComplete="organization"
         />
 
         <div className="flex flex-col gap-1">
           <label htmlFor="workspace-url" className="text-sm font-medium text-(--txt-secondary)">
-            Set your workspace&apos;s URL
+            {t('instanceAdmin.createWorkspace.urlLabel', "Set your workspace's URL")}
           </label>
           <div className="flex flex-1 items-center gap-0 overflow-hidden rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) text-sm">
             <span className="shrink-0 truncate border-r border-(--border-subtle) bg-(--bg-layer-1) px-3 py-2 text-(--txt-tertiary)">
@@ -122,7 +138,7 @@ export function InstanceAdminCreateWorkspacePage() {
               type="text"
               value={slug}
               onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-              placeholder="workspace-name"
+              placeholder={t('instanceAdmin.createWorkspace.slugPlaceholder', 'workspace-name')}
               className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
             />
           </div>
@@ -130,7 +146,10 @@ export function InstanceAdminCreateWorkspacePage() {
 
         <div className="flex flex-col gap-1">
           <label htmlFor="organization-size" className="text-sm font-medium text-(--txt-secondary)">
-            How many people will use this workspace?
+            {t(
+              'instanceAdmin.createWorkspace.orgSizeLabel',
+              'How many people will use this workspace?',
+            )}
           </label>
           <div className="relative">
             <select
@@ -141,7 +160,7 @@ export function InstanceAdminCreateWorkspacePage() {
             >
               {ORGANIZATION_SIZE_OPTIONS.map((opt) => (
                 <option key={opt.value || 'empty'} value={opt.value}>
-                  {opt.label}
+                  {opt.value === '' ? t('workspace.orgSize.selectRange', opt.label) : opt.label}
                 </option>
               ))}
             </select>
@@ -155,14 +174,16 @@ export function InstanceAdminCreateWorkspacePage() {
 
         <div className="flex flex-wrap gap-3">
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating…' : 'Create workspace'}
+            {isSubmitting
+              ? t('instanceAdmin.createWorkspace.creating', 'Creating…')
+              : t('instanceAdmin.createWorkspace.create', 'Create workspace')}
           </Button>
           <Button
             type="button"
             variant="secondary"
             onClick={() => navigate('/instance-admin/workspace')}
           >
-            Go back
+            {t('common.goBack', 'Go back')}
           </Button>
         </div>
       </form>

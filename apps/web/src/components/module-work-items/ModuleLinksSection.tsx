@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Copy, Pencil, Trash2, Link as LinkIcon, Plus } from 'lucide-react';
 import { moduleService, type ModuleLinkApiResponse } from '../../services/moduleService';
 import { safeUrl } from '../../lib/sanitize';
@@ -10,23 +12,23 @@ interface ModuleLinksSectionProps {
   moduleId: string;
 }
 
-function timeAgo(iso: string): string {
-  const t = Date.parse(iso);
-  if (Number.isNaN(t)) return '';
-  const sec = Math.max(1, Math.floor((Date.now() - t) / 1000));
-  const units: [number, string][] = [
-    [31536000, 'year'],
-    [2592000, 'month'],
-    [604800, 'week'],
-    [86400, 'day'],
-    [3600, 'hour'],
-    [60, 'minute'],
+function timeAgo(iso: string, t: TFunction): string {
+  const ts = Date.parse(iso);
+  if (Number.isNaN(ts)) return '';
+  const sec = Math.max(1, Math.floor((Date.now() - ts) / 1000));
+  const units: [number, string, string][] = [
+    [31536000, 'common.timeAgo.year', '{{count}} year ago'],
+    [2592000, 'common.timeAgo.month', '{{count}} month ago'],
+    [604800, 'common.timeAgo.week', '{{count}} week ago'],
+    [86400, 'common.timeAgo.day', '{{count}} day ago'],
+    [3600, 'common.timeAgo.hour', '{{count}} hour ago'],
+    [60, 'common.timeAgo.minute', '{{count}} minute ago'],
   ];
-  for (const [s, label] of units) {
+  for (const [s, key, def] of units) {
     const v = Math.floor(sec / s);
-    if (v >= 1) return `${v} ${label}${v > 1 ? 's' : ''} ago`;
+    if (v >= 1) return t(key, def, { count: v });
   }
-  return 'just now';
+  return t('common.justNow', 'just now');
 }
 
 /** Small favicon for a link, falling back to a generic icon. */
@@ -61,6 +63,7 @@ export function ModuleLinksSection({
   projectId,
   moduleId,
 }: ModuleLinksSectionProps) {
+  const { t } = useTranslation();
   const [links, setLinks] = useState<ModuleLinkApiResponse[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ModuleLinkApiResponse | null>(null);
@@ -115,10 +118,10 @@ export function ModuleLinksSection({
   return (
     <section className="space-y-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-(--txt-secondary)">Links</h3>
+        <h3 className="text-sm font-medium text-(--txt-secondary)">{t('module.links', 'Links')}</h3>
         <button
           type="button"
-          aria-label="Add link"
+          aria-label={t('module.addLink', 'Add link')}
           onClick={() => {
             setEditing(null);
             setModalOpen(true);
@@ -154,7 +157,7 @@ export function ModuleLinksSection({
                 <div className="flex shrink-0 items-center opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                   <button
                     type="button"
-                    aria-label="Edit link"
+                    aria-label={t('module.editLink', 'Edit link')}
                     className={actionBtn}
                     onClick={() => {
                       setEditing(l);
@@ -165,7 +168,7 @@ export function ModuleLinksSection({
                   </button>
                   <button
                     type="button"
-                    aria-label="Copy link"
+                    aria-label={t('module.copyLink', 'Copy link')}
                     className={actionBtn}
                     onClick={() => copy(l.url)}
                   >
@@ -173,7 +176,7 @@ export function ModuleLinksSection({
                   </button>
                   <button
                     type="button"
-                    aria-label="Remove link"
+                    aria-label={t('module.removeLink', 'Remove link')}
                     className="grid place-items-center rounded-sm p-1 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-danger-primary)"
                     onClick={() => void remove(l.id)}
                   >
@@ -182,7 +185,7 @@ export function ModuleLinksSection({
                 </div>
               </div>
               <p className="mt-0.5 pl-5 text-[11px] text-(--txt-tertiary)">
-                Added {timeAgo(l.created_at)}
+                {t('module.addedTime', 'Added {{time}}', { time: timeAgo(l.created_at, t) })}
               </p>
             </div>
           ))}

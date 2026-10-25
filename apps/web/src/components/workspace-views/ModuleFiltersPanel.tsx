@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useModulesFilter } from '../../contexts/ModulesFilterContext';
 import { CollapsibleSection } from './WorkspaceViewsFiltersShared';
 import { DATE_PRESET_LABELS, FILTER_ICONS } from './WorkspaceViewsFiltersData';
@@ -107,6 +108,7 @@ export interface ModuleFiltersPanelProps {
 }
 
 export function ModuleFiltersPanel({ workspaceSlug, onOpenDateModal }: ModuleFiltersPanelProps) {
+  const { t } = useTranslation();
   const filter = useModulesFilter();
   const [search, setSearch] = useState('');
   const [members, setWorkspaceMembers] = useState<WorkspaceMemberApiResponse[]>([]);
@@ -187,7 +189,7 @@ export function ModuleFiltersPanel({ workspaceSlug, onOpenDateModal }: ModuleFil
           </span>
           <input
             type="text"
-            placeholder="Search"
+            placeholder={t('common.search', 'Search')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -199,7 +201,7 @@ export function ModuleFiltersPanel({ workspaceSlug, onOpenDateModal }: ModuleFil
         style={{ maxHeight: 'min(70vh, 28rem)' }}
       >
         <CollapsibleSection
-          title="Favorites"
+          title={t('filters.favorites', 'Favorites')}
           open={sectionOpen.favorites}
           onToggle={() => toggleSection('favorites')}
         >
@@ -210,12 +212,12 @@ export function ModuleFiltersPanel({ workspaceSlug, onOpenDateModal }: ModuleFil
               onChange={() => setFavorites(!favorites)}
               className="rounded border-(--border-subtle)"
             />
-            <span>Favorites</span>
+            <span>{t('filters.favorites', 'Favorites')}</span>
           </label>
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Status"
+          title={t('filters.status', 'Status')}
           open={sectionOpen.status}
           onToggle={() => toggleSection('status')}
         >
@@ -237,13 +239,13 @@ export function ModuleFiltersPanel({ workspaceSlug, onOpenDateModal }: ModuleFil
                 className="rounded border-(--border-subtle)"
               />
               <ModuleStatusIcon statusId={s.id} />
-              <span>{s.label}</span>
+              <span>{t(`module.status.${s.id}`, s.label)}</span>
             </label>
           ))}
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Lead"
+          title={t('filters.lead', 'Lead')}
           open={sectionOpen.lead}
           onToggle={() => toggleSection('lead')}
         >
@@ -279,13 +281,13 @@ export function ModuleFiltersPanel({ workspaceSlug, onOpenDateModal }: ModuleFil
               onClick={() => setShowAllLeads((v) => !v)}
               className="px-3 py-1.5 text-left text-sm text-(--brand-default) hover:underline"
             >
-              {showAllLeads ? 'Show less' : 'View all'}
+              {showAllLeads ? t('common.showLess', 'Show less') : t('common.viewAll', 'View all')}
             </button>
           )}
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Members"
+          title={t('filters.members', 'Members')}
           open={sectionOpen.members}
           onToggle={() => toggleSection('members')}
         >
@@ -321,13 +323,13 @@ export function ModuleFiltersPanel({ workspaceSlug, onOpenDateModal }: ModuleFil
               onClick={() => setShowAllMembers((v) => !v)}
               className="px-3 py-1.5 text-left text-sm text-(--brand-default) hover:underline"
             >
-              {showAllMembers ? 'Show less' : 'View all'}
+              {showAllMembers ? t('common.showLess', 'Show less') : t('common.viewAll', 'View all')}
             </button>
           )}
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Start date"
+          title={t('filters.startDate', 'Start date')}
           open={sectionOpen.start_date}
           onToggle={() => toggleSection('start_date')}
         >
@@ -391,7 +393,7 @@ export function ModuleFiltersPanel({ workspaceSlug, onOpenDateModal }: ModuleFil
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="Due date"
+          title={t('filters.dueDate', 'Due date')}
           open={sectionOpen.due_date}
           onToggle={() => toggleSection('due_date')}
         >

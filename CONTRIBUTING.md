@@ -15,7 +15,13 @@ Devlane is a monorepo with two deployable apps under `apps/`:
 1. **Infra** — `docker compose up -d` (Postgres is published on host port **15432**, not 5432).
 2. **API** — from `apps/api`, copy `.env.example` to `.env`, set `DB_PORT=15432` plus your Postgres/Redis (and optional RabbitMQ/MinIO) settings, then `go run ./cmd/api`. Migrations run automatically on startup.
 3. **Web** — from `apps/web`, run `npm install` then `npm run dev` (defaults to port 5173).
-4. **First run** — complete instance setup in the browser (create the admin account, then a workspace and project).
+4. **First run** — either complete instance setup in the browser (create the admin account, then a workspace and project), **or** seed a ready-to-explore instance from `apps/api`:
+
+   ```sh
+   go run ./cmd/api seed
+   ```
+
+   This creates a demo user (`demo@devlane.test` / `Demo1234!`), a **Demo Workspace**, a **Getting Started** project with the standard workflow states, and a handful of sample work items. It's idempotent — re-running it is a no-op once the demo user exists. Sign in with those credentials at the web app. (Local-only demo credentials; never use them in a real deployment.)
 
 Before pushing, run the full check from the repo root:
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Modal } from '../ui';
 import { Button, Input } from '../ui';
@@ -19,6 +20,7 @@ export interface CreateViewModalProps {
 }
 
 export function CreateViewModal({ open, onClose, onCreated }: CreateViewModalProps) {
+  const { t } = useTranslation();
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const navigate = useNavigate();
   const { filters: contextFilters, display: contextDisplay } = useWorkspaceViewsState();
@@ -45,7 +47,7 @@ export function CreateViewModal({ open, onClose, onCreated }: CreateViewModalPro
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!workspaceSlug?.trim() || !title.trim()) {
-      setError('Title is required.');
+      setError(t('views.titleRequired', 'Title is required.'));
       return;
     }
     setError(null);
@@ -73,7 +75,9 @@ export function CreateViewModal({ open, onClose, onCreated }: CreateViewModalPro
       onCreated?.();
       navigate(`/${workspaceSlug}/views/${created.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create view.');
+      setError(
+        err instanceof Error ? err.message : t('views.createFailed', 'Failed to create view.'),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -83,35 +87,35 @@ export function CreateViewModal({ open, onClose, onCreated }: CreateViewModalPro
     <Modal
       open={open}
       onClose={onClose}
-      title="Create View"
+      title={t('views.createView', 'Create View')}
       className="max-w-lg"
       footer={
         <>
           <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button type="submit" form="create-view-form" disabled={submitting || !title.trim()}>
-            Create View
+            {t('views.createView', 'Create View')}
           </Button>
         </>
       }
     >
       <form id="create-view-form" onSubmit={handleSubmit} className="space-y-4">
         <Input
-          label="Title"
+          label={t('views.title', 'Title')}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="View name"
+          placeholder={t('views.viewNamePlaceholder', 'View name')}
           autoFocus
         />
         <div>
           <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-            Description
+            {t('views.description', 'Description')}
           </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Optional description"
+            placeholder={t('views.optionalDescription', 'Optional description')}
             rows={3}
             className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
           />
@@ -123,10 +127,10 @@ export function CreateViewModal({ open, onClose, onCreated }: CreateViewModalPro
             onOpen={(id) =>
               setOpenPanel(id as 'create-view-filters' | 'create-view-display' | null)
             }
-            label="Filters"
+            label={t('views.filters', 'Filters')}
             icon={null}
             displayValue=""
-            triggerContent={<span>Filters</span>}
+            triggerContent={<span>{t('views.filters', 'Filters')}</span>}
             triggerClassName="inline-flex items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             panelClassName="flex w-[min(280px,calc(100vw-2rem))] max-h-[min(52vh,22rem)] flex-col overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
             align="left"
@@ -147,10 +151,10 @@ export function CreateViewModal({ open, onClose, onCreated }: CreateViewModalPro
             onOpen={(id) =>
               setOpenPanel(id as 'create-view-filters' | 'create-view-display' | null)
             }
-            label="Display"
+            label={t('views.display', 'Display')}
             icon={null}
             displayValue=""
-            triggerContent={<span>Display</span>}
+            triggerContent={<span>{t('views.display', 'Display')}</span>}
             triggerClassName="inline-flex items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             panelClassName="flex w-[min(320px,calc(100vw-2rem))] max-h-[min(52vh,22rem)] flex-col overflow-hidden rounded-md border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
             align="left"

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input } from '../../components/ui';
 import { InstanceAdminCopyRow, InstanceAdminToggleSwitch } from '../../components/instance-admin';
@@ -16,6 +17,7 @@ const IconGitHub = () => (
 );
 
 export function InstanceAdminAuthGitHubPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
@@ -34,7 +36,7 @@ export function InstanceAdminAuthGitHubPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  useDocumentTitle('GitHub authentication');
+  useDocumentTitle(t('instanceAdmin.auth.github.documentTitle', 'GitHub authentication'));
 
   useEffect(() => {
     let cancelled = false;
@@ -92,7 +94,12 @@ export function InstanceAdminAuthGitHubPage() {
       instanceSettingsService.updateSection('auth', authPayload),
     ])
       .then(([oauthRes]) => {
-        setSuccess('Your GitHub authentication is configured. You should test it now.');
+        setSuccess(
+          t(
+            'instanceAdmin.auth.github.success',
+            'Your GitHub authentication is configured. You should test it now.',
+          ),
+        );
         if (oauthRes.value) {
           const v = oauthRes.value as InstanceOAuthSection;
           setClientId(v.github_client_id ?? '');
@@ -130,7 +137,10 @@ export function InstanceAdminAuthGitHubPage() {
           <div>
             <h1 className="text-base font-semibold text-(--txt-primary)">GitHub</h1>
             <p className="text-xs text-(--txt-secondary)">
-              Allow members to login or sign up for Devlane with their GitHub accounts.
+              {t(
+                'instanceAdmin.auth.github.subtitle',
+                'Allow members to login or sign up for Devlane with their GitHub accounts.',
+              )}
             </p>
           </div>
         </div>
@@ -147,72 +157,99 @@ export function InstanceAdminAuthGitHubPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="rounded border border-(--border-subtle) bg-(--bg-surface-1) p-4">
           <h2 className="mb-4 text-sm font-semibold text-(--txt-primary)">
-            GitHub-provided details for Devlane
+            {t('instanceAdmin.auth.github.providedDetails', 'GitHub-provided details for Devlane')}
           </h2>
           <div className="space-y-3">
             <Input
-              label="Client ID"
+              label={t('instanceAdmin.auth.clientId', 'Client ID')}
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
               autoComplete="off"
-              placeholder="Your client ID from your GitHub OAuth App."
+              placeholder={t(
+                'instanceAdmin.auth.github.clientIdPlaceholder',
+                'Your client ID from your GitHub OAuth App.',
+              )}
             />
             <p className="text-[11px] text-(--txt-tertiary)">
-              Your client ID lives in your GitHub OAuth App settings.{' '}
-              <a
-                href="https://github.com/settings/developers"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-(--txt-accent) hover:underline"
-              >
-                Learn more
-              </a>
+              <Trans
+                i18nKey="instanceAdmin.auth.github.clientIdHint"
+                defaults="Your client ID lives in your GitHub OAuth App settings. <a>Learn more</a>"
+                components={{
+                  a: (
+                    <a
+                      href="https://github.com/settings/developers"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-(--txt-accent) hover:underline"
+                    />
+                  ),
+                }}
+              />
             </p>
             <div className="relative">
               <Input
-                label="Client secret"
+                label={t('instanceAdmin.auth.clientSecret', 'Client secret')}
                 type={showSecret ? 'text' : 'password'}
                 value={clientSecret}
                 onChange={(e) => setClientSecret(e.target.value)}
                 autoComplete="new-password"
-                placeholder={secretSet ? '(unchanged if left blank)' : 'Enter client secret'}
+                placeholder={
+                  secretSet
+                    ? t('instanceAdmin.auth.unchangedIfBlank', '(unchanged if left blank)')
+                    : t('instanceAdmin.auth.enterClientSecret', 'Enter client secret')
+                }
               />
               <button
                 type="button"
                 onClick={() => setShowSecret(!showSecret)}
                 className="absolute top-7 right-2 p-1 text-(--txt-icon-tertiary) hover:text-(--txt-icon-secondary)"
-                aria-label={showSecret ? 'Hide secret' : 'Show secret'}
+                aria-label={
+                  showSecret
+                    ? t('instanceAdmin.auth.hideSecret', 'Hide secret')
+                    : t('instanceAdmin.auth.showSecret', 'Show secret')
+                }
               >
                 {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             <p className="text-[11px] text-(--txt-tertiary)">
-              Your client secret should also be in your GitHub OAuth App settings.{' '}
-              <a
-                href="https://github.com/settings/developers"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-(--txt-accent) hover:underline"
-              >
-                Learn more
-              </a>
+              <Trans
+                i18nKey="instanceAdmin.auth.github.clientSecretHint"
+                defaults="Your client secret should also be in your GitHub OAuth App settings. <a>Learn more</a>"
+                components={{
+                  a: (
+                    <a
+                      href="https://github.com/settings/developers"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-(--txt-accent) hover:underline"
+                    />
+                  ),
+                }}
+              />
             </p>
           </div>
         </div>
 
         <div className="rounded border border-(--border-subtle) bg-(--bg-surface-1) p-4">
           <h2 className="mb-4 text-sm font-semibold text-(--txt-primary)">
-            Devlane-provided details for GitHub
+            {t('instanceAdmin.auth.github.devlaneDetails', 'Devlane-provided details for GitHub')}
           </h2>
           <div className="space-y-3">
             <InstanceAdminCopyRow
-              label="Homepage URL"
-              hint="Paste this into your GitHub OAuth App Homepage URL field."
+              label={t('instanceAdmin.auth.github.homepageUrl', 'Homepage URL')}
+              hint={t(
+                'instanceAdmin.auth.github.homepageUrlHint',
+                'Paste this into your GitHub OAuth App Homepage URL field.',
+              )}
               value={oauthJsOrigin}
             />
             <InstanceAdminCopyRow
-              label="Authorization callback URL"
-              hint="Paste this into your GitHub OAuth App Authorization callback URL field."
+              label={t('instanceAdmin.auth.github.callbackUrl', 'Authorization callback URL')}
+              hint={t(
+                'instanceAdmin.auth.github.callbackUrlHint',
+                'Paste this into your GitHub OAuth App Authorization callback URL field.',
+              )}
               value={callbackUrl}
             />
           </div>
@@ -220,14 +257,14 @@ export function InstanceAdminAuthGitHubPage() {
 
         <div className="flex items-center gap-2">
           <Button type="submit" disabled={saving || !isDirty}>
-            {saving ? 'Saving…' : 'Save changes'}
+            {saving ? t('common.saving', 'Saving…') : t('common.saveChanges', 'Save changes')}
           </Button>
           <Button
             type="button"
             onClick={() => void navigate('/instance-admin/authentication')}
             className="bg-transparent text-(--txt-secondary) shadow-none hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
           >
-            Go back
+            {t('common.goBack', 'Go back')}
           </Button>
         </div>
       </form>

@@ -1,4 +1,5 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader } from '../ui';
 import { issueService } from '../../services/issueService';
 import type { IssueAttachmentApiResponse } from '../../api/types';
@@ -20,6 +21,7 @@ export function IssueAttachmentsPanel({
   attachments,
   onAttachmentsChange,
 }: IssueAttachmentsPanelProps) {
+  const { t } = useTranslation();
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
 
   return (
@@ -27,11 +29,11 @@ export function IssueAttachmentsPanel({
       <CardHeader className="flex items-center justify-between text-sm font-medium text-(--txt-secondary)">
         <span className="flex items-center gap-1.5">
           <IconPaperclip />
-          Attachments
+          {t('workItem.attachments.title', 'Attachments')}
         </span>
         <label
           className="cursor-pointer rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover)"
-          title="Upload file"
+          title={t('workItem.attachments.upload', 'Upload file')}
         >
           <IconPlus />
           <input
@@ -83,9 +85,15 @@ export function IssueAttachmentsPanel({
         </label>
       </CardHeader>
       <CardContent className="space-y-1 pt-2">
-        {uploadingAttachment && <p className="text-xs text-(--txt-tertiary)">Uploading…</p>}
+        {uploadingAttachment && (
+          <p className="text-xs text-(--txt-tertiary)">
+            {t('workItem.attachments.uploading', 'Uploading…')}
+          </p>
+        )}
         {attachments.length === 0 && !uploadingAttachment ? (
-          <p className="text-xs text-(--txt-tertiary)">No attachments yet.</p>
+          <p className="text-xs text-(--txt-tertiary)">
+            {t('workItem.attachments.empty', 'No attachments yet.')}
+          </p>
         ) : (
           attachments.map((att) => (
             <div key={att.id} className="flex items-center gap-1 group">
@@ -96,10 +104,11 @@ export function IssueAttachmentsPanel({
                 className="min-w-0 flex-1 truncate text-xs text-(--txt-accent-primary) hover:underline"
                 title={att.attributes?.name}
               >
-                {att.attributes?.name ?? 'Attachment'}
+                {att.attributes?.name ?? t('workItem.attachments.fallbackName', 'Attachment')}
               </a>
               {att.attributes?.size != null && (
                 <span className="shrink-0 text-[10px] text-(--txt-tertiary)">
+                  {}
                   {(att.attributes.size / 1024).toFixed(0)}KB
                 </span>
               )}
@@ -120,7 +129,7 @@ export function IssueAttachmentsPanel({
                   }
                 }}
                 className="shrink-0 opacity-0 group-hover:opacity-100 rounded p-0.5 text-(--txt-tertiary) hover:text-(--txt-danger-primary)"
-                title="Delete"
+                title={t('common.delete', 'Delete')}
               >
                 ×
               </button>

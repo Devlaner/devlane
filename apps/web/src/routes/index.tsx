@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- routes file exports router + layout components; keep for future use */
 import { lazy, Suspense, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createBrowserRouter, Navigate, Outlet, useParams } from 'react-router-dom';
 import { AppShell, InstanceAdminLayout } from '../components/layout';
 import { RootRedirect } from '../components/RootRedirect';
@@ -211,11 +212,14 @@ const InviteSignUpPage = lazy(() =>
   import('../pages/InviteSignUpPage').then((m) => page({ InviteSignUpPage: m.InviteSignUpPage })),
 );
 
-const PageFallback = () => (
-  <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-    Loading...
-  </div>
-);
+const PageFallback = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
+      {t('common.loading', 'Loading…')}
+    </div>
+  );
+};
 
 function AppLayout() {
   return (

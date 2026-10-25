@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const IconGlobe = () => (
   <svg
@@ -283,6 +284,7 @@ const INTEGRATIONS_SUB_LABEL: Record<string, string> = {
 };
 
 export function InstanceAdminLayout() {
+  const { t } = useTranslation();
   const location = useLocation();
   const pathname = location.pathname;
   const basePath = '/instance-admin';
@@ -292,7 +294,7 @@ export function InstanceAdminLayout() {
   const subKey = segments[1] ?? '';
   let breadcrumbTail: string | null = null;
   if (subKey === 'create') {
-    breadcrumbTail = 'Create';
+    breadcrumbTail = t('common.create', 'Create');
   } else if (segment === 'integrations') {
     breadcrumbTail = INTEGRATIONS_SUB_LABEL[subKey] ?? null;
   } else if (segment === 'authentication') {
@@ -311,11 +313,13 @@ export function InstanceAdminLayout() {
               <span className="flex size-7 items-center justify-center rounded-md bg-(--bg-layer-2) text-(--txt-icon-secondary)">
                 <IconGlobe />
               </span>
-              Instance admin
+              {t('instanceAdmin.title', 'Instance admin')}
             </div>
           </div>
           <nav className="flex-1 overflow-y-auto p-1.5">
-            {SECTIONS.map(({ path, label, desc, Icon }) => {
+            {SECTIONS.map(({ path, label: labelEn, desc: descEn, Icon }) => {
+              const label = t(`instanceAdmin.section.${path}.label`, labelEn);
+              const desc = t(`instanceAdmin.section.${path}.desc`, descEn);
               const to = `${basePath}/${path}`;
               return (
                 <NavLink
@@ -350,20 +354,20 @@ export function InstanceAdminLayout() {
               className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-(--txt-secondary) no-underline hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
             >
               <IconExternalLink />
-              Redirect to Devlane
+              {t('instanceAdmin.redirectToDevlane', 'Redirect to Devlane')}
             </a>
             <div className="flex gap-0.5">
               <button
                 type="button"
                 className="flex size-7 shrink-0 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary) [&_svg]:size-4"
-                aria-label="Help"
+                aria-label={t('common.help', 'Help')}
               >
                 <IconHelp />
               </button>
               <Link
                 to="/acme"
                 className="flex size-7 shrink-0 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary) [&_svg]:size-4"
-                aria-label="Back"
+                aria-label={t('common.back', 'Back')}
               >
                 <IconArrowLeft />
               </Link>
@@ -375,9 +379,11 @@ export function InstanceAdminLayout() {
         <main className="min-w-0 flex-1 overflow-auto p-5">
           <div className="mb-4 flex items-center gap-1.5 text-xs text-(--txt-secondary) [&_svg]:size-3.5">
             <IconSettings />
-            <span>Settings</span>
+            <span>{t('instanceAdmin.breadcrumb.settings', 'Settings')}</span>
             <span className="text-(--txt-icon-tertiary)">&gt;</span>
-            <span className="text-(--txt-primary)">{breadcrumbLabel}</span>
+            <span className="text-(--txt-primary)">
+              {t(`instanceAdmin.breadcrumb.${segment}`, breadcrumbLabel)}
+            </span>
             {breadcrumbTail && (
               <>
                 <span className="text-(--txt-icon-tertiary)">&gt;</span>

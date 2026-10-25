@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, X, GripVertical } from 'lucide-react';
 import { Button, Card, Input, Modal } from '../ui';
 import { estimateService } from '../../services/estimateService';
@@ -28,6 +29,7 @@ interface EstimateModalProps {
 
 /** Create / edit an estimate system: name, type, and an ordered list of points. */
 function EstimateModal({ open, onClose, initial, onSubmit }: EstimateModalProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [type, setType] = useState('points');
   const [active, setActive] = useState(false);
@@ -57,7 +59,7 @@ function EstimateModal({ open, onClose, initial, onSubmit }: EstimateModalProps)
     const values = points.map((p) => p.trim()).filter(Boolean);
     if (!trimmedName || submitting) return;
     if (values.length === 0) {
-      setError('Add at least one estimate point.');
+      setError(t('settings.estimates.error.needPoint', 'Add at least one estimate point.'));
       return;
     }
     setSubmitting(true);
@@ -71,7 +73,7 @@ function EstimateModal({ open, onClose, initial, onSubmit }: EstimateModalProps)
       });
       onClose();
     } catch {
-      setError('Could not save the estimate system.');
+      setError(t('settings.estimates.error.save', 'Could not save the estimate system.'));
     } finally {
       setSubmitting(false);
     }
@@ -81,14 +83,18 @@ function EstimateModal({ open, onClose, initial, onSubmit }: EstimateModalProps)
     <Modal
       open={open}
       onClose={onClose}
-      title={initial ? 'Edit estimate system' : 'New estimate system'}
+      title={
+        initial
+          ? t('settings.estimates.editTitle', 'Edit estimate system')
+          : t('settings.estimates.newTitle', 'New estimate system')
+      }
     >
       <form onSubmit={submit} className="space-y-4">
         <Input
-          label="Name"
+          label={t('common.name', 'Name')}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. T-Shirt sizes"
+          placeholder={t('settings.estimates.namePlaceholder', 'e.g. T-Shirt sizes')}
           autoFocus
         />
         <div>
@@ -96,7 +102,7 @@ function EstimateModal({ open, onClose, initial, onSubmit }: EstimateModalProps)
             htmlFor="estimate-type"
             className="mb-1 block text-sm font-medium text-(--txt-secondary)"
           >
-            Type
+            {t('settings.estimates.type', 'Type')}
           </label>
           <select
             id="estimate-type"
@@ -104,15 +110,17 @@ function EstimateModal({ open, onClose, initial, onSubmit }: EstimateModalProps)
             onChange={(e) => setType(e.target.value)}
             className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:border-(--border-strong) focus:outline-none"
           >
-            {ESTIMATE_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
+            {ESTIMATE_TYPES.map((et) => (
+              <option key={et.value} value={et.value}>
+                {t(`settings.estimates.typeOption.${et.value}`, et.label)}
               </option>
             ))}
           </select>
         </div>
         <fieldset className="min-w-0">
-          <legend className="mb-1 block text-sm font-medium text-(--txt-secondary)">Points</legend>
+          <legend className="mb-1 block text-sm font-medium text-(--txt-secondary)">
+            {t('settings.estimates.points', 'Points')}
+          </legend>
           <div className="space-y-2">
             {points.map((p, i) => (
               <div key={i} className="flex items-center gap-2">
@@ -121,12 +129,16 @@ function EstimateModal({ open, onClose, initial, onSubmit }: EstimateModalProps)
                   type="text"
                   value={p}
                   onChange={(e) => setPointAt(i, e.target.value)}
-                  placeholder={`Point ${i + 1}`}
+                  placeholder={t('settings.estimates.pointPlaceholder', 'Point {{n}}', {
+                    n: i + 1,
+                  })}
                   className="min-w-0 flex-1 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-1.5 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:border-(--border-strong) focus:outline-none"
                 />
                 <button
                   type="button"
-                  aria-label={`Remove point ${i + 1}`}
+                  aria-label={t('settings.estimates.removePoint', 'Remove point {{n}}', {
+                    n: i + 1,
+                  })}
                   onClick={() => removePoint(i)}
                   disabled={points.length <= 1}
                   className="grid size-7 place-items-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-danger-primary) disabled:opacity-40"
@@ -141,7 +153,7 @@ function EstimateModal({ open, onClose, initial, onSubmit }: EstimateModalProps)
             onClick={addPoint}
             className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-(--txt-accent-primary) hover:underline"
           >
-            <Plus className="size-3.5" /> Add point
+            <Plus className="size-3.5" /> {t('settings.estimates.addPoint', 'Add point')}
           </button>
         </fieldset>
         <label className="flex items-center gap-2 text-sm text-(--txt-secondary)">
@@ -151,15 +163,15 @@ function EstimateModal({ open, onClose, initial, onSubmit }: EstimateModalProps)
             onChange={(e) => setActive(e.target.checked)}
             className="rounded border-(--border-subtle)"
           />
-          Set as the active estimate system
+          {t('settings.estimates.setActiveLabel', 'Set as the active estimate system')}
         </label>
         {error && <p className="text-sm text-(--txt-danger-primary)">{error}</p>}
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button type="submit" disabled={!name.trim() || submitting}>
-            {initial ? 'Save changes' : 'Create'}
+            {initial ? t('common.saveChanges', 'Save changes') : t('common.create', 'Create')}
           </Button>
         </div>
       </form>
@@ -175,6 +187,7 @@ export function ProjectEstimatesSettings({
   workspaceSlug,
   projectId,
 }: ProjectEstimatesSettingsProps) {
+  const { t } = useTranslation();
   const [estimates, setEstimates] = useState<EstimateApiResponse[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<EstimateApiResponse | null>(null);
@@ -238,10 +251,14 @@ export function ProjectEstimatesSettings({
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-(--txt-primary)">Estimates</h2>
+          <h2 className="text-base font-semibold text-(--txt-primary)">
+            {t('settings.estimates.title', 'Estimates')}
+          </h2>
           <p className="mt-0.5 text-sm text-(--txt-secondary)">
-            Set up estimation systems to track and communicate the effort required for each work
-            item.
+            {t(
+              'settings.estimates.description',
+              'Set up estimation systems to track and communicate the effort required for each work item.',
+            )}
           </p>
         </div>
         <Button
@@ -252,15 +269,20 @@ export function ProjectEstimatesSettings({
             setModalOpen(true);
           }}
         >
-          <Plus className="size-4" /> Add estimate
+          <Plus className="size-4" /> {t('settings.estimates.add', 'Add estimate')}
         </Button>
       </div>
 
       {estimates.length === 0 ? (
         <Card variant="outlined" className="p-6 text-center">
-          <p className="text-sm text-(--txt-secondary)">No estimate systems yet.</p>
+          <p className="text-sm text-(--txt-secondary)">
+            {t('settings.estimates.empty', 'No estimate systems yet.')}
+          </p>
           <p className="mt-1 text-xs text-(--txt-tertiary)">
-            Create one to assign effort estimates to work items.
+            {t(
+              'settings.estimates.emptyHint',
+              'Create one to assign effort estimates to work items.',
+            )}
           </p>
         </Card>
       ) : (
@@ -275,7 +297,7 @@ export function ProjectEstimatesSettings({
                     </span>
                     {e.last_used && (
                       <span className="rounded-full bg-(--bg-accent-subtle) px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-(--txt-accent-primary)">
-                        Active
+                        {t('settings.estimates.active', 'Active')}
                       </span>
                     )}
                     <span className="text-[11px] capitalize text-(--txt-tertiary)">{e.type}</span>
@@ -294,12 +316,12 @@ export function ProjectEstimatesSettings({
                 <div className="flex shrink-0 items-center gap-1">
                   {!e.last_used && (
                     <Button variant="ghost" size="sm" onClick={() => void makeActive(e)}>
-                      Set active
+                      {t('settings.estimates.setActive', 'Set active')}
                     </Button>
                   )}
                   <button
                     type="button"
-                    aria-label="Edit estimate"
+                    aria-label={t('settings.estimates.editAria', 'Edit estimate')}
                     onClick={() => {
                       setEditing(e);
                       setModalOpen(true);
@@ -310,7 +332,7 @@ export function ProjectEstimatesSettings({
                   </button>
                   <button
                     type="button"
-                    aria-label="Delete estimate"
+                    aria-label={t('settings.estimates.deleteAria', 'Delete estimate')}
                     onClick={() => void remove(e.id)}
                     className="grid size-7 place-items-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-danger-primary)"
                   >

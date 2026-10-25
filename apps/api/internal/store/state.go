@@ -62,6 +62,24 @@ func (s *StateStore) ListByProjectID(ctx context.Context, projectID uuid.UUID) (
 	return list, err
 }
 
+// GetDefaultByProjectID returns the project's default state (the one marked
+// default), or nil when none is set. When several are somehow marked, the
+// lowest-sequence one wins for determinism.
+func (s *StateStore) GetDefaultByProjectID(ctx context.Context, projectID uuid.UUID) (*model.State, error) {
+	var st model.State
+	err := s.db.WithContext(ctx).
+		Where(`project_id = ? AND deleted_at IS NULL AND "default" = TRUE`, projectID).
+		Order("sequence ASC, created_at ASC").
+		First(&st).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &st, nil
+}
+
 func (s *StateStore) Update(ctx context.Context, st *model.State) error {
 	return s.db.WithContext(ctx).Save(st).Error
 }

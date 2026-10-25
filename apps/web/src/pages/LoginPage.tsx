@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
 import { Button, Input } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,6 +13,7 @@ type AuthStep = 'email' | 'password' | 'code';
 type AuthMode = 'sign-in' | 'sign-up';
 
 export function LoginPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { login, refreshUser } = useAuth();
@@ -51,7 +53,7 @@ export function LoginPage() {
     gitlab: false,
   });
 
-  useDocumentTitle('Sign in');
+  useDocumentTitle(t('auth.login.documentTitle', 'Sign in'));
 
   useEffect(() => {
     if (oauthError) {
@@ -115,7 +117,10 @@ export function LoginPage() {
             await sendMagicCode();
             setStep('code');
           } catch (err: unknown) {
-            setError(getApiErrorMessage(err) || 'Could not send sign-in code.');
+            setError(
+              getApiErrorMessage(err) ||
+                t('auth.login.sendCodeError', 'Could not send sign-in code.'),
+            );
           } finally {
             setIsSubmitting(false);
           }
@@ -138,6 +143,7 @@ export function LoginPage() {
       isSmtpConfigured,
       sendMagicCode,
       navigate,
+      t,
     ],
   );
 
@@ -148,11 +154,13 @@ export function LoginPage() {
       await sendMagicCode();
       setStep('code');
     } catch (err: unknown) {
-      setError(getApiErrorMessage(err) || 'Could not send sign-in code.');
+      setError(
+        getApiErrorMessage(err) || t('auth.login.sendCodeError', 'Could not send sign-in code.'),
+      );
     } finally {
       setIsSubmitting(false);
     }
-  }, [sendMagicCode]);
+  }, [sendMagicCode, t]);
 
   const handlePasswordSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -163,12 +171,15 @@ export function LoginPage() {
         await login(email, password);
         navigate(returnPath, { replace: true });
       } catch (err: unknown) {
-        setError(getApiErrorMessage(err) || 'Something went wrong. Please try again.');
+        setError(
+          getApiErrorMessage(err) ||
+            t('common.genericError', 'Something went wrong. Please try again.'),
+        );
       } finally {
         setIsSubmitting(false);
       }
     },
-    [email, password, login, navigate, returnPath],
+    [email, password, login, navigate, returnPath, t],
   );
 
   const handleMagicCodeSubmit = useCallback(
@@ -177,7 +188,7 @@ export function LoginPage() {
       setError('');
       const code = magicCode.replace(/\D/g, '');
       if (code.length !== 6) {
-        setError('Enter the 6-digit code from your email.');
+        setError(t('auth.login.codeLengthError', 'Enter the 6-digit code from your email.'));
         return;
       }
       setIsSubmitting(true);
@@ -190,12 +201,14 @@ export function LoginPage() {
         await refreshUser();
         navigate(returnPath, { replace: true });
       } catch (err: unknown) {
-        setError(getApiErrorMessage(err) || 'Invalid or expired code.');
+        setError(
+          getApiErrorMessage(err) || t('auth.login.invalidCode', 'Invalid or expired code.'),
+        );
       } finally {
         setIsSubmitting(false);
       }
     },
-    [magicCode, email, inviteToken, refreshUser, navigate, returnPath],
+    [magicCode, email, inviteToken, refreshUser, navigate, returnPath, t],
   );
 
   const goBackToEmail = useCallback(() => {
@@ -212,16 +225,20 @@ export function LoginPage() {
   }, []);
 
   const title = useMemo(() => {
-    if (step === 'email') return 'Get started with Devlane';
-    if (step === 'code') return 'Check your email';
-    return 'Welcome back!';
-  }, [step]);
+    if (step === 'email') return t('auth.login.titleEmail', 'Get started with Devlane');
+    if (step === 'code') return t('auth.login.titleCode', 'Check your email');
+    return t('auth.login.titlePassword', 'Welcome back!');
+  }, [step, t]);
 
   const subtitle = useMemo(() => {
-    if (step === 'email') return 'Enter your email to continue.';
-    if (step === 'code') return 'We sent a 6-digit code to your inbox. It expires in 10 minutes.';
-    return 'Enter your password to sign in.';
-  }, [step]);
+    if (step === 'email') return t('auth.login.subtitleEmail', 'Enter your email to continue.');
+    if (step === 'code')
+      return t(
+        'auth.login.subtitleCode',
+        'We sent a 6-digit code to your inbox. It expires in 10 minutes.',
+      );
+    return t('auth.login.subtitlePassword', 'Enter your password to sign in.');
+  }, [step, t]);
 
   return (
     <AuthPageShell mode="sign-in" enableSignup={allowSignup}>
@@ -230,7 +247,10 @@ export function LoginPage() {
         <p className="mb-6 text-sm text-(--txt-secondary)">{subtitle}</p>
         {step === 'email' && isPasswordEnabled && canUseMagicCode && (
           <p className="-mt-4 mb-4 text-xs text-(--txt-tertiary)">
-            After you continue, you can use your password or choose a one-time email code instead.
+            {t(
+              'auth.login.magicHint',
+              'After you continue, you can use your password or choose a one-time email code instead.',
+            )}
           </p>
         )}
 
@@ -269,7 +289,7 @@ export function LoginPage() {
                         fill="#EA4335"
                       />
                     </svg>
-                    Continue with Google
+                    {t('auth.login.continueWithGoogle', 'Continue with Google')}
                   </button>
                 )}
                 {oauthProviders.github && (
@@ -281,7 +301,7 @@ export function LoginPage() {
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
                     </svg>
-                    Continue with GitHub
+                    {t('auth.login.continueWithGithub', 'Continue with GitHub')}
                   </button>
                 )}
                 {oauthProviders.gitlab && (
@@ -293,7 +313,7 @@ export function LoginPage() {
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M23.955 13.587l-1.342-4.135-2.664-8.189a.455.455 0 0 0-.867 0L16.418 9.45H7.582L4.918 1.263a.455.455 0 0 0-.867 0L1.386 9.452.044 13.587a.924.924 0 0 0 .331 1.023L12 23.054l11.625-8.443a.92.92 0 0 0 .33-1.024" />
                     </svg>
-                    Continue with GitLab
+                    {t('auth.login.continueWithGitlab', 'Continue with GitLab')}
                   </button>
                 )}
                 <div className="relative my-2">
@@ -301,24 +321,28 @@ export function LoginPage() {
                     <div className="w-full border-t border-(--border-primary)" />
                   </div>
                   <div className="relative flex justify-center text-xs">
-                    <span className="bg-(--bg-primary) px-2 text-(--txt-tertiary)">or</span>
+                    <span className="bg-(--bg-primary) px-2 text-(--txt-tertiary)">
+                      {t('common.or', 'or')}
+                    </span>
                   </div>
                 </div>
               </div>
             )}
             <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
               <Input
-                label="Email"
+                label={t('common.email', 'Email')}
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder={t('common.emailPlaceholder', 'you@example.com')}
                 required
                 autoComplete="email"
                 autoFocus
               />
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Checking…' : 'Continue with email'}
+                {isSubmitting
+                  ? t('common.checking', 'Checking…')
+                  : t('auth.login.continueWithEmail', 'Continue with email')}
               </Button>
             </form>
           </>
@@ -339,11 +363,11 @@ export function LoginPage() {
 
             <div className="relative">
               <Input
-                label="Password"
+                label={t('common.password', 'Password')}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
+                placeholder={t('auth.login.passwordPlaceholder', 'Enter password')}
                 required
                 autoComplete="current-password"
                 autoFocus
@@ -352,7 +376,11 @@ export function LoginPage() {
                 type="button"
                 className="absolute top-[2.1rem] right-3 text-(--txt-tertiary) hover:text-(--txt-primary)"
                 onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={
+                  showPassword
+                    ? t('common.hidePassword', 'Hide password')
+                    : t('common.showPassword', 'Show password')
+                }
                 aria-pressed={showPassword}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -367,11 +395,14 @@ export function LoginPage() {
                     state={{ email }}
                     className="text-xs text-(--txt-accent) hover:underline"
                   >
-                    Forgot your password?
+                    {t('auth.login.forgotPassword', 'Forgot your password?')}
                   </Link>
                 ) : (
                   <span className="text-xs text-(--txt-tertiary)">
-                    To reset your password, ask your administrator to configure SMTP.
+                    {t(
+                      'auth.login.resetSmtpHint',
+                      'To reset your password, ask your administrator to configure SMTP.',
+                    )}
                   </span>
                 )}
               </div>
@@ -384,19 +415,21 @@ export function LoginPage() {
                 disabled={isSubmitting}
                 className="w-full text-center text-xs font-medium text-(--txt-accent) hover:underline disabled:opacity-50"
               >
-                Sign in with email code instead
+                {t('auth.login.useMagicCode', 'Sign in with email code instead')}
               </button>
             )}
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Signing in…' : 'Sign in'}
+              {isSubmitting
+                ? t('auth.login.signingIn', 'Signing in…')
+                : t('common.signIn', 'Sign in')}
             </Button>
 
             {(allowSignup || !!inviteToken) && (
               <p className="text-center text-sm text-(--txt-secondary)">
-                {"Don't have an account? "}
+                {t('auth.login.noAccount', "Don't have an account? ")}
                 <Link to="/sign-up" className="font-medium text-(--txt-accent) hover:underline">
-                  Sign up
+                  {t('common.signUp', 'Sign up')}
                 </Link>
               </p>
             )}
@@ -417,7 +450,7 @@ export function LoginPage() {
             </div>
 
             <Input
-              label="6-digit code"
+              label={t('auth.login.codeLabel', '6-digit code')}
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
@@ -430,7 +463,9 @@ export function LoginPage() {
             />
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Verifying…' : 'Continue'}
+              {isSubmitting
+                ? t('common.verifying', 'Verifying…')
+                : t('common.continue', 'Continue')}
             </Button>
 
             <button
@@ -439,7 +474,7 @@ export function LoginPage() {
               disabled={isSubmitting}
               className="w-full text-center text-xs text-(--txt-accent) hover:underline disabled:opacity-50"
             >
-              Resend code
+              {t('auth.login.resendCode', 'Resend code')}
             </button>
 
             {isPasswordEnabled && (
@@ -448,7 +483,7 @@ export function LoginPage() {
                 onClick={goBackToPassword}
                 className="w-full text-center text-xs text-(--txt-tertiary) hover:text-(--txt-primary)"
               >
-                Use password instead
+                {t('auth.login.usePassword', 'Use password instead')}
               </button>
             )}
           </form>

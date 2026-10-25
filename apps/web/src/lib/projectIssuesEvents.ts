@@ -13,6 +13,7 @@ export const PROJECT_ISSUES_DISPLAY_EVENT = 'project-issues-display-change';
 export interface ProjectIssuesDisplayPayload {
   displayProperties: SavedViewDisplayPropertyId[];
   groupBy: SavedViewGroupBy;
+  subGroupBy?: SavedViewGroupBy;
   orderBy: SavedViewOrderBy;
   showSubWorkItems: boolean;
   showEmptyGroups: boolean;

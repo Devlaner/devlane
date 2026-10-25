@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { Button, Input } from '../components/ui';
 import { authService } from '../services/authService';
@@ -10,6 +11,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 const RESEND_COOLDOWN_SECONDS = 30;
 
 export function ForgotPasswordPage() {
+  const { t } = useTranslation();
   const location = useLocation();
   const prefilledEmail = (location.state as { email?: string } | null)?.email ?? '';
 
@@ -19,7 +21,7 @@ export function ForgotPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
-  useDocumentTitle('Forgot password');
+  useDocumentTitle(t('auth.forgotPassword.documentTitle', 'Forgot password'));
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -39,12 +41,15 @@ export function ForgotPasswordPage() {
         setSuccess(true);
         setCooldown(RESEND_COOLDOWN_SECONDS);
       } catch (err: unknown) {
-        setError(getApiErrorMessage(err) || 'Something went wrong. Please try again.');
+        setError(
+          getApiErrorMessage(err) ||
+            t('common.genericError', 'Something went wrong. Please try again.'),
+        );
       } finally {
         setIsSubmitting(false);
       }
     },
-    [email],
+    [email, t],
   );
 
   const handleResend = useCallback(async () => {
@@ -57,11 +62,14 @@ export function ForgotPasswordPage() {
       setEmail(normalized);
       setCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err: unknown) {
-      setError(getApiErrorMessage(err) || 'Something went wrong. Please try again.');
+      setError(
+        getApiErrorMessage(err) ||
+          t('common.genericError', 'Something went wrong. Please try again.'),
+      );
     } finally {
       setIsSubmitting(false);
     }
-  }, [email, cooldown]);
+  }, [email, cooldown, t]);
 
   return (
     <AuthPageShell mode="sign-in" enableSignup={true}>
@@ -71,12 +79,17 @@ export function ForgotPasswordPage() {
           className="mb-4 flex items-center gap-1 text-xs text-(--txt-tertiary) hover:text-(--txt-primary)"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Back to sign in
+          {t('auth.forgotPassword.backToSignIn', 'Back to sign in')}
         </Link>
 
-        <h1 className="mb-1 text-2xl font-semibold text-(--txt-primary)">Reset your password</h1>
+        <h1 className="mb-1 text-2xl font-semibold text-(--txt-primary)">
+          {t('auth.forgotPassword.title', 'Reset your password')}
+        </h1>
         <p className="mb-6 text-sm text-(--txt-secondary)">
-          Enter your email and we&apos;ll send you a link to reset your password.
+          {t(
+            'auth.forgotPassword.subtitle',
+            "Enter your email and we'll send you a link to reset your password.",
+          )}
         </p>
 
         {error && (
@@ -90,19 +103,23 @@ export function ForgotPasswordPage() {
           <div className="mb-4 flex items-start gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
             <CircleCheck className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
-              If <strong>{email}</strong> is registered, you&apos;ll receive a reset link shortly.
-              Check your inbox and spam folder.
+              <Trans
+                i18nKey="auth.forgotPassword.successMessage"
+                defaults="If <b>{{email}}</b> is registered, you'll receive a reset link shortly. Check your inbox and spam folder."
+                values={{ email }}
+                components={{ b: <strong /> }}
+              />
             </span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input
-            label="Email"
+            label={t('common.email', 'Email')}
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder={t('common.emailPlaceholder', 'you@example.com')}
             required
             autoComplete="email"
             disabled={success && cooldown > 0}
@@ -111,7 +128,9 @@ export function ForgotPasswordPage() {
 
           {!success ? (
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Sending…' : 'Send reset link'}
+              {isSubmitting
+                ? t('auth.forgotPassword.sending', 'Sending…')
+                : t('auth.forgotPassword.sendResetLink', 'Send reset link')}
             </Button>
           ) : (
             <Button
@@ -120,7 +139,9 @@ export function ForgotPasswordPage() {
               disabled={cooldown > 0 || isSubmitting}
               onClick={handleResend}
             >
-              {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend reset link'}
+              {cooldown > 0
+                ? t('auth.forgotPassword.resendIn', 'Resend in {{count}}s', { count: cooldown })
+                : t('auth.forgotPassword.resendResetLink', 'Resend reset link')}
             </Button>
           )}
         </form>

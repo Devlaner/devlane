@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"time"
 
 	"github.com/Devlaner/devlane/api/internal/model"
 	"github.com/google/uuid"
@@ -51,7 +52,60 @@ func (s *ProjectStore) GetByID(ctx context.Context, id uuid.UUID) (*model.Projec
 
 func (s *ProjectStore) ListByWorkspaceID(ctx context.Context, workspaceID uuid.UUID) ([]model.Project, error) {
 	var list []model.Project
-	err := s.db.WithContext(ctx).Where("workspace_id = ? AND deleted_at IS NULL", workspaceID).Order("created_at ASC").Find(&list).Error
+	err := s.db.WithContext(ctx).Where("workspace_id = ? AND deleted_at IS NULL AND archived_at IS NULL", workspaceID).Order("created_at ASC").Find(&list).Error
+	return list, err
+}
+
+// ListArchivedByWorkspaceID returns the workspace's archived (non-deleted)
+// projects, most recently archived first.
+func (s *ProjectStore) ListArchivedByWorkspaceID(ctx context.Context, workspaceID uuid.UUID) ([]model.Project, error) {
+	var list []model.Project
+	err := s.db.WithContext(ctx).
+		Where("workspace_id = ? AND deleted_at IS NULL AND archived_at IS NOT NULL", workspaceID).
+		Order("archived_at DESC").Find(&list).Error
+	return list, err
+}
+
+// ListArchivedVisibleByWorkspaceID returns archived projects a user may see:
+// public ones plus any (public or secret) they belong to.
+func (s *ProjectStore) ListArchivedVisibleByWorkspaceID(ctx context.Context, workspaceID, userID uuid.UUID) ([]model.Project, error) {
+	var list []model.Project
+	memberProjects := s.db.Model(&model.ProjectMember{}).
+		Select("project_id").
+		Where("member_id = ? AND deleted_at IS NULL", userID)
+	err := s.db.WithContext(ctx).
+		Where("workspace_id = ? AND deleted_at IS NULL AND archived_at IS NOT NULL", workspaceID).
+		Where("network = ? OR id IN (?)", model.NetworkPublic, memberProjects).
+		Order("archived_at DESC").
+		Find(&list).Error
+	return list, err
+}
+
+// SetArchived archives (sets archived_at) or restores (clears it) a project.
+func (s *ProjectStore) SetArchived(ctx context.Context, id uuid.UUID, archived bool) error {
+	var val interface{}
+	if archived {
+		val = time.Now()
+	} else {
+		val = nil
+	}
+	return s.db.WithContext(ctx).Model(&model.Project{}).
+		Where("id = ?", id).
+		UpdateColumn("archived_at", val).Error
+}
+
+// ListVisibleByWorkspaceID returns the projects a user may see: every public
+// project in the workspace, plus any project (public or secret) they belong to.
+func (s *ProjectStore) ListVisibleByWorkspaceID(ctx context.Context, workspaceID, userID uuid.UUID) ([]model.Project, error) {
+	var list []model.Project
+	memberProjects := s.db.Model(&model.ProjectMember{}).
+		Select("project_id").
+		Where("member_id = ? AND deleted_at IS NULL", userID)
+	err := s.db.WithContext(ctx).
+		Where("workspace_id = ? AND deleted_at IS NULL AND archived_at IS NULL", workspaceID).
+		Where("network = ? OR id IN (?)", model.NetworkPublic, memberProjects).
+		Order("created_at ASC").
+		Find(&list).Error
 	return list, err
 }
 
@@ -77,6 +131,26 @@ func (s *ProjectStore) GetByWorkspaceAndIdentifier(ctx context.Context, workspac
 }
 
 // IsInWorkspace checks that the project belongs to the workspace.
+// ListWithAutoArchive returns projects that have auto-archive enabled (archive_in > 0).
+func (s *ProjectStore) ListWithAutoArchive(ctx context.Context) ([]model.Project, error) {
+	var list []model.Project
+	err := s.db.WithContext(ctx).Where("archive_in > 0 AND deleted_at IS NULL").Find(&list).Error
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+// ListWithAutoClose returns projects that have auto-close enabled (close_in > 0).
+func (s *ProjectStore) ListWithAutoClose(ctx context.Context) ([]model.Project, error) {
+	var list []model.Project
+	err := s.db.WithContext(ctx).Where("close_in > 0 AND deleted_at IS NULL").Find(&list).Error
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
 func (s *ProjectStore) IsInWorkspace(ctx context.Context, projectID, workspaceID uuid.UUID) (bool, error) {
 	var count int64
 	err := s.db.WithContext(ctx).Model(&model.Project{}).

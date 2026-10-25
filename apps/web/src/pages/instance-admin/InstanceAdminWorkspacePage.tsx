@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Skeleton } from '../../components/ui';
 import { workspaceService } from '../../services/workspaceService';
@@ -8,6 +9,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import type { InstanceGeneralSection } from '../../api/types';
 
 export function InstanceAdminWorkspacePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [workspaces, setWorkspaces] = useState<Array<{ id: string; name: string; slug: string }>>(
     [],
@@ -17,7 +19,7 @@ export function InstanceAdminWorkspacePage() {
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  useDocumentTitle('Workspaces');
+  useDocumentTitle(t('instanceAdmin.workspaces.documentTitle', 'Workspaces'));
 
   useEffect(() => {
     let cancelled = false;
@@ -120,10 +122,13 @@ export function InstanceAdminWorkspacePage() {
     <div className="w-full space-y-6">
       <div>
         <h1 className="text-base font-semibold text-(--txt-primary)">
-          Workspaces on this instance
+          {t('instanceAdmin.workspaces.title', 'Workspaces on this instance')}
         </h1>
         <p className="mt-0.5 text-xs text-(--txt-secondary)">
-          See all workspaces and control who can create them.
+          {t(
+            'instanceAdmin.workspaces.subtitle',
+            'See all workspaces and control who can create them.',
+          )}
         </p>
       </div>
 
@@ -132,11 +137,16 @@ export function InstanceAdminWorkspacePage() {
       <section className="flex items-start justify-between gap-3 rounded border border-(--border-subtle) bg-(--bg-surface-1) p-3">
         <div>
           <p className="text-xs font-medium text-(--txt-primary)">
-            Prevent anyone else from creating a workspace.
+            {t(
+              'instanceAdmin.workspaces.preventTitle',
+              'Prevent anyone else from creating a workspace.',
+            )}
           </p>
           <p className="mt-0.5 text-xs text-(--txt-secondary)">
-            Toggling this on will let only you (the instance admin) create workspaces. You will have
-            to invite users to new workspaces.
+            {t(
+              'instanceAdmin.workspaces.preventDesc',
+              'Toggling this on will let only you (the instance admin) create workspaces. You will have to invite users to new workspaces.',
+            )}
           </p>
         </div>
         <label className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full bg-(--neutral-400) has-[:checked]:bg-(--brand-default)">
@@ -155,11 +165,19 @@ export function InstanceAdminWorkspacePage() {
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-wide text-(--txt-secondary)">
-              All workspaces on this instance • {workspaces.length}
+              {t(
+                'instanceAdmin.workspaces.listHeading',
+                'All workspaces on this instance • {{count}}',
+                {
+                  count: workspaces.length,
+                },
+              )}
             </h2>
             <p className="mt-0.5 text-xs text-(--txt-secondary)">
-              You can&apos;t yet delete workspaces and you can only go to the workspace if you are
-              an Admin or a Member.
+              {t(
+                'instanceAdmin.workspaces.listHint',
+                "You can't yet delete workspaces and you can only go to the workspace if you are an Admin or a Member.",
+              )}
             </p>
           </div>
           <Button
@@ -168,7 +186,7 @@ export function InstanceAdminWorkspacePage() {
             className="text-xs"
             onClick={() => navigate('/instance-admin/workspace/create')}
           >
-            Create workspace
+            {t('instanceAdmin.workspaces.create', 'Create workspace')}
           </Button>
         </div>
         {error && <p className="mb-3 text-sm text-(--txt-danger-primary)">{error}</p>}
@@ -190,7 +208,7 @@ export function InstanceAdminWorkspacePage() {
               <Link
                 to={`/${w.slug}`}
                 className="flex size-8 shrink-0 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-                aria-label="Go to workspace"
+                aria-label={t('instanceAdmin.workspaces.goToWorkspace', 'Go to workspace')}
               >
                 <svg
                   width="16"

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { viewService } from '../../services/viewService';
 import { PROJECT_VIEWS_REFRESH_EVENT } from '../../lib/projectViewsEvents';
@@ -82,6 +83,7 @@ export function ProjectSavedViewMoreMenu({
   projectId: string;
   viewId: string;
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -162,7 +164,7 @@ export function ProjectSavedViewMoreMenu({
             <span className="text-(--txt-icon-secondary)">
               <IconEdit />
             </span>
-            Edit
+            {t('common.edit', 'Edit')}
           </button>
           <button
             type="button"
@@ -173,7 +175,7 @@ export function ProjectSavedViewMoreMenu({
             <span className="text-(--txt-icon-secondary)">
               <IconOpenTab />
             </span>
-            Open in new tab
+            {t('common.openInNewTab', 'Open in new tab')}
           </button>
           <button
             type="button"
@@ -184,7 +186,7 @@ export function ProjectSavedViewMoreMenu({
             <span className="text-(--txt-icon-secondary)">
               <IconLink />
             </span>
-            Copy link
+            {t('common.copyLink', 'Copy link')}
           </button>
           <button
             type="button"
@@ -195,7 +197,7 @@ export function ProjectSavedViewMoreMenu({
             <span className="text-(--txt-danger-primary)">
               <IconTrash />
             </span>
-            Delete
+            {t('common.delete', 'Delete')}
           </button>
         </div>
       ) : null}

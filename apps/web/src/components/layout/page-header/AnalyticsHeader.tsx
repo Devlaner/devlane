@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dropdown } from '../../work-item';
 import { projectService } from '../../../services/projectService';
 import type { ProjectApiResponse } from '../../../api/types';
 import { IconBarChart, IconBriefcase } from './icons';
 
 export function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
+  const { t } = useTranslation();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [projectSearch, setProjectSearch] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -46,23 +48,23 @@ export function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
         <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
           <IconBarChart />
         </span>
-        Analytics
+        {t('header.analytics', 'Analytics')}
       </div>
       <div className="flex items-center gap-2">
         <Dropdown
           id="analytics-projects"
           openId={openDropdown}
           onOpen={setOpenDropdown}
-          label="All projects"
+          label={t('header.allProjects', 'All projects')}
           icon={<IconBriefcase />}
-          displayValue={selectedProject?.name ?? 'All projects'}
+          displayValue={selectedProject?.name ?? t('header.allProjects', 'All projects')}
           panelClassName="flex min-w-[200px] max-h-52 flex-col rounded border border-(--border-subtle) bg-(--bg-surface-1) shadow-(--shadow-raised)"
           align="right"
         >
           <div className="sticky top-0 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
             <input
               type="text"
-              placeholder="Search..."
+              placeholder={t('common.searchEllipsis', 'Search...')}
               value={projectSearch}
               onChange={(e) => setProjectSearch(e.target.value)}
               className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
@@ -77,7 +79,7 @@ export function AnalyticsHeader({ workspaceSlug }: { workspaceSlug: string }) {
               }}
               className="w-full text-left text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
             >
-              All projects
+              {t('header.allProjects', 'All projects')}
             </button>
             {filteredProjects.map((p) => (
               <button

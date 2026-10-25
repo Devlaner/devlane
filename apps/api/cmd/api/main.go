@@ -18,6 +18,8 @@ import (
 	"github.com/Devlaner/devlane/api/internal/rabbitmq"
 	"github.com/Devlaner/devlane/api/internal/redis"
 	"github.com/Devlaner/devlane/api/internal/router"
+	"github.com/Devlaner/devlane/api/internal/service"
+	"github.com/Devlaner/devlane/api/internal/slack"
 	"github.com/Devlaner/devlane/api/internal/store"
 )
 
@@ -26,6 +28,10 @@ func main() {
 	// instead of starting the server.
 	if len(os.Args) > 1 && os.Args[1] == "admin" {
 		os.Exit(runAdmin(os.Args[2:]))
+	}
+	// Local development: `api seed` populates a demo workspace/project/issues.
+	if len(os.Args) > 1 && os.Args[1] == "seed" {
+		os.Exit(runSeed(os.Args[2:]))
 	}
 
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
@@ -94,7 +100,7 @@ func main() {
 		mc = client
 	}
 
-	r := router.New(router.Config{
+	r, importerSvc := router.New(router.Config{
 		Log:               log,
 		DB:                db,
 		Redis:             rdb,
@@ -117,12 +123,41 @@ func main() {
 			instanceSettingStore := store.NewInstanceSettingStore(db)
 			emailSender := mail.NewSMTPEmailSender(instanceSettingStore, log)
 			consumer.Register(queue.QueueEmails, queue.HandleSendEmail(log, emailSender))
-			consumer.Register(queue.QueueWebhooks, queue.HandleWebhook(queue.NoopWebhookDeliverer(log)))
-			if err := consumer.Run(consumerCtx, []string{queue.QueueEmails, queue.QueueWebhooks}); err != nil {
+			webhookDeliverer := service.NewWebhookDeliverer(store.NewWebhookStore(db), log)
+			consumer.Register(queue.QueueWebhooks, queue.HandleWebhook(webhookDeliverer))
+			consumer.Register(queue.QueueImports, queue.HandleImport(importerSvc.Run))
+			consumer.Register(queue.QueueSlack, queue.HandleSlackPost(log, store.NewWorkspaceIntegrationStore(db), slack.PostMessage))
+			if err := consumer.Run(consumerCtx, []string{queue.QueueEmails, queue.QueueWebhooks, queue.QueueImports, queue.QueueSlack}); err != nil {
 				log.Warn("queue consumer", "error", err)
 			}
 		}
 	}
+
+	// Periodically run project automations for projects that opt in: auto-archive
+	// settled items (archive_in > 0) and auto-close inactive items (close_in > 0).
+	// Runs in-process; stops on shutdown via consumerCtx.
+	automationSvc := service.NewAutomationService(store.NewProjectStore(db), store.NewIssueStore(db))
+	go func() {
+		ticker := time.NewTicker(6 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-consumerCtx.Done():
+				return
+			case <-ticker.C:
+				if n, err := automationSvc.RunAutoArchive(consumerCtx); err != nil {
+					log.Warn("auto-archive", "error", err)
+				} else if n > 0 {
+					log.Info("auto-archive", "archived", n)
+				}
+				if n, err := automationSvc.RunAutoClose(consumerCtx); err != nil {
+					log.Warn("auto-close", "error", err)
+				} else if n > 0 {
+					log.Info("auto-close", "closed", n)
+				}
+			}
+		}
+	}()
 
 	addr := ":" + cfg.ServerPort
 	srv := &http.Server{

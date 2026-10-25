@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
 import { Button } from '../ui';
 
@@ -35,6 +36,7 @@ function nextWeek() {
  * to keep the dependency surface small — accessibility comes for free.
  */
 export function SnoozeMenu({ snoozedUntil, onSnooze, onUnsnooze }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [customValue, setCustomValue] = useState('');
   const ref = useRef<HTMLDivElement>(null);
@@ -53,7 +55,7 @@ export function SnoozeMenu({ snoozedUntil, onSnooze, onUnsnooze }: Props) {
   if (snoozedUntil) {
     return (
       <Button size="sm" variant="secondary" onClick={() => onUnsnooze()}>
-        <Clock size={14} /> Wake up
+        <Clock size={14} /> {t('notifications.snooze.wakeUp', 'Wake up')}
       </Button>
     );
   }
@@ -66,7 +68,7 @@ export function SnoozeMenu({ snoozedUntil, onSnooze, onUnsnooze }: Props) {
   return (
     <div ref={ref} className="relative">
       <Button size="sm" variant="secondary" onClick={() => setOpen((v) => !v)}>
-        <Clock size={14} /> Snooze
+        <Clock size={14} /> {t('notifications.snooze.snooze', 'Snooze')}
       </Button>
       {open ? (
         <div className="absolute right-0 z-(--z-modal) mt-1 w-56 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)">
@@ -75,26 +77,26 @@ export function SnoozeMenu({ snoozedUntil, onSnooze, onUnsnooze }: Props) {
             className="block w-full px-3 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             onClick={() => choose(inOneHour())}
           >
-            For 1 hour
+            {t('notifications.snooze.forOneHour', 'For 1 hour')}
           </button>
           <button
             type="button"
             className="block w-full px-3 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             onClick={() => choose(tomorrowMorning())}
           >
-            Until tomorrow morning
+            {t('notifications.snooze.untilTomorrow', 'Until tomorrow morning')}
           </button>
           <button
             type="button"
             className="block w-full px-3 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             onClick={() => choose(nextWeek())}
           >
-            Next week
+            {t('notifications.snooze.nextWeek', 'Next week')}
           </button>
           <div className="my-1 h-px bg-(--border-subtle)" />
           <div className="px-3 py-2">
             <label htmlFor="snooze-custom-time" className="block text-xs text-(--txt-tertiary)">
-              Custom
+              {t('notifications.snooze.custom', 'Custom')}
             </label>
             <input
               id="snooze-custom-time"
@@ -114,7 +116,7 @@ export function SnoozeMenu({ snoozedUntil, onSnooze, onUnsnooze }: Props) {
               }}
               className="mt-1 w-full rounded bg-(--brand-default) px-2 py-1 text-xs font-medium text-white disabled:opacity-50"
             >
-              Snooze until…
+              {t('notifications.snooze.snoozeUntil', 'Snooze until…')}
             </button>
           </div>
         </div>

@@ -1,7 +1,19 @@
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, Modal } from '../../ui';
 import { IconChevronDown } from '../icons';
 import { issueService } from '../../../services/issueService';
+import { exportService } from '../../../services/exportService';
 import type { ProjectApiResponse, WorkspaceApiResponse } from '../../../api/types';
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
 
 interface ExportModalProps {
   open: boolean;
@@ -31,11 +43,15 @@ export function ExportModal({
   setExporting,
   setExportProjectOpen,
 }: ExportModalProps) {
+  const { t } = useTranslation();
+  const [error, setError] = useState<string | null>(null);
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={`Export ${exportFormat.toUpperCase()}`}
+      title={t('settings.export.modalTitle', 'Export {{format}}', {
+        format: exportFormat.toUpperCase(),
+      })}
       footer={
         <>
           <Button
@@ -43,16 +59,27 @@ export function ExportModal({
             onClick={() => setExportProjectOpen(false)}
             disabled={exporting}
           >
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button
             disabled={exporting}
             onClick={async () => {
               if (!workspaceSlug) return;
+              setError(null);
               setExporting(true);
               try {
                 const projectIds =
                   exportProjectValue === 'all' ? projects.map((p) => p.id) : [exportProjectValue];
+                const base = `export-${workspace?.slug ?? workspaceSlug}-${new Date().toISOString().slice(0, 10)}`;
+
+                // Excel is generated server-side (real .xlsx); CSV/JSON stay client-side.
+                if (exportFormat === 'xlsx') {
+                  const blob = await exportService.createXlsx(workspaceSlug, projectIds);
+                  downloadBlob(blob, `${base}.xlsx`);
+                  setExportProjectOpen(false);
+                  return;
+                }
+
                 const allIssues: Array<
                   Record<string, unknown> & {
                     project_id?: string;
@@ -77,11 +104,9 @@ export function ExportModal({
                     offset += issues.length;
                   }
                 }
-                const fmt = exportFormat === 'xlsx' ? 'csv' : exportFormat;
                 let blob: Blob;
                 let filename: string;
-                const base = `export-${workspace?.slug ?? workspaceSlug}-${new Date().toISOString().slice(0, 10)}`;
-                if (fmt === 'json') {
+                if (exportFormat === 'json') {
                   const str = JSON.stringify(allIssues, null, 2);
                   blob = new Blob([str], { type: 'application/json' });
                   filename = `${base}.json`;
@@ -118,34 +143,33 @@ export function ExportModal({
                   blob = new Blob([csv], { type: 'text/csv' });
                   filename = `${base}.csv`;
                 }
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                a.click();
-                setTimeout(() => URL.revokeObjectURL(url), 0);
+                downloadBlob(blob, filename);
                 setExportProjectOpen(false);
               } catch {
-                // could set export error state
+                setError(t('settings.export.failed', 'Export failed. Please try again.'));
               } finally {
                 setExporting(false);
               }
             }}
           >
-            {exporting ? 'Exporting…' : 'Export'}
+            {exporting
+              ? t('settings.export.exporting', 'Exporting…')
+              : t('settings.export.action', 'Export')}
           </Button>
         </>
       }
     >
       <div>
-        <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">Projects</label>
+        <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
+          {t('settings.export.projects', 'Projects')}
+        </label>
         <div className="relative">
           <select
             value={exportProjectValue}
             onChange={(e) => setExportProjectValue(e.target.value)}
             className="w-full appearance-none rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 pr-8 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
           >
-            <option value="all">All projects</option>
+            <option value="all">{t('settings.export.allProjects', 'All projects')}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -158,9 +182,13 @@ export function ExportModal({
         </div>
         {exportFormat === 'xlsx' && (
           <p className="mt-2 text-sm text-(--txt-tertiary)">
-            Excel export will download as CSV for now.
+            {t(
+              'settings.export.xlsxHint',
+              'Exports as a real Excel workbook (.xlsx) generated on the server.',
+            )}
           </p>
         )}
+        {error && <p className="mt-2 text-sm text-(--txt-danger-primary)">{error}</p>}
       </div>
     </Modal>
   );

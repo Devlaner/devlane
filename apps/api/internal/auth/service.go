@@ -67,7 +67,12 @@ type Service struct {
 	resetTokenStore *store.PasswordResetTokenStore
 	accountStore    *store.AccountStore
 	apiTokenStore   *store.ApiTokenStore
+	workspaceStore  *store.WorkspaceStore // optional: enforces workspace-token scope
 }
+
+// SetWorkspaceStore wires the workspace store used to enforce that a
+// workspace-scoped API token only reaches its own workspace. Optional.
+func (s *Service) SetWorkspaceStore(ws *store.WorkspaceStore) { s.workspaceStore = ws }
 
 func NewService(userStore *store.UserStore, sessionStore *store.SessionStore, resetTokenStore *store.PasswordResetTokenStore) *Service {
 	return &Service{userStore: userStore, sessionStore: sessionStore, resetTokenStore: resetTokenStore}
@@ -272,19 +277,37 @@ func (s *Service) ActiveUserByID(ctx context.Context, id uuid.UUID) (*model.User
 // if the value isn't a recognized token (not an error — callers should fall
 // back to other bearer interpretations).
 func (s *Service) UserFromAPIToken(ctx context.Context, plain string) (*model.User, error) {
+	user, _, err := s.UserFromAPITokenScoped(ctx, plain)
+	return user, err
+}
+
+// UserFromAPITokenScoped resolves a bearer token to its user and also returns
+// the token record, so callers can enforce a workspace-scoped token's scope.
+func (s *Service) UserFromAPITokenScoped(ctx context.Context, plain string) (*model.User, *model.ApiToken, error) {
 	if s.apiTokenStore == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	tok, err := s.apiTokenStore.GetActiveByHash(ctx, store.HashToken(plain))
 	if err != nil || tok == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	user, err := s.ActiveUserByID(ctx, tok.UserID)
 	if err != nil || user == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	_ = s.apiTokenStore.UpdateLastUsed(ctx, tok.ID)
-	return user, nil
+	return user, tok, nil
+}
+
+// SlugMatchesWorkspace reports whether the workspace addressed by slug is the
+// given workspace id. Used to keep a workspace-scoped token inside its own
+// workspace. Returns false if the store isn't wired or the slug is unknown.
+func (s *Service) SlugMatchesWorkspace(ctx context.Context, slug string, workspaceID uuid.UUID) bool {
+	if s.workspaceStore == nil || slug == "" {
+		return false
+	}
+	w, err := s.workspaceStore.GetBySlug(ctx, slug)
+	return err == nil && w != nil && w.ID == workspaceID
 }
 
 func (s *Service) UpdateProfile(ctx context.Context, u *model.User) error {

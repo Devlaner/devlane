@@ -1,4 +1,5 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader } from '../ui';
 import { issueService } from '../../services/issueService';
@@ -31,6 +32,7 @@ export function IssueRelationsPanel({
   relations,
   onRelationsChange,
 }: IssueRelationsPanelProps) {
+  const { t } = useTranslation();
   const [addRelationOpen, setAddRelationOpen] = useState(false);
   const [addRelationType, setAddRelationType] = useState<IssueRelationType>('relates_to');
   const [addRelationSearch, setAddRelationSearch] = useState('');
@@ -41,7 +43,7 @@ export function IssueRelationsPanel({
       <CardHeader className="flex items-center justify-between text-sm font-medium text-(--txt-secondary)">
         <span className="flex items-center gap-1.5">
           <IconRelation />
-          Relations
+          {t('workItem.relations.title', 'Relations')}
         </span>
         <button
           type="button"
@@ -50,7 +52,7 @@ export function IssueRelationsPanel({
             setAddRelationSearch('');
           }}
           className="rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover)"
-          title="Add relation"
+          title={t('workItem.relations.add', 'Add relation')}
         >
           <IconPlus />
         </button>
@@ -65,13 +67,13 @@ export function IssueRelationsPanel({
             >
               {Object.entries(RELATION_TYPE_LABELS).map(([v, l]) => (
                 <option key={v} value={v}>
-                  {l}
+                  {t(`workItem.relationType.${v}`, l)}
                 </option>
               ))}
             </select>
             <input
               type="text"
-              placeholder="Search issues…"
+              placeholder={t('workItem.relations.searchPlaceholder', 'Search issues…')}
               value={addRelationSearch}
               onChange={(e) => setAddRelationSearch(e.target.value)}
               className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-canvas) px-2 py-1 text-xs text-(--txt-primary) focus:outline-none focus:ring-1 focus:ring-(--border-focus)"
@@ -127,7 +129,7 @@ export function IssueRelationsPanel({
               onClick={() => setAddRelationOpen(false)}
               className="text-xs text-(--txt-tertiary) hover:text-(--txt-secondary)"
             >
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </button>
           </div>
         )}
@@ -138,7 +140,7 @@ export function IssueRelationsPanel({
             return (
               <div key={rtype}>
                 <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-(--txt-tertiary)">
-                  {RELATION_TYPE_LABELS[rtype]}
+                  {t(`workItem.relationType.${rtype}`, RELATION_TYPE_LABELS[rtype])}
                 </p>
                 <div className="space-y-0.5">
                   {group.map((rel) => (
@@ -162,7 +164,7 @@ export function IssueRelationsPanel({
                           }));
                         }}
                         className="shrink-0 opacity-0 group-hover:opacity-100 rounded p-0.5 text-(--txt-tertiary) hover:text-(--txt-danger-primary)"
-                        title="Remove"
+                        title={t('common.remove', 'Remove')}
                       >
                         ×
                       </button>
@@ -174,7 +176,9 @@ export function IssueRelationsPanel({
           },
         )}
         {!addRelationOpen && Object.values(relations).every((g) => !g?.length) && (
-          <p className="text-xs text-(--txt-tertiary)">No relations yet.</p>
+          <p className="text-xs text-(--txt-tertiary)">
+            {t('workItem.relations.empty', 'No relations yet.')}
+          </p>
         )}
       </CardContent>
     </Card>

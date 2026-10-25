@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { Card, CardContent, Button, Modal, Input } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +10,7 @@ import { stickiesService } from '../services/stickiesService';
 import { StickyNoteCard } from '../components/stickies/StickyNoteCard';
 import { pickRandomStickyBackground } from '../components/stickies/stickyPalette';
 import { OPEN_HOME_WIDGETS } from '../lib/homeWidgetsEvents';
+import { safeUrl } from '../lib/sanitize';
 import { recentsService } from '../services/recentsService';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import type {
@@ -314,11 +316,11 @@ function normalizeWidgets(raw: unknown): HomeWidget[] {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function getGreeting(): string {
+function getGreeting(t: (key: string, def: string) => string): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return t('home.greeting.morning', 'Good morning');
+  if (hour < 17) return t('home.greeting.afternoon', 'Good afternoon');
+  return t('home.greeting.evening', 'Good evening');
 }
 
 function formatDateTime(date: Date): string {
@@ -419,11 +421,14 @@ function QuicklinkCardRow({
   onEdit: (ql: QuickLinkApiResponse) => void;
   onAfterChange: () => void;
 }) {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRootRef = useRef<HTMLDivElement>(null);
   const label = ql.title?.trim() || ql.url;
   const isInternal = !!ql.project_id;
-  const href = isInternal ? `${baseUrl}/projects/${ql.project_id}` : ql.url;
+  // External quicklink URLs are user-supplied, so run them through safeUrl to
+  // block javascript:/data: and other non http(s) schemes.
+  const href = isInternal ? `${baseUrl}/projects/${ql.project_id}` : safeUrl(ql.url);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -454,7 +459,7 @@ function QuicklinkCardRow({
 
   const handleDelete = async () => {
     if (!workspaceSlug) return;
-    if (!window.confirm('Delete this quicklink?')) return;
+    if (!window.confirm(t('home.quicklink.deleteConfirm', 'Delete this quicklink?'))) return;
     try {
       await quickLinksService.delete(workspaceSlug, ql.id);
       onAfterChange();
@@ -502,7 +507,7 @@ function QuicklinkCardRow({
           }`}
           aria-expanded={menuOpen}
           aria-haspopup="true"
-          aria-label="Quicklink options"
+          aria-label={t('home.quicklink.options', 'Quicklink options')}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -528,7 +533,7 @@ function QuicklinkCardRow({
               <span className="text-(--txt-icon-tertiary)" aria-hidden>
                 <IconPencil />
               </span>
-              Edit
+              {t('common.edit', 'Edit')}
             </button>
             <button
               type="button"
@@ -539,7 +544,7 @@ function QuicklinkCardRow({
               <span className="text-(--txt-icon-tertiary)" aria-hidden>
                 <IconOpenNewTab />
               </span>
-              Open in new tab
+              {t('home.quicklink.openInNewTab', 'Open in new tab')}
             </button>
             <button
               type="button"
@@ -550,7 +555,7 @@ function QuicklinkCardRow({
               <span className="text-(--txt-icon-tertiary)" aria-hidden>
                 <IconChain />
               </span>
-              Copy link
+              {t('home.quicklink.copyLink', 'Copy link')}
             </button>
             <button
               type="button"
@@ -561,7 +566,7 @@ function QuicklinkCardRow({
               <span className="text-(--txt-danger-primary)" aria-hidden>
                 <IconTrash />
               </span>
-              Delete
+              {t('common.delete', 'Delete')}
             </button>
           </div>
         ) : null}
@@ -575,6 +580,7 @@ function QuicklinkCardRow({
 // ---------------------------------------------------------------------------
 
 export function WorkspaceHomePage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
@@ -615,7 +621,7 @@ export function WorkspaceHomePage() {
   const [draggingWidgetId, setDraggingWidgetId] = useState<HomeWidgetId | null>(null);
   const [widgetsHydrated, setWidgetsHydrated] = useState(false);
 
-  useDocumentTitle('Home');
+  useDocumentTitle(t('home.documentTitle', 'Home'));
 
   const widgetsStorageKey = workspaceSlug ? `devlane:home-widgets:${workspaceSlug}` : '';
 
@@ -839,16 +845,32 @@ export function WorkspaceHomePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-        Loading…
+        {t('common.loading', 'Loading…')}
       </div>
     );
   }
   if (!workspace) {
-    return <div className="text-(--txt-secondary)">Workspace not found.</div>;
+    return (
+      <div className="text-(--txt-secondary)">
+        {t('common.workspaceNotFound', 'Workspace not found.')}
+      </div>
+    );
   }
 
   const baseUrl = `/${workspace.slug}`;
   const recentsFilterOptions = ['All', 'Work Items', 'Pages', 'Projects'] as const;
+  const recentsFilterLabel = (option: (typeof recentsFilterOptions)[number]): string => {
+    switch (option) {
+      case 'All':
+        return t('common.all', 'All');
+      case 'Work Items':
+        return t('home.recentsFilter.workItems', 'Work Items');
+      case 'Pages':
+        return t('home.recentsFilter.pages', 'Pages');
+      case 'Projects':
+        return t('home.recentsFilter.projects', 'Projects');
+    }
+  };
   const filteredRecents =
     recentsFilterValue === 'All'
       ? recents
@@ -862,7 +884,9 @@ export function WorkspaceHomePage() {
     quicklinks: (
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-(--txt-primary)">Quicklinks</h2>
+          <h2 className="text-base font-semibold text-(--txt-primary)">
+            {t('home.quicklinks.title', 'Quicklinks')}
+          </h2>
           <Button
             variant="ghost"
             size="sm"
@@ -870,23 +894,25 @@ export function WorkspaceHomePage() {
             onClick={() => setAddQuicklinkOpen(true)}
           >
             <IconPlus />
-            Add quick Link
+            {t('home.quicklinks.add', 'Add quick Link')}
           </Button>
         </div>
         <Modal
           open={addQuicklinkOpen}
           onClose={handleCloseQuicklink}
-          title="Add Quicklink"
+          title={t('home.quicklink.addTitle', 'Add Quicklink')}
           footer={
             <>
               <Button variant="secondary" onClick={handleCloseQuicklink}>
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
               <Button
                 onClick={handleAddQuicklink}
                 disabled={!quicklinkUrl.trim() || quicklinkSubmitting}
               >
-                {quicklinkSubmitting ? 'Adding…' : 'Add Quicklink'}
+                {quicklinkSubmitting
+                  ? t('common.adding', 'Adding…')
+                  : t('home.quicklink.addTitle', 'Add Quicklink')}
               </Button>
             </>
           }
@@ -894,23 +920,28 @@ export function WorkspaceHomePage() {
           <div className="flex flex-col gap-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                URL <span className="text-(--txt-tertiary)">Required</span>
+                {t('home.quicklink.urlLabel', 'URL')}{' '}
+                <span className="text-(--txt-tertiary)">{t('common.required', 'Required')}</span>
               </label>
               <Input
                 value={quicklinkUrl}
                 onChange={(e) => setQuicklinkUrl(e.target.value)}
-                placeholder="Type or paste a URL"
+                placeholder={t('home.quicklink.urlPlaceholder', 'Type or paste a URL')}
                 className="mt-1"
               />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                Display title <span className="text-(--txt-tertiary)">Optional</span>
+                {t('home.quicklink.displayTitleLabel', 'Display title')}{' '}
+                <span className="text-(--txt-tertiary)">{t('common.optional', 'Optional')}</span>
               </label>
               <Input
                 value={quicklinkTitle}
                 onChange={(e) => setQuicklinkTitle(e.target.value)}
-                placeholder="What you'd like to see this link as"
+                placeholder={t(
+                  'home.quicklink.titlePlaceholder',
+                  "What you'd like to see this link as",
+                )}
                 className="mt-1"
               />
             </div>
@@ -919,17 +950,17 @@ export function WorkspaceHomePage() {
         <Modal
           open={editQuicklink !== null}
           onClose={handleCloseEditQuicklink}
-          title="Edit Quicklink"
+          title={t('home.quicklink.editTitle', 'Edit Quicklink')}
           footer={
             <>
               <Button variant="secondary" onClick={handleCloseEditQuicklink}>
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
               <Button
                 onClick={() => void handleSaveEditQuicklink()}
                 disabled={!editQuicklinkUrl.trim() || editQuicklinkSubmitting}
               >
-                {editQuicklinkSubmitting ? 'Saving…' : 'Save'}
+                {editQuicklinkSubmitting ? t('common.saving', 'Saving…') : t('common.save', 'Save')}
               </Button>
             </>
           }
@@ -937,23 +968,28 @@ export function WorkspaceHomePage() {
           <div className="flex flex-col gap-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                URL <span className="text-(--txt-tertiary)">Required</span>
+                {t('home.quicklink.urlLabel', 'URL')}{' '}
+                <span className="text-(--txt-tertiary)">{t('common.required', 'Required')}</span>
               </label>
               <Input
                 value={editQuicklinkUrl}
                 onChange={(e) => setEditQuicklinkUrl(e.target.value)}
-                placeholder="Type or paste a URL"
+                placeholder={t('home.quicklink.urlPlaceholder', 'Type or paste a URL')}
                 className="mt-1"
               />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                Display title <span className="text-(--txt-tertiary)">Optional</span>
+                {t('home.quicklink.displayTitleLabel', 'Display title')}{' '}
+                <span className="text-(--txt-tertiary)">{t('common.optional', 'Optional')}</span>
               </label>
               <Input
                 value={editQuicklinkTitle}
                 onChange={(e) => setEditQuicklinkTitle(e.target.value)}
-                placeholder="What you'd like to see this link as"
+                placeholder={t(
+                  'home.quicklink.titlePlaceholder',
+                  "What you'd like to see this link as",
+                )}
                 className="mt-1"
               />
             </div>
@@ -982,7 +1018,10 @@ export function WorkspaceHomePage() {
                 <IconTarget />
               </div>
               <p className="text-sm text-(--txt-tertiary)">
-                No quicklinks yet. Add one to jump back to a project.
+                {t(
+                  'home.quicklinks.empty',
+                  'No quicklinks yet. Add one to jump back to a project.',
+                )}
               </p>
             </CardContent>
           </Card>
@@ -992,7 +1031,9 @@ export function WorkspaceHomePage() {
     recents: (
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-(--txt-primary)">Recents</h2>
+          <h2 className="text-base font-semibold text-(--txt-primary)">
+            {t('home.recents.title', 'Recents')}
+          </h2>
           <div className="relative">
             <button
               ref={recentsFilterTriggerRef}
@@ -1001,9 +1042,9 @@ export function WorkspaceHomePage() {
               className="flex items-center gap-1.5 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
               aria-expanded={recentsFilterOpen}
               aria-haspopup="listbox"
-              aria-label="Filter recents"
+              aria-label={t('home.recents.filterAriaLabel', 'Filter recents')}
             >
-              {recentsFilterValue}
+              {recentsFilterLabel(recentsFilterValue)}
               <IconChevronDown />
             </button>
             {recentsFilterOpen && (
@@ -1024,7 +1065,7 @@ export function WorkspaceHomePage() {
                     }}
                     className="w-full px-3 py-2 text-left text-[13px] font-medium text-(--txt-primary) hover:bg-(--bg-layer-transparent-hover)"
                   >
-                    {option}
+                    {recentsFilterLabel(option)}
                   </button>
                 ))}
               </div>
@@ -1079,7 +1120,7 @@ export function WorkspaceHomePage() {
             })}
             {filteredRecents.length === 0 && (
               <div className="px-4 py-6 text-center text-sm text-(--txt-tertiary)">
-                No recent activity.
+                {t('home.recents.empty', 'No recent activity.')}
               </div>
             )}
           </CardContent>
@@ -1089,7 +1130,9 @@ export function WorkspaceHomePage() {
     stickies: (
       <section>
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-base font-semibold text-(--txt-primary)">Your stickies</h2>
+          <h2 className="text-base font-semibold text-(--txt-primary)">
+            {t('home.stickies.title', 'Your stickies')}
+          </h2>
           <div className="flex flex-1 items-center justify-end gap-1 min-w-0">
             <div
               className={`overflow-hidden transition-[width] duration-200 ease-out ${stickySearchOpen ? 'w-56' : 'w-0'}`}
@@ -1102,9 +1145,12 @@ export function WorkspaceHomePage() {
                   type="text"
                   value={stickySearchQuery}
                   onChange={(e) => setStickySearchQuery(e.target.value)}
-                  placeholder="Search by title or content"
+                  placeholder={t('home.stickies.searchPlaceholder', 'Search by title or content')}
                   className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
-                  aria-label="Search stickies by title or content"
+                  aria-label={t(
+                    'home.stickies.searchAriaLabel',
+                    'Search stickies by title or content',
+                  )}
                 />
                 <button
                   type="button"
@@ -1113,7 +1159,7 @@ export function WorkspaceHomePage() {
                     setStickySearchOpen(false);
                   }}
                   className="shrink-0 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-secondary)"
-                  aria-label="Clear search"
+                  aria-label={t('home.stickies.clearSearch', 'Clear search')}
                 >
                   <IconX />
                 </button>
@@ -1124,7 +1170,7 @@ export function WorkspaceHomePage() {
                 type="button"
                 onClick={() => setStickySearchOpen(true)}
                 className="flex size-8 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover)"
-                aria-label="Search stickies"
+                aria-label={t('home.stickies.searchButtonAriaLabel', 'Search stickies')}
               >
                 <IconSearch />
               </button>
@@ -1136,21 +1182,23 @@ export function WorkspaceHomePage() {
               onClick={() => setAddStickyOpen(true)}
             >
               <IconPlus />
-              Add sticky
+              {t('home.stickies.add', 'Add sticky')}
             </Button>
           </div>
         </div>
         <Modal
           open={addStickyOpen}
           onClose={handleCloseSticky}
-          title="Add sticky"
+          title={t('home.stickies.addTitle', 'Add sticky')}
           footer={
             <>
               <Button variant="secondary" onClick={handleCloseSticky}>
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
               <Button onClick={handleAddSticky} disabled={stickySubmitting}>
-                {stickySubmitting ? 'Adding…' : 'Add sticky'}
+                {stickySubmitting
+                  ? t('common.adding', 'Adding…')
+                  : t('home.stickies.add', 'Add sticky')}
               </Button>
             </>
           }
@@ -1158,7 +1206,8 @@ export function WorkspaceHomePage() {
           <div className="flex flex-col gap-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                Content <span className="text-(--txt-tertiary)">Optional</span>
+                {t('home.stickies.contentLabel', 'Content')}{' '}
+                <span className="text-(--txt-tertiary)">{t('common.optional', 'Optional')}</span>
               </label>
               <textarea
                 value={stickyContent}
@@ -1170,7 +1219,10 @@ export function WorkspaceHomePage() {
                     void handleAddSticky();
                   }
                 }}
-                placeholder="Jot down an idea, capture an aha..."
+                placeholder={t(
+                  'home.stickies.contentPlaceholder',
+                  'Jot down an idea, capture an aha...',
+                )}
                 rows={4}
                 className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
               />
@@ -1196,8 +1248,11 @@ export function WorkspaceHomePage() {
                   </span>
                   <p className="max-w-sm text-center text-sm italic text-(--txt-placeholder)">
                     {stickySearchQuery.trim()
-                      ? 'No stickies match your search.'
-                      : 'Jot down an idea, capture an aha, or record a brainwave. Add a sticky to get started.'}
+                      ? t('home.stickies.emptySearch', 'No stickies match your search.')
+                      : t(
+                          'home.stickies.empty',
+                          'Jot down an idea, capture an aha, or record a brainwave. Add a sticky to get started.',
+                        )}
                   </p>
                 </CardContent>
               </Card>
@@ -1238,7 +1293,7 @@ export function WorkspaceHomePage() {
           setManageWidgetsOpen(false);
           setDraggingWidgetId(null);
         }}
-        title="Manage widgets"
+        title={t('home.manageWidgets.title', 'Manage widgets')}
         footer={
           <Button
             variant="secondary"
@@ -1247,7 +1302,7 @@ export function WorkspaceHomePage() {
               setDraggingWidgetId(null);
             }}
           >
-            Close
+            {t('common.close', 'Close')}
           </Button>
         }
       >
@@ -1291,7 +1346,7 @@ export function WorkspaceHomePage() {
                   id={`widget-toggle-label-${widget.id}`}
                   className="text-sm font-medium text-(--txt-primary)"
                 >
-                  {widget.label}
+                  {t(`home.widget.${widget.id}`, widget.label)}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -1321,7 +1376,7 @@ export function WorkspaceHomePage() {
       {/* Welcome */}
       <section className="text-center">
         <h1 className="text-2xl font-bold tracking-tight text-(--txt-primary)">
-          {getGreeting()}, {user?.name ?? 'User'}
+          {getGreeting(t)}, {user?.name ?? t('common.user', 'User')}
         </h1>
         <p className="mt-1 flex items-center justify-center gap-2 text-sm text-(--txt-tertiary)">
           <span className="text-(--txt-icon-tertiary)">

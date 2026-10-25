@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Calendar, Minus, SignalHigh, SignalLow, SignalMedium } from 'lucide-react';
 import { Avatar } from '../ui';
 import { cn, getImageUrl } from '../../lib/utils';
@@ -20,11 +21,12 @@ interface StatePillProps {
 }
 
 export function StatePill({ state, size = 'sm' }: StatePillProps) {
+  const { t } = useTranslation();
   if (!state) {
     return (
       <span className="inline-flex h-5 items-center gap-1.5 rounded-(--radius-md) border border-(--border-subtle) px-1.5 text-[11px] text-(--txt-tertiary)">
         <span className="h-2 w-2 rounded-full bg-(--neutral-400)" />
-        No state
+        {t('common.noState', 'No state')}
       </span>
     );
   }
@@ -100,15 +102,23 @@ interface PriorityIconProps {
 }
 
 export function PriorityIcon({ priority, variant = 'pill' }: PriorityIconProps) {
+  const { t } = useTranslation();
   const key = (priority ?? 'none') as Priority;
   const meta = PRIORITY_META[key] ?? PRIORITY_META.none;
+  const label = {
+    urgent: t('common.priorityUrgent', 'Urgent'),
+    high: t('common.priorityHigh', 'High'),
+    medium: t('common.priorityMedium', 'Medium'),
+    low: t('common.priorityLow', 'Low'),
+    none: t('common.noPriority', 'No priority'),
+  }[key];
   if (variant === 'icon') {
     return (
       <span
         className="inline-flex h-5 w-5 items-center justify-center"
         style={{ color: meta.color }}
-        title={meta.label}
-        aria-label={meta.label}
+        title={label}
+        aria-label={label}
       >
         {meta.icon}
       </span>
@@ -122,8 +132,8 @@ export function PriorityIcon({ priority, variant = 'pill' }: PriorityIconProps) 
         backgroundColor: meta.bg,
         borderColor: key === 'none' ? 'var(--border-subtle)' : withAlpha(meta.color, 0.3),
       }}
-      title={meta.label}
-      aria-label={meta.label}
+      title={label}
+      aria-label={label}
     >
       {meta.icon}
     </span>
@@ -140,12 +150,13 @@ interface AvatarGroupProps {
 }
 
 export function WorkItemAvatarGroup({ members, max = 3 }: AvatarGroupProps) {
+  const { t } = useTranslation();
   if (members.length === 0) {
     return (
       <span
         className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-(--border-subtle) text-[10px] text-(--txt-icon-tertiary)"
-        title="Unassigned"
-        aria-label="Unassigned"
+        title={t('common.unassigned', 'Unassigned')}
+        aria-label={t('common.unassigned', 'Unassigned')}
       >
         <UserDashedIcon />
       </span>
@@ -170,7 +181,7 @@ export function WorkItemAvatarGroup({ members, max = 3 }: AvatarGroupProps) {
       {overflow > 0 && (
         <span
           className="-ml-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-(--bg-layer-1) text-[10px] font-medium text-(--txt-secondary) ring-2 ring-(--bg-canvas)"
-          aria-label={`${overflow} more`}
+          aria-label={t('common.moreCount', '{{count}} more', { count: overflow })}
         >
           +{overflow}
         </span>
@@ -256,6 +267,7 @@ interface DueDateCellProps {
 }
 
 export function DueDateCell({ issue, state, now }: DueDateCellProps) {
+  const { t } = useTranslation();
   const overdue = useMemo(
     () => isOverdue(issue.target_date, state?.group, now),
     [issue.target_date, state?.group, now],
@@ -265,7 +277,7 @@ export function DueDateCell({ issue, state, now }: DueDateCellProps) {
     return (
       <span
         className="inline-flex h-5 items-center gap-1 text-[11px] text-(--txt-tertiary)"
-        title="No due date"
+        title={t('workItem.dueDate.none', 'No due date')}
       >
         <Calendar className="h-3 w-3" />
         <span>—</span>
@@ -278,7 +290,11 @@ export function DueDateCell({ issue, state, now }: DueDateCellProps) {
         'inline-flex h-5 items-center gap-1 text-[11px]',
         overdue ? 'text-(--txt-danger-primary)' : 'text-(--txt-secondary)',
       )}
-      title={overdue ? `Overdue · ${issue.target_date}` : `Due ${issue.target_date}`}
+      title={
+        overdue
+          ? t('workItem.dueDate.overdue', 'Overdue · {{date}}', { date: issue.target_date })
+          : t('workItem.dueDate.due', 'Due {{date}}', { date: issue.target_date })
+      }
     >
       <Calendar className="h-3 w-3" />
       <span>{formatShort(issue.target_date, now)}</span>

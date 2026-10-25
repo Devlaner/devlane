@@ -48,7 +48,15 @@ func RequireAuth(authSvc *auth.Service, log *slog.Logger) gin.HandlerFunc {
 		}
 		if authHeader := c.GetHeader("Authorization"); len(authHeader) > 7 && strings.EqualFold(authHeader[:7], "bearer ") {
 			bearer := strings.TrimSpace(authHeader[7:])
-			if user, err := authSvc.UserFromAPIToken(ctx, bearer); err == nil && user != nil {
+			if user, tok, err := authSvc.UserFromAPITokenScoped(ctx, bearer); err == nil && user != nil {
+				// A workspace-scoped token may only reach its own workspace's
+				// routes. Deny anything else (other workspaces, /users/me,
+				// instance admin, minting more tokens).
+				if tok != nil && tok.WorkspaceID != nil &&
+					!authSvc.SlugMatchesWorkspace(ctx, c.Param("slug"), *tok.WorkspaceID) {
+					c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Token is scoped to a different workspace"})
+					return
+				}
 				c.Set(UserContextKey, user)
 				c.Next()
 				return

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Avatar } from '../components/ui';
 import { CreateProjectModal } from '../components/CreateProjectModal';
@@ -58,6 +59,7 @@ function getCoverGradient(projectId: string): string {
 }
 
 export function ProjectsListPage() {
+  const { t } = useTranslation();
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const { user: authUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -83,7 +85,7 @@ export function ProjectsListPage() {
   );
   const [loading, setLoading] = useState(true);
 
-  useDocumentTitle('Projects');
+  useDocumentTitle(t('projects.documentTitle', 'Projects'));
 
   const createProjectOpen = searchParams.get('createProject') === '1';
 
@@ -318,12 +320,16 @@ export function ProjectsListPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-        Loading…
+        {t('common.loading', 'Loading…')}
       </div>
     );
   }
   if (!workspace) {
-    return <div className="text-(--txt-secondary)">Workspace not found.</div>;
+    return (
+      <div className="text-(--txt-secondary)">
+        {t('common.workspaceNotFound', 'Workspace not found.')}
+      </div>
+    );
   }
 
   const baseUrl = `/${workspace.slug}`;
@@ -379,8 +385,8 @@ export function ProjectsListPage() {
                     className="absolute right-3 top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/30 backdrop-blur-sm text-white shadow-sm hover:bg-white/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 disabled:opacity-60 disabled:pointer-events-none"
                     aria-label={
                       favoriteProjectIds.includes(project.id)
-                        ? 'Remove from favorites'
-                        : 'Add to favorites'
+                        ? t('projects.removeFromFavorites', 'Remove from favorites')
+                        : t('projects.addToFavorites', 'Add to favorites')
                     }
                   >
                     <IconStar filled={favoriteProjectIds.includes(project.id)} />
@@ -407,7 +413,7 @@ export function ProjectsListPage() {
                 {/* Description */}
                 <div className="px-4 py-3">
                   <p className="line-clamp-2 text-sm text-(--txt-secondary)">
-                    {project.description || 'No description'}
+                    {project.description || t('projects.noDescription', 'No description')}
                   </p>
                 </div>
               </Link>
@@ -418,7 +424,9 @@ export function ProjectsListPage() {
                   className="flex min-w-0 flex-1 -space-x-2 no-underline"
                 >
                   {visibleMembers.length === 0 ? (
-                    <span className="text-xs text-(--txt-tertiary)">No members</span>
+                    <span className="text-xs text-(--txt-tertiary)">
+                      {t('projects.noMembers', 'No members')}
+                    </span>
                   ) : (
                     <>
                       {visibleMembers.map((user) => (
@@ -433,7 +441,9 @@ export function ProjectsListPage() {
                       {extraCount > 0 && (
                         <span
                           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-(--bg-surface-1) bg-(--bg-layer-2) text-[10px] font-medium text-(--txt-secondary)"
-                          title={`${extraCount} more`}
+                          title={t('projects.extraMembers', '{{count}} more', {
+                            count: extraCount,
+                          })}
                         >
                           +{extraCount}
                         </span>
@@ -444,7 +454,7 @@ export function ProjectsListPage() {
                 <Link
                   to={`${baseUrl}/settings/projects/${project.id}`}
                   className="flex size-8 shrink-0 items-center justify-center rounded-(--radius-md) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-                  aria-label="Project settings"
+                  aria-label={t('projects.projectSettings', 'Project settings')}
                 >
                   <IconSettings />
                 </Link>
@@ -457,9 +467,9 @@ export function ProjectsListPage() {
         <p className="text-sm text-(--txt-tertiary)">
           {hasActiveFiltersOrSearch
             ? searchQuery
-              ? 'No results match your search'
-              : 'No projects match the selected filters.'
-            : 'No projects yet.'}
+              ? t('projects.noSearchResults', 'No results match your search')
+              : t('projects.noFilterResults', 'No projects match the selected filters.')
+            : t('projects.empty', 'No projects yet.')}
         </p>
       )}
     </div>

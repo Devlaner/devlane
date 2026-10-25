@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
 import { Archive, ArchiveRestore, Layers } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, Avatar } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
@@ -79,6 +80,7 @@ const GHOST_TRIGGER =
   'inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-(--radius-md) px-2 py-1.5 text-xs text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)';
 
 export function IssueDetailPage() {
+  const { t } = useTranslation();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const { workspaceSlug, projectId, issueId } = useParams<{
@@ -122,7 +124,8 @@ export function IssueDetailPage() {
   // Attachments
   const [attachments, setAttachments] = useState<IssueAttachmentApiResponse[]>([]);
 
-  useDocumentTitle(loading ? 'Work item' : (issue?.name ?? 'Work item'));
+  const workItemTitle = t('workItem.detail.documentTitle', 'Work item');
+  useDocumentTitle(loading ? workItemTitle : (issue?.name ?? workItemTitle));
 
   useEffect(() => {
     if (!workspaceSlug || !projectId) return;
@@ -231,7 +234,7 @@ export function IssueDetailPage() {
     if (display) return display;
     const emailUser = m?.member_email?.split('@')[0]?.trim();
     if (emailUser) return emailUser;
-    return 'Member';
+    return t('common.member', 'Member');
   };
   const getMemberAvatar = (memberId: string | null | undefined): string | null => {
     if (!memberId) return null;
@@ -241,7 +244,10 @@ export function IssueDetailPage() {
   };
   const mentionMembers = members.map((m) => ({
     id: m.member_id,
-    label: m.member_display_name?.trim() || m.member_email?.split('@')[0]?.trim() || 'Member',
+    label:
+      m.member_display_name?.trim() ||
+      m.member_email?.split('@')[0]?.trim() ||
+      t('common.member', 'Member'),
   }));
 
   const assigneeIds = issue?.assignee_ids ?? [];
@@ -252,12 +258,16 @@ export function IssueDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-        Loading…
+        {t('common.loading', 'Loading…')}
       </div>
     );
   }
   if (!workspace || !project || !issue) {
-    return <div className="text-(--txt-secondary)">Issue not found.</div>;
+    return (
+      <div className="text-(--txt-secondary)">
+        {t('workItem.detail.issueNotFound', 'Issue not found.')}
+      </div>
+    );
   }
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
@@ -265,12 +275,20 @@ export function IssueDetailPage() {
 
   const handleArchive = async () => {
     if (!workspaceSlug || !projectId || !issueId) return;
-    if (!window.confirm('Archive this work item? It will be hidden from active lists.')) return;
+    if (
+      !window.confirm(
+        t(
+          'workItem.detail.archiveConfirm',
+          'Archive this work item? It will be hidden from active lists.',
+        ),
+      )
+    )
+      return;
     try {
       await issueService.archive(workspaceSlug, projectId, issueId);
       navigate(`${baseUrl}/issues`);
     } catch {
-      setErrorMessage('Failed to archive work item.');
+      setErrorMessage(t('workItem.detail.archiveFailed', 'Failed to archive work item.'));
     }
   };
 
@@ -280,7 +298,7 @@ export function IssueDetailPage() {
       await issueService.restore(workspaceSlug, projectId, issueId);
       setIssue((prev) => (prev ? { ...prev, archived_at: null } : prev));
     } catch {
-      setErrorMessage('Failed to restore work item.');
+      setErrorMessage(t('workItem.detail.restoreFailed', 'Failed to restore work item.'));
     }
   };
 
@@ -288,7 +306,10 @@ export function IssueDetailPage() {
     if (!workspaceSlug || !projectId || !issueId) return;
     if (
       !window.confirm(
-        'Convert this work item to an epic? It will be detached from its parent, if any.',
+        t(
+          'workItem.detail.convertEpicConfirm',
+          'Convert this work item to an epic? It will be detached from its parent, if any.',
+        ),
       )
     )
       return;
@@ -296,7 +317,7 @@ export function IssueDetailPage() {
       await issueService.convert(workspaceSlug, projectId, issueId, true);
       navigate(`${baseUrl}/epics/${issueId}`);
     } catch {
-      setErrorMessage('Failed to convert to epic.');
+      setErrorMessage(t('workItem.detail.convertEpicFailed', 'Failed to convert to epic.'));
     }
   };
 
@@ -312,7 +333,11 @@ export function IssueDetailPage() {
       const updated = await issueService.update(workspaceSlug, projectId, issueId, patch as never);
       setIssue(updated);
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Failed to update work item.');
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : t('workItem.detail.updateFailed', 'Failed to update work item.'),
+      );
     }
   };
 
@@ -351,7 +376,11 @@ export function IssueDetailPage() {
         .catch(() => null);
       if (refreshed) setIssue(refreshed);
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Failed to update cycle.');
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : t('workItem.detail.updateCycleFailed', 'Failed to update cycle.'),
+      );
     }
   };
 
@@ -373,7 +402,11 @@ export function IssueDetailPage() {
         .catch(() => null);
       if (refreshed) setIssue(refreshed);
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Failed to update module.');
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : t('workItem.detail.updateModuleFailed', 'Failed to update module.'),
+      );
     }
   };
 
@@ -389,14 +422,17 @@ export function IssueDetailPage() {
     const minutes = Math.floor(diffMs / 60000);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
-    if (days > 0) return `${days} day${days === 1 ? '' : 's'} ago`;
-    if (hours > 0) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-    if (minutes > 0) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
-    return 'just now';
+    if (days > 0) return t('common.time.daysAgo', '{{count}} day ago', { count: days });
+    if (hours > 0) return t('common.time.hoursAgo', '{{count}} hour ago', { count: hours });
+    if (minutes > 0) return t('common.time.minutesAgo', '{{count}} minute ago', { count: minutes });
+    return t('common.time.justNow', 'just now');
   };
 
-  const postComment = async (contentHtml: string, access: 'INTERNAL' | 'EXTERNAL' = 'INTERNAL') => {
-    if (!workspaceSlug || !contentHtml.trim()) return;
+  const postComment = async (
+    contentHtml: string,
+    access: 'INTERNAL' | 'EXTERNAL' = 'INTERNAL',
+  ): Promise<boolean> => {
+    if (!workspaceSlug || !contentHtml.trim()) return false;
     setErrorMessage(null);
     setPostingComment(true);
     try {
@@ -408,15 +444,21 @@ export function IssueDetailPage() {
         access,
       );
       setComments((prev) => [...prev, created]);
+      return true;
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Failed to post comment.');
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : t('workItem.detail.postCommentFailed', 'Failed to post comment.'),
+      );
+      return false;
     } finally {
       setPostingComment(false);
     }
   };
 
-  const updateComment = async (commentId: string, contentHtml: string) => {
-    if (!workspaceSlug || !contentHtml.trim()) return;
+  const updateComment = async (commentId: string, contentHtml: string): Promise<boolean> => {
+    if (!workspaceSlug || !contentHtml.trim()) return false;
     setErrorMessage(null);
     setUpdatingCommentId(commentId);
     try {
@@ -429,8 +471,14 @@ export function IssueDetailPage() {
       );
       setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
       setEditingCommentId(null);
+      return true;
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Failed to update comment.');
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : t('workItem.detail.updateCommentFailed', 'Failed to update comment.'),
+      );
+      return false;
     } finally {
       setUpdatingCommentId(null);
     }
@@ -438,7 +486,9 @@ export function IssueDetailPage() {
 
   const deleteComment = async (commentId: string) => {
     if (!workspaceSlug) return;
-    const confirmed = window.confirm('Delete this comment?');
+    const confirmed = window.confirm(
+      t('workItem.detail.deleteCommentConfirm', 'Delete this comment?'),
+    );
     if (!confirmed) return;
     setErrorMessage(null);
     setDeletingCommentId(commentId);
@@ -446,7 +496,11 @@ export function IssueDetailPage() {
       await commentService.delete(workspaceSlug, project.id, issue.id, commentId);
       setComments((prev) => prev.filter((c) => c.id !== commentId));
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Failed to delete comment.');
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : t('workItem.detail.deleteCommentFailed', 'Failed to delete comment.'),
+      );
     } finally {
       setDeletingCommentId(null);
     }
@@ -474,7 +528,7 @@ export function IssueDetailPage() {
           </Link>
           <span>/</span>
           <Link to={`${baseUrl}/issues`} className="text-(--txt-accent-primary) hover:underline">
-            Issues
+            {t('workItem.detail.issuesBreadcrumb', 'Issues')}
           </Link>
           <span>/</span>
           <span className="text-(--txt-secondary)">{displayId}</span>
@@ -487,7 +541,7 @@ export function IssueDetailPage() {
               className="inline-flex shrink-0 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-secondary) transition-colors hover:bg-(--bg-layer-1-hover)"
             >
               <Layers className="h-3.5 w-3.5" />
-              Convert to epic
+              {t('workItem.detail.convertToEpic', 'Convert to epic')}
             </button>
           ) : null}
           {!issue.is_epic && !issue.archived_at && workspaceSlug ? (
@@ -507,7 +561,7 @@ export function IssueDetailPage() {
               className="inline-flex shrink-0 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-secondary) transition-colors hover:bg-(--bg-layer-1-hover)"
             >
               <ArchiveRestore className="h-3.5 w-3.5" />
-              Restore
+              {t('common.restore', 'Restore')}
             </button>
           ) : (
             <button
@@ -516,7 +570,7 @@ export function IssueDetailPage() {
               className="inline-flex shrink-0 items-center gap-1 rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-secondary) transition-colors hover:bg-(--bg-layer-1-hover)"
             >
               <Archive className="h-3.5 w-3.5" />
-              Archive
+              {t('common.archive', 'Archive')}
             </button>
           )}
         </div>
@@ -525,13 +579,15 @@ export function IssueDetailPage() {
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-semibold text-(--txt-primary)">{issue.name}</h1>
           <p className="mt-1 text-xs text-(--txt-tertiary)">
-            Last edited {new Date(issue.updated_at).toLocaleDateString()}
+            {t('workItem.detail.lastEdited', 'Last edited {{date}}', {
+              date: new Date(issue.updated_at).toLocaleDateString(),
+            })}
           </p>
         </div>
         <div className="shrink-0">
           <Button size="sm" className="gap-1.5" onClick={() => setSubCreateOpen(true)}>
             <IconPlus />
-            Add sub-work item
+            {t('workItem.detail.addSubWorkItem', 'Add sub-work item')}
           </Button>
         </div>
       </div>
@@ -540,20 +596,23 @@ export function IssueDetailPage() {
         <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader className="flex items-center justify-between text-sm font-medium text-(--txt-secondary)">
-              <span>Description</span>
+              <span>{t('workItem.detail.description', 'Description')}</span>
               <button
                 type="button"
                 onClick={() => setHistoryOpen(true)}
                 className="rounded-(--radius-md) px-2 py-1 text-xs font-normal text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-secondary)"
               >
-                History
+                {t('workItem.detail.history', 'History')}
               </button>
             </CardHeader>
             <CardContent>
               <DescriptionEditor
                 initialHtml={descriptionHtml}
                 onSave={(html) => updateIssue({ description: html, description_html: html })}
-                placeholder="Add a description… (type / for commands)"
+                placeholder={t(
+                  'workItem.detail.descriptionPlaceholder',
+                  'Add a description… (type / for commands)',
+                )}
                 mentionMembers={mentionMembers}
               />
               {workspaceSlug && projectId && issueId && (
@@ -571,8 +630,14 @@ export function IssueDetailPage() {
 
           <Card>
             <CardHeader className="flex items-center justify-between">
-              <span className="text-sm font-medium text-(--txt-secondary)">Activity</span>
-              <span className="text-xs text-(--txt-tertiary)">Comments {comments.length}</span>
+              <span className="text-sm font-medium text-(--txt-secondary)">
+                {t('workItem.detail.activity', 'Activity')}
+              </span>
+              <span className="text-xs text-(--txt-tertiary)">
+                {t('workItem.detail.commentsCount', 'Comments {{count}}', {
+                  count: comments.length,
+                })}
+              </span>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-4">
@@ -585,7 +650,9 @@ export function IssueDetailPage() {
                 />
 
                 {comments.length === 0 ? (
-                  <p className="text-sm text-(--txt-tertiary)">No comments yet.</p>
+                  <p className="text-sm text-(--txt-tertiary)">
+                    {t('workItem.detail.noComments', 'No comments yet.')}
+                  </p>
                 ) : (
                   comments.map((c) => {
                     const isEditing = editingCommentId === c.id;
@@ -599,8 +666,11 @@ export function IssueDetailPage() {
                         {isBot ? (
                           <span
                             className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-secondary)"
-                            title="Posted by the GitHub integration"
-                            aria-label="GitHub bot"
+                            title={t(
+                              'workItem.detail.botTitle',
+                              'Posted by the GitHub integration',
+                            )}
+                            aria-label={t('workItem.detail.botAriaLabel', 'GitHub bot')}
                           >
                             <BotGitHubIcon />
                           </span>
@@ -620,21 +690,27 @@ export function IssueDetailPage() {
                               </span>
                               {isBot && (
                                 <span className="rounded bg-(--bg-layer-1) px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide text-(--txt-tertiary)">
-                                  Bot
+                                  {t('workItem.detail.bot', 'Bot')}
                                 </span>
                               )}
                               {c.access === 'EXTERNAL' && (
                                 <span
                                   className="inline-flex items-center gap-0.5 rounded bg-(--bg-accent-subtle) px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide text-(--txt-accent-primary)"
-                                  title="External — visible to guests"
+                                  title={t(
+                                    'workItem.detail.externalTitle',
+                                    'External — visible to guests',
+                                  )}
                                 >
-                                  External
+                                  {t('workItem.detail.external', 'External')}
                                 </span>
                               )}
                               {c.access === 'INTERNAL' && (
                                 <span
                                   className="inline-flex items-center gap-0.5 text-(--txt-icon-tertiary)"
-                                  title="Internal — workspace members only"
+                                  title={t(
+                                    'workItem.detail.internalTitle',
+                                    'Internal — workspace members only',
+                                  )}
                                 >
                                   <CommentLockIcon />
                                 </span>
@@ -643,7 +719,7 @@ export function IssueDetailPage() {
                             <div className="flex items-center gap-2 text-[11px] text-(--txt-tertiary)">
                               <span title={new Date(c.created_at).toLocaleString()}>
                                 {formatRelativeTime(c.created_at)}
-                                {editedAt && ' (edited)'}
+                                {editedAt && ` ${t('workItem.detail.edited', '(edited)')}`}
                               </span>
                               {isOwn && !isEditing && (
                                 <>
@@ -655,7 +731,7 @@ export function IssueDetailPage() {
                                       updatingCommentId === c.id || deletingCommentId === c.id
                                     }
                                   >
-                                    Edit
+                                    {t('common.edit', 'Edit')}
                                   </button>
                                   <button
                                     type="button"
@@ -665,7 +741,9 @@ export function IssueDetailPage() {
                                       deletingCommentId === c.id || updatingCommentId === c.id
                                     }
                                   >
-                                    {deletingCommentId === c.id ? 'Deleting…' : 'Delete'}
+                                    {deletingCommentId === c.id
+                                      ? t('common.deleting', 'Deleting…')
+                                      : t('common.delete', 'Delete')}
                                   </button>
                                 </>
                               )}
@@ -675,7 +753,7 @@ export function IssueDetailPage() {
                             <div className="mt-2">
                               <CommentEditor
                                 initialHtml={c.comment}
-                                onSubmit={(html) => void updateComment(c.id, html)}
+                                onSubmit={(html) => updateComment(c.id, html)}
                                 isSubmitting={updatingCommentId === c.id}
                                 onCancel={() => setEditingCommentId(null)}
                                 showShortcutHint
@@ -718,21 +796,43 @@ export function IssueDetailPage() {
 
           {children.length > 0 && (
             <Card>
-              <CardHeader className="text-sm font-medium text-(--txt-secondary)">
-                Sub-work items
+              <CardHeader className="flex items-center gap-2 text-sm font-medium text-(--txt-secondary)">
+                <span>{t('workItem.detail.subWorkItems', 'Sub-work items')}</span>
+                <span className="rounded-full bg-(--bg-layer-2) px-1.5 text-xs text-(--txt-tertiary)">
+                  {children.length}
+                </span>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2">
-                  {children.map((ch) => (
-                    <li key={ch.id}>
-                      <Link
-                        to={`${baseUrl}/issues/${ch.id}`}
-                        className="text-sm text-(--txt-accent-primary) hover:underline"
-                      >
-                        {ch.name}
-                      </Link>
-                    </li>
-                  ))}
+                <ul className="divide-y divide-(--border-subtle)">
+                  {children.map((ch) => {
+                    const childState = ch.state_id
+                      ? (states.find((s) => s.id === ch.state_id) ?? null)
+                      : null;
+                    return (
+                      <li key={ch.id}>
+                        <Link
+                          to={`${baseUrl}/issues/${ch.id}`}
+                          className="flex items-center gap-2 rounded-(--radius-sm) py-2 hover:bg-(--bg-layer-1-hover) focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-(--brand-default)"
+                        >
+                          <span
+                            className="size-2.5 shrink-0 rounded-full border border-(--border-subtle)"
+                            style={{ backgroundColor: childState?.color ?? 'transparent' }}
+                            title={childState?.name ?? t('workItem.detail.noState', 'No state')}
+                          />
+                          <span className="shrink-0 text-[11px] font-medium text-(--txt-tertiary)">
+                            {project.identifier ?? project.id.slice(0, 8)}-
+                            {ch.sequence_id ?? ch.id.slice(-4)}
+                          </span>
+                          <span className="truncate text-sm text-(--txt-primary)">{ch.name}</span>
+                          {ch.priority && ch.priority !== 'none' && (
+                            <span className="ml-auto shrink-0">
+                              <PriorityIcon priority={ch.priority as Priority} />
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               </CardContent>
             </Card>
@@ -798,16 +898,16 @@ export function IssueDetailPage() {
 
           <Card>
             <CardHeader className="text-sm font-medium text-(--txt-secondary)">
-              Properties
+              {t('workItem.detail.properties', 'Properties')}
             </CardHeader>
             <CardContent className="space-y-1 pt-3 text-sm">
               {/* State */}
-              <PropertyRow icon={<IconStack />} label="State">
+              <PropertyRow icon={<IconStack />} label={t('workItem.detail.field.state', 'State')}>
                 <Dropdown
                   id="state"
                   openId={openDropdown}
                   onOpen={setOpenDropdown}
-                  label="State"
+                  label={t('workItem.detail.field.state', 'State')}
                   icon={<IconStack />}
                   displayValue=""
                   align="right"
@@ -816,7 +916,9 @@ export function IssueDetailPage() {
                     currentState ? (
                       <StatePill state={currentState} size="md" />
                     ) : (
-                      <span className="text-(--txt-tertiary)">Select state</span>
+                      <span className="text-(--txt-tertiary)">
+                        {t('workItem.detail.selectState', 'Select state')}
+                      </span>
                     )
                   }
                 >
@@ -849,11 +951,15 @@ export function IssueDetailPage() {
                         <span className="truncate text-(--txt-primary)">{s.name}</span>
                         {needsConfirm && (
                           <span className="ml-auto text-[10px] text-(--txt-warning-primary)">
-                            ⚠ confirm
+                            {}
+                            <span aria-hidden>⚠</span>{' '}
+                            {t('workItem.detail.confirmChange', 'confirm')}
                           </span>
                         )}
                         {issue.state_id === s.id && !needsConfirm && (
-                          <span className="ml-auto text-xs text-(--txt-tertiary)">Selected</span>
+                          <span className="ml-auto text-xs text-(--txt-tertiary)">
+                            {t('common.selected', 'Selected')}
+                          </span>
                         )}
                       </button>
                     );
@@ -862,12 +968,15 @@ export function IssueDetailPage() {
               </PropertyRow>
 
               {/* Assignees */}
-              <PropertyRow icon={<IconUser />} label="Assignees">
+              <PropertyRow
+                icon={<IconUser />}
+                label={t('workItem.detail.field.assignees', 'Assignees')}
+              >
                 <Dropdown
                   id="assignees"
                   openId={openDropdown}
                   onOpen={setOpenDropdown}
-                  label="Assignees"
+                  label={t('workItem.detail.field.assignees', 'Assignees')}
                   icon={<IconUser />}
                   displayValue=""
                   align="right"
@@ -875,21 +984,27 @@ export function IssueDetailPage() {
                   panelClassName="max-h-72 min-w-[240px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
                   triggerContent={
                     issueAssignees.length === 0 ? (
-                      <span className="text-(--txt-tertiary)">Add assignee</span>
+                      <span className="text-(--txt-tertiary)">
+                        {t('workItem.detail.addAssignee', 'Add assignee')}
+                      </span>
                     ) : (
                       <div className="flex min-w-0 items-center gap-2">
                         <WorkItemAvatarGroup members={issueAssignees} max={3} />
                         <span className="truncate text-(--txt-secondary)">
                           {issueAssignees.length === 1
                             ? issueAssignees[0].name
-                            : `${issueAssignees.length} assignees`}
+                            : t('workItem.detail.assigneesCount', '{{count}} assignees', {
+                                count: issueAssignees.length,
+                              })}
                         </span>
                       </div>
                     )
                   }
                 >
                   {members.length === 0 ? (
-                    <div className="px-3 py-2 text-sm text-(--txt-tertiary)">No members.</div>
+                    <div className="px-3 py-2 text-sm text-(--txt-tertiary)">
+                      {t('workItem.detail.noMembers', 'No members.')}
+                    </div>
                   ) : (
                     members.map((m) => {
                       const checked = assigneeIds.includes(m.member_id);
@@ -925,12 +1040,15 @@ export function IssueDetailPage() {
               </PropertyRow>
 
               {/* Priority */}
-              <PropertyRow icon={<IconFlag />} label="Priority">
+              <PropertyRow
+                icon={<IconFlag />}
+                label={t('workItem.detail.field.priority', 'Priority')}
+              >
                 <Dropdown
                   id="priority"
                   openId={openDropdown}
                   onOpen={setOpenDropdown}
-                  label="Priority"
+                  label={t('workItem.detail.field.priority', 'Priority')}
                   icon={<IconFlag />}
                   displayValue=""
                   align="right"
@@ -939,7 +1057,7 @@ export function IssueDetailPage() {
                     <div className="flex items-center gap-2">
                       <PriorityIcon priority={issue.priority as Priority | null | undefined} />
                       <span className="capitalize text-(--txt-secondary)">
-                        {issue.priority ?? 'No priority'}
+                        {issue.priority ?? t('workItem.detail.noPriority', 'No priority')}
                       </span>
                     </div>
                   }
@@ -957,7 +1075,9 @@ export function IssueDetailPage() {
                       <PriorityIcon priority={p} />
                       <span className="capitalize text-(--txt-primary)">{p}</span>
                       {issue.priority === p && (
-                        <span className="ml-auto text-xs text-(--txt-tertiary)">Selected</span>
+                        <span className="ml-auto text-xs text-(--txt-tertiary)">
+                          {t('common.selected', 'Selected')}
+                        </span>
                       )}
                     </button>
                   ))}
@@ -965,7 +1085,10 @@ export function IssueDetailPage() {
               </PropertyRow>
 
               {/* Created by (read-only) */}
-              <PropertyRow icon={<IconUser />} label="Created by">
+              <PropertyRow
+                icon={<IconUser />}
+                label={t('workItem.detail.field.createdBy', 'Created by')}
+              >
                 <div className="flex min-w-0 items-center gap-2 px-2 py-1.5">
                   <Avatar
                     name={getMemberLabel(issue.created_by_id)}
@@ -980,41 +1103,52 @@ export function IssueDetailPage() {
               </PropertyRow>
 
               {/* Start date */}
-              <PropertyRow icon={<IconCalendar />} label="Start date">
+              <PropertyRow
+                icon={<IconCalendar />}
+                label={t('workItem.detail.field.startDate', 'Start date')}
+              >
                 <DatePickerTrigger
-                  label="Start date"
+                  label={t('workItem.detail.field.startDate', 'Start date')}
                   icon={<IconCalendar />}
                   value={issue.start_date ?? ''}
-                  placeholder="Add start date"
+                  placeholder={t('workItem.detail.addStartDate', 'Add start date')}
                   onChange={(v) => updateIssue({ start_date: v })}
                 />
               </PropertyRow>
 
               {/* Due date */}
-              <PropertyRow icon={<IconCalendar />} label="Due date">
+              <PropertyRow
+                icon={<IconCalendar />}
+                label={t('workItem.detail.field.dueDate', 'Due date')}
+              >
                 <DatePickerTrigger
-                  label="Due date"
+                  label={t('workItem.detail.field.dueDate', 'Due date')}
                   icon={<IconCalendar />}
                   value={issue.target_date ?? ''}
-                  placeholder="Add due date"
+                  placeholder={t('workItem.detail.addDueDate', 'Add due date')}
                   onChange={(v) => updateIssue({ target_date: v })}
                 />
               </PropertyRow>
 
               {/* Modules (multi) */}
-              <PropertyRow icon={<IconStack />} label="Modules">
+              <PropertyRow
+                icon={<IconStack />}
+                label={t('workItem.detail.field.modules', 'Modules')}
+              >
                 <Dropdown
                   id="module"
                   openId={openDropdown}
                   onOpen={setOpenDropdown}
-                  label="Modules"
+                  label={t('workItem.detail.field.modules', 'Modules')}
                   icon={<IconStack />}
                   displayValue=""
                   align="right"
                   triggerClassName={GHOST_TRIGGER}
                   triggerContent={
                     selectedModules.length === 0 ? (
-                      <span className="text-(--txt-tertiary)">No modules</span>
+                      <span className="text-(--txt-tertiary)">
+                        {t('workItem.detail.noModules', 'No modules')}
+                      </span>
                     ) : (
                       <div className="flex flex-wrap items-center gap-1">
                         {selectedModules.slice(0, 2).map((m) => (
@@ -1042,7 +1176,9 @@ export function IssueDetailPage() {
                       handleSetModule(null);
                     }}
                   >
-                    <span className="text-(--txt-tertiary)">No module</span>
+                    <span className="text-(--txt-tertiary)">
+                      {t('workItem.detail.noModule', 'No module')}
+                    </span>
                   </button>
                   {modules.map((m) => (
                     <button
@@ -1056,7 +1192,9 @@ export function IssueDetailPage() {
                     >
                       <span className="truncate text-(--txt-primary)">{m.name}</span>
                       {moduleIds.includes(m.id) && (
-                        <span className="text-xs text-(--txt-tertiary)">Selected</span>
+                        <span className="text-xs text-(--txt-tertiary)">
+                          {t('common.selected', 'Selected')}
+                        </span>
                       )}
                     </button>
                   ))}
@@ -1064,12 +1202,12 @@ export function IssueDetailPage() {
               </PropertyRow>
 
               {/* Cycle */}
-              <PropertyRow icon={<IconCycle />} label="Cycle">
+              <PropertyRow icon={<IconCycle />} label={t('workItem.detail.field.cycle', 'Cycle')}>
                 <Dropdown
                   id="cycle"
                   openId={openDropdown}
                   onOpen={setOpenDropdown}
-                  label="Cycle"
+                  label={t('workItem.detail.field.cycle', 'Cycle')}
                   icon={<IconCycle />}
                   displayValue=""
                   align="right"
@@ -1080,7 +1218,9 @@ export function IssueDetailPage() {
                         <span className="truncate">{selectedCycle.name}</span>
                       </span>
                     ) : (
-                      <span className="text-(--txt-tertiary)">No cycle</span>
+                      <span className="text-(--txt-tertiary)">
+                        {t('workItem.detail.noCycle', 'No cycle')}
+                      </span>
                     )
                   }
                 >
@@ -1092,7 +1232,9 @@ export function IssueDetailPage() {
                       handleSetCycle(null);
                     }}
                   >
-                    <span className="text-(--txt-tertiary)">No cycle</span>
+                    <span className="text-(--txt-tertiary)">
+                      {t('workItem.detail.noCycle', 'No cycle')}
+                    </span>
                   </button>
                   {cycles.map((c) => (
                     <button
@@ -1106,7 +1248,9 @@ export function IssueDetailPage() {
                     >
                       <span className="truncate text-(--txt-primary)">{c.name}</span>
                       {cycleIds.includes(c.id) && (
-                        <span className="text-xs text-(--txt-tertiary)">Selected</span>
+                        <span className="text-xs text-(--txt-tertiary)">
+                          {t('common.selected', 'Selected')}
+                        </span>
                       )}
                     </button>
                   ))}
@@ -1114,12 +1258,12 @@ export function IssueDetailPage() {
               </PropertyRow>
 
               {/* Parent */}
-              <PropertyRow icon={<IconStack />} label="Parent">
+              <PropertyRow icon={<IconStack />} label={t('workItem.detail.field.parent', 'Parent')}>
                 <Dropdown
                   id="parent"
                   openId={openDropdown}
                   onOpen={setOpenDropdown}
-                  label="Parent"
+                  label={t('workItem.detail.field.parent', 'Parent')}
                   icon={<IconStack />}
                   displayValue=""
                   align="right"
@@ -1135,7 +1279,9 @@ export function IssueDetailPage() {
                         <span className="truncate text-(--txt-secondary)">{parentIssue.name}</span>
                       </div>
                     ) : (
-                      <span className="text-(--txt-tertiary)">Add parent work item</span>
+                      <span className="text-(--txt-tertiary)">
+                        {t('workItem.detail.addParent', 'Add parent work item')}
+                      </span>
                     )
                   }
                 >
@@ -1148,7 +1294,9 @@ export function IssueDetailPage() {
                         updateIssue({ parent_id: null });
                       }}
                     >
-                      <span className="text-(--txt-tertiary)">Remove parent</span>
+                      <span className="text-(--txt-tertiary)">
+                        {t('workItem.detail.removeParent', 'Remove parent')}
+                      </span>
                     </button>
                   )}
                   {filteredParentOptions.slice(0, 200).map((pi) => (
@@ -1172,12 +1320,12 @@ export function IssueDetailPage() {
               </PropertyRow>
 
               {/* Labels (multi-chip) */}
-              <PropertyRow icon={<IconTag />} label="Labels">
+              <PropertyRow icon={<IconTag />} label={t('workItem.detail.field.labels', 'Labels')}>
                 <Dropdown
                   id="labels"
                   openId={openDropdown}
                   onOpen={setOpenDropdown}
-                  label="Labels"
+                  label={t('workItem.detail.field.labels', 'Labels')}
                   icon={<IconTag />}
                   displayValue=""
                   align="right"
@@ -1185,7 +1333,9 @@ export function IssueDetailPage() {
                   panelClassName="max-h-72 min-w-[240px] overflow-auto rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
                   triggerContent={
                     selectedLabels.length === 0 ? (
-                      <span className="text-(--txt-tertiary)">Select label</span>
+                      <span className="text-(--txt-tertiary)">
+                        {t('workItem.detail.selectLabel', 'Select label')}
+                      </span>
                     ) : (
                       <div className="flex flex-wrap items-center gap-1">
                         {selectedLabels.slice(0, 3).map((l) => (
@@ -1212,7 +1362,9 @@ export function IssueDetailPage() {
                   }
                 >
                   {labels.length === 0 ? (
-                    <div className="px-3 py-2 text-sm text-(--txt-tertiary)">No labels.</div>
+                    <div className="px-3 py-2 text-sm text-(--txt-tertiary)">
+                      {t('workItem.detail.noLabels', 'No labels.')}
+                    </div>
                   ) : (
                     labels.map((l) => {
                       const checked = labelIds.includes(l.id);
@@ -1245,12 +1397,12 @@ export function IssueDetailPage() {
               </PropertyRow>
 
               {/* Type */}
-              <PropertyRow icon={<IconType />} label="Type">
+              <PropertyRow icon={<IconType />} label={t('workItem.detail.field.type', 'Type')}>
                 <Dropdown
                   id="type"
                   openId={openDropdown}
                   onOpen={setOpenDropdown}
-                  label="Type"
+                  label={t('workItem.detail.field.type', 'Type')}
                   icon={<IconType />}
                   displayValue=""
                   align="right"
@@ -1261,19 +1413,21 @@ export function IssueDetailPage() {
                     </span>
                   }
                 >
-                  {WORK_ITEM_TYPES.map((t) => (
+                  {WORK_ITEM_TYPES.map((wt) => (
                     <button
-                      key={t.value}
+                      key={wt.value}
                       type="button"
                       className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-layer-1-hover)"
                       onClick={() => {
                         setOpenDropdown(null);
-                        updateIssue({ type: t.value });
+                        updateIssue({ type: wt.value });
                       }}
                     >
-                      <span className="capitalize text-(--txt-primary)">{t.label}</span>
-                      {(issue.type ?? 'task') === t.value && (
-                        <span className="ml-auto text-xs text-(--txt-tertiary)">Selected</span>
+                      <span className="capitalize text-(--txt-primary)">{wt.label}</span>
+                      {(issue.type ?? 'task') === wt.value && (
+                        <span className="ml-auto text-xs text-(--txt-tertiary)">
+                          {t('common.selected', 'Selected')}
+                        </span>
                       )}
                     </button>
                   ))}
@@ -1287,8 +1441,12 @@ export function IssueDetailPage() {
                       }}
                     >
                       <Layers className="size-3.5 text-(--txt-icon-tertiary)" />
-                      <span className="text-(--txt-primary)">Epic</span>
-                      <span className="ml-auto text-xs text-(--txt-tertiary)">Convert</span>
+                      <span className="text-(--txt-primary)">
+                        {t('workItem.detail.epic', 'Epic')}
+                      </span>
+                      <span className="ml-auto text-xs text-(--txt-tertiary)">
+                        {t('workItem.detail.convert', 'Convert')}
+                      </span>
                     </button>
                   )}
                 </Dropdown>
@@ -1296,19 +1454,23 @@ export function IssueDetailPage() {
 
               {/* Estimate */}
               {estimatePoints.length > 0 && (
-                <PropertyRow icon={<IconEstimate />} label="Estimate">
+                <PropertyRow
+                  icon={<IconEstimate />}
+                  label={t('workItem.detail.field.estimate', 'Estimate')}
+                >
                   <Dropdown
                     id="estimate"
                     openId={openDropdown}
                     onOpen={setOpenDropdown}
-                    label="Estimate"
+                    label={t('workItem.detail.field.estimate', 'Estimate')}
                     icon={<IconEstimate />}
                     displayValue=""
                     align="right"
                     triggerClassName={GHOST_TRIGGER}
                     triggerContent={
                       <span className="text-(--txt-secondary)">
-                        {currentEstimatePoint?.value ?? 'No estimate'}
+                        {currentEstimatePoint?.value ??
+                          t('workItem.detail.noEstimate', 'No estimate')}
                       </span>
                     }
                   >
@@ -1320,9 +1482,13 @@ export function IssueDetailPage() {
                         updateIssue({ estimate_point_id: '' });
                       }}
                     >
-                      <span className="text-(--txt-primary)">No estimate</span>
+                      <span className="text-(--txt-primary)">
+                        {t('workItem.detail.noEstimate', 'No estimate')}
+                      </span>
                       {!issue.estimate_point_id && (
-                        <span className="ml-auto text-xs text-(--txt-tertiary)">Selected</span>
+                        <span className="ml-auto text-xs text-(--txt-tertiary)">
+                          {t('common.selected', 'Selected')}
+                        </span>
                       )}
                     </button>
                     {estimatePoints.map((p) => (
@@ -1337,7 +1503,9 @@ export function IssueDetailPage() {
                       >
                         <span className="text-(--txt-primary)">{p.value}</span>
                         {issue.estimate_point_id === p.id && (
-                          <span className="ml-auto text-xs text-(--txt-tertiary)">Selected</span>
+                          <span className="ml-auto text-xs text-(--txt-tertiary)">
+                            {t('common.selected', 'Selected')}
+                          </span>
                         )}
                       </button>
                     ))}
@@ -1363,11 +1531,15 @@ export function IssueDetailPage() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <h3 className="mb-2 text-base font-semibold text-(--txt-primary)">
-                  Confirm state change
+                  {t('workItem.detail.confirmStateChange', 'Confirm state change')}
                 </h3>
                 <p className="mb-4 text-sm text-(--txt-secondary)">
-                  Move this issue to <strong>{targetState?.name}</strong>? This marks it as{' '}
-                  {targetState?.group}.
+                  <Trans
+                    i18nKey="workItem.detail.confirmStateBody"
+                    defaults="Move this issue to <b>{{name}}</b>? This marks it as {{group}}."
+                    values={{ name: targetState?.name, group: targetState?.group }}
+                    components={{ b: <strong /> }}
+                  />
                 </p>
                 <div className="flex justify-end gap-2">
                   <button
@@ -1375,7 +1547,7 @@ export function IssueDetailPage() {
                     onClick={() => setPendingStateId(null)}
                     className="rounded-(--radius-md) px-3 py-1.5 text-sm text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)"
                   >
-                    Cancel
+                    {t('common.cancel', 'Cancel')}
                   </button>
                   <button
                     type="button"
@@ -1385,7 +1557,7 @@ export function IssueDetailPage() {
                     }}
                     className="rounded-(--radius-md) bg-(--bg-accent-primary) px-3 py-1.5 text-sm text-white hover:opacity-90"
                   >
-                    Confirm
+                    {t('common.confirm', 'Confirm')}
                   </button>
                 </div>
               </div>
@@ -1443,7 +1615,11 @@ export function IssueDetailPage() {
             if (refreshedAll) setAllIssues(refreshedAll);
             setSubCreateOpen(false);
           } catch (err) {
-            setCreateError(err instanceof Error ? err.message : 'Failed to create sub-work item');
+            setCreateError(
+              err instanceof Error
+                ? err.message
+                : t('workItem.detail.createSubItemFailed', 'Failed to create sub-work item'),
+            );
           }
         }}
       />

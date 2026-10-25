@@ -18,6 +18,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { Editor } from '@tiptap/react';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import { Tooltip } from '../ui/Tooltip';
 import { cn } from '../../lib/utils';
 import { TypographyDropdown } from './TypographyDropdown';
@@ -25,6 +27,8 @@ import { ColorDropdown } from './ColorDropdown';
 
 interface ToolbarItem {
   key: string;
+  /** i18n key for the button's label/tooltip. */
+  labelKey: string;
   label: string;
   icon: LucideIcon;
   shortcut?: string;
@@ -36,6 +40,7 @@ interface ToolbarItem {
 const BASIC_MARKS: ToolbarItem[] = [
   {
     key: 'bold',
+    labelKey: 'editor.toolbar.bold',
     label: 'Bold',
     icon: Bold,
     shortcut: 'Cmd+B',
@@ -44,6 +49,7 @@ const BASIC_MARKS: ToolbarItem[] = [
   },
   {
     key: 'italic',
+    labelKey: 'editor.toolbar.italic',
     label: 'Italic',
     icon: Italic,
     shortcut: 'Cmd+I',
@@ -52,6 +58,7 @@ const BASIC_MARKS: ToolbarItem[] = [
   },
   {
     key: 'underline',
+    labelKey: 'editor.toolbar.underline',
     label: 'Underline',
     icon: Underline,
     shortcut: 'Cmd+U',
@@ -60,6 +67,7 @@ const BASIC_MARKS: ToolbarItem[] = [
   },
   {
     key: 'strike',
+    labelKey: 'editor.toolbar.strikethrough',
     label: 'Strikethrough',
     icon: Strikethrough,
     shortcut: 'Cmd+Shift+S',
@@ -71,6 +79,7 @@ const BASIC_MARKS: ToolbarItem[] = [
 const ALIGNMENT: ToolbarItem[] = [
   {
     key: 'align-left',
+    labelKey: 'editor.toolbar.alignLeft',
     label: 'Left align',
     icon: AlignLeft,
     isActive: (e) => e.isActive({ textAlign: 'left' }),
@@ -78,6 +87,7 @@ const ALIGNMENT: ToolbarItem[] = [
   },
   {
     key: 'align-center',
+    labelKey: 'editor.toolbar.alignCenter',
     label: 'Center align',
     icon: AlignCenter,
     isActive: (e) => e.isActive({ textAlign: 'center' }),
@@ -85,6 +95,7 @@ const ALIGNMENT: ToolbarItem[] = [
   },
   {
     key: 'align-right',
+    labelKey: 'editor.toolbar.alignRight',
     label: 'Right align',
     icon: AlignRight,
     isActive: (e) => e.isActive({ textAlign: 'right' }),
@@ -95,6 +106,7 @@ const ALIGNMENT: ToolbarItem[] = [
 const LIST_ITEMS: ToolbarItem[] = [
   {
     key: 'numbered-list',
+    labelKey: 'editor.toolbar.numberedList',
     label: 'Numbered list',
     icon: ListOrdered,
     shortcut: 'Cmd+Shift+7',
@@ -103,6 +115,7 @@ const LIST_ITEMS: ToolbarItem[] = [
   },
   {
     key: 'bulleted-list',
+    labelKey: 'editor.toolbar.bulletedList',
     label: 'Bulleted list',
     icon: List,
     shortcut: 'Cmd+Shift+8',
@@ -111,6 +124,7 @@ const LIST_ITEMS: ToolbarItem[] = [
   },
   {
     key: 'todo-list',
+    labelKey: 'editor.toolbar.todoList',
     label: 'To-do list',
     icon: ListTodo,
     shortcut: 'Cmd+Shift+9',
@@ -122,6 +136,7 @@ const LIST_ITEMS: ToolbarItem[] = [
 const TEXT_BLOCKS: ToolbarItem[] = [
   {
     key: 'quote',
+    labelKey: 'editor.toolbar.quote',
     label: 'Quote',
     icon: TextQuote,
     isActive: (e) => e.isActive('blockquote'),
@@ -129,6 +144,7 @@ const TEXT_BLOCKS: ToolbarItem[] = [
   },
   {
     key: 'code-inline',
+    labelKey: 'editor.toolbar.inlineCode',
     label: 'Inline code',
     icon: Code,
     isActive: (e) => e.isActive('code'),
@@ -136,6 +152,7 @@ const TEXT_BLOCKS: ToolbarItem[] = [
   },
   {
     key: 'code-block',
+    labelKey: 'editor.toolbar.codeBlock',
     label: 'Code block',
     icon: Code2,
     isActive: (e) => e.isActive('codeBlock'),
@@ -146,6 +163,7 @@ const TEXT_BLOCKS: ToolbarItem[] = [
 const COMPLEX: ToolbarItem[] = [
   {
     key: 'table',
+    labelKey: 'editor.toolbar.insertTable',
     label: 'Insert table',
     icon: TableIcon,
     isActive: (e) => e.isActive('table'),
@@ -153,11 +171,12 @@ const COMPLEX: ToolbarItem[] = [
   },
   {
     key: 'image',
+    labelKey: 'editor.toolbar.insertImage',
     label: 'Insert image',
     icon: ImageIcon,
     isActive: () => false,
     run: (e) => {
-      const url = window.prompt('Image URL');
+      const url = window.prompt(i18n.t('editor.toolbar.imageUrlPrompt', 'Image URL'));
       if (!url) return;
       e.chain().focus().setImage({ src: url }).run();
     },
@@ -172,14 +191,16 @@ interface ToolbarButtonProps {
 }
 
 function ToolbarButton({ item, editor }: ToolbarButtonProps) {
+  const { t } = useTranslation();
   const Icon = item.icon;
   const active = item.isActive(editor);
   const disabled = item.disabled?.(editor) ?? false;
+  const label = t(item.labelKey, item.label);
   return (
     <Tooltip
       content={
         <span className="flex flex-col gap-0.5 text-center">
-          <span className="font-medium">{item.label}</span>
+          <span className="font-medium">{label}</span>
           {item.shortcut ? <kbd className="text-(--txt-tertiary)">{item.shortcut}</kbd> : null}
         </span>
       }
@@ -189,7 +210,7 @@ function ToolbarButton({ item, editor }: ToolbarButtonProps) {
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => item.run(editor)}
         disabled={disabled}
-        aria-label={item.label}
+        aria-label={label}
         aria-pressed={active}
         className={cn(
           'grid size-7 shrink-0 place-items-center rounded transition-colors disabled:opacity-40',

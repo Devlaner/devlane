@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { instanceService } from '../services/instanceService';
 
-const PageFallback = () => (
-  <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-    Loading...
-  </div>
-);
+const PageFallback = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
+      {t('common.loading', 'Loading…')}
+    </div>
+  );
+};
 
 /**
  * When instance setup is required (no users yet), redirects to /setup for any path

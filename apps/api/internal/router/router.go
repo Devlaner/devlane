@@ -35,7 +35,9 @@ type Config struct {
 }
 
 // New builds and returns the Gin engine with /api/ and /auth/ routes.
-func New(cfg Config) *gin.Engine {
+// New builds the Gin engine and also returns the ImporterService so the caller
+// (cmd/api) can register the background import worker on the task queue.
+func New(cfg Config) (*gin.Engine, *service.ImporterService) {
 	if cfg.Log == nil {
 		cfg.Log = slog.Default()
 	}
@@ -74,6 +76,8 @@ func New(cfg Config) *gin.Engine {
 	issueViewStore := store.NewIssueViewStore(cfg.DB)
 	searchStore := store.NewSearchStore(cfg.DB)
 	estimateStore := store.NewEstimateStore(cfg.DB)
+	intakeStore := store.NewIntakeStore(cfg.DB)
+	webhookStore := store.NewWebhookStore(cfg.DB)
 	pageStore := store.NewPageStore(cfg.DB)
 	notificationStore := store.NewNotificationStore(cfg.DB)
 	issueSubscriberStore := store.NewIssueSubscriberStore(cfg.DB)
@@ -88,6 +92,7 @@ func New(cfg Config) *gin.Engine {
 
 	// Integration stores
 	integrationStore := store.NewIntegrationStore(cfg.DB)
+	slackChannelLinkStore := store.NewSlackChannelLinkStore(cfg.DB)
 	workspaceIntegrationStore := store.NewWorkspaceIntegrationStore(cfg.DB)
 	githubRepoStore := store.NewGithubRepositoryStore(cfg.DB)
 	githubRepoSyncStore := store.NewGithubRepositorySyncStore(cfg.DB)
@@ -103,6 +108,8 @@ func New(cfg Config) *gin.Engine {
 	authSvc := auth.NewService(userStore, sessionStore, passwordResetTokenStore)
 	authSvc.SetAccountStore(accountStore)
 	authSvc.SetApiTokenStore(apiTokenStore)
+	authSvc.SetWorkspaceStore(workspaceStore)
+	accountSvc := service.NewAccountService(userStore, sessionStore, store.NewEmailChangeRequestStore(cfg.DB), cfg.MagicCodeSecret)
 	appBaseURL := cfg.AppBaseURL
 	if appBaseURL == "" {
 		appBaseURL = cfg.CORSAllowOrigin
@@ -110,6 +117,7 @@ func New(cfg Config) *gin.Engine {
 
 	authHandler := &handler.AuthHandler{
 		Auth:              authSvc,
+		Account:           accountSvc,
 		Settings:          instanceSettingStore,
 		Winv:              workspaceInviteStore,
 		Ws:                workspaceStore,
@@ -133,10 +141,11 @@ func New(cfg Config) *gin.Engine {
 	r.GET("/api/invitations/by-token/", invitationHandler.GetInviteByToken)
 	r.POST("/api/invitations/decline/", invitationHandler.DeclineInviteByToken)
 
-	instanceSettingsHandler := &handler.InstanceSettingsHandler{Settings: instanceSettingStore, Admins: instanceAdminStore, Users: userStore}
+	instanceSettingsHandler := &handler.InstanceSettingsHandler{Settings: instanceSettingStore, Admins: instanceAdminStore, Users: userStore, Log: cfg.Log}
 
 	// Services
 	workspaceSvc := service.NewWorkspaceService(workspaceStore, workspaceInviteStore, userStore)
+	workspaceSvc.SetApiTokenStore(apiTokenStore)
 	projectSvc := service.NewProjectService(projectStore, projectInviteStore, workspaceStore, userStore)
 	stateSvc := service.NewStateService(stateStore, projectStore, workspaceStore)
 	labelSvc := service.NewLabelService(labelStore, projectStore, workspaceStore)
@@ -148,12 +157,17 @@ func New(cfg Config) *gin.Engine {
 	attachmentSvc := service.NewAttachmentService(issueStore, projectStore, workspaceStore, cfg.Minio)
 	attachmentSvc.SetActivityStore(issueActivityStore)
 	cycleSvc := service.NewCycleService(cycleStore, projectStore, workspaceStore)
+	exporterStore := store.NewExporterStore(cfg.DB)
+	exportSvc := service.NewExportService(exporterStore, issueStore, stateStore, projectStore, workspaceStore)
 	cycleSvc.SetIssueStore(issueStore)
 	moduleSvc := service.NewModuleService(moduleStore, projectStore, workspaceStore)
 	moduleSvc.SetIssueStore(issueStore)
 	issueViewSvc := service.NewIssueViewService(issueViewStore, projectStore, workspaceStore, userFavoriteStore)
 	searchSvc := service.NewSearchService(searchStore, workspaceStore)
 	estimateSvc := service.NewEstimateService(estimateStore, projectStore, workspaceStore)
+	intakeSvc := service.NewIntakeService(intakeStore, issueStore, projectStore, workspaceStore)
+	webhookSvc := service.NewWebhookService(webhookStore, workspaceStore, cfg.Queue)
+	issueSvc.SetWebhookService(webhookSvc)
 	pageSvc := service.NewPageService(pageStore, projectStore, workspaceStore)
 	pageSvc.SetFavoriteStore(userFavoriteStore)
 	notificationSvc := service.NewNotificationService(notificationStore, workspaceStore, issueStore, projectStore, userStore, stateStore)
@@ -166,6 +180,10 @@ func New(cfg Config) *gin.Engine {
 		notificationSvc.SetEmailLogStore(emailLogStore)
 		notificationSvc.SetQueue(cfg.Queue)
 		notificationSvc.SetAppBaseURL(appBaseURL)
+
+		// Wire Slack notifications to the same publisher
+		notificationSvc.SetSlackQueue(cfg.Queue)
+		notificationSvc.SetSlackStores(slackChannelLinkStore, workspaceIntegrationStore)
 	}
 	issueSvc.SetNotificationService(notificationSvc)
 	issueSvc.SetSubscriberStore(issueSubscriberStore)
@@ -173,6 +191,8 @@ func New(cfg Config) *gin.Engine {
 	issueSvc.SetReactionStore(issueReactionStore)
 	issueSvc.SetStateStore(stateStore)
 	issueSvc.SetLabelStore(labelStore)
+	importerStore := store.NewImporterStore(cfg.DB)
+	importerSvc := service.NewImporterService(importerStore, workspaceStore, projectStore, stateStore, issueSvc, cfg.Queue, cfg.Log)
 	commentReactionStore := store.NewCommentReactionStore(cfg.DB)
 	commentSvc := service.NewCommentService(commentStore, issueStore, projectStore, workspaceStore)
 	commentSvc.SetReactionStore(commentReactionStore)
@@ -194,7 +214,7 @@ func New(cfg Config) *gin.Engine {
 	}
 
 	integrationSvc := service.NewIntegrationService(
-		integrationStore, workspaceIntegrationStore, workspaceStore, instanceSettingStore, githubClient,
+		integrationStore, workspaceIntegrationStore, workspaceStore, instanceSettingStore, slackChannelLinkStore, githubClient,
 	)
 	githubSyncSvc := service.NewGithubSyncService(
 		integrationSvc, workspaceIntegrationStore, githubRepoStore, githubRepoSyncStore,
@@ -233,18 +253,32 @@ func New(cfg Config) *gin.Engine {
 		Queue:      cfg.Queue,
 		AppBaseURL: appBaseURL,
 	}
+
+	analyticsStore := store.NewAnalyticsStore(cfg.DB)
+	analyticsSvc := service.NewAnalyticsService(analyticsStore, workspaceStore, projectStore, cfg.Log)
+	analyticsHandler := &handler.AnalyticsHandler{
+		AnalyticsService: analyticsSvc,
+		Log:              cfg.Log,
+	}
+
 	projectHandler := &handler.ProjectHandler{Project: projectSvc, State: stateSvc}
-	favoriteHandler := &handler.FavoriteHandler{Project: projectSvc, Favorites: userFavoriteStore}
+	notifPrefHandler := &handler.NotificationPreferenceHandler{Prefs: userNotifPrefStore, Ws: workspaceStore, Projects: projectSvc}
+	favoriteSvc := service.NewFavoriteService(userFavoriteStore, workspaceStore, projectSvc)
+	favoriteHandler := &handler.FavoriteHandler{Project: projectSvc, Favorites: userFavoriteStore, Fav: favoriteSvc}
 	stateHandler := &handler.StateHandler{State: stateSvc}
 	labelHandler := &handler.LabelHandler{Label: labelSvc}
 	searchHandler := &handler.SearchHandler{Svc: searchSvc}
 	estimateHandler := &handler.EstimateHandler{Estimate: estimateSvc}
+	intakeHandler := &handler.IntakeHandler{Intake: intakeSvc}
+	webhookHandler := &handler.WebhookHandler{Webhooks: webhookSvc}
 	issueHandler := &handler.IssueHandler{Issue: issueSvc}
+	importerHandler := &handler.ImporterHandler{Importers: importerSvc}
 	issueLinkHandler := &handler.IssueLinkHandler{Issue: issueSvc}
 	agentHandler := &handler.AgentHandler{Agent: agentSvc}
 	attachmentHandler := &handler.AttachmentHandler{Attachment: attachmentSvc}
 	epicHandler := &handler.EpicHandler{Issue: issueSvc}
 	cycleHandler := &handler.CycleHandler{Cycle: cycleSvc}
+	exportHandler := &handler.ExportHandler{Export: exportSvc}
 	moduleHandler := &handler.ModuleHandler{Module: moduleSvc}
 	issueViewHandler := &handler.IssueViewHandler{IssueView: issueViewSvc}
 	pageHandler := &handler.PageHandler{Page: pageSvc}
@@ -265,13 +299,25 @@ func New(cfg Config) *gin.Engine {
 		api.POST("/users/me/set-password/", authHandler.SetPassword)
 		api.GET("/users/me/notification-preferences/", authHandler.GetNotificationPreferences)
 		api.PUT("/users/me/notification-preferences/", authHandler.UpdateNotificationPreferences)
+		api.POST("/users/me/deactivate/", authHandler.DeactivateMe)
+		api.POST("/users/me/change-email/", middleware.RateLimit(cfg.Redis, "changeemailreq", 10, 15*time.Minute), authHandler.RequestEmailChange)
+		api.POST("/users/me/change-email/verify/", middleware.RateLimit(cfg.Redis, "changeemailverify", 10, 15*time.Minute), authHandler.VerifyEmailChange)
+		api.GET("/workspaces/:slug/notification-preferences/", notifPrefHandler.GetWorkspace)
+		api.PUT("/workspaces/:slug/notification-preferences/", notifPrefHandler.UpdateWorkspace)
+		api.GET("/workspaces/:slug/projects/:projectId/notification-preferences/", notifPrefHandler.GetProject)
+		api.PUT("/workspaces/:slug/projects/:projectId/notification-preferences/", notifPrefHandler.UpdateProject)
 		api.GET("/users/me/activity/", userHandler.GetActivity)
 		api.GET("/users/me/tokens/", authHandler.ListTokens)
 		api.POST("/users/me/tokens/", authHandler.CreateToken)
 		api.DELETE("/users/me/tokens/:id/", authHandler.RevokeToken)
 		api.GET("/users/me/favorite-projects/", favoriteHandler.ListFavoriteProjects)
+		api.GET("/workspaces/:slug/favorites/", favoriteHandler.ListFavorites)
+		api.POST("/workspaces/:slug/favorites/", favoriteHandler.CreateFavorite)
+		api.PATCH("/workspaces/:slug/favorites/:favId/", favoriteHandler.UpdateFavorite)
+		api.DELETE("/workspaces/:slug/favorites/:favId/", favoriteHandler.DeleteFavorite)
 		api.GET("/instance/settings/", instanceSettingsHandler.GetSettings)
 		api.PATCH("/instance/settings/:key", instanceSettingsHandler.UpdateSetting)
+		api.POST("/instance/settings/email/test", instanceSettingsHandler.SendTestEmail)
 		api.GET("/instance/unsplash/search", instanceSettingsHandler.UnsplashSearch)
 		// Instance-admin management (admin-gated inside the handler).
 		api.GET("/instance/admins/", instanceSettingsHandler.ListAdmins)
@@ -289,6 +335,11 @@ func New(cfg Config) *gin.Engine {
 		api.GET("/workspaces/:slug/", workspaceHandler.GetBySlug)
 		api.PATCH("/workspaces/:slug/", workspaceHandler.Update)
 		api.DELETE("/workspaces/:slug/", workspaceHandler.Delete)
+		api.POST("/workspaces/:slug/exports/", exportHandler.CreateExport)
+		api.GET("/workspaces/:slug/exports/", exportHandler.ListExports)
+		api.GET("/workspaces/:slug/tokens/", workspaceHandler.ListTokens)
+		api.POST("/workspaces/:slug/tokens/", workspaceHandler.CreateToken)
+		api.DELETE("/workspaces/:slug/tokens/:id/", workspaceHandler.RevokeToken)
 		api.GET("/workspaces/:slug/members/", workspaceHandler.ListMembers)
 		api.POST("/workspaces/:slug/members/leave/", workspaceHandler.Leave)
 		api.GET("/workspaces/:slug/members/:pk/", workspaceHandler.GetMember)
@@ -304,6 +355,12 @@ func New(cfg Config) *gin.Engine {
 		api.POST("/workspaces/:slug/projects/join/", projectHandler.JoinByToken)
 		api.GET("/workspaces/:slug/draft-issues/", issueHandler.ListWorkspaceDrafts)
 		api.GET("/workspaces/:slug/archived-issues/", issueHandler.ListWorkspaceArchived)
+		api.GET("/workspaces/:slug/archived-projects/", projectHandler.ListArchived)
+		api.GET("/workspaces/:slug/webhooks/", webhookHandler.List)
+		api.POST("/workspaces/:slug/webhooks/", webhookHandler.Create)
+		api.PATCH("/workspaces/:slug/webhooks/:webhookId/", webhookHandler.Update)
+		api.DELETE("/workspaces/:slug/webhooks/:webhookId/", webhookHandler.Delete)
+		api.GET("/workspaces/:slug/webhooks/:webhookId/logs/", webhookHandler.ListLogs)
 		api.GET("/workspaces/:slug/search/", searchHandler.Search)
 		api.GET("/workspaces/:slug/agents/", agentHandler.List)
 		api.POST("/workspaces/:slug/agents/", agentHandler.Create)
@@ -316,6 +373,8 @@ func New(cfg Config) *gin.Engine {
 		api.GET("/workspaces/:slug/projects/:projectId/", projectHandler.Get)
 		api.PATCH("/workspaces/:slug/projects/:projectId/", projectHandler.Update)
 		api.DELETE("/workspaces/:slug/projects/:projectId/", projectHandler.Delete)
+		api.POST("/workspaces/:slug/projects/:projectId/archive/", projectHandler.Archive)
+		api.DELETE("/workspaces/:slug/projects/:projectId/archive/", projectHandler.Restore)
 		api.POST("/workspaces/:slug/projects/:projectId/favorite", favoriteHandler.AddFavoriteProject)
 		api.DELETE("/workspaces/:slug/projects/:projectId/favorite", favoriteHandler.RemoveFavoriteProject)
 		api.GET("/workspaces/:slug/projects/:projectId/members/", projectHandler.ListMembers)
@@ -347,6 +406,14 @@ func New(cfg Config) *gin.Engine {
 		api.GET("/workspaces/:slug/projects/:projectId/estimates/:pk/", estimateHandler.Get)
 		api.PATCH("/workspaces/:slug/projects/:projectId/estimates/:pk/", estimateHandler.Update)
 		api.DELETE("/workspaces/:slug/projects/:projectId/estimates/:pk/", estimateHandler.Delete)
+		api.GET("/workspaces/:slug/projects/:projectId/intake-issues/", intakeHandler.List)
+		api.GET("/workspaces/:slug/projects/:projectId/intake-issues/count/", intakeHandler.Count)
+		api.PATCH("/workspaces/:slug/projects/:projectId/intake-issues/:pk/", intakeHandler.Transition)
+
+		// Bulk import (CSV) for a project.
+		api.GET("/workspaces/:slug/projects/:projectId/importers/", importerHandler.List)
+		api.POST("/workspaces/:slug/projects/:projectId/importers/", importerHandler.Create)
+		api.GET("/workspaces/:slug/projects/:projectId/importers/:importerId/", importerHandler.Get)
 
 		api.GET("/workspaces/:slug/projects/:projectId/issues/", issueHandler.List)
 		api.POST("/workspaces/:slug/projects/:projectId/issues/", issueHandler.Create)
@@ -387,7 +454,14 @@ func New(cfg Config) *gin.Engine {
 		api.POST("/workspaces/:slug/projects/:projectId/issues-bulk/delete/", issueHandler.BulkDelete)
 		api.POST("/workspaces/:slug/projects/:projectId/issues-bulk/reorder/", issueHandler.BulkReorder)
 
+		api.GET("/workspaces/:slug/analytics/", analyticsHandler.GetWorkspaceAnalytics)
+		api.GET("/workspaces/:slug/analytics/export/", analyticsHandler.ExportWorkspaceCSV)
+
+		api.GET("/workspaces/:slug/projects/:projectId/analytics/", analyticsHandler.GetProjectAnalytics)
+		api.GET("/workspaces/:slug/projects/:projectId/analytics/export/", analyticsHandler.ExportProjectCSV)
+
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/", cycleHandler.List)
+		api.GET("/workspaces/:slug/projects/:projectId/cycles-progress/", cycleHandler.CyclesProgress)
 		api.POST("/workspaces/:slug/projects/:projectId/cycles/", cycleHandler.Create)
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/:cycleId/", cycleHandler.Get)
 		api.PATCH("/workspaces/:slug/projects/:projectId/cycles/:cycleId/", cycleHandler.Update)
@@ -395,10 +469,12 @@ func New(cfg Config) *gin.Engine {
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/:cycleId/issues/", cycleHandler.ListIssues)
 		api.POST("/workspaces/:slug/projects/:projectId/cycles/:cycleId/issues/", cycleHandler.AddIssue)
 		api.DELETE("/workspaces/:slug/projects/:projectId/cycles/:cycleId/issues/:issueId/", cycleHandler.RemoveIssue)
+		api.POST("/workspaces/:slug/projects/:projectId/cycles/:cycleId/transfer-issues/", cycleHandler.CompleteCycle)
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/:cycleId/progress/", cycleHandler.Progress)
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/:cycleId/cycle-progress/", cycleHandler.Progress)
 		api.GET("/workspaces/:slug/projects/:projectId/cycles/:cycleId/analytics", cycleHandler.Analytics)
 
+		api.GET("/workspaces/:slug/projects/:projectId/modules-progress/", moduleHandler.ModulesProgress)
 		api.GET("/workspaces/:slug/projects/:projectId/modules/", moduleHandler.List)
 		api.POST("/workspaces/:slug/projects/:projectId/modules/", moduleHandler.Create)
 		api.GET("/workspaces/:slug/projects/:projectId/modules/:moduleId/", moduleHandler.Get)
@@ -497,6 +573,13 @@ func New(cfg Config) *gin.Engine {
 		api.GET("/workspaces/:slug/integrations/", integrationHandler.ListInstalled)
 		api.DELETE("/workspaces/:slug/integrations/:provider/", integrationHandler.Uninstall)
 
+		// Slack Channel Link Routes
+		api.GET("/workspaces/:slug/integrations/slack/channels/", integrationHandler.SlackListChannels)
+		api.GET("/workspaces/:slug/projects/:projectId/integrations/slack/channel/", integrationHandler.SlackGetChannel)
+		api.POST("/workspaces/:slug/projects/:projectId/integrations/slack/channel/", integrationHandler.SlackLinkChannel)
+		api.PATCH("/workspaces/:slug/projects/:projectId/integrations/slack/channel/", integrationHandler.SlackUpdateChannel)
+		api.DELETE("/workspaces/:slug/projects/:projectId/integrations/slack/channel/", integrationHandler.SlackUnlinkChannel)
+
 		// GitHub-specific (workspace-level): list installation repos.
 		api.GET("/workspaces/:slug/integrations/github/repositories/", integrationHandler.GitHubListRepositories)
 
@@ -562,6 +645,10 @@ func New(cfg Config) *gin.Engine {
 	r.GET("/auth/github-app/install", middleware.RequireAuth(authSvc, cfg.Log), integrationHandler.GitHubInstallStart)
 	r.GET("/auth/github-app/callback", middleware.RequireAuth(authSvc, cfg.Log), integrationHandler.GitHubInstallCallback)
 
+	// Slack App install flow.
+	r.GET("/auth/slack/install", middleware.RequireAuth(authSvc, cfg.Log), integrationHandler.SlackInstallStart)
+	r.GET("/auth/slack/callback", middleware.RequireAuth(authSvc, cfg.Log), integrationHandler.SlackInstallCallback)
+
 	// GitHub webhook receiver — public; HMAC-signature-verified.
 	r.POST("/webhooks/github", integrationHandler.GitHubWebhook)
 	r.POST("/webhooks/github/", integrationHandler.GitHubWebhook)
@@ -575,5 +662,5 @@ func New(cfg Config) *gin.Engine {
 		})
 	}
 
-	return r
+	return r, importerSvc
 }

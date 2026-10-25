@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 
@@ -52,6 +53,7 @@ const VIEWPORT_PADDING = 8;
 const PANEL_GAP = 4;
 
 export function WorkspaceViewsEllipsisMenu() {
+  const { t } = useTranslation();
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -148,7 +150,7 @@ export function WorkspaceViewsEllipsisMenu() {
               <span className="text-(--txt-icon-tertiary)">
                 <IconExternal />
               </span>
-              Open in new tab
+              {t('common.openInNewTab', 'Open in new tab')}
             </button>
             <button
               type="button"
@@ -158,7 +160,7 @@ export function WorkspaceViewsEllipsisMenu() {
               <span className="text-(--txt-icon-tertiary)">
                 <IconLink />
               </span>
-              Copy link
+              {t('common.copyLink', 'Copy link')}
             </button>
           </div>,
           document.body,

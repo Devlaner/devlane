@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FileText, Trash2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -68,6 +69,7 @@ interface Props {
  * covers >95% of the page-categorisation use case.
  */
 export function EmojiLogoPicker({ value, disabled, onChange, size = 32, className }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -110,7 +112,7 @@ export function EmojiLogoPicker({ value, disabled, onChange, size = 32, classNam
         <div className="absolute top-full left-0 z-30 mt-2 w-72 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-3 shadow-(--shadow-raised)">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[11px] font-semibold tracking-wide text-(--txt-tertiary) uppercase">
-              Pick an icon
+              {t('editor.iconPicker.title', 'Pick an icon')}
             </p>
             {emoji ? (
               <button
@@ -121,7 +123,7 @@ export function EmojiLogoPicker({ value, disabled, onChange, size = 32, classNam
                 }}
                 className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--danger-default)"
               >
-                <Trash2 size={11} /> Clear
+                <Trash2 size={11} /> {t('common.clear', 'Clear')}
               </button>
             ) : null}
           </div>

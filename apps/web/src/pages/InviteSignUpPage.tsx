@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, Button } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
@@ -109,6 +110,7 @@ function PasswordRequirement({ met, label }: { met: boolean; label: string }) {
 }
 
 export function InviteSignUpPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { setUserFromApi, user } = useAuth();
@@ -122,7 +124,8 @@ export function InviteSignUpPage() {
 
   const email = (state?.email ?? '').trim();
   const token = (state?.token ?? '').trim();
-  const workspaceName = state?.workspaceName ?? 'the workspace';
+  const workspaceName =
+    state?.workspaceName ?? t('auth.inviteSignUp.defaultWorkspace', 'the workspace');
   const workspaceSlug = (state?.workspaceSlug ?? '').trim();
 
   const [password, setPassword] = useState('');
@@ -136,7 +139,7 @@ export function InviteSignUpPage() {
   const allMet = req.minLength && req.upper && req.lower && req.number && req.special;
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
 
-  useDocumentTitle('Sign up');
+  useDocumentTitle(t('auth.inviteSignUp.documentTitle', 'Sign up'));
 
   useEffect(() => {
     if (!email || !token) {
@@ -154,11 +157,11 @@ export function InviteSignUpPage() {
     e.preventDefault();
     setError('');
     if (!allMet) {
-      setError('Please meet all password requirements.');
+      setError(t('auth.inviteSignUp.requirementsError', 'Please meet all password requirements.'));
       return;
     }
     if (!passwordsMatch) {
-      setError('Passwords do not match.');
+      setError(t('auth.password.mismatch', 'Passwords do not match.'));
       return;
     }
     setIsSubmitting(true);
@@ -176,7 +179,7 @@ export function InviteSignUpPage() {
         err && typeof err === 'object' && 'response' in err
           ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
           : null;
-      setError(message ?? 'Something went wrong. Please try again.');
+      setError(message ?? t('common.genericError', 'Something went wrong. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -185,7 +188,7 @@ export function InviteSignUpPage() {
   if (!email || !token) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
-        <p className="text-sm text-(--txt-tertiary)">Loading…</p>
+        <p className="text-sm text-(--txt-tertiary)">{t('common.loading', 'Loading…')}</p>
       </div>
     );
   }
@@ -195,17 +198,22 @@ export function InviteSignUpPage() {
       <Card className="w-full max-w-md">
         <CardContent className="p-6">
           <h1 className="flex items-center gap-2 text-2xl font-semibold text-(--txt-primary)">
-            <span className="text-(--txt-secondary)">Join</span>
+            <span className="text-(--txt-secondary)">{t('common.join', 'Join')}</span>
             <IconGlobe />
             <span>{workspaceName}</span>
           </h1>
           <p className="mt-2 text-sm text-(--txt-secondary)">
-            Set a password to create your account and join the workspace.
+            {t(
+              'auth.inviteSignUp.subtitle',
+              'Set a password to create your account and join the workspace.',
+            )}
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">Email</label>
+              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
+                {t('common.email', 'Email')}
+              </label>
               <input
                 type="email"
                 value={email}
@@ -220,7 +228,7 @@ export function InviteSignUpPage() {
                 htmlFor="invite-signup-password"
                 className="mb-1 block text-sm font-medium text-(--txt-secondary)"
               >
-                Password
+                {t('common.password', 'Password')}
               </label>
               <div className="relative">
                 <input
@@ -228,7 +236,7 @@ export function InviteSignUpPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create a password"
+                  placeholder={t('auth.inviteSignUp.passwordPlaceholder', 'Create a password')}
                   className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-2 pl-3 pr-9 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                   autoComplete="new-password"
                 />
@@ -236,18 +244,37 @@ export function InviteSignUpPage() {
                   type="button"
                   onClick={() => setShowPassword((p) => !p)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary) hover:text-(--txt-secondary)"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={
+                    showPassword
+                      ? t('common.hidePassword', 'Hide password')
+                      : t('common.showPassword', 'Show password')
+                  }
                   aria-pressed={showPassword}
                 >
                   {showPassword ? <IconEyeOff /> : <IconEye />}
                 </button>
               </div>
               <div className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">
-                <PasswordRequirement met={req.minLength} label="Min 8 characters" />
-                <PasswordRequirement met={req.upper} label="One uppercase" />
-                <PasswordRequirement met={req.lower} label="One lowercase" />
-                <PasswordRequirement met={req.number} label="Min 1 number" />
-                <PasswordRequirement met={req.special} label="Min 1 special" />
+                <PasswordRequirement
+                  met={req.minLength}
+                  label={t('auth.inviteSignUp.reqMinLength', 'Min 8 characters')}
+                />
+                <PasswordRequirement
+                  met={req.upper}
+                  label={t('auth.inviteSignUp.reqUpper', 'One uppercase')}
+                />
+                <PasswordRequirement
+                  met={req.lower}
+                  label={t('auth.inviteSignUp.reqLower', 'One lowercase')}
+                />
+                <PasswordRequirement
+                  met={req.number}
+                  label={t('auth.inviteSignUp.reqNumber', 'Min 1 number')}
+                />
+                <PasswordRequirement
+                  met={req.special}
+                  label={t('auth.inviteSignUp.reqSpecial', 'Min 1 special')}
+                />
               </div>
             </div>
 
@@ -256,7 +283,7 @@ export function InviteSignUpPage() {
                 htmlFor="invite-signup-confirm"
                 className="mb-1 block text-sm font-medium text-(--txt-secondary)"
               >
-                Confirm password
+                {t('common.confirmPassword', 'Confirm password')}
               </label>
               <div className="relative">
                 <input
@@ -264,7 +291,10 @@ export function InviteSignUpPage() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm password"
+                  placeholder={t(
+                    'auth.inviteSignUp.confirmPasswordPlaceholder',
+                    'Confirm password',
+                  )}
                   className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-2 pl-3 pr-9 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                   autoComplete="new-password"
                 />
@@ -273,7 +303,9 @@ export function InviteSignUpPage() {
                   onClick={() => setShowConfirmPassword((p) => !p)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary) hover:text-(--txt-secondary)"
                   aria-label={
-                    showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'
+                    showConfirmPassword
+                      ? t('common.hideConfirmPassword', 'Hide confirm password')
+                      : t('common.showConfirmPassword', 'Show confirm password')
                   }
                   aria-pressed={showConfirmPassword}
                 >
@@ -289,12 +321,14 @@ export function InviteSignUpPage() {
               className="w-full"
               disabled={isSubmitting || !allMet || !passwordsMatch}
             >
-              {isSubmitting ? 'Creating account…' : 'Create account'}
+              {isSubmitting
+                ? t('common.creatingAccount', 'Creating account…')
+                : t('common.createAccount', 'Create account')}
             </Button>
           </form>
 
           <p className="mt-6 text-center text-sm text-(--txt-secondary)">
-            Already have an account?{' '}
+            {t('auth.inviteSignUp.haveAccount', 'Already have an account?')}{' '}
             <Link
               to="/login"
               state={{
@@ -303,7 +337,7 @@ export function InviteSignUpPage() {
               }}
               className="font-medium text-(--txt-accent) hover:underline"
             >
-              Sign in
+              {t('common.signIn', 'Sign in')}
             </Link>
           </p>
         </CardContent>

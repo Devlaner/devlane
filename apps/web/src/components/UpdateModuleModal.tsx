@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Modal, Button, Input, Avatar } from './ui';
 import { DateRangeModal } from './workspace-views/DateRangeModal';
 import { getImageUrl } from '../lib/utils';
@@ -9,14 +11,14 @@ import { formatISODateDisplay } from '../lib/dateOnly';
 import { MODULE_STATUSES } from '../lib/moduleStatuses';
 import { apiErrorMessage } from '../lib/apiError';
 
-function formatDateRangeDisplay(start: string | null, end: string | null): string {
-  if (!start && !end) return 'Start date → End date';
+function formatDateRangeDisplay(start: string | null, end: string | null, t: TFunction): string {
+  if (!start && !end) return t('common.dateRangePlaceholder', 'Start date → End date');
   if (start && end) return `${formatISODateDisplay(start)} → ${formatISODateDisplay(end)}`;
   return start
     ? formatISODateDisplay(start)
     : end
       ? formatISODateDisplay(end)
-      : 'Start date → End date';
+      : t('common.dateRangePlaceholder', 'Start date → End date');
 }
 
 export interface UpdateModuleModalProps {
@@ -38,6 +40,7 @@ export function UpdateModuleModal({
   onUpdated,
   openDatePickerOnOpen,
 }: UpdateModuleModalProps) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState<string | null>(null);
@@ -129,7 +132,7 @@ export function UpdateModuleModal({
       onUpdated?.(updated);
       onClose();
     } catch (e) {
-      setError(apiErrorMessage(e, 'Failed to update module.'));
+      setError(apiErrorMessage(e, t('module.update.error', 'Failed to update module.')));
     } finally {
       setSubmitting(false);
     }
@@ -140,15 +143,15 @@ export function UpdateModuleModal({
       <Modal
         open={open}
         onClose={onClose}
-        title="Update module"
+        title={t('module.update.title', 'Update module')}
         className="max-w-3xl"
         footer={
           <>
             <Button variant="secondary" onClick={onClose} disabled={submitting}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button onClick={handleSubmit} disabled={submitting || !module || !title.trim()}>
-              Update Module
+              {t('module.update.submit', 'Update Module')}
             </Button>
           </>
         }
@@ -158,12 +161,12 @@ export function UpdateModuleModal({
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Module name"
+            placeholder={t('module.update.namePlaceholder', 'Module name')}
           />
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Description"
+            placeholder={t('common.description', 'Description')}
             className="min-h-24 w-full resize-none rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
           />
 
@@ -173,10 +176,11 @@ export function UpdateModuleModal({
               onClick={() => setDateModalOpen(true)}
               className="flex items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
             >
+              {}
               <span className="text-(--txt-icon-tertiary)" aria-hidden>
                 📅
               </span>
-              {formatDateRangeDisplay(startDate, endDate)}
+              {formatDateRangeDisplay(startDate, endDate, t)}
             </button>
 
             <div className="relative" ref={statusRef}>
@@ -185,10 +189,11 @@ export function UpdateModuleModal({
                 onClick={() => setStatusDropdownOpen((v) => !v)}
                 className="flex items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
               >
+                {}
                 <span className="text-(--txt-icon-tertiary)" aria-hidden>
                   ⏺
                 </span>
-                {statusLabel}
+                {t(`module.status.${status}`, statusLabel)}
                 <span className="text-(--txt-icon-tertiary)" aria-hidden>
                   ▾
                 </span>
@@ -205,7 +210,7 @@ export function UpdateModuleModal({
                         setStatusDropdownOpen(false);
                       }}
                     >
-                      {s.label}
+                      {t(`module.status.${s.id}`, s.label)}
                       {s.id === status && <span className="text-(--txt-icon-tertiary)">✓</span>}
                     </button>
                   ))}
@@ -235,7 +240,7 @@ export function UpdateModuleModal({
                     👤
                   </span>
                 )}
-                Lead
+                {t('common.lead', 'Lead')}
                 <span className="text-(--txt-icon-tertiary)" aria-hidden>
                   ▾
                 </span>
@@ -243,12 +248,13 @@ export function UpdateModuleModal({
               {leadDropdownOpen && (
                 <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-1.5 shadow-(--shadow-raised)">
                   <div className="mb-1.5 flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
+                    {}
                     <span className="text-(--txt-icon-tertiary)" aria-hidden>
                       🔎
                     </span>
                     <input
                       type="text"
-                      placeholder="Search"
+                      placeholder={t('common.search', 'Search')}
                       value={leadSearch}
                       onChange={(e) => setLeadSearch(e.target.value)}
                       className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -263,7 +269,7 @@ export function UpdateModuleModal({
                       }}
                       className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                     >
-                      <span className="truncate">No lead</span>
+                      <span className="truncate">{t('module.update.noLead', 'No lead')}</span>
                       {leadId === null && <span className="text-(--txt-icon-tertiary)">✓</span>}
                     </button>
                     {filteredLead.map((m) => (
@@ -302,7 +308,7 @@ export function UpdateModuleModal({
                 onClick={() => setMembersDropdownOpen((v) => !v)}
                 className="flex items-center gap-2 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
               >
-                <span>Members</span>
+                <span>{t('common.members', 'Members')}</span>
                 {selectedMembers.length > 0 && (
                   <span className="flex -space-x-1.5">
                     {selectedMembers.map((m) => (
@@ -323,12 +329,13 @@ export function UpdateModuleModal({
               {membersDropdownOpen && (
                 <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-1.5 shadow-(--shadow-raised)">
                   <div className="mb-1.5 flex items-center gap-2 rounded border border-(--border-subtle) bg-(--bg-layer-1) px-2 py-1.5">
+                    {}
                     <span className="text-(--txt-icon-tertiary)" aria-hidden>
                       🔎
                     </span>
                     <input
                       type="text"
-                      placeholder="Search"
+                      placeholder={t('common.search', 'Search')}
                       value={membersSearch}
                       onChange={(e) => setMembersSearch(e.target.value)}
                       className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -376,7 +383,7 @@ export function UpdateModuleModal({
       <DateRangeModal
         open={dateModalOpen}
         onClose={() => setDateModalOpen(false)}
-        title="Date range"
+        title={t('module.update.dateRangeTitle', 'Date range')}
         after={startDate}
         before={endDate}
         onApply={(after, before) => {

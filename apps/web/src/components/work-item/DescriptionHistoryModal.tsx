@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, Button } from '../ui';
 import { issueService } from '../../services/issueService';
 import { sanitizeHtml } from '../../lib/sanitize';
@@ -24,6 +25,7 @@ export function DescriptionHistoryModal({
   authorLabel,
   onRestored,
 }: DescriptionHistoryModalProps) {
+  const { t } = useTranslation();
   const [versions, setVersions] = useState<IssueDescriptionVersionApiResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,10 +79,15 @@ export function DescriptionHistoryModal({
         </p>
       )}
       {loading ? (
-        <p className="py-6 text-center text-sm text-(--txt-tertiary)">Loading history…</p>
+        <p className="py-6 text-center text-sm text-(--txt-tertiary)">
+          {t('views.descriptionHistory.loading', 'Loading history…')}
+        </p>
       ) : versions.length === 0 ? (
         <p className="py-6 text-center text-sm text-(--txt-tertiary)">
-          No previous versions yet. Edits to the description are recorded here.
+          {t(
+            'views.descriptionHistory.empty',
+            'No previous versions yet. Edits to the description are recorded here.',
+          )}
         </p>
       ) : (
         <ul className="max-h-[60vh] space-y-3 overflow-y-auto">

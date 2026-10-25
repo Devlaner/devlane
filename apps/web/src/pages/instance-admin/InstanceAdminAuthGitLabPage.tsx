@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input } from '../../components/ui';
 import { InstanceAdminCopyRow, InstanceAdminToggleSwitch } from '../../components/instance-admin';
@@ -16,6 +17,7 @@ const IconGitLab = () => (
 );
 
 export function InstanceAdminAuthGitLabPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
@@ -35,7 +37,7 @@ export function InstanceAdminAuthGitLabPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  useDocumentTitle('GitLab authentication');
+  useDocumentTitle(t('instanceAdmin.auth.gitlab.documentTitle', 'GitLab authentication'));
 
   useEffect(() => {
     let cancelled = false;
@@ -97,7 +99,12 @@ export function InstanceAdminAuthGitLabPage() {
       instanceSettingsService.updateSection('auth', authPayload),
     ])
       .then(([oauthRes]) => {
-        setSuccess('Your GitLab authentication is configured. You should test it now.');
+        setSuccess(
+          t(
+            'instanceAdmin.auth.gitlab.success',
+            'Your GitLab authentication is configured. You should test it now.',
+          ),
+        );
         if (oauthRes.value) {
           const v = oauthRes.value as InstanceOAuthSection;
           setClientId(v.gitlab_client_id ?? '');
@@ -137,7 +144,10 @@ export function InstanceAdminAuthGitLabPage() {
           <div>
             <h1 className="text-base font-semibold text-(--txt-primary)">GitLab</h1>
             <p className="text-xs text-(--txt-secondary)">
-              Allow members to log in or sign up for Devlane with their GitLab accounts.
+              {t(
+                'instanceAdmin.auth.gitlab.subtitle',
+                'Allow members to log in or sign up for Devlane with their GitLab accounts.',
+              )}
             </p>
           </div>
         </div>
@@ -154,78 +164,104 @@ export function InstanceAdminAuthGitLabPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="rounded border border-(--border-subtle) bg-(--bg-surface-1) p-4">
           <h2 className="mb-4 text-sm font-semibold text-(--txt-primary)">
-            GitLab-provided details for Devlane
+            {t('instanceAdmin.auth.gitlab.providedDetails', 'GitLab-provided details for Devlane')}
           </h2>
           <div className="space-y-3">
             <Input
-              label="Host URL (optional)"
+              label={t('instanceAdmin.auth.gitlab.hostUrl', 'Host URL (optional)')}
               value={gitlabHost}
               onChange={(e) => setGitlabHost(e.target.value)}
               autoComplete="off"
               placeholder="https://gitlab.com"
             />
             <p className="text-[11px] text-(--txt-tertiary)">
-              Leave blank for gitlab.com. Set your self-hosted GitLab URL for on-premises
-              installations.
+              {t(
+                'instanceAdmin.auth.gitlab.hostUrlHint',
+                'Leave blank for gitlab.com. Set your self-hosted GitLab URL for on-premises installations.',
+              )}
             </p>
             <Input
-              label="Application ID (Client ID)"
+              label={t('instanceAdmin.auth.gitlab.applicationId', 'Application ID (Client ID)')}
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
               autoComplete="off"
-              placeholder="Your application ID from GitLab."
+              placeholder={t(
+                'instanceAdmin.auth.gitlab.applicationIdPlaceholder',
+                'Your application ID from GitLab.',
+              )}
             />
             <p className="text-[11px] text-(--txt-tertiary)">
-              Your application ID lives in your GitLab application settings.{' '}
-              <a
-                href="https://gitlab.com/-/user_settings/applications"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-(--txt-accent) hover:underline"
-              >
-                Learn more
-              </a>
+              <Trans
+                i18nKey="instanceAdmin.auth.gitlab.applicationIdHint"
+                defaults="Your application ID lives in your GitLab application settings. <a>Learn more</a>"
+                components={{
+                  a: (
+                    <a
+                      href="https://gitlab.com/-/user_settings/applications"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-(--txt-accent) hover:underline"
+                    />
+                  ),
+                }}
+              />
             </p>
             <div className="relative">
               <Input
-                label="Secret"
+                label={t('instanceAdmin.auth.gitlab.secret', 'Secret')}
                 type={showSecret ? 'text' : 'password'}
                 value={clientSecret}
                 onChange={(e) => setClientSecret(e.target.value)}
                 autoComplete="new-password"
-                placeholder={secretSet ? '(unchanged if left blank)' : 'Enter secret'}
+                placeholder={
+                  secretSet
+                    ? t('instanceAdmin.auth.unchangedIfBlank', '(unchanged if left blank)')
+                    : t('instanceAdmin.auth.gitlab.enterSecret', 'Enter secret')
+                }
               />
               <button
                 type="button"
                 onClick={() => setShowSecret(!showSecret)}
                 className="absolute top-7 right-2 p-1 text-(--txt-icon-tertiary) hover:text-(--txt-icon-secondary)"
-                aria-label={showSecret ? 'Hide secret' : 'Show secret'}
+                aria-label={
+                  showSecret
+                    ? t('instanceAdmin.auth.hideSecret', 'Hide secret')
+                    : t('instanceAdmin.auth.showSecret', 'Show secret')
+                }
               >
                 {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             <p className="text-[11px] text-(--txt-tertiary)">
-              Your secret should also be in your GitLab application settings.{' '}
-              <a
-                href="https://gitlab.com/-/user_settings/applications"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-(--txt-accent) hover:underline"
-              >
-                Learn more
-              </a>
+              <Trans
+                i18nKey="instanceAdmin.auth.gitlab.secretHint"
+                defaults="Your secret should also be in your GitLab application settings. <a>Learn more</a>"
+                components={{
+                  a: (
+                    <a
+                      href="https://gitlab.com/-/user_settings/applications"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-(--txt-accent) hover:underline"
+                    />
+                  ),
+                }}
+              />
             </p>
           </div>
         </div>
 
         <div className="rounded border border-(--border-subtle) bg-(--bg-surface-1) p-4">
           <h2 className="mb-4 text-sm font-semibold text-(--txt-primary)">
-            Devlane-provided details for GitLab
+            {t('instanceAdmin.auth.gitlab.devlaneDetails', 'Devlane-provided details for GitLab')}
           </h2>
           <div className="space-y-3">
             <InstanceAdminCopyRow
-              label="Redirect URI"
-              hint="Paste this into your GitLab application Redirect URI field."
+              label={t('instanceAdmin.auth.gitlab.redirectUri', 'Redirect URI')}
+              hint={t(
+                'instanceAdmin.auth.gitlab.redirectUriHint',
+                'Paste this into your GitLab application Redirect URI field.',
+              )}
               value={callbackUrl}
             />
           </div>
@@ -233,14 +269,14 @@ export function InstanceAdminAuthGitLabPage() {
 
         <div className="flex items-center gap-2">
           <Button type="submit" disabled={saving || !isDirty}>
-            {saving ? 'Saving…' : 'Save changes'}
+            {saving ? t('common.saving', 'Saving…') : t('common.saveChanges', 'Save changes')}
           </Button>
           <Button
             type="button"
             onClick={() => void navigate('/instance-admin/authentication')}
             className="bg-transparent text-(--txt-secondary) shadow-none hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
           >
-            Go back
+            {t('common.goBack', 'Go back')}
           </Button>
         </div>
       </form>

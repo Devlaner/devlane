@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, Button } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
@@ -92,6 +93,7 @@ const IconClear = () => (
 );
 
 export function InviteAcceptPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
@@ -111,7 +113,7 @@ export function InviteAcceptPage() {
   const [joinEmail, setJoinEmail] = useState('');
   const autoAcceptDone = useRef(false);
 
-  useDocumentTitle('Accept invite');
+  useDocumentTitle(t('auth.inviteAccept.documentTitle', 'Accept invite'));
 
   useEffect(() => {
     if (!token.trim()) {
@@ -125,7 +127,7 @@ export function InviteAcceptPage() {
         if (!cancelled) setInvite(data);
       })
       .catch(() => {
-        if (!cancelled) setError('Invite not found or expired.');
+        if (!cancelled) setError(t('auth.inviteAccept.notFound', 'Invite not found or expired.'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -133,7 +135,7 @@ export function InviteAcceptPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, navigate]);
+  }, [token, navigate, t]);
 
   const doJoinWorkspace = useCallback(async () => {
     if (!token || !invite) return;
@@ -142,11 +144,11 @@ export function InviteAcceptPage() {
       await workspaceService.joinByToken(token);
       navigate(`/${invite.workspace_slug}`, { replace: true });
     } catch {
-      setError('Failed to join workspace. Please try again.');
+      setError(t('auth.inviteAccept.joinFailed', 'Failed to join workspace. Please try again.'));
     } finally {
       setAccepting(false);
     }
-  }, [token, invite, navigate]);
+  }, [token, invite, navigate, t]);
 
   // When user returns from login (already authenticated), auto-accept and go to workspace
   useEffect(() => {
@@ -172,7 +174,7 @@ export function InviteAcceptPage() {
       await invitationService.declineByToken(token);
       navigate('/', { replace: true });
     } catch {
-      setError('Failed to decline. Please try again.');
+      setError(t('auth.inviteAccept.declineFailed', 'Failed to decline. Please try again.'));
     } finally {
       setIgnoring(false);
     }
@@ -181,7 +183,7 @@ export function InviteAcceptPage() {
   if (authLoading || loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-(--bg-canvas) p-4">
-        <p className="text-sm text-(--txt-tertiary)">Loading…</p>
+        <p className="text-sm text-(--txt-tertiary)">{t('common.loading', 'Loading…')}</p>
       </div>
     );
   }
@@ -197,7 +199,7 @@ export function InviteAcceptPage() {
               className="mt-4"
               onClick={() => navigate('/', { replace: true })}
             >
-              Go home
+              {t('common.goHome', 'Go home')}
             </Button>
           </CardContent>
         </Card>
@@ -214,22 +216,24 @@ export function InviteAcceptPage() {
         <Card className="w-full max-w-md">
           <CardContent className="p-6">
             <h1 className="flex items-center gap-2 text-2xl font-semibold text-(--txt-primary)">
-              <span className="text-(--txt-secondary)">Join</span>
+              <span className="text-(--txt-secondary)">{t('common.join', 'Join')}</span>
               <IconGlobe />
               <span>{invite.workspace_name}</span>
             </h1>
             <p className="mt-2 text-sm text-(--txt-secondary)">
-              Log in to start managing work with your team.
+              {t('auth.inviteAccept.joinSubtitle', 'Log in to start managing work with your team.')}
             </p>
 
             <div className="mt-6">
-              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">Email</label>
+              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
+                {t('common.email', 'Email')}
+              </label>
               <div className="relative">
                 <input
                   type="email"
                   value={joinEmail}
                   onChange={(e) => setJoinEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder={t('common.emailPlaceholder', 'you@example.com')}
                   className="h-9 w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) py-2 pl-3 pr-9 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
                   autoComplete="email"
                 />
@@ -238,7 +242,7 @@ export function InviteAcceptPage() {
                     type="button"
                     onClick={() => setJoinEmail('')}
                     className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-full text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-                    aria-label="Clear email"
+                    aria-label={t('auth.inviteAccept.clearEmail', 'Clear email')}
                   >
                     <IconClear />
                   </button>
@@ -261,11 +265,11 @@ export function InviteAcceptPage() {
                 })
               }
             >
-              Continue
+              {t('common.continue', 'Continue')}
             </Button>
 
             <p className="mt-4 text-center text-sm text-(--txt-secondary)">
-              Already have an account?{' '}
+              {t('auth.inviteAccept.haveAccount', 'Already have an account?')}{' '}
               <button
                 type="button"
                 onClick={() =>
@@ -279,20 +283,22 @@ export function InviteAcceptPage() {
                 }
                 className="font-medium text-(--txt-accent) hover:underline"
               >
-                Sign in
+                {t('common.signIn', 'Sign in')}
               </button>
             </p>
 
             <p className="mt-6 text-center text-xs text-(--txt-tertiary)">
-              By signing in, you understand and agree to our{' '}
-              <a href="/terms" className="underline hover:text-(--txt-secondary)">
-                Terms of Service
-              </a>{' '}
-              and{' '}
-              <a href="/privacy" className="underline hover:text-(--txt-secondary)">
-                Privacy Policy
-              </a>
-              .
+              <Trans i18nKey="auth.inviteAccept.legal">
+                By signing in, you understand and agree to our{' '}
+                <a href="/terms" className="underline hover:text-(--txt-secondary)">
+                  Terms of Service
+                </a>{' '}
+                and{' '}
+                <a href="/privacy" className="underline hover:text-(--txt-secondary)">
+                  Privacy Policy
+                </a>
+                .
+              </Trans>
             </p>
           </CardContent>
         </Card>
@@ -305,11 +311,15 @@ export function InviteAcceptPage() {
       <Card className="w-full max-w-lg">
         <CardContent className="p-8">
           <h1 className="text-xl font-semibold text-(--txt-primary)">
-            You have been invited to {invite.workspace_name}
+            {t('auth.inviteAccept.invitedTitle', 'You have been invited to {{workspaceName}}', {
+              workspaceName: invite.workspace_name,
+            })}
           </h1>
           <p className="mt-3 text-sm text-(--txt-secondary)">
-            Your workspace is where you'll create projects, collaborate on work items, and organize
-            different streams of work in your Devlane account.
+            {t(
+              'auth.inviteAccept.description',
+              "Your workspace is where you'll create projects, collaborate on work items, and organize different streams of work in your Devlane account.",
+            )}
           </p>
 
           {error && <p className="mt-3 text-sm text-(--txt-destructive)">{error}</p>}
@@ -325,7 +335,7 @@ export function InviteAcceptPage() {
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-(--bg-accent-primary) text-(--txt-on-color)">
                   <IconCheck />
                 </span>
-                Accept
+                {t('auth.inviteAccept.accept', 'Accept')}
               </span>
               <span className="text-(--txt-icon-tertiary)">
                 <IconChevronRight />
@@ -342,7 +352,7 @@ export function InviteAcceptPage() {
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-(--bg-layer-2) text-(--txt-icon-secondary)">
                   <IconX />
                 </span>
-                Ignore
+                {t('auth.inviteAccept.ignore', 'Ignore')}
               </span>
               <span className="text-(--txt-icon-tertiary)">
                 <IconChevronRight />

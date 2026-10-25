@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Archive,
@@ -52,17 +54,17 @@ type SaveStatus =
 
 const AUTOSAVE_DEBOUNCE_MS = 1500;
 
-function formatRelative(at: number): string {
+function formatRelative(at: number, t: TFunction): string {
   const diff = Math.max(0, Date.now() - at);
   const sec = Math.floor(diff / 1000);
-  if (sec < 5) return 'just now';
-  if (sec < 60) return `${sec}s ago`;
+  if (sec < 5) return t('page.relativeJustNow', 'just now');
+  if (sec < 60) return t('page.relativeSecondsAgo', '{{count}}s ago', { count: sec });
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m ago`;
+  if (min < 60) return t('page.relativeMinutesAgo', '{{count}}m ago', { count: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
+  if (hr < 24) return t('page.relativeHoursAgo', '{{count}}h ago', { count: hr });
   const day = Math.floor(hr / 24);
-  return `${day}d ago`;
+  return t('page.relativeDaysAgo', '{{count}}d ago', { count: day });
 }
 
 function pageLogoFrom(page: PageApiResponse | null): PageLogo | undefined {
@@ -81,14 +83,24 @@ export function PageDetailPage() {
   }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [page, setPage] = useState<PageApiResponse | null>(null);
+  // Latest page, readable from async callbacks without re-deriving their
+  // identity — lets an in-flight save detect that the route changed and avoid
+  // writing the previous page's content onto the newly-opened one.
+  const pageRef = useRef<PageApiResponse | null>(page);
+  pageRef.current = page;
+  // Seed HTML for the editor. Updated only on genuine document swaps (load,
+  // route change, version restore) — never from an autosave round-trip — so the
+  // editor is never reseeded (and the caret never jumps) while the user types.
+  const [seedHtml, setSeedHtml] = useState('<p></p>');
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  useDocumentTitle(loading ? 'Page' : (page?.name ?? 'Page'));
+  useDocumentTitle(loading ? t('page.title', 'Page') : (page?.name ?? t('page.title', 'Page')));
 
   const [titleInput, setTitleInput] = useState('');
   const [titleStatus, setTitleStatus] = useState<SaveStatus>({ kind: 'idle' });
@@ -129,20 +141,25 @@ export function PageDetailPage() {
     async (html: string) => {
       if (!workspaceSlug || !page) return;
       if (html === lastSavedHtml.current) return;
+      const savingPageId = page.id;
       setBodyStatus({ kind: 'saving' });
       try {
         const updated = await pageService.updateContent(workspaceSlug, page.id, html);
+        // The route may have changed while the request was in flight; the save
+        // still persisted, but don't touch the current page's state.
+        if (pageRef.current?.id !== savingPageId) return;
         lastSavedHtml.current = html;
         setPage(updated);
         setBodyStatus({ kind: 'saved', at: Date.now() });
       } catch (err) {
+        if (pageRef.current?.id !== savingPageId) return;
         setBodyStatus({
           kind: 'error',
-          message: err instanceof Error ? err.message : 'Save failed',
+          message: err instanceof Error ? err.message : t('page.saveFailed', 'Save failed'),
         });
       }
     },
-    [workspaceSlug, page],
+    [workspaceSlug, page, t],
   );
 
   const onEditorUpdate = useCallback(
@@ -170,8 +187,8 @@ export function PageDetailPage() {
   }, [saveBodyNow]);
 
   const editor = usePageEditor({
-    initialHtml: page?.description_html ?? '<p></p>',
-    placeholder: 'Start writing… or press “/” for commands',
+    initialHtml: seedHtml,
+    placeholder: t('page.editorPlaceholder', 'Start writing… or press “/” for commands'),
     readOnly: editorReadOnly,
     onUpdate: onEditorUpdate,
     onSaveShortcut,
@@ -196,7 +213,7 @@ export function PageDetailPage() {
         setMentionMembers(
           members.map((m) => ({
             id: m.member_id,
-            label: m.member_display_name || m.member_email || 'Member',
+            label: m.member_display_name || m.member_email || t('common.member', 'Member'),
             avatarUrl: m.member_avatar ?? null,
           })),
         );
@@ -207,7 +224,7 @@ export function PageDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug]);
+  }, [workspaceSlug, t]);
 
   // ----- Initial load ------------------------------------------------------
   useEffect(() => {
@@ -233,6 +250,7 @@ export function PageDetailPage() {
         setProject(p ?? null);
         setPage(pg);
         setTitleInput(pg.name ?? '');
+        setSeedHtml(pg.description_html ?? '<p></p>');
         lastSavedHtml.current = pg.description_html ?? '<p></p>';
         setIsFavorite(favIds.includes(pg.id));
         setNotFound(false);
@@ -256,19 +274,22 @@ export function PageDetailPage() {
       if (!workspaceSlug || !page) return;
       const trimmed = next.trim();
       if (trimmed === page.name) return;
+      const savingPageId = page.id;
       setTitleStatus({ kind: 'saving' });
       try {
         const updated = await pageService.update(workspaceSlug, page.id, { name: trimmed });
+        if (pageRef.current?.id !== savingPageId) return;
         setPage(updated);
         setTitleStatus({ kind: 'saved', at: Date.now() });
       } catch (err) {
+        if (pageRef.current?.id !== savingPageId) return;
         setTitleStatus({
           kind: 'error',
-          message: err instanceof Error ? err.message : 'Save failed',
+          message: err instanceof Error ? err.message : t('page.saveFailed', 'Save failed'),
         });
       }
     },
-    [workspaceSlug, page],
+    [workspaceSlug, page, t],
   );
 
   const onTitleChange = (v: string) => {
@@ -295,19 +316,34 @@ export function PageDetailPage() {
     }
   };
 
-  // Save on unmount/navigation if there are unsaved changes.
+  // Refs to the latest save handlers + title, so the flush effect below can run
+  // them without taking them as deps (which would re-fire it on every autosave).
+  const saveBodyNowRef = useRef(saveBodyNow);
+  saveBodyNowRef.current = saveBodyNow;
+  const saveTitleNowRef = useRef(saveTitleNow);
+  saveTitleNowRef.current = saveTitleNow;
+  const titleInputRef = useRef(titleInput);
+  titleInputRef.current = titleInput;
+
+  // Flush any pending body/title save when the page changes or on unmount, so
+  // edits made in the last debounce window aren't dropped and a stale timer
+  // can't later fire against the newly-opened page. The route guards in
+  // saveBodyNow/saveTitleNow keep the flushed save from overwriting it.
   useEffect(() => {
     return () => {
       if (bodySaveTimer.current) {
         window.clearTimeout(bodySaveTimer.current);
         bodySaveTimer.current = null;
+        const html = editorRef.current?.getHTML();
+        if (html !== undefined) void saveBodyNowRef.current(html);
       }
       if (titleSaveTimer.current) {
         window.clearTimeout(titleSaveTimer.current);
         titleSaveTimer.current = null;
+        void saveTitleNowRef.current(titleInputRef.current);
       }
     };
-  }, []);
+  }, [workspaceSlug, projectId, pageId]);
 
   // Click outside the options dropdown closes it.
   useEffect(() => {
@@ -352,7 +388,7 @@ export function PageDetailPage() {
     if (!workspaceSlug || !projectId || !page) return;
     try {
       const child = await pageService.create(workspaceSlug, {
-        name: 'Untitled sub-page',
+        name: t('page.untitledSubpage', 'Untitled sub-page'),
         project_id: projectId,
         parent_id: page.id,
         access: page.access,
@@ -393,12 +429,14 @@ export function PageDetailPage() {
       const updated = await pageService.restoreVersion(workspaceSlug, page.id, versionId);
       setPage(updated);
       lastSavedHtml.current = updated.description_html ?? '<p></p>';
-      editor?.commands.setContent(updated.description_html ?? '', { emitUpdate: false });
+      // Reseed the editor with the restored content via the seed prop (a genuine
+      // document swap), which the editor's sync effect applies.
+      setSeedHtml(updated.description_html ?? '<p></p>');
       setBodyStatus({ kind: 'saved', at: Date.now() });
       setPreviewVersion(null);
       void loadVersions();
     } catch {
-      setBodyStatus({ kind: 'error', message: 'Restore failed' });
+      setBodyStatus({ kind: 'error', message: t('page.restoreFailed', 'Restore failed') });
     }
   };
 
@@ -483,7 +521,7 @@ export function PageDetailPage() {
       const list = await projectService.list(workspaceSlug);
       setMoveProjects(list.filter((p) => p.id !== projectId));
     } catch {
-      setMoveError('Failed to load projects.');
+      setMoveError(t('page.loadProjectsError', 'Failed to load projects.'));
     } finally {
       setMoveLoading(false);
     }
@@ -502,7 +540,7 @@ export function PageDetailPage() {
         err && typeof err === 'object' && 'response' in err
           ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
           : null;
-      setMoveError(apiError ?? 'Failed to move page.');
+      setMoveError(apiError ?? t('page.movePageError', 'Failed to move page.'));
     } finally {
       setMoveSubmitting(false);
     }
@@ -568,12 +606,17 @@ export function PageDetailPage() {
                 ),
               }
             : { kind: 'idle' as const };
-    if (overall.kind === 'saving') return compose('Saving…', 'text-(--txt-tertiary)');
+    if (overall.kind === 'saving')
+      return compose(t('page.saving', 'Saving…'), 'text-(--txt-tertiary)');
     if (overall.kind === 'saved')
-      return compose(`Saved · ${formatRelative(overall.at)}`, 'text-(--txt-tertiary)');
-    if (overall.kind === 'error') return compose('Save failed', 'text-(--danger-default)');
+      return compose(
+        t('page.savedAt', 'Saved · {{time}}', { time: formatRelative(overall.at, t) }),
+        'text-(--txt-tertiary)',
+      );
+    if (overall.kind === 'error')
+      return compose(t('page.saveFailed', 'Save failed'), 'text-(--danger-default)');
     return null;
-  }, [titleStatus, bodyStatus]);
+  }, [titleStatus, bodyStatus, t]);
 
   // Page breadcrumb chunk — just the page-name (and tiny emoji) suffix; the
   // workspace/project portion is rendered by `PageDetailHeader` in PageHeader.
@@ -582,7 +625,9 @@ export function PageDetailPage() {
       {logo?.emoji?.value ? (
         <span className="text-base leading-none">{logo.emoji.value}</span>
       ) : null}
-      <span className="truncate font-medium text-(--txt-primary)">{page.name || 'Untitled'}</span>
+      <span className="truncate font-medium text-(--txt-primary)">
+        {page.name || t('page.untitled', 'Untitled')}
+      </span>
       {statusPill ? <span className="ml-2 shrink-0">{statusPill}</span> : null}
     </span>
   ) : null;
@@ -594,47 +639,55 @@ export function PageDetailPage() {
     <>
       {isArchived ? (
         <span className="rounded border border-(--warning-300) bg-(--warning-50) px-1.5 py-0.5 text-[11px] font-medium text-(--warning-default)">
-          Archived
+          {t('page.archived', 'Archived')}
         </span>
       ) : null}
       {canEditMeta ? (
-        <Tooltip content={isLocked ? 'Unlock page' : 'Lock page'}>
+        <Tooltip
+          content={isLocked ? t('page.unlockPage', 'Unlock page') : t('page.lockPage', 'Lock page')}
+        >
           <button
             type="button"
             onClick={onToggleLock}
-            aria-label={isLocked ? 'Unlock page' : 'Lock page'}
+            aria-label={
+              isLocked ? t('page.unlockPage', 'Unlock page') : t('page.lockPage', 'Lock page')
+            }
             className="grid size-7 place-items-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
           >
             {isLocked ? <Unlock size={14} /> : <Lock size={14} />}
           </button>
         </Tooltip>
       ) : null}
-      <Tooltip content={linkCopied ? 'Copied!' : 'Copy link'}>
+      <Tooltip content={linkCopied ? t('page.copied', 'Copied!') : t('page.copyLink', 'Copy link')}>
         <button
           type="button"
           onClick={onCopyLink}
-          aria-label="Copy link"
+          aria-label={t('page.copyLink', 'Copy link')}
           className="grid size-7 place-items-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
         >
           <Link2 size={14} />
         </button>
       </Tooltip>
-      <Tooltip content={isFavorite ? 'Unfavorite' : 'Favorite'}>
+      <Tooltip
+        content={isFavorite ? t('page.unfavorite', 'Unfavorite') : t('page.favorite', 'Favorite')}
+      >
         <button
           type="button"
           onClick={onToggleFavorite}
-          aria-label={isFavorite ? 'Unfavorite' : 'Favorite'}
+          aria-label={
+            isFavorite ? t('page.unfavorite', 'Unfavorite') : t('page.favorite', 'Favorite')
+          }
           className="grid size-7 place-items-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
         >
           <Star size={14} className={isFavorite ? 'fill-amber-500 text-amber-500' : ''} />
         </button>
       </Tooltip>
       <div ref={optionsRef} className="relative">
-        <Tooltip content="More options">
+        <Tooltip content={t('common.moreOptions', 'More options')}>
           <button
             type="button"
             onClick={() => setOptionsOpen((v) => !v)}
-            aria-label="More options"
+            aria-label={t('common.moreOptions', 'More options')}
             className="grid size-7 place-items-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
           >
             <MoreHorizontal size={14} />
@@ -650,14 +703,14 @@ export function PageDetailPage() {
               }}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             >
-              <ExternalLink size={13} /> Open in new tab
+              <ExternalLink size={13} /> {t('common.openInNewTab', 'Open in new tab')}
             </button>
             <button
               type="button"
               onClick={() => void onDuplicate()}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
             >
-              <Copy size={13} /> Make a copy
+              <Copy size={13} /> {t('page.makeCopy', 'Make a copy')}
             </button>
             {canEditMeta && !isArchived ? (
               <button
@@ -665,7 +718,7 @@ export function PageDetailPage() {
                 onClick={() => void openMove()}
                 className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
               >
-                <FolderInput size={13} /> Move to project
+                <FolderInput size={13} /> {t('page.moveToProject', 'Move to project')}
               </button>
             ) : null}
             {canEditMeta && !isArchived ? (
@@ -674,7 +727,10 @@ export function PageDetailPage() {
                 onClick={() => void onToggleAccess()}
                 className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
               >
-                <Lock size={13} /> {isPrivate ? 'Make public' : 'Make private'}
+                <Lock size={13} />{' '}
+                {isPrivate
+                  ? t('page.makePublic', 'Make public')
+                  : t('page.makePrivate', 'Make private')}
               </button>
             ) : null}
             {canEditMeta ? (
@@ -684,7 +740,7 @@ export function PageDetailPage() {
                 className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
               >
                 {isArchived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
-                {isArchived ? 'Restore' : 'Archive'}
+                {isArchived ? t('page.restore', 'Restore') : t('page.archive', 'Archive')}
               </button>
             ) : null}
             {canDelete ? (
@@ -698,7 +754,7 @@ export function PageDetailPage() {
                   }}
                   className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-(--danger-default) hover:bg-(--danger-50)"
                 >
-                  <Trash2 size={13} /> Delete
+                  <Trash2 size={13} /> {t('common.delete', 'Delete')}
                 </button>
               </>
             ) : null}
@@ -713,20 +769,20 @@ export function PageDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-        Loading…
+        {t('common.loading', 'Loading…')}
       </div>
     );
   }
   if (notFound || !workspace || !project || !page) {
     return (
       <div className="space-y-3 p-6 text-(--txt-secondary)">
-        <p>Page not found.</p>
+        <p>{t('page.notFound', 'Page not found.')}</p>
         {workspaceSlug && projectId ? (
           <Link
             to={`/${workspaceSlug}/projects/${projectId}/pages`}
             className="text-(--txt-accent-primary) underline"
           >
-            Back to Pages
+            {t('page.backToPages', 'Back to Pages')}
           </Link>
         ) : null}
       </div>
@@ -735,11 +791,21 @@ export function PageDetailPage() {
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
   const panelToggle = (
-    <Tooltip content={sidebarOpen ? 'Hide side panel' : 'Show side panel'}>
+    <Tooltip
+      content={
+        sidebarOpen
+          ? t('page.hideSidePanel', 'Hide side panel')
+          : t('page.showSidePanel', 'Show side panel')
+      }
+    >
       <button
         type="button"
         onClick={() => switchSidePanelTo(sidebarOpen ? 'closed' : 'outline')}
-        aria-label={sidebarOpen ? 'Hide side panel' : 'Show side panel'}
+        aria-label={
+          sidebarOpen
+            ? t('page.hideSidePanel', 'Hide side panel')
+            : t('page.showSidePanel', 'Show side panel')
+        }
         className="grid size-7 place-items-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
       >
         {sidebarOpen ? <PanelRightClose size={14} /> : <PanelRight size={14} />}
@@ -768,11 +834,14 @@ export function PageDetailPage() {
           {/* Notices */}
           {isArchived ? (
             <div className="mx-(--padding-page) mt-4 rounded border border-(--warning-300) bg-(--warning-50) px-3 py-2 text-sm text-(--warning-default)">
-              This page is archived and read-only. Restore it from the menu to edit.
+              {t(
+                'page.archivedNotice',
+                'This page is archived and read-only. Restore it from the menu to edit.',
+              )}
             </div>
           ) : isLocked && !isOwner ? (
             <div className="mx-(--padding-page) mt-4 rounded border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-secondary)">
-              The owner has locked this page. You can read but not edit.
+              {t('page.lockedNotice', 'The owner has locked this page. You can read but not edit.')}
             </div>
           ) : null}
 
@@ -792,7 +861,7 @@ export function PageDetailPage() {
               onChange={(e) => onTitleChange(e.target.value)}
               onBlur={onTitleBlur}
               onKeyDown={onTitleKeyDown}
-              placeholder="Untitled"
+              placeholder={t('page.untitled', 'Untitled')}
               rows={1}
               className="block w-full resize-none border-0 bg-transparent text-3xl leading-tight font-bold tracking-tight text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none disabled:opacity-80"
             />
@@ -818,7 +887,7 @@ export function PageDetailPage() {
                     : 'text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)',
                 )}
               >
-                <ListTree size={11} className="mr-1 inline-block" /> Outline
+                <ListTree size={11} className="mr-1 inline-block" /> {t('page.outline', 'Outline')}
               </button>
               <button
                 type="button"
@@ -830,7 +899,7 @@ export function PageDetailPage() {
                     : 'text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)',
                 )}
               >
-                Sub-pages
+                {t('page.subPages', 'Sub-pages')}
               </button>
               <button
                 type="button"
@@ -842,7 +911,7 @@ export function PageDetailPage() {
                     : 'text-(--txt-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)',
                 )}
               >
-                <History size={11} className="mr-1 inline-block" /> History
+                <History size={11} className="mr-1 inline-block" /> {t('page.history', 'History')}
               </button>
             </div>
 
@@ -858,12 +927,16 @@ export function PageDetailPage() {
                   onClick={() => void onAddSubpage()}
                   className="mb-2 inline-flex w-full items-center justify-center gap-1 rounded border border-dashed border-(--border-subtle) px-2 py-1.5 text-xs text-(--txt-secondary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary) disabled:opacity-50"
                 >
-                  <Plus size={12} /> Add sub-page
+                  <Plus size={12} /> {t('page.addSubPage', 'Add sub-page')}
                 </button>
                 {children === null ? (
-                  <p className="px-2 py-3 text-xs text-(--txt-tertiary)">Loading…</p>
+                  <p className="px-2 py-3 text-xs text-(--txt-tertiary)">
+                    {t('common.loading', 'Loading…')}
+                  </p>
                 ) : children.length === 0 ? (
-                  <p className="px-2 py-3 text-xs text-(--txt-tertiary)">No sub-pages.</p>
+                  <p className="px-2 py-3 text-xs text-(--txt-tertiary)">
+                    {t('page.noSubPages', 'No sub-pages.')}
+                  </p>
                 ) : (
                   <ul className="space-y-0.5">
                     {children.map((c) => {
@@ -887,7 +960,9 @@ export function PageDetailPage() {
                                 <FileText size={12} />
                               )}
                             </span>
-                            <span className="truncate">{c.name || 'Untitled'}</span>
+                            <span className="truncate">
+                              {c.name || t('page.untitled', 'Untitled')}
+                            </span>
                           </Link>
                         </li>
                       );
@@ -898,9 +973,13 @@ export function PageDetailPage() {
             ) : (
               <div className="min-h-0 flex-1 overflow-y-auto p-2">
                 {versions === null ? (
-                  <p className="px-2 py-3 text-xs text-(--txt-tertiary)">Loading…</p>
+                  <p className="px-2 py-3 text-xs text-(--txt-tertiary)">
+                    {t('common.loading', 'Loading…')}
+                  </p>
                 ) : versions.length === 0 ? (
-                  <p className="px-2 py-3 text-xs text-(--txt-tertiary)">No versions yet.</p>
+                  <p className="px-2 py-3 text-xs text-(--txt-tertiary)">
+                    {t('page.noVersions', 'No versions yet.')}
+                  </p>
                 ) : (
                   <ul className="space-y-0.5">
                     {versions.map((v) => (
@@ -919,7 +998,8 @@ export function PageDetailPage() {
                             })}
                           </span>
                           <span className="block truncate text-xs text-(--txt-tertiary)">
-                            {v.description_stripped?.slice(0, 60) || '(empty)'}
+                            {v.description_stripped?.slice(0, 60) ||
+                              t('page.emptyVersion', '(empty)')}
                           </span>
                         </button>
                       </li>
@@ -936,7 +1016,9 @@ export function PageDetailPage() {
         <Modal
           open
           onClose={() => setPreviewVersion(null)}
-          title={`Version preview · ${new Date(previewVersion.last_saved_at).toLocaleString()}`}
+          title={t('page.versionPreviewTitle', 'Version preview · {{time}}', {
+            time: new Date(previewVersion.last_saved_at).toLocaleString(),
+          })}
         >
           <div className="max-w-2xl space-y-4">
             <div className="flex items-center justify-end">
@@ -946,7 +1028,7 @@ export function PageDetailPage() {
                 disabled={!canEditContent}
                 onClick={() => void onRestoreVersion(previewVersion.id)}
               >
-                Restore this version
+                {t('page.restoreThisVersion', 'Restore this version')}
               </Button>
             </div>
             <div
@@ -958,10 +1040,17 @@ export function PageDetailPage() {
       ) : null}
 
       {moveOpen ? (
-        <Modal open onClose={() => setMoveOpen(false)} title="Move page to project">
+        <Modal
+          open
+          onClose={() => setMoveOpen(false)}
+          title={t('page.movePageModalTitle', 'Move page to project')}
+        >
           <div className="max-w-md space-y-3">
             <p className="text-sm text-(--txt-tertiary)">
-              The page and its sub-pages move to the project you choose.
+              {t(
+                'page.movePageModalDescription',
+                'The page and its sub-pages move to the project you choose.',
+              )}
             </p>
             {moveError ? (
               <p className="rounded-(--radius-md) bg-(--bg-danger-subtle) px-3 py-2 text-sm text-(--txt-danger)">
@@ -969,7 +1058,9 @@ export function PageDetailPage() {
               </p>
             ) : null}
             {moveLoading ? (
-              <p className="py-6 text-center text-sm text-(--txt-tertiary)">Loading projects…</p>
+              <p className="py-6 text-center text-sm text-(--txt-tertiary)">
+                {t('page.loadingProjects', 'Loading projects…')}
+              </p>
             ) : moveProjects.length > 0 ? (
               <ul className="max-h-72 space-y-1 overflow-y-auto">
                 {moveProjects.map((p) => (
@@ -990,7 +1081,7 @@ export function PageDetailPage() {
               </ul>
             ) : !moveError ? (
               <p className="py-6 text-center text-sm text-(--txt-tertiary)">
-                No other projects available.
+                {t('page.noOtherProjects', 'No other projects available.')}
               </p>
             ) : null}
           </div>
@@ -998,17 +1089,24 @@ export function PageDetailPage() {
       ) : null}
 
       {confirmingDelete ? (
-        <Modal open onClose={() => setConfirmingDelete(false)} title="Delete page?">
+        <Modal
+          open
+          onClose={() => setConfirmingDelete(false)}
+          title={t('page.deleteModalTitle', 'Delete page?')}
+        >
           <div className="max-w-md space-y-4">
             <p className="text-sm text-(--txt-secondary)">
-              This permanently removes the page and its history. This cannot be undone.
+              {t(
+                'page.deleteModalDescription',
+                'This permanently removes the page and its history. This cannot be undone.',
+              )}
             </p>
             <div className="flex justify-end gap-2">
               <Button size="sm" variant="secondary" onClick={() => setConfirmingDelete(false)}>
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
               <Button size="sm" variant="primary" onClick={() => void onDelete()}>
-                Delete
+                {t('common.delete', 'Delete')}
               </Button>
             </div>
           </div>

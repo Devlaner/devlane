@@ -1,3 +1,4 @@
+import { Trans, useTranslation } from 'react-i18next';
 import type { NotificationApiResponse } from '../../api/types';
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
  * so we never have to interpret message client-side just to draw a row.
  */
 export function NotificationContent({ notification }: Props) {
+  const { t } = useTranslation();
   const { message, sender, title } = notification;
   // Legacy / `system` rows may have no message, or a partial one without the
   // structured actor/issue fields. In that case fall back to the server-built
@@ -26,8 +28,12 @@ export function NotificationContent({ notification }: Props) {
     case 'assigned':
       return (
         <p className="text-sm text-(--txt-primary)">
-          <strong>{actor.display_name}</strong> assigned you to{' '}
-          <span className="font-medium">{issueRef}</span> — {issue.name}
+          <Trans
+            i18nKey="notifications.assigned"
+            defaults="<b>{{actor}}</b> assigned you to <ref>{{issueRef}}</ref> — {{name}}"
+            values={{ actor: actor.display_name, issueRef, name: issue.name }}
+            components={{ b: <strong />, ref: <span className="font-medium" /> }}
+          />
         </p>
       );
 
@@ -35,8 +41,12 @@ export function NotificationContent({ notification }: Props) {
       return (
         <div className="space-y-2 text-sm text-(--txt-primary)">
           <p>
-            <strong>{actor.display_name}</strong> mentioned you in{' '}
-            <span className="font-medium">{issueRef}</span> — {issue.name}
+            <Trans
+              i18nKey="notifications.mentioned"
+              defaults="<b>{{actor}}</b> mentioned you in <ref>{{issueRef}}</ref> — {{name}}"
+              values={{ actor: actor.display_name, issueRef, name: issue.name }}
+              components={{ b: <strong />, ref: <span className="font-medium" /> }}
+            />
             {context ? <span className="text-(--txt-tertiary)"> ({context})</span> : null}
           </p>
           {comment_preview ? (
@@ -51,8 +61,12 @@ export function NotificationContent({ notification }: Props) {
       return (
         <div className="space-y-2 text-sm text-(--txt-primary)">
           <p>
-            <strong>{actor.display_name}</strong> commented on{' '}
-            <span className="font-medium">{issueRef}</span> — {issue.name}
+            <Trans
+              i18nKey="notifications.commented"
+              defaults="<b>{{actor}}</b> commented on <ref>{{issueRef}}</ref> — {{name}}"
+              values={{ actor: actor.display_name, issueRef, name: issue.name }}
+              components={{ b: <strong />, ref: <span className="font-medium" /> }}
+            />
           </p>
           {comment_preview ? (
             <p className="rounded border border-(--border-subtle) bg-(--bg-surface-1) p-3 text-(--txt-secondary)">
@@ -65,18 +79,23 @@ export function NotificationContent({ notification }: Props) {
     case 'state_changed':
       return (
         <p className="text-sm text-(--txt-primary)">
-          <strong>{actor.display_name}</strong> moved{' '}
-          <span className="font-medium">{issueRef}</span>
+          <Trans
+            i18nKey="notifications.stateChanged"
+            defaults="<b>{{actor}}</b> moved <ref>{{issueRef}}</ref>"
+            values={{ actor: actor.display_name, issueRef }}
+            components={{ b: <strong />, ref: <span className="font-medium" /> }}
+          />
           {before ? (
             <>
               {' '}
-              from <span className="text-(--txt-secondary)">{before}</span>
+              {t('notifications.stateChangedFrom', 'from')}{' '}
+              <span className="text-(--txt-secondary)">{before}</span>
             </>
           ) : null}
           {after ? (
             <>
               {' '}
-              to <span className="font-medium">{after}</span>
+              {t('notifications.stateChangedTo', 'to')} <span className="font-medium">{after}</span>
             </>
           ) : null}
         </p>
@@ -85,8 +104,12 @@ export function NotificationContent({ notification }: Props) {
     case 'subscribed':
       return (
         <p className="text-sm text-(--txt-primary)">
-          <strong>{actor.display_name}</strong> updated{' '}
-          <span className="font-medium">{issueRef}</span>
+          <Trans
+            i18nKey="notifications.subscribed"
+            defaults="<b>{{actor}}</b> updated <ref>{{issueRef}}</ref>"
+            values={{ actor: actor.display_name, issueRef }}
+            components={{ b: <strong />, ref: <span className="font-medium" /> }}
+          />
           {before && after ? (
             <>
               : {before} → {after}

@@ -3,9 +3,14 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
+	"time"
 
+	"github.com/Devlaner/devlane/api/internal/crypto"
 	"github.com/Devlaner/devlane/api/internal/mail"
+	"github.com/Devlaner/devlane/api/internal/store"
+	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -144,7 +149,7 @@ func HandleSendEmail(log *slog.Logger, sender func(ctx context.Context, to, subj
 }
 
 // HandleWebhook parses webhook_deliver task and runs the given deliverer.
-func HandleWebhook(deliverer func(ctx context.Context, url, secret, event string, payload map[string]interface{}) error) TaskHandler {
+func HandleWebhook(deliverer func(ctx context.Context, p WebhookPayload) error) TaskHandler {
 	return func(ctx context.Context, queue string, body []byte) error {
 		var msg struct {
 			Type    string         `json:"type"`
@@ -156,7 +161,80 @@ func HandleWebhook(deliverer func(ctx context.Context, url, secret, event string
 		if msg.Type != TaskWebhookDeliver {
 			return nil
 		}
-		return deliverer(ctx, msg.Payload.URL, msg.Payload.Secret, msg.Payload.Event, msg.Payload.Payload)
+		return deliverer(ctx, msg.Payload)
+	}
+}
+
+// HandleSlackPost parses slack_post task and runs the given poster.
+func HandleSlackPost(log *slog.Logger, wintegStore *store.WorkspaceIntegrationStore, poster func(ctx context.Context, token, channelID, text string, blocks interface{}) error) TaskHandler {
+	return func(ctx context.Context, queue string, body []byte) error {
+		var msg struct {
+			Type    string           `json:"type"`
+			Payload SlackPostPayload `json:"payload"`
+		}
+		if err := json.Unmarshal(body, &msg); err != nil {
+			return err
+		}
+		if msg.Type != TaskSlackPost {
+			return nil
+		}
+		p := &msg.Payload
+		if log != nil {
+			log.Info("queue processing slack_post", "channel", p.ChannelID)
+		}
+
+		wiID, err := uuid.Parse(p.WorkspaceIntegrationID)
+		if err != nil {
+			return fmt.Errorf("invalid workspace integration ID: %w", err)
+		}
+
+		winteg, err := wintegStore.GetByID(ctx, wiID)
+		if err != nil {
+			return fmt.Errorf("get workspace integration: %w", err)
+		}
+		if winteg == nil || winteg.Config == nil {
+			return fmt.Errorf("workspace integration not found or unconfigured")
+		}
+
+		rawToken, ok := winteg.Config["bot_token"].(string)
+		if !ok || rawToken == "" {
+			return fmt.Errorf("no bot_token in workspace integration")
+		}
+		token := crypto.DecryptOrPlain(rawToken)
+		if token == "" {
+			return fmt.Errorf("failed to decrypt workspace integration bot token")
+		}
+
+		postCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
+		err = poster(postCtx, token, p.ChannelID, p.Text, p.Blocks)
+		if err != nil {
+			if log != nil {
+				log.Error("slack post failed", "channel", p.ChannelID, "error", err)
+			}
+			return err
+		}
+		if log != nil {
+			log.Info("slack post succeeded", "channel", p.ChannelID)
+		}
+		return nil
+	}
+}
+
+// HandleImport parses an import_run task and runs the given importer.
+func HandleImport(runner func(ctx context.Context, importerID string) error) TaskHandler {
+	return func(ctx context.Context, queue string, body []byte) error {
+		var msg struct {
+			Type    string        `json:"type"`
+			Payload ImportPayload `json:"payload"`
+		}
+		if err := json.Unmarshal(body, &msg); err != nil {
+			return err
+		}
+		if msg.Type != TaskImportRun {
+			return nil
+		}
+		return runner(ctx, msg.Payload.ImporterID)
 	}
 }
 
@@ -170,14 +248,13 @@ func NoopEmailSender(log *slog.Logger) func(ctx context.Context, to, subject, bo
 	}
 }
 
-// NoopWebhookDeliverer is a no-op deliverer (log only). Replace with real HTTP POST in production.
-func NoopWebhookDeliverer(log *slog.Logger) func(ctx context.Context, url, secret, event string, payload map[string]interface{}) error {
-	return func(ctx context.Context, url, secret, event string, payload map[string]interface{}) error {
+// NoopWebhookDeliverer is a no-op deliverer (log only). Used as a fallback when
+// no real deliverer is wired.
+func NoopWebhookDeliverer(log *slog.Logger) func(ctx context.Context, p WebhookPayload) error {
+	return func(ctx context.Context, p WebhookPayload) error {
 		if log != nil {
-			log.Info("webhook would be delivered", "url", url, "event", event)
+			log.Info("webhook would be delivered", "url", p.URL, "event", p.Event)
 		}
-		_ = secret
-		_ = payload
 		return nil
 	}
 }

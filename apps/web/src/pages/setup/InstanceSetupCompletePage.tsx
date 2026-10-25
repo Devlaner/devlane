@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button, Card, CardContent } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
@@ -22,7 +23,8 @@ const IconWorkspace = () => (
 
 export function InstanceSetupCompletePage() {
   const navigate = useNavigate();
-  useDocumentTitle('Setup complete');
+  const { t } = useTranslation();
+  useDocumentTitle(t('setup.complete.documentTitle', 'Setup complete'));
 
   const handleCreateWorkspace = () => {
     navigate('/instance-admin/workspace/create', {
@@ -41,17 +43,21 @@ export function InstanceSetupCompletePage() {
         <CardContent className="p-6">
           <div className="flex gap-6">
             <div className="min-w-0 flex-1">
-              <h2 className="text-xl font-semibold text-(--txt-primary)">Create workspace</h2>
+              <h2 className="text-xl font-semibold text-(--txt-primary)">
+                {t('setup.complete.title', 'Create workspace')}
+              </h2>
               <p className="mt-2 text-sm text-(--txt-secondary)">
-                Instance setup is complete. Welcome to your Devlane instance. Start your journey by
-                creating your first workspace.
+                {t(
+                  'setup.complete.description',
+                  'Instance setup is complete. Welcome to your Devlane instance. Start your journey by creating your first workspace.',
+                )}
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Button type="button" onClick={handleCreateWorkspace} size="lg">
-                  Create workspace
+                  {t('setup.complete.createWorkspace', 'Create workspace')}
                 </Button>
                 <Button variant="secondary" onClick={handleClose} size="lg" type="button">
-                  Close
+                  {t('common.close', 'Close')}
                 </Button>
               </div>
             </div>

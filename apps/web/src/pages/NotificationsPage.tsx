@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Archive, ArchiveRestore } from 'lucide-react';
 import { Avatar, Button } from '../components/ui';
@@ -25,9 +26,9 @@ function formatTimeAgo(iso: string): string {
   return 'less than a minute ago';
 }
 
-function rowLabels(n: NotificationApiResponse) {
+function rowLabels(n: NotificationApiResponse, t: (key: string, def: string) => string) {
   // System / legacy rows may have an empty or partial message payload.
-  const actor = n.message?.actor?.display_name ?? 'Someone';
+  const actor = n.message?.actor?.display_name ?? t('notifications.actorFallback', 'Someone');
   const issue = n.message?.issue;
   const ref =
     issue?.project_identifier && issue.sequence_id != null
@@ -44,6 +45,7 @@ const TABS: { id: InboxTab; label: string }[] = [
 ];
 
 export function NotificationsPage() {
+  const { t } = useTranslation();
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
   const navigate = useNavigate();
   const [inboxTab, setInboxTab] = useState<InboxTab>('all');
@@ -55,7 +57,7 @@ export function NotificationsPage() {
   // effect below skips them so the toggle actually sticks.
   const [explicitUnreadIds, setExplicitUnreadIds] = useState<Set<string>>(new Set());
 
-  useDocumentTitle('Inbox');
+  useDocumentTitle(t('notifications.documentTitle', 'Inbox'));
 
   useEffect(() => {
     if (!workspaceSlug) {
@@ -218,22 +220,35 @@ export function NotificationsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-        Loading…
+        {t('common.loading', 'Loading…')}
       </div>
     );
   }
   if (!workspace) {
-    return <div className="p-4 text-(--txt-secondary)">Workspace not found.</div>;
+    return (
+      <div className="p-4 text-(--txt-secondary)">
+        {t('common.workspaceNotFound', 'Workspace not found.')}
+      </div>
+    );
   }
 
   const listWidth = 'min(420px, 35%)';
 
   const emptyMessage =
     inboxTab === 'mentions'
-      ? 'No mentions yet. When someone @-mentions you in an issue or comment, it shows here.'
+      ? t(
+          'notifications.empty.mentions',
+          'No mentions yet. When someone @-mentions you in an issue or comment, it shows here.',
+        )
       : inboxTab === 'archived'
-        ? 'No archived notifications. Archive a row from the inbox to declutter without losing it.'
-        : 'Inbox zero. Notifications about issues you’re involved with will land here.';
+        ? t(
+            'notifications.empty.archived',
+            'No archived notifications. Archive a row from the inbox to declutter without losing it.',
+          )
+        : t(
+            'notifications.empty.all',
+            'Inbox zero. Notifications about issues you’re involved with will land here.',
+          );
 
   return (
     <div className="flex h-full min-h-0 w-full">
@@ -244,27 +259,27 @@ export function NotificationsPage() {
         <div className="shrink-0 border-b border-(--border-subtle) px-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex gap-1">
-              {TABS.map((t) => (
+              {TABS.map((tab) => (
                 <button
-                  key={t.id}
+                  key={tab.id}
                   type="button"
                   onClick={() => {
-                    setInboxTab(t.id);
+                    setInboxTab(tab.id);
                     setSelectedId(null);
                   }}
                   className={`border-b-2 px-4 py-2.5 text-sm font-medium ${
-                    inboxTab === t.id
+                    inboxTab === tab.id
                       ? 'border-(--brand-default) text-(--txt-primary)'
                       : 'border-transparent text-(--txt-secondary) hover:text-(--txt-primary)'
                   }`}
                 >
-                  {t.label}
+                  {t(`notifications.tab.${tab.id}`, tab.label)}
                 </button>
               ))}
             </div>
             {inboxTab !== 'archived' ? (
               <Button size="sm" variant="secondary" onClick={onMarkAllRead}>
-                Mark all read
+                {t('notifications.markAllRead', 'Mark all read')}
               </Button>
             ) : null}
           </div>
@@ -276,7 +291,7 @@ export function NotificationsPage() {
           ) : (
             <ul className="divide-y divide-(--border-subtle)">
               {notifications.map((n) => {
-                const { actor, ref, issueName } = rowLabels(n);
+                const { actor, ref, issueName } = rowLabels(n, t);
                 const isSelected = selectedId === n.id;
                 const isArchived = !!n.archived_at;
                 return (
@@ -300,15 +315,23 @@ export function NotificationsPage() {
                         <span className="block">{formatTimeAgo(n.created_at)}</span>
                         {!n.read_at && !isArchived && (
                           <span className="mt-1 inline-block rounded bg-(--brand-200) px-2 py-0.5 text-[10px] font-medium text-(--brand-default)">
-                            New
+                            {t('notifications.new', 'New')}
                           </span>
                         )}
                       </span>
                     </button>
                     <button
                       type="button"
-                      aria-label={isArchived ? 'Unarchive' : 'Archive'}
-                      title={isArchived ? 'Unarchive' : 'Archive'}
+                      aria-label={
+                        isArchived
+                          ? t('common.unarchive', 'Unarchive')
+                          : t('common.archive', 'Archive')
+                      }
+                      title={
+                        isArchived
+                          ? t('common.unarchive', 'Unarchive')
+                          : t('common.archive', 'Archive')
+                      }
                       onClick={(e) => {
                         e.stopPropagation();
                         if (isArchived) {
@@ -334,7 +357,7 @@ export function NotificationsPage() {
       <div className="min-w-0 flex-1 bg-(--bg-canvas)">
         {!selected ? (
           <div className="flex h-full items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-            Select a notification to see details.
+            {t('notifications.selectPrompt', 'Select a notification to see details.')}
           </div>
         ) : (
           <div className="h-full overflow-y-auto px-(--padding-page) py-6">
@@ -349,7 +372,9 @@ export function NotificationsPage() {
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <Button size="sm" variant="secondary" onClick={onToggleReadOnSelected}>
-                  {selected.read_at ? 'Mark unread' : 'Mark read'}
+                  {selected.read_at
+                    ? t('notifications.markUnread', 'Mark unread')
+                    : t('notifications.markRead', 'Mark read')}
                 </Button>
                 <SnoozeMenu
                   snoozedUntil={selected.snoozed_till ?? null}
@@ -363,11 +388,13 @@ export function NotificationsPage() {
                     selected.archived_at ? onUnarchiveRow(selected.id) : onArchiveRow(selected.id)
                   }
                 >
-                  {selected.archived_at ? 'Unarchive' : 'Archive'}
+                  {selected.archived_at
+                    ? t('common.unarchive', 'Unarchive')
+                    : t('common.archive', 'Archive')}
                 </Button>
                 {selected.message?.issue?.id && selected.project_id ? (
                   <Button size="sm" variant="primary" onClick={onOpenIssue}>
-                    Open issue
+                    {t('notifications.openIssue', 'Open issue')}
                   </Button>
                 ) : null}
               </div>

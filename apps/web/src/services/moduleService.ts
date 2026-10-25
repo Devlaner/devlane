@@ -19,7 +19,28 @@ export interface CreateModulePayload {
   member_ids?: string[];
 }
 
+/** Child-issue counts for a module, grouped by state group (plus a total). */
+export interface ModuleProgress {
+  backlog: number;
+  unstarted: number;
+  started: number;
+  completed: number;
+  cancelled: number;
+  total: number;
+}
+
 export const moduleService = {
+  /** Per-module progress for the whole project, keyed by module id. */
+  async listProgress(
+    workspaceSlug: string,
+    projectId: string,
+  ): Promise<Record<string, ModuleProgress>> {
+    const { data } = await apiClient.get<Record<string, ModuleProgress>>(
+      `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/modules-progress/`,
+    );
+    return data ?? {};
+  },
+
   async list(workspaceSlug: string, projectId: string): Promise<ModuleApiResponse[]> {
     const { data } = await apiClient.get<ModuleApiResponse[]>(
       `/api/workspaces/${encodeURIComponent(workspaceSlug)}/projects/${encodeURIComponent(projectId)}/modules/`,

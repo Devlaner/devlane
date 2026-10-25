@@ -1,3 +1,4 @@
+import { Trans, useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 interface AuthPageShellProps {
@@ -7,6 +8,9 @@ interface AuthPageShellProps {
 }
 
 export function AuthPageShell({ mode, enableSignup = true, children }: AuthPageShellProps) {
+  const { t } = useTranslation();
+  const action =
+    mode === 'sign-in' ? t('auth.signingIn', 'signing in') : t('auth.signingUp', 'signing up');
   return (
     <div className="relative flex min-h-screen w-full flex-col items-center overflow-y-auto bg-(--bg-canvas) px-8 pt-6 pb-10">
       <div className="sticky top-0 flex w-full flex-shrink-0 items-center justify-between gap-6">
@@ -29,8 +33,11 @@ export function AuthPageShell({ mode, enableSignup = true, children }: AuthPageS
         {children}
       </div>
       <p className="mt-6 text-center text-xs text-(--txt-tertiary)">
-        By {mode === 'sign-in' ? 'signing in' : 'signing up'}, you agree to our terms of service and
-        privacy policy.
+        <Trans
+          i18nKey="auth.termsNotice"
+          defaults="By {{action}}, you agree to our terms of service and privacy policy."
+          values={{ action }}
+        />
       </p>
     </div>
   );

@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, Modal } from '../../ui';
 import { IconChevronDown, IconPlus } from '../icons';
 
@@ -28,18 +29,21 @@ export function InviteModal({
   inviting,
   submitInviteModal,
 }: InviteModalProps) {
+  const { t } = useTranslation();
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Invite people to collaborate"
+      title={t('settings.invite.title', 'Invite people to collaborate')}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button type="submit" form="invite-collaborators-form" disabled={inviting}>
-            {inviting ? 'Sending…' : 'Send invitations'}
+            {inviting
+              ? t('settings.invite.sending', 'Sending…')
+              : t('settings.invite.send', 'Send invitations')}
           </Button>
         </>
       }
@@ -53,8 +57,11 @@ export function InviteModal({
       >
         <p className="mb-4 text-sm text-(--txt-secondary)">
           {inviteTarget === 'project'
-            ? 'Invite people to this project.'
-            : 'Invite people to collaborate on your workspace.'}
+            ? t('settings.invite.subtitleProject', 'Invite people to this project.')
+            : t(
+                'settings.invite.subtitleWorkspace',
+                'Invite people to collaborate on your workspace.',
+              )}
         </p>
         <div className="space-y-3">
           {inviteRows.map((row) => (
@@ -72,7 +79,7 @@ export function InviteModal({
                   e.preventDefault();
                   void submitInviteModal();
                 }}
-                placeholder="name@company.com"
+                placeholder={t('settings.invite.emailPlaceholder', 'name@company.com')}
                 className="min-w-[200px] flex-1 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
               />
               <div className="relative min-w-[100px]">
@@ -93,8 +100,8 @@ export function InviteModal({
                   }}
                   className="w-full appearance-none rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-2 pl-2.5 pr-7 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
                 >
-                  <option value="member">Member</option>
-                  <option value="admin">Admin</option>
+                  <option value="member">{t('settings.invite.roleMember', 'Member')}</option>
+                  <option value="admin">{t('settings.invite.roleAdmin', 'Admin')}</option>
                 </select>
                 <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-(--txt-icon-tertiary)">
                   <IconChevronDown />
@@ -113,7 +120,7 @@ export function InviteModal({
             className="flex items-center gap-1.5 text-sm font-medium text-(--txt-accent-primary) hover:underline"
           >
             <IconPlus />
-            Add more
+            {t('settings.invite.addMore', 'Add more')}
           </button>
         </div>
       </form>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { Button, Card, CardContent } from '../components/ui';
 import { workspaceService } from '../services/workspaceService';
@@ -15,6 +16,7 @@ import type {
 } from '../api/types';
 
 export function EpicsPage() {
+  const { t } = useTranslation();
   const { workspaceSlug, projectId } = useParams<{ workspaceSlug: string; projectId: string }>();
   const [loading, setLoading] = useState(true);
   const [workspace, setWorkspace] = useState<WorkspaceApiResponse | null>(null);
@@ -26,7 +28,7 @@ export function EpicsPage() {
   const [createName, setCreateName] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  useDocumentTitle('Epics');
+  useDocumentTitle(t('epics.documentTitle', 'Epics'));
 
   useEffect(() => {
     if (!workspaceSlug || !projectId) return;
@@ -80,23 +82,32 @@ export function EpicsPage() {
       setCreateOpen(false);
       setCreateName('');
     } catch {
-      setError('Failed to create epic.');
+      setError(t('epics.createFailed', 'Failed to create epic.'));
     }
     setCreating(false);
   };
 
-  if (loading) return <div className="p-6 text-sm text-(--txt-tertiary)">Loading epics…</div>;
+  if (loading)
+    return (
+      <div className="p-6 text-sm text-(--txt-tertiary)">
+        {t('epics.loading', 'Loading epics…')}
+      </div>
+    );
   if (!workspace || !project)
-    return <div className="p-6 text-sm text-(--txt-secondary)">Project not found.</div>;
+    return (
+      <div className="p-6 text-sm text-(--txt-secondary)">
+        {t('common.projectNotFound', 'Project not found.')}
+      </div>
+    );
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-(--txt-primary)">Epics</h1>
+        <h1 className="text-lg font-semibold text-(--txt-primary)">{t('epics.title', 'Epics')}</h1>
         <Button size="sm" onClick={() => setCreateOpen((v) => !v)}>
-          + New epic
+          + {t('epics.newEpic', 'New epic')}
         </Button>
       </div>
 
@@ -107,7 +118,7 @@ export function EpicsPage() {
               <input
                 autoFocus
                 type="text"
-                placeholder="Epic name"
+                placeholder={t('epics.namePlaceholder', 'Epic name')}
                 value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
                 required
@@ -116,7 +127,7 @@ export function EpicsPage() {
               {error && <p className="text-xs text-(--txt-danger-primary)">{error}</p>}
               <div className="flex gap-2">
                 <Button type="submit" size="sm" disabled={creating}>
-                  {creating ? 'Creating…' : 'Create'}
+                  {creating ? t('common.creating', 'Creating…') : t('common.create', 'Create')}
                 </Button>
                 <Button
                   type="button"
@@ -128,7 +139,7 @@ export function EpicsPage() {
                     setError(null);
                   }}
                 >
-                  Cancel
+                  {t('common.cancel', 'Cancel')}
                 </Button>
               </div>
             </form>
@@ -138,7 +149,7 @@ export function EpicsPage() {
 
       {epics.length === 0 ? (
         <div className="rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-8 text-center text-sm text-(--txt-tertiary)">
-          No epics yet. Create one to group related work.
+          {t('epics.empty', 'No epics yet. Create one to group related work.')}
         </div>
       ) : (
         <div className="space-y-2">
@@ -154,7 +165,8 @@ export function EpicsPage() {
                   </Link>
                   <p className="text-xs text-(--txt-tertiary)">
                     {project.identifier ?? project.id.slice(0, 6)}-{epic.sequence_id} ·{' '}
-                    {stateName(epic.state_id)} · {epic.priority ?? 'no priority'}
+                    {stateName(epic.state_id)} ·{' '}
+                    {epic.priority ?? t('epics.noPriority', 'no priority')}
                   </p>
                 </div>
                 <EpicProgressBar progress={progress[epic.id]} />
@@ -162,7 +174,7 @@ export function EpicsPage() {
                   to={`${baseUrl}/epics/${epic.id}`}
                   className="shrink-0 rounded-(--radius-md) px-2 py-1 text-xs text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)"
                 >
-                  Open →
+                  {t('epics.open', 'Open')} →
                 </Link>
               </CardContent>
             </Card>

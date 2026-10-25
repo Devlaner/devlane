@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -22,7 +23,15 @@ import {
 import { createMentionExtension, type MentionMember } from './editorMention';
 
 export interface CommentEditorProps {
-  onSubmit: (contentHtml: string, access: 'INTERNAL' | 'EXTERNAL') => void | Promise<void>;
+  /**
+   * Called when the user submits. Return (or resolve to) `false` — or throw —
+   * to signal the submit failed; the editor then keeps the typed text instead
+   * of clearing it, so nothing is lost on a network/permission error.
+   */
+  onSubmit: (
+    contentHtml: string,
+    access: 'INTERNAL' | 'EXTERNAL',
+  ) => void | boolean | Promise<void | boolean>;
   isSubmitting?: boolean;
   initialHtml?: string;
   placeholder?: string;
@@ -53,6 +62,7 @@ export function CommentEditor({
   mentionMembers,
   submitLabel,
 }: CommentEditorProps) {
+  const { t } = useTranslation();
   const [access, setAccess] = useState<'INTERNAL' | 'EXTERNAL'>(initialAccess);
   const [isEmpty, setIsEmpty] = useState(() => normalize(initialHtml) === '');
   const membersRef = useRef<MentionMember[]>(mentionMembers ?? []);
@@ -75,7 +85,7 @@ export function CommentEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       Placeholder.configure({
-        placeholder: placeholder ?? 'Add comment',
+        placeholder: placeholder ?? t('workItem.comment.placeholder', 'Add comment'),
       }),
       mentionExt,
     ],
@@ -103,11 +113,21 @@ export function CommentEditor({
 
   if (!editor) return null;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (isSubmitting) return;
     const html = editor.getHTML().trim();
     if (html === '<p></p>' || html === '') return;
-    void onSubmit(html, access);
+    try {
+      // Only clear once the submit has actually succeeded — otherwise a failed
+      // post/edit would silently discard the user's text.
+      const result = await onSubmit(html, access);
+      if (result === false) return;
+    } catch {
+      return;
+    }
+    // The await above may outlive the editor (parent unmounts / cancels the
+    // edit); clearing a destroyed editor throws.
+    if (editor.isDestroyed) return;
     editor.commands.clearContent();
     setIsEmpty(true);
   };
@@ -136,13 +156,20 @@ export function CommentEditor({
               onClick={() => setAccess((a) => (a === 'INTERNAL' ? 'EXTERNAL' : 'INTERNAL'))}
               title={
                 access === 'INTERNAL'
-                  ? 'Internal — only workspace members'
-                  : 'External — visible to guests / public boards'
+                  ? t('workItem.comment.accessInternalTooltip', 'Internal — only workspace members')
+                  : t(
+                      'workItem.comment.accessExternalTooltip',
+                      'External — visible to guests / public boards',
+                    )
               }
-              aria-label="Toggle comment visibility"
+              aria-label={t('workItem.comment.toggleVisibility', 'Toggle comment visibility')}
             >
               {access === 'INTERNAL' ? <Lock className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
-              <span>{access === 'INTERNAL' ? 'Internal' : 'External'}</span>
+              <span>
+                {access === 'INTERNAL'
+                  ? t('workItem.comment.internal', 'Internal')
+                  : t('workItem.comment.external', 'External')}
+              </span>
             </button>
             <Divider />
           </>
@@ -152,7 +179,7 @@ export function CommentEditor({
           editor={editor}
           onClick={() => editor.chain().focus().toggleBold().run()}
           isActive={editor.isActive('bold')}
-          label="Bold"
+          label={t('workItem.editor.bold', 'Bold')}
           shortcut="Ctrl+B"
         >
           <Bold className="h-3.5 w-3.5" />
@@ -161,7 +188,7 @@ export function CommentEditor({
           editor={editor}
           onClick={() => editor.chain().focus().toggleItalic().run()}
           isActive={editor.isActive('italic')}
-          label="Italic"
+          label={t('workItem.editor.italic', 'Italic')}
           shortcut="Ctrl+I"
         >
           <Italic className="h-3.5 w-3.5" />
@@ -170,7 +197,7 @@ export function CommentEditor({
           editor={editor}
           onClick={() => editor.chain().focus().toggleUnderline().run()}
           isActive={editor.isActive('underline')}
-          label="Underline"
+          label={t('workItem.editor.underline', 'Underline')}
           shortcut="Ctrl+U"
         >
           <UnderlineIcon className="h-3.5 w-3.5" />
@@ -179,7 +206,7 @@ export function CommentEditor({
           editor={editor}
           onClick={() => editor.chain().focus().toggleStrike().run()}
           isActive={editor.isActive('strike')}
-          label="Strikethrough"
+          label={t('workItem.editor.strikethrough', 'Strikethrough')}
           shortcut="Ctrl+Shift+X"
         >
           <Strikethrough className="h-3.5 w-3.5" />
@@ -191,7 +218,7 @@ export function CommentEditor({
           editor={editor}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           isActive={editor.isActive('bulletList')}
-          label="Bullet list"
+          label={t('workItem.editor.bulletList', 'Bullet list')}
           shortcut="Ctrl+Shift+8"
         >
           <List className="h-3.5 w-3.5" />
@@ -200,7 +227,7 @@ export function CommentEditor({
           editor={editor}
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           isActive={editor.isActive('orderedList')}
-          label="Numbered list"
+          label={t('workItem.editor.numberedList', 'Numbered list')}
           shortcut="Ctrl+Shift+7"
         >
           <ListOrdered className="h-3.5 w-3.5" />
@@ -209,7 +236,7 @@ export function CommentEditor({
           editor={editor}
           onClick={() => editor.chain().focus().toggleTaskList().run()}
           isActive={editor.isActive('taskList')}
-          label="To-do list"
+          label={t('workItem.editor.todoList', 'To-do list')}
           shortcut="Ctrl+Shift+9"
         >
           <ListChecks className="h-3.5 w-3.5" />
@@ -221,7 +248,7 @@ export function CommentEditor({
           editor={editor}
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
           isActive={editor.isActive('blockquote')}
-          label="Quote"
+          label={t('workItem.editor.quote', 'Quote')}
           shortcut="Ctrl+Shift+B"
         >
           <Quote className="h-3.5 w-3.5" />
@@ -230,7 +257,7 @@ export function CommentEditor({
           editor={editor}
           onClick={() => editor.chain().focus().toggleCodeBlock().run()}
           isActive={editor.isActive('codeBlock')}
-          label="Code block"
+          label={t('workItem.editor.codeBlock', 'Code block')}
           shortcut="Ctrl+Alt+C"
         >
           <Code2 className="h-3.5 w-3.5" />
@@ -239,7 +266,7 @@ export function CommentEditor({
         <div className="ml-auto flex items-center gap-2 pl-2">
           {showShortcutHint && (
             <span className="hidden text-[11px] text-(--txt-tertiary) sm:inline">
-              Ctrl + Enter to send
+              {t('workItem.comment.sendHint', 'Ctrl + Enter to send')}
             </span>
           )}
           {onCancel && (
@@ -249,7 +276,7 @@ export function CommentEditor({
               onClick={onCancel}
               disabled={isSubmitting}
             >
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </button>
           )}
           <button
@@ -257,15 +284,15 @@ export function CommentEditor({
             className="inline-flex h-7 items-center justify-center gap-1 rounded-md bg-(--bg-accent-primary) px-2.5 text-xs font-medium text-(--txt-on-color) transition-colors hover:bg-(--bg-accent-primary-hover) disabled:cursor-not-allowed disabled:opacity-40"
             disabled={submitDisabled}
             onClick={handleSubmit}
-            title="Send (Ctrl + Enter)"
-            aria-label="Send comment"
+            title={t('workItem.comment.sendTooltip', 'Send (Ctrl + Enter)')}
+            aria-label={t('workItem.comment.sendAria', 'Send comment')}
           >
             {isSubmitting ? (
               <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-(--txt-on-color) border-t-transparent" />
             ) : (
               <ArrowUp className="h-3.5 w-3.5" />
             )}
-            <span>{submitLabel ?? 'Send'}</span>
+            <span>{submitLabel ?? t('common.send', 'Send')}</span>
           </button>
         </div>
       </div>

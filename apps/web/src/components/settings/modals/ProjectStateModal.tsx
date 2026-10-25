@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, Modal } from '../../ui';
 import { stateService } from '../../../services/stateService';
 import type { StateApiResponse } from '../../../api/types';
@@ -37,6 +38,7 @@ export function ProjectStateModal({
   setProjectStates,
   setProjectStateModalOpen,
 }: ProjectStateModalProps) {
+  const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,11 +46,15 @@ export function ProjectStateModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={projectStateEdit ? 'Edit state' : 'Add state'}
+      title={
+        projectStateEdit
+          ? t('settings.states.editTitle', 'Edit state')
+          : t('settings.states.addTitle', 'Add state')
+      }
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button
             disabled={!projectStateName.trim() || saving}
@@ -75,13 +81,19 @@ export function ProjectStateModal({
                 setProjectStateModalOpen(false);
                 setProjectStateEdit(null);
               } catch {
-                setError('Failed to save state. Please try again.');
+                setError(
+                  t('settings.states.error.save', 'Failed to save state. Please try again.'),
+                );
               } finally {
                 setSaving(false);
               }
             }}
           >
-            {saving ? 'Saving…' : projectStateEdit ? 'Save' : 'Create'}
+            {saving
+              ? t('common.saving', 'Saving…')
+              : projectStateEdit
+                ? t('common.save', 'Save')
+                : t('common.create', 'Create')}
           </Button>
         </>
       }
@@ -93,17 +105,21 @@ export function ProjectStateModal({
           </p>
         ) : null}
         <div>
-          <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">Name</label>
+          <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
+            {t('common.name', 'Name')}
+          </label>
           <input
             type="text"
             value={projectStateName}
             onChange={(e) => setProjectStateName(e.target.value)}
             className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
-            placeholder="e.g. In Progress"
+            placeholder={t('settings.states.namePlaceholder', 'e.g. In Progress')}
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">Color</label>
+          <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
+            {t('common.color', 'Color')}
+          </label>
           <div className="flex items-center gap-2">
             <input
               type="color"
@@ -120,17 +136,19 @@ export function ProjectStateModal({
           </div>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">Group</label>
+          <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
+            {t('settings.states.group', 'Group')}
+          </label>
           <select
             value={projectStateGroup}
             onChange={(e) => setProjectStateGroup(e.target.value)}
             className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) focus:outline-none focus:border-(--border-strong)"
           >
-            <option value="backlog">Backlog</option>
-            <option value="unstarted">Unstarted</option>
-            <option value="started">Started</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="backlog">{t('settings.states.group.backlog', 'Backlog')}</option>
+            <option value="unstarted">{t('settings.states.group.unstarted', 'Unstarted')}</option>
+            <option value="started">{t('settings.states.group.started', 'Started')}</option>
+            <option value="completed">{t('settings.states.group.completed', 'Completed')}</option>
+            <option value="cancelled">{t('settings.states.group.cancelled', 'Cancelled')}</option>
           </select>
         </div>
       </div>

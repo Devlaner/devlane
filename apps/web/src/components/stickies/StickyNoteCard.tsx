@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { findParentNode } from '@tiptap/core';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { TaskItem } from '@tiptap/extension-task-item';
@@ -191,6 +192,7 @@ export function StickyNoteCard({
   onUpdate,
   onDelete,
 }: StickyNoteCardProps) {
+  const { t } = useTranslation();
   const safeSlug = workspaceSlug.trim();
   const initialHtml = getInitialStickyHtml(sticky);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -245,8 +247,12 @@ export function StickyNoteCard({
         },
         a11y: {
           checkboxLabel: (node, checked) => {
-            const text = node.textContent.replace(/\s+/g, ' ').trim() || 'empty task item';
-            return checked ? `Completed task: ${text}` : `Task: ${text}`;
+            const text =
+              node.textContent.replace(/\s+/g, ' ').trim() ||
+              t('stickies.emptyTaskItem', 'empty task item');
+            return checked
+              ? t('stickies.completedTask', 'Completed task: {{text}}', { text })
+              : t('stickies.task', 'Task: {{text}}', { text });
           },
         },
       }),
@@ -338,17 +344,17 @@ export function StickyNoteCard({
         />
         {contentSaveError ? (
           <p className="mt-1 text-xs text-(--txt-danger-primary)" role="alert">
-            Could not save. Edit again to retry.
+            {t('stickies.saveError', 'Could not save. Edit again to retry.')}
           </p>
         ) : null}
       </div>
       <div className="mt-2 flex shrink-0 items-center gap-1 pt-2">
         <div className="relative" ref={colorPanelRef}>
-          <Tooltip content="Background color">
+          <Tooltip content={t('stickies.backgroundColor', 'Background color')}>
             <button
               type="button"
               className={tb}
-              aria-label="Change color"
+              aria-label={t('stickies.changeColor', 'Change color')}
               aria-expanded={colorOpen}
               aria-haspopup="listbox"
               aria-controls={colorOpen ? colorListboxId : undefined}
@@ -361,10 +367,12 @@ export function StickyNoteCard({
             <div
               id={colorListboxId}
               role="listbox"
-              aria-label="Background color"
+              aria-label={t('stickies.backgroundColor', 'Background color')}
               className="absolute left-0 top-8 z-20 w-44 rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) p-2 shadow-(--shadow-overlay)"
             >
-              <p className="mb-2 text-xs font-medium text-(--txt-secondary)">Background color</p>
+              <p className="mb-2 text-xs font-medium text-(--txt-secondary)">
+                {t('stickies.backgroundColor', 'Background color')}
+              </p>
               <div className="grid grid-cols-6 gap-1.5">
                 {STICKY_BACKGROUND_COLORS_LIGHT.map((lightHex, i) => {
                   const swatch = isDarkTheme ? STICKY_BACKGROUND_COLORS_DARK[i] : lightHex;
@@ -375,7 +383,13 @@ export function StickyNoteCard({
                       type="button"
                       role="option"
                       aria-selected={active}
-                      aria-label={`Set sticky background slot ${i}`}
+                      aria-label={t(
+                        'stickies.setBackgroundSlot',
+                        'Set sticky background slot {{n}}',
+                        {
+                          n: i,
+                        },
+                      )}
                       className={`h-5 w-5 rounded border ${active ? 'border-(--border-strong)' : 'border-(--border-subtle)'}`}
                       style={{ backgroundColor: swatch }}
                       onClick={() => setStickyColor(lightHex)}
@@ -389,7 +403,7 @@ export function StickyNoteCard({
         <Tooltip
           content={
             <div className="text-center">
-              <p>Bold</p>
+              <p>{t('stickies.bold', 'Bold')}</p>
               <p className="text-(--txt-tertiary)">{boldShortcut}</p>
             </div>
           }
@@ -397,7 +411,7 @@ export function StickyNoteCard({
           <button
             type="button"
             className={tb}
-            aria-label="Bold"
+            aria-label={t('stickies.bold', 'Bold')}
             onClick={() => editor.chain().focus().toggleBold().run()}
           >
             <IconBold />
@@ -406,7 +420,7 @@ export function StickyNoteCard({
         <Tooltip
           content={
             <div className="text-center">
-              <p>Italic</p>
+              <p>{t('stickies.italic', 'Italic')}</p>
               <p className="text-(--txt-tertiary)">{italicShortcut}</p>
             </div>
           }
@@ -414,7 +428,7 @@ export function StickyNoteCard({
           <button
             type="button"
             className={tb}
-            aria-label="Italic"
+            aria-label={t('stickies.italic', 'Italic')}
             onClick={() => editor.chain().focus().toggleItalic().run()}
           >
             <IconItalic />
@@ -423,7 +437,7 @@ export function StickyNoteCard({
         <Tooltip
           content={
             <div className="text-center">
-              <p>To-do list</p>
+              <p>{t('stickies.todoList', 'To-do list')}</p>
               <p className="text-(--txt-tertiary)">{todoShortcut}</p>
             </div>
           }
@@ -431,19 +445,19 @@ export function StickyNoteCard({
           <button
             type="button"
             className={tb}
-            aria-label="Todo list"
+            aria-label={t('stickies.todoListAria', 'Todo list')}
             onClick={() => editor.chain().focus().toggleTaskList().run()}
           >
             <IconTodo />
           </button>
         </Tooltip>
         <div className="ml-auto">
-          <Tooltip content="Delete sticky note">
+          <Tooltip content={t('stickies.deleteNote', 'Delete sticky note')}>
             <button
               type="button"
               onClick={() => onDelete(sticky.id)}
               className={`${tb} hover:text-(--txt-danger-primary)`}
-              aria-label="Delete"
+              aria-label={t('common.delete', 'Delete')}
             >
               <IconTrash />
             </button>

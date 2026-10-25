@@ -40,10 +40,11 @@ func NewTestServer(t testing.TB) *TestServer {
 		AppBaseURL:      "http://localhost:5173",
 		APIPublicURL:    "http://localhost:8080",
 	}
+	eng, _ := router.New(cfg)
 	return &TestServer{
 		T:      t,
 		DB:     db,
-		Router: router.New(cfg),
+		Router: eng,
 	}
 }
 

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useWorkspaceViewsState } from '../../contexts/WorkspaceViewsStateContext';
 import type {
   WorkspaceMemberApiResponse,
@@ -99,31 +100,38 @@ export function ProjectSavedViewActiveFilters({
   projects,
   scopeProjectId,
 }: Props) {
+  const { t } = useTranslation();
   const { filters, setFilters } = useWorkspaceViewsState();
 
   const pills = useMemo<PillSpec[]>(() => {
     const out: PillSpec[] = [];
+    const priorityLabel = (p: string) => t(`views.filter.priority.${p}`, PRIORITY_LABEL[p] ?? p);
+    const stateGroupLabel = (s: string) =>
+      t(`views.filter.stateGroup.${s}`, STATE_GROUP_LABEL[s] ?? s);
+    const datePresetLabel = (d: string) =>
+      t(`views.filter.datePreset.${d}`, DATE_PRESET_LABEL[d] ?? d);
+    const groupingLabel = (g: string) => t(`views.filter.grouping.${g}`, GROUPING_LABEL[g] ?? g);
 
     if (filters.priority.length) {
       out.push({
         key: 'priority',
-        label: 'Priority',
-        values: filters.priority.map((p) => PRIORITY_LABEL[p] ?? p),
+        label: t('views.filter.priorityLabel', 'Priority'),
+        values: filters.priority.map((p) => priorityLabel(p)),
         onClear: () => setFilters((p) => ({ ...p, priority: [] })),
       });
     }
     if (filters.stateGroup.length) {
       out.push({
         key: 'stateGroup',
-        label: 'Status',
-        values: filters.stateGroup.map((s) => STATE_GROUP_LABEL[s] ?? s),
+        label: t('views.filter.statusLabel', 'Status'),
+        values: filters.stateGroup.map((s) => stateGroupLabel(s)),
         onClear: () => setFilters((p) => ({ ...p, stateGroup: [] })),
       });
     }
     if (filters.assigneeIds.length) {
       out.push({
         key: 'assignees',
-        label: 'Assignees',
+        label: t('views.filter.assigneesLabel', 'Assignees'),
         values: filters.assigneeIds.map((id) => memberName(members, id)),
         onClear: () => setFilters((p) => ({ ...p, assigneeIds: [] })),
       });
@@ -131,7 +139,7 @@ export function ProjectSavedViewActiveFilters({
     if (filters.createdByIds.length) {
       out.push({
         key: 'createdBy',
-        label: 'Created by',
+        label: t('views.filter.createdByLabel', 'Created by'),
         values: filters.createdByIds.map((id) => memberName(members, id)),
         onClear: () => setFilters((p) => ({ ...p, createdByIds: [] })),
       });
@@ -139,7 +147,7 @@ export function ProjectSavedViewActiveFilters({
     if (filters.labelIds.length) {
       out.push({
         key: 'labels',
-        label: 'Labels',
+        label: t('views.filter.labelsLabel', 'Labels'),
         values: filters.labelIds.map((id) => labelName(labels, id)),
         onClear: () => setFilters((p) => ({ ...p, labelIds: [] })),
       });
@@ -155,7 +163,7 @@ export function ProjectSavedViewActiveFilters({
     ) {
       out.push({
         key: 'projects',
-        label: 'Project',
+        label: t('views.filter.projectLabel', 'Project'),
         values: filters.projectIds.map((id) => projectName(projects, id)),
         onClear: () => setFilters((p) => ({ ...p, projectIds: [] })),
       });
@@ -163,18 +171,21 @@ export function ProjectSavedViewActiveFilters({
     if (filters.grouping !== 'all') {
       out.push({
         key: 'grouping',
-        label: 'Type',
-        values: [GROUPING_LABEL[filters.grouping] ?? filters.grouping],
+        label: t('views.filter.typeLabel', 'Type'),
+        values: [groupingLabel(filters.grouping)],
         onClear: () => setFilters((p) => ({ ...p, grouping: 'all' })),
       });
     }
     if (filters.startDate.length) {
       const v = filters.startDate.includes('custom')
-        ? `Custom · ${filters.startAfter ?? '…'} → ${filters.startBefore ?? '…'}`
-        : filters.startDate.map((d) => DATE_PRESET_LABEL[d] ?? d).join(', ');
+        ? t('views.filter.customRange', 'Custom · {{after}} → {{before}}', {
+            after: filters.startAfter ?? '…',
+            before: filters.startBefore ?? '…',
+          })
+        : filters.startDate.map((d) => datePresetLabel(d)).join(', ');
       out.push({
         key: 'startDate',
-        label: 'Start date',
+        label: t('views.filter.startDateLabel', 'Start date'),
         values: [v],
         onClear: () =>
           setFilters((p) => ({ ...p, startDate: [], startAfter: null, startBefore: null })),
@@ -182,17 +193,20 @@ export function ProjectSavedViewActiveFilters({
     }
     if (filters.dueDate.length) {
       const v = filters.dueDate.includes('custom')
-        ? `Custom · ${filters.dueAfter ?? '…'} → ${filters.dueBefore ?? '…'}`
-        : filters.dueDate.map((d) => DATE_PRESET_LABEL[d] ?? d).join(', ');
+        ? t('views.filter.customRange', 'Custom · {{after}} → {{before}}', {
+            after: filters.dueAfter ?? '…',
+            before: filters.dueBefore ?? '…',
+          })
+        : filters.dueDate.map((d) => datePresetLabel(d)).join(', ');
       out.push({
         key: 'dueDate',
-        label: 'Due date',
+        label: t('views.filter.dueDateLabel', 'Due date'),
         values: [v],
         onClear: () => setFilters((p) => ({ ...p, dueDate: [], dueAfter: null, dueBefore: null })),
       });
     }
     return out;
-  }, [filters, members, labels, projects, scopeProjectId, setFilters]);
+  }, [filters, members, labels, projects, scopeProjectId, setFilters, t]);
 
   if (pills.length === 0) return null;
 
@@ -226,7 +240,7 @@ export function ProjectSavedViewActiveFilters({
           <span className="max-w-[260px] truncate">{p.values.join(', ')}</span>
           <button
             type="button"
-            aria-label={`Clear ${p.label} filter`}
+            aria-label={t('views.filter.clearFilter', 'Clear {{label}} filter', { label: p.label })}
             onClick={p.onClear}
             className="-mr-0.5 inline-flex size-4 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover) hover:text-(--txt-icon-secondary)"
           >
@@ -239,7 +253,7 @@ export function ProjectSavedViewActiveFilters({
         onClick={clearAll}
         className="ml-1 text-xs text-(--txt-secondary) hover:text-(--txt-primary) hover:underline"
       >
-        Clear all
+        {t('views.filter.clearAll', 'Clear all')}
       </button>
     </div>
   );

@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dropdown } from '../work-item/Dropdown';
 import { Avatar } from '../ui';
 import type {
@@ -409,6 +410,7 @@ export function DraftIssueRowProperties({
   onMoveToIssues,
   onDelete,
 }: DraftIssueRowPropertiesProps) {
+  const { t } = useTranslation();
   const startInputRef = useRef<HTMLInputElement>(null);
   const dueInputRef = useRef<HTMLInputElement>(null);
   const [stateSearch, setStateSearch] = useState('');
@@ -424,7 +426,7 @@ export function DraftIssueRowProperties({
 
   const pri = (issue.priority ?? 'none') as Priority;
   const currentState = states.find((s) => s.id === issue.state_id);
-  const stateName = currentState?.name ?? 'Backlog';
+  const stateName = currentState?.name ?? t('drafts.backlog', 'Backlog');
   const primaryAssigneeId =
     issue.assignee_ids && issue.assignee_ids.length > 0 ? issue.assignee_ids[0] : null;
   const assigneeMember = findWorkspaceMemberByUserId(members, primaryAssigneeId);
@@ -481,7 +483,11 @@ export function DraftIssueRowProperties({
       setLabelSearch('');
       setOpenDropdownId(null);
     } catch (err) {
-      setCreateLabelError(err instanceof Error ? err.message : 'Failed to create label.');
+      setCreateLabelError(
+        err instanceof Error
+          ? err.message
+          : t('drafts.failedToCreateLabel', 'Failed to create label.'),
+      );
     } finally {
       setCreateLabelLoading(false);
     }
@@ -501,10 +507,10 @@ export function DraftIssueRowProperties({
 
   const moduleLabel =
     moduleCount > 1
-      ? `${moduleCount} Modules`
+      ? t('drafts.moduleCount', '{{count}} Modules', { count: moduleCount })
       : moduleCount === 1
-        ? (modules.find((m) => m.id === currentModuleId)?.name ?? '1 Module')
-        : 'No module';
+        ? (modules.find((m) => m.id === currentModuleId)?.name ?? t('drafts.oneModule', '1 Module'))
+        : t('drafts.noModule', 'No module');
 
   return (
     <div
@@ -536,14 +542,16 @@ export function DraftIssueRowProperties({
         <div className="sticky top-0 z-10 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
           <input
             type="text"
-            placeholder="Search"
+            placeholder={t('common.search', 'Search')}
             value={stateSearch}
             onChange={(e) => setStateSearch(e.target.value)}
             className="w-full rounded border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:border-(--border-strong) focus:outline-none"
           />
         </div>
         {filteredStateOptions.length === 0 ? (
-          <div className="px-3 py-2 text-[13px] text-(--txt-tertiary)">No states</div>
+          <div className="px-3 py-2 text-[13px] text-(--txt-tertiary)">
+            {t('drafts.noStates', 'No states')}
+          </div>
         ) : (
           <>
             {filteredStateOptions.map((opt) => {
@@ -595,8 +603,10 @@ export function DraftIssueRowProperties({
         align="right"
         disabled={busy}
         triggerClassName={propBtnSquare}
-        triggerAriaLabel="Priority"
-        triggerTitle={`Priority ${PRIORITY_LABELS[pri]}`}
+        triggerAriaLabel={t('drafts.priority', 'Priority')}
+        triggerTitle={t('drafts.priorityTitle', 'Priority {{priority}}', {
+          priority: PRIORITY_LABELS[pri],
+        })}
         triggerContent={
           <span className="flex size-4.5 items-center justify-center [&_svg]:size-3.5">
             {priorityIcon(pri)}
@@ -620,7 +630,7 @@ export function DraftIssueRowProperties({
             </svg>
             <input
               type="text"
-              placeholder="Search"
+              placeholder={t('common.search', 'Search')}
               value={prioritySearch}
               onChange={(e) => setPrioritySearch(e.target.value)}
               className="w-full bg-transparent text-[13px] text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
@@ -673,7 +683,9 @@ export function DraftIssueRowProperties({
         triggerContent={
           <span
             className={labelNames.length ? '' : 'opacity-50'}
-            title={`Labels ${labelNames[0] ?? 'None'}`}
+            title={t('drafts.labelsTitle', 'Labels {{label}}', {
+              label: labelNames[0] ?? t('common.none', 'None'),
+            })}
           >
             <IconTag />
           </span>
@@ -683,7 +695,7 @@ export function DraftIssueRowProperties({
         <div className="sticky top-0 z-10 border-b border-(--border-subtle) bg-(--bg-surface-1) p-1.5">
           <input
             type="text"
-            placeholder="Search"
+            placeholder={t('common.search', 'Search')}
             value={labelSearch}
             onChange={(e) => setLabelSearch(e.target.value)}
             onKeyDown={(e) => {
@@ -697,7 +709,9 @@ export function DraftIssueRowProperties({
         </div>
         {filteredLabels.length === 0 ? (
           <div className="px-3 py-2 text-[13px] text-(--txt-tertiary)">
-            {canCreateLabel ? 'Press Enter to create label' : 'Type to add a new label'}
+            {canCreateLabel
+              ? t('drafts.pressEnterToCreateLabel', 'Press Enter to create label')
+              : t('drafts.typeToAddLabel', 'Type to add a new label')}
           </div>
         ) : (
           filteredLabels.map((l) => {
@@ -724,7 +738,11 @@ export function DraftIssueRowProperties({
               disabled={createLabelLoading}
               className="w-full px-3 py-2 text-left text-[13px] text-(--brand-default) hover:bg-(--bg-layer-1-hover) disabled:opacity-50"
             >
-              {createLabelLoading ? 'Creating…' : `Create label "${labelSearch.trim()}"`}
+              {createLabelLoading
+                ? t('common.creating', 'Creating…')
+                : t('drafts.createLabelNamed', 'Create label "{{name}}"', {
+                    name: labelSearch.trim(),
+                  })}
             </button>
             {createLabelError ? (
               <div className="px-3 pb-2 text-[12px] text-(--txt-danger-primary)">
@@ -738,7 +756,9 @@ export function DraftIssueRowProperties({
       {/* Start date — icon-only + hidden date input (border-without-text variant) */}
       <div
         className={`${propBtnSquare}${busy ? ' pointer-events-none opacity-40' : ''}`}
-        title={`Start date ${issue.start_date ? issue.start_date.slice(0, 10) : 'None'}`}
+        title={t('drafts.startDateTitle', 'Start date {{date}}', {
+          date: issue.start_date ? issue.start_date.slice(0, 10) : t('common.none', 'None'),
+        })}
       >
         <IconStartDateProperty />
         <input
@@ -747,7 +767,7 @@ export function DraftIssueRowProperties({
           disabled={busy}
           className="absolute inset-0 cursor-pointer opacity-0"
           value={issue.start_date?.slice(0, 10) ?? ''}
-          aria-label="Start date"
+          aria-label={t('drafts.startDate', 'Start date')}
           onChange={(e) => {
             const v = e.target.value;
             void onPatch(issue, { start_date: v || null });
@@ -758,7 +778,9 @@ export function DraftIssueRowProperties({
       {/* Due date */}
       <div
         className={`${propBtnSquare}${busy ? ' pointer-events-none opacity-40' : ''}`}
-        title={`Due date ${issue.target_date ? issue.target_date.slice(0, 10) : 'None'}`}
+        title={t('drafts.dueDateTitle', 'Due date {{date}}', {
+          date: issue.target_date ? issue.target_date.slice(0, 10) : t('common.none', 'None'),
+        })}
       >
         <IconDueDateProperty />
         <input
@@ -767,7 +789,7 @@ export function DraftIssueRowProperties({
           disabled={busy}
           className="absolute inset-0 cursor-pointer opacity-0"
           value={issue.target_date?.slice(0, 10) ?? ''}
-          aria-label="Due date"
+          aria-label={t('drafts.dueDate', 'Due date')}
           onChange={(e) => {
             const v = e.target.value;
             void onPatch(issue, { target_date: v || null });
@@ -815,7 +837,7 @@ export function DraftIssueRowProperties({
             setOpenDropdownId(null);
           }}
         >
-          Unassigned
+          {t('drafts.unassigned', 'Unassigned')}
         </button>
         {members.map((m) => {
           const uid = m.member_id ?? m.id;
@@ -868,7 +890,7 @@ export function DraftIssueRowProperties({
               setOpenDropdownId(null);
             }}
           >
-            No module
+            {t('drafts.noModule', 'No module')}
           </button>
           {modules.map((mod) => (
             <button
@@ -903,7 +925,9 @@ export function DraftIssueRowProperties({
               <span className="shrink-0 text-(--txt-icon-tertiary)">
                 <IconCycle />
               </span>
-              <span className="min-w-0 flex-1 truncate">{cycleName || 'No cycle'}</span>
+              <span className="min-w-0 flex-1 truncate">
+                {cycleName || t('drafts.noCycle', 'No cycle')}
+              </span>
               <IconChevronDown />
             </>
           }
@@ -917,7 +941,7 @@ export function DraftIssueRowProperties({
               setOpenDropdownId(null);
             }}
           >
-            No cycle
+            {t('drafts.noCycle', 'No cycle')}
           </button>
           {cycles.map((cy) => (
             <button
@@ -941,7 +965,7 @@ export function DraftIssueRowProperties({
           type="button"
           className="flex size-7 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary) disabled:opacity-40"
           aria-expanded={rowMenuOpen}
-          aria-label="More options"
+          aria-label={t('common.moreOptions', 'More options')}
           disabled={busy}
           onClick={() => onToggleRowMenu()}
         >
@@ -959,7 +983,7 @@ export function DraftIssueRowProperties({
               onClick={() => onEdit()}
             >
               <IconEdit />
-              Edit
+              {t('common.edit', 'Edit')}
             </button>
             <button
               type="button"
@@ -968,7 +992,7 @@ export function DraftIssueRowProperties({
               onClick={() => onDuplicate()}
             >
               <IconCopy />
-              Make a copy
+              {t('drafts.makeCopy', 'Make a copy')}
             </button>
             <button
               type="button"
@@ -977,7 +1001,7 @@ export function DraftIssueRowProperties({
               onClick={() => onMoveToIssues()}
             >
               <IconMoveToIssues />
-              Move to issues
+              {t('drafts.moveToIssues', 'Move to issues')}
             </button>
             <button
               type="button"
@@ -986,7 +1010,7 @@ export function DraftIssueRowProperties({
               onClick={() => onDelete()}
             >
               <IconTrash />
-              Delete
+              {t('common.delete', 'Delete')}
             </button>
           </div>
         ) : null}

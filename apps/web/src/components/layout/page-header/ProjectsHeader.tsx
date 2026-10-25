@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Avatar, Button } from '../../ui';
 import { Dropdown } from '../../work-item';
@@ -23,6 +24,7 @@ import {
 } from './icons';
 
 export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
+  const { t } = useTranslation();
   const { user: authUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get('q') ?? '';
@@ -54,10 +56,10 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
 
   const baseUrl = `/${workspaceSlug}`;
   const sortFieldLabelMap: Record<typeof sortField, string> = {
-    manual: 'Manual',
-    name: 'Name',
-    created_date: 'Created date',
-    member_count: 'Number of members',
+    manual: t('common.manual', 'Manual'),
+    name: t('common.name', 'Name'),
+    created_date: t('common.createdDate', 'Created date'),
+    member_count: t('header.projects.memberCount', 'Number of members'),
   };
   const activeFilterCount =
     (favoritesOnly ? 1 : 0) +
@@ -144,7 +146,14 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
 
   const memberOptions = [
     ...(authUser
-      ? [{ id: authUser.id, label: 'You', avatarUrl: authUser.avatarUrl, sortLabel: 'You' }]
+      ? [
+          {
+            id: authUser.id,
+            label: t('common.you', 'You'),
+            avatarUrl: authUser.avatarUrl,
+            sortLabel: 'You',
+          },
+        ]
       : []),
     ...workspaceMembers
       .filter((member) => member.member_id !== authUser?.id)
@@ -175,7 +184,7 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
         <span className="flex size-5 items-center justify-center text-(--txt-icon-tertiary)">
           <IconBriefcase />
         </span>
-        Projects
+        {t('header.projects.title', 'Projects')}
       </div>
       <div className="flex flex-1 items-center justify-end gap-2 min-w-0">
         <div
@@ -189,9 +198,9 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
               type="text"
               value={searchQuery}
               onChange={(e) => updateParam('q', e.target.value)}
-              placeholder="Search projects"
+              placeholder={t('header.projects.searchPlaceholder', 'Search projects')}
               className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
-              aria-label="Search projects"
+              aria-label={t('header.projects.searchPlaceholder', 'Search projects')}
             />
             <button
               type="button"
@@ -200,7 +209,7 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                 setSearchOpen(false);
               }}
               className="shrink-0 rounded p-0.5 text-(--txt-icon-tertiary) hover:bg-(--bg-layer-transparent-hover) hover:text-(--txt-secondary)"
-              aria-label="Clear search"
+              aria-label={t('common.clearSearch', 'Clear search')}
             >
               <IconX />
             </button>
@@ -211,7 +220,7 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
             type="button"
             onClick={() => setSearchOpen(true)}
             className="flex size-8 shrink-0 items-center justify-center rounded-md border border-(--border-subtle) bg-(--bg-layer-2) text-(--txt-icon-tertiary) hover:bg-(--bg-layer-2-hover)"
-            aria-label="Search projects"
+            aria-label={t('header.projects.searchPlaceholder', 'Search projects')}
           >
             <IconSearch />
           </button>
@@ -220,7 +229,7 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
           id="projects-sort"
           openId={projectsDropdownOpen}
           onOpen={setProjectsDropdownOpen}
-          label="Sort projects"
+          label={t('header.projects.sortProjects', 'Sort projects')}
           icon={<IconArrowUpDown />}
           displayValue={sortFieldLabelMap[sortField]}
           panelClassName="min-w-52 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
@@ -236,10 +245,10 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
           triggerClassName="flex items-center gap-1.5 rounded-md border border-(--border-subtle) bg-(--bg-layer-2) px-2.5 py-1.5 text-[13px] font-medium text-(--txt-secondary) hover:bg-(--bg-layer-2-hover)"
         >
           {[
-            { value: 'manual', label: 'Manual' },
-            { value: 'name', label: 'Name' },
-            { value: 'created_date', label: 'Created date' },
-            { value: 'member_count', label: 'Number of members' },
+            { value: 'manual', label: t('common.manual', 'Manual') },
+            { value: 'name', label: t('common.name', 'Name') },
+            { value: 'created_date', label: t('common.createdDate', 'Created date') },
+            { value: 'member_count', label: t('header.projects.memberCount', 'Number of members') },
           ].map((opt) => {
             const active = sortField === opt.value;
             return (
@@ -266,8 +275,8 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
           })}
           <div className="mx-2 my-1 h-px bg-(--border-subtle)" />
           {[
-            { value: 'asc', label: 'Ascending' },
-            { value: 'desc', label: 'Descending' },
+            { value: 'asc', label: t('common.ascending', 'Ascending') },
+            { value: 'desc', label: t('common.descending', 'Descending') },
           ].map((opt) => {
             const active = sortDir === opt.value;
             const disabled = sortField === 'manual';
@@ -296,9 +305,13 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
           id="projects-filters"
           openId={projectsDropdownOpen}
           onOpen={setProjectsDropdownOpen}
-          label="Filter projects"
+          label={t('header.projects.filterProjects', 'Filter projects')}
           icon={<IconFilter />}
-          displayValue={activeFilterCount > 0 ? `Filters (${activeFilterCount})` : 'Filters'}
+          displayValue={
+            activeFilterCount > 0
+              ? t('header.filtersWithCount', 'Filters ({{count}})', { count: activeFilterCount })
+              : t('header.filters', 'Filters')
+          }
           panelClassName="w-80 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)"
           triggerContent={
             <>
@@ -306,7 +319,11 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                 <IconFilter />
               </span>
               <span className="truncate">
-                {activeFilterCount > 0 ? `Filters (${activeFilterCount})` : 'Filters'}
+                {activeFilterCount > 0
+                  ? t('header.filtersWithCount', 'Filters ({{count}})', {
+                      count: activeFilterCount,
+                    })
+                  : t('header.filters', 'Filters')}
               </span>
               {projectsDropdownOpen === 'projects-filters' ? (
                 <IconChevronUp />
@@ -326,9 +343,9 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                 type="text"
                 value={projectsFiltersSearch}
                 onChange={(e) => setProjectsFiltersSearch(e.target.value)}
-                placeholder="Search"
+                placeholder={t('common.search', 'Search')}
                 className="min-w-0 flex-1 bg-transparent text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none"
-                aria-label="Search project filters"
+                aria-label={t('header.projects.searchFilters', 'Search project filters')}
               />
             </div>
           </div>
@@ -340,7 +357,7 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                 onChange={() => updateParam('filter', favoritesOnly ? '' : 'favorites')}
                 className="rounded border-(--border-subtle)"
               />
-              <span>Favorites</span>
+              <span>{t('common.favorites', 'Favorites')}</span>
             </label>
             <label className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
               <input
@@ -349,18 +366,26 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                 onChange={() => updateParam('myProjects', myProjectsOnly ? '' : '1')}
                 className="rounded border-(--border-subtle)"
               />
-              <span>My projects</span>
+              <span>{t('header.projects.myProjects', 'My projects')}</span>
             </label>
             <CollapsibleSection
-              title="Access"
+              title={t('header.projects.access', 'Access')}
               open={projectsFilterSectionOpen.access}
               onToggle={() =>
                 setProjectsFilterSectionOpen((prev) => ({ ...prev, access: !prev.access }))
               }
             >
               {[
-                { value: 'private' as const, label: 'Private', icon: <IconLock /> },
-                { value: 'public' as const, label: 'Public', icon: <IconGlobe /> },
+                {
+                  value: 'private' as const,
+                  label: t('common.private', 'Private'),
+                  icon: <IconLock />,
+                },
+                {
+                  value: 'public' as const,
+                  label: t('common.public', 'Public'),
+                  icon: <IconGlobe />,
+                },
               ]
                 .filter((opt) => includeBySearch(opt.label))
                 .map((opt) => (
@@ -380,7 +405,7 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                 ))}
             </CollapsibleSection>
             <CollapsibleSection
-              title="Lead"
+              title={t('header.projects.lead', 'Lead')}
               open={projectsFilterSectionOpen.lead}
               onToggle={() =>
                 setProjectsFilterSectionOpen((prev) => ({ ...prev, lead: !prev.lead }))
@@ -412,12 +437,14 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                   onClick={() => setShowAllLeads((prev) => !prev)}
                   className="px-3 py-1 text-sm text-(--txt-secondary) hover:text-(--txt-primary)"
                 >
-                  {showAllLeads ? 'View less' : 'View all'}
+                  {showAllLeads
+                    ? t('common.viewLess', 'View less')
+                    : t('common.viewAll', 'View all')}
                 </button>
               )}
             </CollapsibleSection>
             <CollapsibleSection
-              title="Members"
+              title={t('header.projects.members', 'Members')}
               open={projectsFilterSectionOpen.members}
               onToggle={() =>
                 setProjectsFilterSectionOpen((prev) => ({ ...prev, members: !prev.members }))
@@ -449,12 +476,14 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
                   onClick={() => setShowAllMembers((prev) => !prev)}
                   className="px-3 py-1 text-sm text-(--txt-secondary) hover:text-(--txt-primary)"
                 >
-                  {showAllMembers ? 'View less' : 'View all'}
+                  {showAllMembers
+                    ? t('common.viewLess', 'View less')
+                    : t('common.viewAll', 'View all')}
                 </button>
               )}
             </CollapsibleSection>
             <CollapsibleSection
-              title="Created date"
+              title={t('common.createdDate', 'Created date')}
               open={projectsFilterSectionOpen.createdDate}
               onToggle={() =>
                 setProjectsFilterSectionOpen((prev) => ({
@@ -464,10 +493,10 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
               }
             >
               {[
-                { value: 'today', label: 'Today' },
-                { value: 'last7', label: 'Last 7 days' },
-                { value: 'last30', label: 'Last 30 days' },
-                { value: 'custom', label: 'Custom' },
+                { value: 'today', label: t('common.today', 'Today') },
+                { value: 'last7', label: t('common.last7Days', 'Last 7 days') },
+                { value: 'last30', label: t('common.last30Days', 'Last 30 days') },
+                { value: 'custom', label: t('common.custom', 'Custom') },
               ]
                 .filter((opt) => includeBySearch(opt.label))
                 .map((opt) => {
@@ -511,14 +540,14 @@ export function ProjectsHeader({ workspaceSlug }: { workspaceSlug: string }) {
         <Link to={`${baseUrl}/projects?createProject=1`}>
           <Button size="sm" className="gap-1.5 text-[13px] font-medium">
             <IconPlus />
-            Add Project
+            {t('header.projects.addProject', 'Add Project')}
           </Button>
         </Link>
       </div>
       <DateRangeModal
         open={projectsDateRangeModalOpen}
         onClose={() => setProjectsDateRangeModalOpen(false)}
-        title="Created date range"
+        title={t('common.createdDateRange', 'Created date range')}
         after={createdAfter}
         before={createdBefore}
         onApply={(after, before) => {

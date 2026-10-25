@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArchiveRestore,
@@ -67,6 +68,7 @@ function pageLogoFrom(page: PageApiResponse): PageLogo | undefined {
 }
 
 export function PagesPage() {
+  const { t } = useTranslation();
   const { workspaceSlug, projectId } = useParams<{
     workspaceSlug: string;
     projectId: string;
@@ -100,7 +102,7 @@ export function PagesPage() {
   const filterRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  useDocumentTitle('Pages');
+  useDocumentTitle(t('pages.documentTitle', 'Pages'));
 
   // ----- Initial load ------------------------------------------------------
   useEffect(() => {
@@ -147,10 +149,11 @@ export function PagesPage() {
   // ----- Click-outside dismissal -------------------------------------------
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (sortOpen && sortRef.current && !sortRef.current.contains(t)) setSortOpen(false);
-      if (filterOpen && filterRef.current && !filterRef.current.contains(t)) setFilterOpen(false);
-      if (openMenu && menuRef.current && !menuRef.current.contains(t)) setOpenMenu(null);
+      const target = e.target as Node;
+      if (sortOpen && sortRef.current && !sortRef.current.contains(target)) setSortOpen(false);
+      if (filterOpen && filterRef.current && !filterRef.current.contains(target))
+        setFilterOpen(false);
+      if (openMenu && menuRef.current && !menuRef.current.contains(target)) setOpenMenu(null);
     };
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
@@ -247,7 +250,7 @@ export function PagesPage() {
       await pageService.delete(workspaceSlug, pageId);
       await reload();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Delete failed';
+      const message = err instanceof Error ? err.message : t('pages.deleteFailed', 'Delete failed');
       window.alert(message);
     }
   };
@@ -257,7 +260,7 @@ export function PagesPage() {
     setCreating(true);
     try {
       const created = await pageService.create(workspaceSlug, {
-        name: createName.trim() || 'Untitled page',
+        name: createName.trim() || t('pages.untitledPage', 'Untitled page'),
         project_id: projectId,
         access: createAccess,
       });
@@ -276,21 +279,34 @@ export function PagesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-        Loading…
+        {t('common.loading', 'Loading…')}
       </div>
     );
   }
   if (!workspace || !project) {
-    return <div className="text-(--txt-secondary)">Project not found.</div>;
+    return (
+      <div className="text-(--txt-secondary)">
+        {t('common.projectNotFound', 'Project not found.')}
+      </div>
+    );
   }
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
   const emptyMessage =
     tab === 'archived'
-      ? 'Archived pages will land here. Archive a page from its detail view to declutter the active list.'
+      ? t(
+          'pages.emptyArchived',
+          'Archived pages will land here. Archive a page from its detail view to declutter the active list.',
+        )
       : tab === 'private'
-        ? 'No private pages yet. Pages you mark Private are visible only to you.'
-        : 'No public pages yet. Create your first page to start documenting work alongside your team.';
+        ? t(
+            'pages.emptyPrivate',
+            'No private pages yet. Pages you mark Private are visible only to you.',
+          )
+        : t(
+            'pages.emptyPublic',
+            'No public pages yet. Create your first page to start documenting work alongside your team.',
+          );
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
@@ -300,22 +316,25 @@ export function PagesPage() {
        * Each tab is a full-height column so its accent underline aligns with
        * (and overrides) this row's `border-b`. */}
       <div className="flex shrink-0 items-stretch justify-between border-b border-(--border-subtle) bg-(--bg-canvas) px-(--padding-page)">
-        <nav className="flex items-stretch" aria-label="Page visibility">
-          {TABS.map((t) => {
-            const active = t.key === tab;
+        <nav
+          className="flex items-stretch"
+          aria-label={t('pages.visibilityNav', 'Page visibility')}
+        >
+          {TABS.map((tabItem) => {
+            const active = tabItem.key === tab;
             return (
               <button
-                key={t.key}
+                key={tabItem.key}
                 type="button"
                 onClick={() => {
-                  setTab(t.key);
+                  setTab(tabItem.key);
                   setOpenMenu(null);
                 }}
                 className="relative flex h-11 items-center px-4 text-[13px] font-medium transition-colors focus:outline-none"
                 aria-current={active ? 'page' : undefined}
               >
                 <span className={active ? 'text-(--txt-accent-primary)' : 'text-(--txt-secondary)'}>
-                  {t.label}
+                  {t(`pages.tab.${tabItem.key}`, tabItem.label)}
                 </span>
                 {/* -bottom-px lets the accent underline replace the row's
                     `border-b` instead of stacking on top of it. */}
@@ -342,7 +361,7 @@ export function PagesPage() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search pages"
+                  placeholder={t('pages.searchPlaceholder', 'Search pages')}
                   onKeyDown={(e) => {
                     if (e.key === 'Escape') {
                       if (search) setSearch('');
@@ -358,17 +377,17 @@ export function PagesPage() {
                     setSearchOpen(false);
                   }}
                   className="grid place-items-center text-(--txt-tertiary) hover:text-(--txt-primary)"
-                  aria-label="Close search"
+                  aria-label={t('pages.closeSearch', 'Close search')}
                 >
                   <X size={12} />
                 </button>
               </div>
             ) : (
-              <Tooltip content="Search">
+              <Tooltip content={t('common.search', 'Search')}>
                 <button
                   type="button"
                   onClick={() => setSearchOpen(true)}
-                  aria-label="Search"
+                  aria-label={t('common.search', 'Search')}
                   className="grid size-8 place-items-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
                 >
                   <Search size={14} />
@@ -389,7 +408,7 @@ export function PagesPage() {
               ) : (
                 <ArrowDownWideNarrow size={12} />
               )}
-              {SORT_LABELS[sortKey]}
+              {t(`pages.sort.${sortKey}`, SORT_LABELS[sortKey])}
             </button>
             {sortOpen ? (
               <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) py-1 shadow-(--shadow-raised)">
@@ -403,7 +422,7 @@ export function PagesPage() {
                     }}
                     className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                   >
-                    {SORT_LABELS[k]}
+                    {t(`pages.sort.${k}`, SORT_LABELS[k])}
                     {sortKey === k ? <Check size={12} className="text-(--txt-tertiary)" /> : null}
                   </button>
                 ))}
@@ -413,7 +432,7 @@ export function PagesPage() {
                   onClick={() => setSortDir('asc')}
                   className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                 >
-                  Ascending
+                  {t('pages.ascending', 'Ascending')}
                   {sortDir === 'asc' ? <Check size={12} className="text-(--txt-tertiary)" /> : null}
                 </button>
                 <button
@@ -421,7 +440,7 @@ export function PagesPage() {
                   onClick={() => setSortDir('desc')}
                   className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                 >
-                  Descending
+                  {t('pages.descending', 'Descending')}
                   {sortDir === 'desc' ? (
                     <Check size={12} className="text-(--txt-tertiary)" />
                   ) : null}
@@ -443,7 +462,7 @@ export function PagesPage() {
               )}
             >
               <ListFilter size={12} />
-              Filters
+              {t('pages.filters', 'Filters')}
               {totalFilters > 0 ? (
                 <span className="rounded-full bg-(--brand-default) px-1.5 py-0 text-[10px] leading-4 font-semibold text-white">
                   {totalFilters}
@@ -455,7 +474,7 @@ export function PagesPage() {
             {filterOpen ? (
               <div className="absolute right-0 z-20 mt-1 w-56 rounded-md border border-(--border-subtle) bg-(--bg-surface-1) p-2 shadow-(--shadow-raised)">
                 <p className="mb-1 px-2 text-[11px] font-semibold tracking-wide text-(--txt-tertiary) uppercase">
-                  Quick filters
+                  {t('pages.quickFilters', 'Quick filters')}
                 </p>
                 <label className="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
                   <input
@@ -463,7 +482,7 @@ export function PagesPage() {
                     checked={filterOwnedByMe}
                     onChange={(e) => setFilterOwnedByMe(e.target.checked)}
                   />
-                  Owned by me
+                  {t('pages.ownedByMe', 'Owned by me')}
                 </label>
                 <label className="flex items-center gap-2 rounded px-2 py-1.5 text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)">
                   <input
@@ -471,7 +490,7 @@ export function PagesPage() {
                     checked={filterLocked}
                     onChange={(e) => setFilterLocked(e.target.checked)}
                   />
-                  Locked
+                  {t('pages.locked', 'Locked')}
                 </label>
                 {totalFilters > 0 ? (
                   <>
@@ -485,7 +504,7 @@ export function PagesPage() {
                       className="flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-left text-sm text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)"
                     >
                       <Filter size={12} />
-                      Clear filters
+                      {t('pages.clearFilters', 'Clear filters')}
                     </button>
                   </>
                 ) : null}
@@ -508,7 +527,7 @@ export function PagesPage() {
               <p className="text-sm text-(--txt-secondary)">{emptyMessage}</p>
               {tab !== 'archived' ? (
                 <Button size="sm" variant="primary" onClick={() => setShowCreate(true)}>
-                  <Plus size={14} /> Add page
+                  <Plus size={14} /> {t('pages.addPage', 'Add page')}
                 </Button>
               ) : null}
             </div>
@@ -520,7 +539,7 @@ export function PagesPage() {
               const isOwner = !!user && page.owned_by_id === user.id;
               const isArchivedRow = !!page.archived_at;
               const owner = members.get(page.owned_by_id);
-              const ownerName = owner?.member_display_name ?? 'Unknown';
+              const ownerName = owner?.member_display_name ?? t('common.unknown', 'Unknown');
               const logo = pageLogoFrom(page);
               return (
                 <li
@@ -539,12 +558,12 @@ export function PagesPage() {
                       )}
                     </span>
                     <span className="min-w-0 truncate text-[13px] font-medium text-(--txt-primary)">
-                      {page.name || 'Untitled'}
+                      {page.name || t('pages.untitled', 'Untitled')}
                     </span>
                   </Link>
 
                   <div className="flex shrink-0 items-center gap-2 text-(--txt-icon-tertiary)">
-                    <Tooltip content={`Owned by ${ownerName}`}>
+                    <Tooltip content={t('pages.ownedBy', 'Owned by {{name}}', { name: ownerName })}>
                       {/* getImageUrl resolves the relative `/api/...` avatar
                           path against VITE_API_BASE_URL so it loads from the
                           API server in dev — same helper the modules page uses. */}
@@ -554,23 +573,43 @@ export function PagesPage() {
                         src={getImageUrl(owner?.member_avatar) ?? undefined}
                       />
                     </Tooltip>
-                    <Tooltip content={page.access === 0 ? 'Public' : 'Private'}>
+                    <Tooltip
+                      content={
+                        page.access === 0
+                          ? t('pages.public', 'Public')
+                          : t('pages.private', 'Private')
+                      }
+                    >
                       <span className="grid size-5 place-items-center">
                         {page.access === 0 ? <Earth size={14} /> : <Lock size={14} />}
                       </span>
                     </Tooltip>
                     <span aria-hidden className="h-4 w-px bg-(--border-subtle)" />
-                    <Tooltip content={`Created ${formatDate(page.created_at)}`}>
+                    <Tooltip
+                      content={t('pages.createdOn', 'Created {{date}}', {
+                        date: formatDate(page.created_at),
+                      })}
+                    >
                       <span className="grid size-5 place-items-center">
                         <Info size={14} />
                       </span>
                     </Tooltip>
-                    <Tooltip content={isFav ? 'Remove from favorites' : 'Add to favorites'}>
+                    <Tooltip
+                      content={
+                        isFav
+                          ? t('common.removeFromFavorites', 'Remove from favorites')
+                          : t('common.addToFavorites', 'Add to favorites')
+                      }
+                    >
                       <button
                         type="button"
                         onClick={() => void onToggleFavorite(page.id)}
                         className="grid size-7 place-items-center rounded hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
-                        aria-label={isFav ? 'Unfavorite' : 'Favorite'}
+                        aria-label={
+                          isFav
+                            ? t('pages.unfavorite', 'Unfavorite')
+                            : t('pages.favorite', 'Favorite')
+                        }
                       >
                         {/* Amber matches the favorite star elsewhere
                             (modules / cycles) so favourite state reads the
@@ -581,7 +620,7 @@ export function PagesPage() {
                     <button
                       type="button"
                       onClick={() => setOpenMenu((m) => (m === page.id ? null : page.id))}
-                      aria-label="More options"
+                      aria-label={t('common.moreOptions', 'More options')}
                       className="grid size-7 place-items-center rounded hover:bg-(--bg-layer-1-hover) hover:text-(--txt-primary)"
                     >
                       <MoreHorizontal size={14} />
@@ -596,7 +635,7 @@ export function PagesPage() {
                           onClick={() => void onDuplicate(page.id)}
                           className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                         >
-                          <Copy size={13} /> Make a copy
+                          <Copy size={13} /> {t('pages.makeCopy', 'Make a copy')}
                         </button>
                         {isOwner ? (
                           <button
@@ -605,7 +644,9 @@ export function PagesPage() {
                             className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-(--txt-primary) hover:bg-(--bg-layer-1-hover)"
                           >
                             {isArchivedRow ? <ArchiveRestore size={13} /> : <Filter size={13} />}
-                            {isArchivedRow ? 'Restore' : 'Archive'}
+                            {isArchivedRow
+                              ? t('common.restore', 'Restore')
+                              : t('common.archive', 'Archive')}
                           </button>
                         ) : null}
                         {isOwner && isArchivedRow ? (
@@ -614,7 +655,7 @@ export function PagesPage() {
                             onClick={() => void onDelete(page.id)}
                             className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-(--danger-default) hover:bg-(--danger-50)"
                           >
-                            <Trash2 size={13} /> Delete
+                            <Trash2 size={13} /> {t('common.delete', 'Delete')}
                           </button>
                         ) : null}
                       </div>
@@ -628,22 +669,28 @@ export function PagesPage() {
       </div>
 
       {showCreate ? (
-        <Modal open onClose={() => setShowCreate(false)} title="Create page">
+        <Modal
+          open
+          onClose={() => setShowCreate(false)}
+          title={t('pages.createPage', 'Create page')}
+        >
           <div className="max-w-md space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">Title</label>
+              <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
+                {t('pages.title', 'Title')}
+              </label>
               <input
                 autoFocus
                 type="text"
                 value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
-                placeholder="Untitled page"
+                placeholder={t('pages.untitledPage', 'Untitled page')}
                 className="w-full rounded border border-(--border-subtle) bg-(--bg-canvas) px-3 py-1.5 text-sm text-(--txt-primary) placeholder:text-(--txt-tertiary) focus:outline-none"
               />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-(--txt-secondary)">
-                Visibility
+                {t('pages.visibility', 'Visibility')}
               </label>
               <div className="flex gap-2">
                 <button
@@ -656,7 +703,7 @@ export function PagesPage() {
                       : 'border-(--border-subtle) text-(--txt-secondary)',
                   )}
                 >
-                  Public
+                  {t('pages.public', 'Public')}
                 </button>
                 <button
                   type="button"
@@ -668,13 +715,13 @@ export function PagesPage() {
                       : 'border-(--border-subtle) text-(--txt-secondary)',
                   )}
                 >
-                  Private
+                  {t('pages.private', 'Private')}
                 </button>
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button size="sm" variant="secondary" onClick={() => setShowCreate(false)}>
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
               <Button
                 size="sm"
@@ -682,7 +729,7 @@ export function PagesPage() {
                 disabled={creating}
                 onClick={() => void onCreate()}
               >
-                {creating ? 'Creating…' : 'Create'}
+                {creating ? t('common.creating', 'Creating…') : t('common.create', 'Create')}
               </Button>
             </div>
           </div>

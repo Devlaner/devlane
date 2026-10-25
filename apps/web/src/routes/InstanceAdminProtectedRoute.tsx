@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -6,13 +7,14 @@ interface InstanceAdminProtectedRouteProps {
 }
 
 export function InstanceAdminProtectedRoute({ children }: InstanceAdminProtectedRouteProps) {
+  const { t } = useTranslation();
   const location = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-        Loading...
+        {t('common.loading', 'Loading…')}
       </div>
     );
   }

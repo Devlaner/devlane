@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from './ui';
 
 const EMOJI_LIST = [
@@ -153,10 +154,11 @@ export function ProjectIconModal({
   open,
   onClose,
   onSelect,
-  title = 'Project icon',
+  title,
   currentEmoji,
   currentIconProp,
 }: ProjectIconModalProps) {
+  const { t } = useTranslation();
   void currentEmoji; // reserved for future use (e.g. pre-select emoji tab)
   const [tab, setTab] = useState<Tab>(TAB_EMOJI);
   const [emojiSearch, setEmojiSearch] = useState('');
@@ -195,12 +197,18 @@ export function ProjectIconModal({
       onClick={onClose}
       className="rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-layer-2) px-3 py-1.5 text-sm font-medium text-(--txt-primary) hover:bg-(--bg-layer-2-hover)"
     >
-      Cancel
+      {t('common.cancel', 'Cancel')}
     </button>
   );
 
   return (
-    <Modal open={open} onClose={onClose} title={title} footer={footer} className="max-w-md">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={title ?? t('project.icon.title', 'Project icon')}
+      footer={footer}
+      className="max-w-md"
+    >
       <div className="flex gap-2 border-b border-(--border-subtle) pb-3 mb-3">
         <button
           type="button"
@@ -211,7 +219,7 @@ export function ProjectIconModal({
               : 'text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover)'
           }`}
         >
-          Emoji
+          {t('project.icon.tabEmoji', 'Emoji')}
         </button>
         <button
           type="button"
@@ -222,7 +230,7 @@ export function ProjectIconModal({
               : 'text-(--txt-secondary) hover:bg-(--bg-layer-transparent-hover)'
           }`}
         >
-          Icon
+          {t('project.icon.tabIcon', 'Icon')}
         </button>
       </div>
 
@@ -232,7 +240,7 @@ export function ProjectIconModal({
             type="text"
             value={emojiSearch}
             onChange={(e) => setEmojiSearch(e.target.value)}
-            placeholder="Search"
+            placeholder={t('common.search', 'Search')}
             className="w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-3 py-2 text-sm text-(--txt-primary) placeholder:text-(--txt-placeholder) focus:outline-none focus:border-(--border-strong)"
           />
           <div className="grid grid-cols-8 gap-1.5 max-h-48 overflow-y-auto">
@@ -253,7 +261,7 @@ export function ProjectIconModal({
 
       {tab === TAB_ICON && (
         <div className="space-y-3">
-          <p className="text-xs text-(--txt-tertiary)">Color</p>
+          <p className="text-xs text-(--txt-tertiary)">{t('project.icon.color', 'Color')}</p>
           <div className="flex flex-wrap gap-2">
             {ICON_COLORS.map((c) => (
               <button
@@ -266,11 +274,13 @@ export function ProjectIconModal({
                   borderColor: iconColor === c ? 'var(--brand-default)' : 'transparent',
                   boxShadow: c === '#ffffff' ? '0 0 0 1px var(--border-subtle)' : undefined,
                 }}
-                aria-label={`Color ${c}`}
+                aria-label={t('project.icon.colorAria', 'Color {{color}}', { color: c })}
               />
             ))}
           </div>
-          <p className="text-xs text-(--txt-tertiary)">Choose an icon</p>
+          <p className="text-xs text-(--txt-tertiary)">
+            {t('project.icon.chooseIcon', 'Choose an icon')}
+          </p>
           <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto">
             {ICON_NAMES.map((name) => (
               <button

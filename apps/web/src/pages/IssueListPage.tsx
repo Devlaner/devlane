@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui';
 import { CreateWorkItemModal } from '../components/CreateWorkItemModal';
+import { ImportCSVModal } from '../components/work-item/ImportCSVModal';
 import { workspaceService } from '../services/workspaceService';
 import { projectService } from '../services/projectService';
 import { issueService } from '../services/issueService';
@@ -31,7 +33,7 @@ import type {
 import type { Priority } from '../types';
 import type { StateGroup } from '../types/workspaceViewFilters';
 import type { SavedViewDisplayPropertyId } from '../lib/projectSavedViewDisplay';
-import { buildGroupedIssues } from '../lib/issueListGroupAndSort';
+import { buildGroupedIssues, buildSubGroupedIssues } from '../lib/issueListGroupAndSort';
 import {
   cloneDefaultProjectIssuesDisplay,
   fromDisplayPayload,
@@ -87,6 +89,7 @@ const IconPlus = () => (
 );
 
 export function IssueListPage() {
+  const { t } = useTranslation();
   const { workspaceSlug, projectId } = useParams<{
     workspaceSlug: string;
     projectId: string;
@@ -97,6 +100,7 @@ export function IssueListPage() {
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [projects, setProjects] = useState<ProjectApiResponse[]>([]);
   const [issues, setIssues] = useState<IssueApiResponse[]>([]);
+  const [importOpen, setImportOpen] = useState(false);
   const [states, setStates] = useState<StateApiResponse[]>([]);
   const [labels, setLabels] = useState<LabelApiResponse[]>([]);
   const [cycles, setCycles] = useState<CycleApiResponse[]>([]);
@@ -128,7 +132,7 @@ export function IssueListPage() {
   useLayoutEffect(() => {
     routeKeyRef.current = `${workspaceSlug ?? ''}/${projectId ?? ''}`;
   }, [workspaceSlug, projectId]);
-  useDocumentTitle('Work items');
+  useDocumentTitle(t('workItem.list.documentTitle', 'Work items'));
 
   const refetchIssues = () => {
     if (!workspaceSlug || !projectId) return;
@@ -162,7 +166,9 @@ export function IssueListPage() {
       clearSelection();
       refetchIssues();
     } catch {
-      setBulkError('Bulk action failed. Nothing was changed — try again.');
+      setBulkError(
+        t('workItem.list.bulkActionFailed', 'Bulk action failed. Nothing was changed — try again.'),
+      );
       refetchIssues();
     }
   };
@@ -175,39 +181,50 @@ export function IssueListPage() {
     }
     let cancelled = false;
     setLoading(true);
+
+    const safeFetch = <T,>(promise: Promise<T>, fallback: T): Promise<T> => {
+      return Promise.resolve(promise)
+        .then((val) => val ?? fallback)
+        .catch((err: unknown) => {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          console.warn('Secondary request ignored (Prevents crashes)', errorMessage);
+          return fallback;
+        });
+    };
+
     Promise.all([
       workspaceService.getBySlug(workspaceSlug),
       projectService.get(workspaceSlug, projectId),
-      projectService.list(workspaceSlug),
-      issueService.list(workspaceSlug, projectId, { limit: 100 }),
-      stateService.list(workspaceSlug, projectId),
-      labelService.list(workspaceSlug, projectId),
-      cycleService.list(workspaceSlug, projectId),
-      moduleService.list(workspaceSlug, projectId),
-      workspaceService.listMembers(workspaceSlug),
+
+      safeFetch(projectService.list(workspaceSlug), [] as ProjectApiResponse[]),
+      safeFetch(
+        issueService.list(workspaceSlug, projectId, { limit: 100 }),
+        [] as IssueApiResponse[],
+      ),
+      safeFetch(stateService.list(workspaceSlug, projectId), [] as StateApiResponse[]),
+      safeFetch(labelService.list(workspaceSlug, projectId), [] as LabelApiResponse[]),
+      safeFetch(cycleService.list(workspaceSlug, projectId), [] as CycleApiResponse[]),
+      safeFetch(moduleService.list(workspaceSlug, projectId), [] as ModuleApiResponse[]),
+      safeFetch(workspaceService.listMembers(workspaceSlug), [] as WorkspaceMemberApiResponse[]),
     ])
       .then(([w, p, list, iss, st, lab, cyc, mod, mem]) => {
         if (cancelled) return;
         setWorkspace(w);
         setProject(p);
-        setProjects(list ?? []);
-        setIssues(iss ?? []);
-        setStates(st ?? []);
-        setLabels(lab ?? []);
-        setCycles(cyc ?? []);
-        setModules(mod ?? []);
-        setMembers(mem ?? []);
+        setProjects(list);
+        setIssues(iss);
+        setStates(st);
+        setLabels(lab);
+        setCycles(cyc);
+        setModules(mod);
+        setMembers(mem);
       })
-      .catch(() => {
-        if (!cancelled) setWorkspace(null);
-        setProject(null);
-        setProjects([]);
-        setIssues([]);
-        setStates([]);
-        setLabels([]);
-        setCycles([]);
-        setModules([]);
-        setMembers([]);
+      .catch((err) => {
+        console.error('Critical error when loading Project or Workspace : ', err);
+        if (!cancelled) {
+          setWorkspace(null);
+          setProject(null);
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -464,6 +481,37 @@ export function IssueListPage() {
     ],
   );
 
+  // Optional second-level grouping (swimlanes). Null unless both a primary and
+  // a distinct secondary dimension are selected; layouts fall back to the flat
+  // groupedIssues when it's null.
+  const subGroupedIssues = useMemo(
+    () =>
+      buildSubGroupedIssues({
+        baseForGrouping,
+        groupBy: listDisplay.groupBy,
+        subGroupBy: listDisplay.subGroupBy,
+        orderBy: listDisplay.orderBy,
+        showEmptyGroups: listDisplay.showEmptyGroups,
+        states,
+        cycles,
+        modules,
+        labels,
+        members,
+      }),
+    [
+      baseForGrouping,
+      listDisplay.groupBy,
+      listDisplay.subGroupBy,
+      listDisplay.orderBy,
+      listDisplay.showEmptyGroups,
+      states,
+      cycles,
+      modules,
+      labels,
+      members,
+    ],
+  );
+
   // Stable "now" timestamp used by overdue/relative-date cells. Sampled once
   // at mount via useState's lazy initializer (allowed to be impure) so each
   // row stays pure for the rest of the render-tree's lifetime.
@@ -526,43 +574,58 @@ export function IssueListPage() {
       refetchIssues();
       handleCloseCreate();
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'Failed to create work item');
+      setCreateError(
+        err instanceof Error
+          ? err.message
+          : t('workItem.list.createFailed', 'Failed to create work item'),
+      );
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-sm text-(--txt-tertiary)">
-        Loading…
+        {t('common.loading', 'Loading…')}
       </div>
     );
   }
   if (!workspace || !project) {
-    return <div className="text-(--txt-secondary)">Project not found.</div>;
+    return (
+      <div className="text-(--txt-secondary)">
+        {t('common.projectNotFound', 'Project not found.')}
+      </div>
+    );
   }
 
   const baseUrl = `/${workspace.slug}/projects/${project.id}`;
   const dp = listDisplay.displayProperties;
   const hasCol = (id: SavedViewDisplayPropertyId) => dp.has(id);
 
+  // Build id -> name maps once per render instead of doing an O(cycles) /
+  // O(modules) find for every row. (Plain consts, not useMemo, because this
+  // sits after the component's early returns.)
+  const cycleNameById = new Map(cycles.map((c) => [c.id, c.name]));
+  const moduleNameById = new Map(modules.map((m) => [m.id, m.name]));
+
   const cycleName = (issue: IssueApiResponse) => {
     const id = issue.cycle_ids?.[0];
-    return id ? (cycles.find((c) => c.id === id)?.name ?? '—') : '—';
+    return id ? (cycleNameById.get(id) ?? '—') : '—';
   };
 
   const moduleName = (issue: IssueApiResponse) => {
     const id = issue.module_ids?.[0];
-    return id ? (modules.find((m) => m.id === id)?.name ?? '—') : '—';
+    return id ? (moduleNameById.get(id) ?? '—') : '—';
   };
 
   const layout = parseIssueLayout(searchParams.get('layout'));
   const issueHref = (id: string) => `${baseUrl}/issues/${id}`;
+  const orderedVisibleIssues = groupedIssues.order.flatMap(
+    (sectionKey) => groupedIssues.groups.get(sectionKey) ?? [],
+  );
   const layoutProps = {
     workspaceSlug: workspace.slug,
     project,
-    issues: groupedIssues.isFlat
-      ? (groupedIssues.groups.get(groupedIssues.order[0]) ?? [])
-      : filteredIssues,
+    issues: orderedVisibleIssues,
     states,
     labels,
     members,
@@ -570,6 +633,14 @@ export function IssueListPage() {
     baseUrl,
     issueHref,
     now,
+  };
+  const groupedLayoutProps = {
+    groupedIssues,
+    hasCol,
+    showEmptyGroups: listDisplay.showEmptyGroups,
+    subWorkCountByParentId,
+    cycleName,
+    moduleName,
   };
 
   // Manual drag-to-reorder. We splice the move into the FULL loaded issue set
@@ -664,39 +735,50 @@ export function IssueListPage() {
           >
             <span className="size-2 rounded-full border border-current border-dashed" />
           </span>
-          All work items {filteredIssues.length}
+          {t('workItem.list.allWorkItems', 'All work items {{count}}', {
+            count: filteredIssues.length,
+          })}
           <button
             type="button"
             className="flex size-7 items-center justify-center rounded-md text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-            aria-label="Add work item"
+            aria-label={t('workItem.list.addWorkItem', 'Add work item')}
             onClick={() => setSearchParams({ create: '1' })}
           >
             <IconPlus />
           </button>
         </h2>
+        <Button variant="secondary" size="sm" onClick={() => setImportOpen(true)}>
+          {t('workItem.list.importCsv', 'Import CSV')}
+        </Button>
       </div>
 
       {issues.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-4 px-4 py-12">
-          <p className="text-sm text-(--txt-tertiary)">No work items yet.</p>
+          <p className="text-sm text-(--txt-tertiary)">
+            {t('workItem.list.emptyNoItems', 'No work items yet.')}
+          </p>
           <Button size="sm" className="gap-1.5" onClick={() => setSearchParams({ create: '1' })}>
             <IconPlus />
-            New work item
+            {t('workItem.list.newWorkItem', 'New work item')}
           </Button>
         </div>
       ) : filteredIssues.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-4 px-4 py-12">
-          <p className="text-sm text-(--txt-tertiary)">No work items match your filters.</p>
+          <p className="text-sm text-(--txt-tertiary)">
+            {t('workItem.list.emptyNoMatch', 'No work items match your filters.')}
+          </p>
         </div>
       ) : (
         <>
           {layout === 'list' && visibleSelectedIds.size > 0 && (
             <div className="flex flex-wrap items-center gap-2 border-b border-(--border-subtle) bg-(--bg-surface-1) px-4 py-2 text-sm">
               <span className="font-medium text-(--txt-secondary)">
-                {visibleSelectedIds.size} selected
+                {t('workItem.list.selectedCount', '{{count}} selected', {
+                  count: visibleSelectedIds.size,
+                })}
               </span>
               <select
-                aria-label="Set priority for selected"
+                aria-label={t('workItem.list.setPriorityForSelected', 'Set priority for selected')}
                 className="rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs text-(--txt-secondary)"
                 value=""
                 onChange={(e) => {
@@ -708,7 +790,9 @@ export function IssueListPage() {
                     );
                 }}
               >
-                <option value="">Set priority…</option>
+                <option value="">
+                  {t('workItem.list.setPriorityPlaceholder', 'Set priority…')}
+                </option>
                 {['urgent', 'high', 'medium', 'low', 'none'].map((p) => (
                   <option key={p} value={p}>
                     {p}
@@ -716,7 +800,7 @@ export function IssueListPage() {
                 ))}
               </select>
               <select
-                aria-label="Set state for selected"
+                aria-label={t('workItem.list.setStateForSelected', 'Set state for selected')}
                 className="rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1 text-xs text-(--txt-secondary)"
                 value=""
                 onChange={(e) => {
@@ -728,7 +812,7 @@ export function IssueListPage() {
                     );
                 }}
               >
-                <option value="">Set state…</option>
+                <option value="">{t('workItem.list.setStatePlaceholder', 'Set state…')}</option>
                 {states.map((st) => (
                   <option key={st.id} value={st.id}>
                     {st.name}
@@ -740,24 +824,30 @@ export function IssueListPage() {
                 className="rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-secondary) hover:bg-(--bg-layer-1-hover)"
                 onClick={() => void runBulk((s, p, ids) => issueService.bulkArchive(s, p, ids))}
               >
-                Archive
+                {t('common.archive', 'Archive')}
               </button>
               <button
                 type="button"
                 className="rounded-(--radius-md) border border-(--border-subtle) px-2 py-1 text-xs text-(--txt-danger-primary) hover:bg-(--bg-layer-1-hover)"
                 onClick={() => {
-                  if (window.confirm(`Delete ${visibleSelectedIds.size} work item(s)?`))
+                  if (
+                    window.confirm(
+                      t('workItem.list.deleteConfirm', 'Delete {{count}} work item(s)?', {
+                        count: visibleSelectedIds.size,
+                      }),
+                    )
+                  )
                     void runBulk((s, p, ids) => issueService.bulkDelete(s, p, ids));
                 }}
               >
-                Delete
+                {t('common.delete', 'Delete')}
               </button>
               <button
                 type="button"
                 className="ml-auto rounded-(--radius-md) px-2 py-1 text-xs text-(--txt-tertiary) hover:text-(--txt-secondary)"
                 onClick={clearSelection}
               >
-                Clear
+                {t('common.clear', 'Clear')}
               </button>
               {bulkError && (
                 <span className="w-full text-xs text-(--txt-danger-primary)">{bulkError}</span>
@@ -768,6 +858,7 @@ export function IssueListPage() {
             <IssueLayoutList
               {...layoutProps}
               groupedIssues={groupedIssues}
+              subGroupedIssues={subGroupedIssues}
               hasCol={hasCol}
               showEmptyGroups={listDisplay.showEmptyGroups}
               subWorkCountByParentId={subWorkCountByParentId}
@@ -781,15 +872,26 @@ export function IssueListPage() {
           {layout === 'board' && (
             <IssueLayoutBoard
               {...layoutProps}
+              {...groupedLayoutProps}
+              subGroupedIssues={subGroupedIssues}
+              groupBy={listDisplay.groupBy}
               onCardMove={handleCardMove}
               onUpdateIssue={handleInlineUpdate}
             />
           )}
           {layout === 'spreadsheet' && (
-            <IssueLayoutSpreadsheet {...layoutProps} onUpdateIssue={handleInlineUpdate} />
+            <IssueLayoutSpreadsheet
+              {...layoutProps}
+              {...groupedLayoutProps}
+              onUpdateIssue={handleInlineUpdate}
+            />
           )}
-          {layout === 'calendar' && <IssueLayoutCalendar {...layoutProps} />}
-          {layout === 'gantt' && <IssueLayoutGantt {...layoutProps} />}
+          {layout === 'calendar' && (
+            <IssueLayoutCalendar {...layoutProps} onUpdateIssue={handleInlineUpdate} />
+          )}
+          {layout === 'gantt' && (
+            <IssueLayoutGantt {...layoutProps} onUpdateIssue={handleInlineUpdate} />
+          )}
           {layout === 'list' && (
             <div className="border-t border-(--border-subtle) px-4 py-2.5">
               <button
@@ -798,7 +900,7 @@ export function IssueListPage() {
                 onClick={() => setSearchParams({ create: '1' })}
               >
                 <IconPlus />
-                New work item
+                {t('workItem.list.newWorkItem', 'New work item')}
               </button>
             </div>
           )}
@@ -813,6 +915,13 @@ export function IssueListPage() {
         defaultProjectId={project.id}
         onSave={handleCreateSave}
         createError={createError}
+      />
+      <ImportCSVModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        workspaceSlug={workspace.slug}
+        projectId={project.id}
+        onImported={refetchIssues}
       />
     </div>
   );

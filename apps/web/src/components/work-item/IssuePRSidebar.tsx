@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { GitPullRequest, GitMerge, X, Loader2, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, Button } from '../ui';
 import { integrationService } from '../../services/integrationService';
@@ -24,6 +25,7 @@ interface IssuePRSidebarProps {
  * first" message rather than the form.
  */
 export function IssuePRSidebar({ workspaceSlug, projectId, issueId }: IssuePRSidebarProps) {
+  const { t } = useTranslation();
   const [links, setLinks] = useState<GitHubIssueLinkResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -87,14 +89,14 @@ export function IssuePRSidebar({ workspaceSlug, projectId, issueId }: IssuePRSid
   return (
     <Card>
       <CardHeader className="flex items-center justify-between text-sm font-medium text-(--txt-secondary)">
-        <span>Linked pull requests</span>
+        <span>{t('workItem.pr.title', 'Linked pull requests')}</span>
         {!showForm && (
           <button
             type="button"
             onClick={() => setShowForm(true)}
             className="inline-flex h-6 w-6 items-center justify-center rounded text-(--txt-icon-tertiary) hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-            aria-label="Link a pull request"
-            title="Link a pull request"
+            aria-label={t('workItem.pr.linkPr', 'Link a pull request')}
+            title={t('workItem.pr.linkPr', 'Link a pull request')}
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -109,12 +111,16 @@ export function IssuePRSidebar({ workspaceSlug, projectId, issueId }: IssuePRSid
 
         {loading ? (
           <div className="flex items-center gap-2 text-xs text-(--txt-tertiary)">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading PRs…
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />{' '}
+            {t('workItem.pr.loading', 'Loading PRs…')}
           </div>
         ) : links.length === 0 && !showForm ? (
           <p className="text-xs text-(--txt-tertiary)">
-            No pull requests yet. They appear automatically when a PR references this issue (e.g.
-            <span className="ml-1 font-mono">Fixes DEV-42</span>), or you can paste a URL above.
+            <Trans
+              i18nKey="workItem.pr.empty"
+              defaults="No pull requests yet. They appear automatically when a PR references this issue (e.g.<0>Fixes DEV-42</0>), or you can paste a URL above."
+              components={[<span className="ml-1 font-mono" />]}
+            />
           </p>
         ) : (
           <ul className="space-y-1.5">
@@ -127,13 +133,16 @@ export function IssuePRSidebar({ workspaceSlug, projectId, issueId }: IssuePRSid
         {showForm && (
           <div className="mt-2 space-y-1.5 border-t border-(--border-subtle) pt-3">
             <label className="block text-xs font-medium text-(--txt-secondary)">
-              Pull request URL
+              {t('workItem.pr.urlLabel', 'Pull request URL')}
             </label>
             <input
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://github.com/owner/repo/pull/123"
+              placeholder={t(
+                'workItem.pr.urlPlaceholder',
+                'https://github.com/owner/repo/pull/123',
+              )}
               className="block w-full rounded-(--radius-md) border border-(--border-subtle) bg-(--bg-surface-1) px-2 py-1.5 text-xs text-(--txt-primary) focus:outline-none"
               disabled={adding}
               onKeyDown={(e) => {
@@ -156,10 +165,10 @@ export function IssuePRSidebar({ workspaceSlug, projectId, issueId }: IssuePRSid
                   setError('');
                 }}
               >
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
               <Button size="sm" disabled={adding || !url.trim()} onClick={() => void handleAdd()}>
-                {adding ? 'Linking…' : 'Link'}
+                {adding ? t('workItem.pr.linking', 'Linking…') : t('workItem.pr.link', 'Link')}
               </Button>
             </div>
           </div>
@@ -170,6 +179,7 @@ export function IssuePRSidebar({ workspaceSlug, projectId, issueId }: IssuePRSid
 }
 
 function PRRow({ link, onUnlink }: { link: GitHubIssueLinkResponse; onUnlink: () => void }) {
+  const { t } = useTranslation();
   const repoLabel = useMemo(() => {
     // issue_url is the canonical PR URL: https://github.com/{owner}/{repo}/pull/{n}
     try {
@@ -185,13 +195,20 @@ function PRRow({ link, onUnlink }: { link: GitHubIssueLinkResponse; onUnlink: ()
   }, [link.issue_url, link.repo_issue_id]);
 
   const stateMeta = prStateMeta(link);
+  const stateLabel =
+    {
+      Merged: t('workItem.pr.stateMerged', 'Merged'),
+      Closed: t('workItem.pr.stateClosed', 'Closed'),
+      Draft: t('workItem.pr.stateDraft', 'Draft'),
+      Open: t('workItem.pr.stateOpen', 'Open'),
+    }[stateMeta.label] ?? stateMeta.label;
 
   return (
     <li className="group flex items-start gap-2 rounded-(--radius-md) p-1 hover:bg-(--bg-layer-1-hover)">
       <span
         className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center"
         style={{ color: stateMeta.color }}
-        title={stateMeta.label}
+        title={stateLabel}
       >
         {stateMeta.icon}
       </span>
@@ -210,17 +227,17 @@ function PRRow({ link, onUnlink }: { link: GitHubIssueLinkResponse; onUnlink: ()
           ) : null}
         </a>
         <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-(--txt-tertiary)">
-          <span>{stateMeta.label}</span>
+          <span>{stateLabel}</span>
           {link.author_login && <span>· @{link.author_login}</span>}
-          {link.detection_source === 'manual' && <span>· manual</span>}
+          {link.detection_source === 'manual' && <span>· {t('workItem.pr.manual', 'manual')}</span>}
         </div>
       </div>
       <button
         type="button"
         onClick={onUnlink}
         className="ml-1 mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 hover:bg-(--bg-layer-1-hover) hover:text-(--txt-icon-secondary)"
-        aria-label="Unlink"
-        title="Unlink"
+        aria-label={t('workItem.pr.unlink', 'Unlink')}
+        title={t('workItem.pr.unlink', 'Unlink')}
       >
         <X className="h-3.5 w-3.5" />
       </button>

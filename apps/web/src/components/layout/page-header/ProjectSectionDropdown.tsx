@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import type { ProjectSection } from '../PageHeader';
 import {
@@ -36,6 +37,9 @@ export function ProjectSectionDropdown({
   currentSection: ProjectSection;
   issueCount: number;
 }) {
+  const { t } = useTranslation();
+  const sectionLabel = (section: ProjectSection) =>
+    t(`header.section.${section}`, SECTION_LABELS[section]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -48,7 +52,7 @@ export function ProjectSectionDropdown({
   }, []);
 
   const sections: ProjectSection[] = ['issues', 'cycles', 'modules', 'views', 'pages'];
-  const currentLabel = SECTION_LABELS[currentSection];
+  const currentLabel = sectionLabel(currentSection);
   const currentIcon = SECTION_ICONS[currentSection];
 
   return (
@@ -90,7 +94,7 @@ export function ProjectSectionDropdown({
                 <span className="flex size-5 items-center justify-center text-(--txt-icon-secondary)">
                   {SECTION_ICONS[section]}
                 </span>
-                {SECTION_LABELS[section]}
+                {sectionLabel(section)}
                 {isActive && (
                   <span className="ml-auto text-(--brand-default)">
                     <IconCheck />

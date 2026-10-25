@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
@@ -75,7 +76,8 @@ const WelcomeIllustration = () => (
 
 export function InstanceSetupWelcomePage() {
   const navigate = useNavigate();
-  useDocumentTitle('Get started');
+  const { t } = useTranslation();
+  useDocumentTitle(t('setup.welcome.documentTitle', 'Get started'));
 
   return (
     <div className="flex min-h-screen flex-col bg-(--bg-canvas)">
@@ -95,13 +97,13 @@ export function InstanceSetupWelcomePage() {
       <main className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-8">
         <div className="flex w-full max-w-md flex-col items-center text-center">
           <h1 className="text-3xl font-bold tracking-tight text-(--txt-primary) sm:text-4xl">
-            Welcome aboard Devlane!
+            {t('setup.welcome.title', 'Welcome aboard Devlane!')}
           </h1>
           <div className="mt-6 w-full">
             <WelcomeIllustration />
           </div>
           <p className="mt-2 text-sm text-(--txt-secondary)">
-            Get started by setting up your instance and workspace.
+            {t('setup.welcome.subtitle', 'Get started by setting up your instance and workspace.')}
           </p>
           <Button
             type="button"
@@ -109,7 +111,7 @@ export function InstanceSetupWelcomePage() {
             className="mt-8 w-full max-w-xs"
             onClick={() => navigate('/setup/configure', { replace: true })}
           >
-            Get started
+            {t('setup.welcome.getStarted', 'Get started')}
           </Button>
         </div>
       </main>

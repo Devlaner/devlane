@@ -66,7 +66,7 @@ Instance administrators can manage workspaces and instance settings from the ins
 
 1. **API** — From the `apps/api` directory, copy `.env.example` to `.env`, set your PostgreSQL and Redis (and optional RabbitMQ/MinIO) settings, run migrations, then start the server (see `apps/api/README.md`).
 2. **UI** — From the `apps/web` directory, run `npm install` and `npm run dev`. Point the UI at your local API using the configured base URL.
-3. **First run** — Complete instance setup in the browser (create admin account, then create a workspace and project).
+3. **First run** — Complete instance setup in the browser (create admin account, then create a workspace and project), or run `go run ./cmd/api seed` from `apps/api` to populate a demo user, workspace, project, and sample work items in one step (see [CONTRIBUTING](CONTRIBUTING.md)).
 
 For contribution workflow and code style, see [CONTRIBUTING](CONTRIBUTING.md) if present.
 
@@ -119,13 +119,13 @@ AI-assisted contributions are accepted, but must be disclosed — note the tool 
 ## Star History
 
 <a href="https://www.star-history.com/?repos=Devlaner%2Fdevlane&type=date&legend=top-left">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Devlaner/devlane&type=date&theme=dark&legend=top-left" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Devlaner/devlane&type=date&legend=top-left" />
-    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Devlaner/devlane&type=date&legend=top-left" />
-  </picture>
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Devlaner/devlane&type=date&theme=dark&legend=top-left&sealed_token=kGLSNgbrnvlf8SFEs9OweVgHjGleFsOPLxFNSbS8sHbo6NWeCjO4twizjuMlX9fCkdivM2KMB3NunAcKwfp2RuyzZxH45s-quC0irrasw5dWrr47yriGwg" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Devlaner/devlane&type=date&legend=top-left&sealed_token=kGLSNgbrnvlf8SFEs9OweVgHjGleFsOPLxFNSbS8sHbo6NWeCjO4twizjuMlX9fCkdivM2KMB3NunAcKwfp2RuyzZxH45s-quC0irrasw5dWrr47yriGwg" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Devlaner/devlane&type=date&legend=top-left&sealed_token=kGLSNgbrnvlf8SFEs9OweVgHjGleFsOPLxFNSbS8sHbo6NWeCjO4twizjuMlX9fCkdivM2KMB3NunAcKwfp2RuyzZxH45s-quC0irrasw5dWrr47yriGwg" />
+ </picture>
 </a>
 
 ## License
 
-This project is licensed under the **Devlane Software License**. It grants you broad use and modification rights (MIT-style) but does not allow selling the software or offering it as a hosted/subscription service to third parties. See [LICENSE](LICENSE) for the full text. This license is not OSI-approved open source.
+This project is licensed under the [MIT License](LICENSE), an OSI-approved open source license.

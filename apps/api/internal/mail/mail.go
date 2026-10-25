@@ -5,15 +5,17 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/smtp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Devlaner/devlane/api/internal/crypto"
 	"github.com/Devlaner/devlane/api/internal/store"
 )
 
-type smtpSettings struct {
+type SMTPSettings struct {
 	Host        string
 	Port        int
 	SenderEmail string
@@ -22,7 +24,7 @@ type smtpSettings struct {
 	Password    string
 }
 
-func getEmailSettings(ctx context.Context, s *store.InstanceSettingStore) (*smtpSettings, error) {
+func getEmailSettings(ctx context.Context, s *store.InstanceSettingStore) (*SMTPSettings, error) {
 	row, err := s.Get(ctx, "email")
 	if err != nil || row == nil {
 		return nil, fmt.Errorf("email settings not found")
@@ -55,7 +57,7 @@ func getEmailSettings(ctx context.Context, s *store.InstanceSettingStore) (*smtp
 	if host == "" {
 		return nil, fmt.Errorf("email host not configured")
 	}
-	return &smtpSettings{
+	return &SMTPSettings{
 		Host:        host,
 		Port:        port,
 		SenderEmail: strings.TrimSpace(sender),
@@ -78,63 +80,131 @@ func NewSMTPEmailSender(instanceSettings *store.InstanceSettingStore, log *slog.
 			LogSkip(log, "instance email not configured", to, err)
 			return err
 		}
-		from := cfg.SenderEmail
-		if from == "" {
-			from = cfg.Username
-		}
-		if from == "" {
-			LogSkip(log, "sender_email and username empty", to, fmt.Errorf("sender not set"))
-			return fmt.Errorf("sender email not configured")
-		}
-		addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
-		auth := smtp.PlainAuth("", cfg.Username, cfg.Password, cfg.Host)
-		msg := buildMessage(to, from, subject, body)
-		if err := sendMailWithConfig(addr, cfg.Host, cfg.Port, cfg.Security, auth, from, to, msg); err != nil {
+		if err := SendWithSMTPSettings(ctx, cfg, to, subject, body, log); err != nil {
 			return err
 		}
 		return nil
 	}
 }
 
-// sendMailWithConfig sends email using smtp.SendMail or, for port 465 with SSL,
-// an explicit TLS connection (smtp.SendMail only supports STARTTLS).
-func sendMailWithConfig(addr, host string, port int, security string, auth smtp.Auth, from, to string, msg []byte) error {
-	useImplicitTLS := port == 465 && strings.EqualFold(strings.TrimSpace(security), "SSL")
-	if useImplicitTLS {
-		conn, err := tls.Dial("tcp", addr, &tls.Config{ServerName: host})
-		if err != nil {
+var smtpSendTimeout = 15 * time.Second
+
+// SendWithSMTPSettings sends an email using the supplied SMTP settings without persisting them.
+func SendWithSMTPSettings(ctx context.Context, cfg *SMTPSettings, to, subject, body string, log *slog.Logger) error {
+	if cfg == nil {
+		return fmt.Errorf("SMTP settings not configured")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(ctx, smtpSendTimeout)
+	defer cancel()
+
+	from := cfg.SenderEmail
+	if from == "" {
+		from = cfg.Username
+	}
+	if from == "" {
+		LogSkip(log, "sender_email and username empty", to, fmt.Errorf("sender not set"))
+		return fmt.Errorf("sender email not configured")
+	}
+	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
+	auth := newSMTPAuth(cfg.Host, cfg.Username, cfg.Password)
+	msg := buildMessage(to, from, subject, body)
+	return sendMailWithConfig(ctx, addr, cfg.Host, cfg.Port, cfg.Security, auth, from, to, msg)
+}
+
+func newSMTPAuth(host, username, password string) smtp.Auth {
+	if username == "" {
+		return nil
+	}
+	return smtp.PlainAuth("", username, password, host)
+}
+
+// sendMailWithConfig sends email using the configured SMTP security mode:
+// TLS requires STARTTLS, SSL uses implicit TLS, and None sends plaintext.
+// Dialing honors ctx, and its deadline bounds every SMTP read and write.
+func sendMailWithConfig(ctx context.Context, addr, host string, port int, security string, auth smtp.Auth, from, to string, msg []byte) error {
+	security = strings.ToUpper(strings.TrimSpace(security))
+	if security == "" {
+		security = "TLS"
+	}
+	switch security {
+	case "TLS", "SSL", "NONE":
+	default:
+		return fmt.Errorf("unsupported SMTP security setting %q", security)
+	}
+
+	conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", addr)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	if deadline, ok := ctx.Deadline(); ok {
+		if err := conn.SetDeadline(deadline); err != nil {
 			return err
 		}
-		defer conn.Close()
-		client, err := smtp.NewClient(conn, host)
-		if err != nil {
+	}
+	stopCancel := context.AfterFunc(ctx, func() {
+		_ = conn.SetDeadline(time.Now())
+	})
+	defer stopCancel()
+
+	var client *smtp.Client
+	if security == "SSL" {
+		tlsConn := tls.Client(conn, &tls.Config{ServerName: host})
+		if err := tlsConn.HandshakeContext(ctx); err != nil {
 			return err
 		}
-		defer client.Close()
+		if client, err = smtp.NewClient(tlsConn, host); err != nil {
+			return err
+		}
+	} else {
+		if client, err = smtp.NewClient(conn, host); err != nil {
+			return err
+		}
+	}
+	defer client.Close()
+
+	switch security {
+	case "TLS":
+		if ok, _ := client.Extension("STARTTLS"); !ok {
+			return fmt.Errorf("SMTP server does not support STARTTLS")
+		}
+		if err := client.StartTLS(&tls.Config{ServerName: host}); err != nil {
+			return err
+		}
+	case "NONE":
+		// The explicit None setting opts out of Go's opportunistic STARTTLS.
+	}
+
+	if err := sendMailWithClient(client, auth, from, to, msg); err != nil {
+		return err
+	}
+	return client.Quit()
+}
+
+func sendMailWithClient(client *smtp.Client, auth smtp.Auth, from, to string, msg []byte) error {
+	if auth != nil {
 		if err := client.Auth(auth); err != nil {
 			return err
 		}
-		if err := client.Mail(from); err != nil {
-			return err
-		}
-		if err := client.Rcpt(to); err != nil {
-			return err
-		}
-		w, err := client.Data()
-		if err != nil {
-			return err
-		}
-		if _, err := w.Write(msg); err != nil {
-			_ = w.Close()
-			return err
-		}
-		if err := w.Close(); err != nil {
-			return err
-		}
-		return client.Quit()
 	}
-	// STARTTLS (port 587) or no security: standard SendMail
-	return smtp.SendMail(addr, auth, from, []string{to}, msg)
+	if err := client.Mail(from); err != nil {
+		return err
+	}
+	if err := client.Rcpt(to); err != nil {
+		return err
+	}
+	w, err := client.Data()
+	if err != nil {
+		return err
+	}
+	if _, err := w.Write(msg); err != nil {
+		_ = w.Close()
+		return err
+	}
+	return w.Close()
 }
 
 // sanitizeHeader removes CR/LF to prevent header injection.
