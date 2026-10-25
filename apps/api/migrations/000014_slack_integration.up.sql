@@ -11,7 +11,7 @@ VALUES (
 ON CONFLICT (provider) DO NOTHING;
 
 -- Create slack_channel_links table --
-CREATE TABLE slack_channel_links (
+CREATE TABLE IF NOT EXISTS slack_channel_links (
     id                        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     workspace_integration_id  UUID NOT NULL REFERENCES workspace_integrations (id) ON DELETE CASCADE,
     project_id                UUID NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
