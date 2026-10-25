@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui';
@@ -104,7 +104,9 @@ export function DraftsPage() {
   const [loading, setLoading] = useState(true);
   const [listLoading, setListLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [offset, setOffset] = useState(0);
+  // Paging cursor lives in a ref so loadDrafts keeps a stable identity; if it
+  // depended on offset state, advancing the page would re-fire the reset effect.
+  const offsetRef = useRef(0);
   const [hasMore, setHasMore] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -181,7 +183,7 @@ export function DraftsPage() {
   const loadDrafts = useCallback(
     async (reset: boolean) => {
       if (!workspaceSlug) return;
-      const nextOffset = reset ? 0 : offset;
+      const nextOffset = reset ? 0 : offsetRef.current;
       if (reset) setListLoading(true);
       setError(null);
       try {
@@ -193,7 +195,7 @@ export function DraftsPage() {
         const slice = more ? batch.slice(0, PAGE_SIZE) : batch;
         setDrafts((prev) => (reset ? slice : [...prev, ...slice]));
         setHasMore(more);
-        setOffset(nextOffset + slice.length);
+        offsetRef.current = nextOffset + slice.length;
         setError(null);
       } catch {
         if (reset) setDrafts([]);
@@ -202,7 +204,7 @@ export function DraftsPage() {
         if (reset) setListLoading(false);
       }
     },
-    [workspaceSlug, offset, t],
+    [workspaceSlug, t],
   );
 
   useEffect(() => {
