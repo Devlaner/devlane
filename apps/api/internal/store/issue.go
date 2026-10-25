@@ -445,6 +445,64 @@ func (s *IssueStore) ClearLabelsForIssue(ctx context.Context, issueID uuid.UUID)
 	return s.db.WithContext(ctx).Where("issue_id = ?", issueID).Delete(&model.IssueLabel{}).Error
 }
 
+// ReplaceAssignees swaps an issue's assignees for assigneeIDs in one
+// transaction, so a failed insert can't leave the issue with the old rows
+// deleted and only some new ones written. Duplicate ids are dropped to respect
+// the (issue_id, assignee_id) unique constraint.
+func (s *IssueStore) ReplaceAssignees(ctx context.Context, issueID, projectID, workspaceID uuid.UUID, assigneeIDs []uuid.UUID) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("issue_id = ?", issueID).Delete(&model.IssueAssignee{}).Error; err != nil {
+			return err
+		}
+		seen := make(map[uuid.UUID]bool, len(assigneeIDs))
+		rows := make([]model.IssueAssignee, 0, len(assigneeIDs))
+		for _, id := range assigneeIDs {
+			if id == uuid.Nil || seen[id] {
+				continue
+			}
+			seen[id] = true
+			rows = append(rows, model.IssueAssignee{
+				IssueID:     issueID,
+				AssigneeID:  id,
+				ProjectID:   projectID,
+				WorkspaceID: workspaceID,
+			})
+		}
+		if len(rows) == 0 {
+			return nil
+		}
+		return tx.Create(&rows).Error
+	})
+}
+
+// ReplaceLabels swaps an issue's labels for labelIDs in one transaction (see
+// ReplaceAssignees). Duplicate ids are dropped.
+func (s *IssueStore) ReplaceLabels(ctx context.Context, issueID, projectID, workspaceID uuid.UUID, labelIDs []uuid.UUID) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("issue_id = ?", issueID).Delete(&model.IssueLabel{}).Error; err != nil {
+			return err
+		}
+		seen := make(map[uuid.UUID]bool, len(labelIDs))
+		rows := make([]model.IssueLabel, 0, len(labelIDs))
+		for _, id := range labelIDs {
+			if id == uuid.Nil || seen[id] {
+				continue
+			}
+			seen[id] = true
+			rows = append(rows, model.IssueLabel{
+				IssueID:     issueID,
+				LabelID:     id,
+				ProjectID:   projectID,
+				WorkspaceID: workspaceID,
+			})
+		}
+		if len(rows) == 0 {
+			return nil
+		}
+		return tx.Create(&rows).Error
+	})
+}
+
 // ListAssigneesForIssue returns assignee IDs for an issue.
 func (s *IssueStore) ListAssigneesForIssue(ctx context.Context, issueID uuid.UUID) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
