@@ -196,6 +196,7 @@ export function StickyNoteCard({
   const safeSlug = workspaceSlug.trim();
   const initialHtml = getInitialStickyHtml(sticky);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingHtmlRef = useRef<string | null>(null);
   const lastSyncedHtmlRef = useRef(initialHtml);
   const contentRequestIdRef = useRef(0);
   const colorRequestIdRef = useRef(0);
@@ -228,6 +229,11 @@ export function StickyNoteCard({
     },
     [safeSlug, sticky.id, onUpdate],
   );
+  const persistStickyRef = useRef(persistSticky);
+
+  useEffect(() => {
+    persistStickyRef.current = persistSticky;
+  }, [persistSticky]);
 
   const editor = useEditor({
     extensions: [
@@ -259,15 +265,25 @@ export function StickyNoteCard({
     ],
     content: initialHtml,
     onUpdate: ({ editor: ed }) => {
-      const html = ed.getHTML();
+      pendingHtmlRef.current = ed.getHTML();
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => persistSticky(html), 400);
+      debounceRef.current = setTimeout(() => {
+        debounceRef.current = null;
+        const pendingHtml = pendingHtmlRef.current;
+        pendingHtmlRef.current = null;
+        if (pendingHtml !== null) persistStickyRef.current(pendingHtml);
+      }, 400);
     },
   });
 
   useEffect(
     () => () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (!debounceRef.current) return;
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+      const pendingHtml = pendingHtmlRef.current;
+      pendingHtmlRef.current = null;
+      if (pendingHtml !== null) persistStickyRef.current(pendingHtml);
     },
     [],
   );
