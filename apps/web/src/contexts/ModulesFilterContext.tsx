@@ -36,6 +36,8 @@ export interface ModulesFilterContextValue extends ModulesFilterState {
   setDueAfter: (v: string | null) => void;
   setDueBefore: (v: string | null) => void;
   updateFilter: (updater: (prev: ModulesFilterState) => Partial<ModulesFilterState>) => void;
+  /** Reset every filter back to defaults (e.g. when switching projects). */
+  reset: () => void;
 }
 
 const defaultState: ModulesFilterState = {
@@ -66,6 +68,8 @@ export function ModulesFilterProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+
+  const reset = useCallback(() => setState(defaultState), []);
 
   const setSearch = useCallback((v: string) => {
     setState((prev) => ({ ...prev, search: v }));
@@ -143,6 +147,7 @@ export function ModulesFilterProvider({ children }: { children: ReactNode }) {
       setDueAfter,
       setDueBefore,
       updateFilter,
+      reset,
     }),
     [
       state,
@@ -161,6 +166,7 @@ export function ModulesFilterProvider({ children }: { children: ReactNode }) {
       setDueAfter,
       setDueBefore,
       updateFilter,
+      reset,
     ],
   );
 
