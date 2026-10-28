@@ -199,6 +199,7 @@ export function StickyNoteCard({
   const pendingHtmlRef = useRef<string | null>(null);
   const lastSyncedHtmlRef = useRef(initialHtml);
   const contentRequestIdRef = useRef(0);
+  const stickyUpdateChainRef = useRef<Promise<void>>(Promise.resolve());
   const colorRequestIdRef = useRef(0);
   const colorListboxId = useId();
   const [colorOpen, setColorOpen] = useState(false);
@@ -210,11 +211,17 @@ export function StickyNoteCard({
       if (!safeSlug) return;
       const plain = htmlToPlainText(html).slice(0, 255);
       const requestId = ++contentRequestIdRef.current;
-      stickiesService
-        .update(safeSlug, sticky.id, {
+      const save = stickyUpdateChainRef.current.then(() =>
+        stickiesService.update(safeSlug, sticky.id, {
           description: html,
           name: plain || 'Untitled',
-        })
+        }),
+      );
+      stickyUpdateChainRef.current = save.then(
+        () => undefined,
+        () => undefined,
+      );
+      save
         .then((data) => {
           if (requestId !== contentRequestIdRef.current) return;
           setContentSaveError(false);
@@ -311,8 +318,14 @@ export function StickyNoteCard({
   const setStickyColor = (next: string) => {
     if (!safeSlug) return;
     const requestId = ++colorRequestIdRef.current;
-    stickiesService
-      .update(safeSlug, sticky.id, { color: next })
+    const update = stickyUpdateChainRef.current.then(() =>
+      stickiesService.update(safeSlug, sticky.id, { color: next }),
+    );
+    stickyUpdateChainRef.current = update.then(
+      () => undefined,
+      () => undefined,
+    );
+    update
       .then((data) => {
         if (requestId !== colorRequestIdRef.current) return;
         onUpdate(data);
