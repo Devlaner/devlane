@@ -124,7 +124,7 @@ src/
 - **API calls**: always go through a service in `src/services/`, which uses `apiClient` from `src/api/client.ts`. `withCredentials: true` is required for cookie sessions. Don't create new axios instances.
 - **Cross-component coordination**: small DOM-event buses in `src/lib/*Events.ts` (e.g. `homeWidgetsEvents`, `projectIssuesEvents`) for state that doesn't justify a full context. Prefer extending an existing event bus to inventing a new context.
 - **Styling**: Tailwind v4 (CSS-first config in `index.css` / `styles/`). CSS variables drive theming — patterns like `text-(--txt-tertiary)` reference custom properties set by `ThemeContext`. Use `clsx` + `tailwind-merge` (`cn` helper in `lib/utils.ts`).
-- **Editor**: TipTap 3.22.3 — keep all `@tiptap/*` packages on the **same exact version** (they share peer deps; mismatches break silently).
+- **Editor**: TipTap 3.30.6 — keep all `@tiptap/*` packages on the **same exact version** (they share peer deps; mismatches break silently).
 - **Lazy boundaries**: every page is `lazy()` with a `<Suspense fallback={<PageFallback />}>`. New pages should follow the same pattern in `routes/index.tsx`.
 
 ## Working with this repo
