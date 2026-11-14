@@ -22,6 +22,8 @@ var (
 	ErrSlugTaken          = errors.New("slug already in use")
 	ErrInviteNotFound     = errors.New("invite not found")
 	ErrMemberNotFound     = errors.New("member not found")
+	// ErrInvalidRole is returned when a requested role is not a defined role level.
+	ErrInvalidRole = errors.New("invalid role")
 	// ErrTokenNotFound is returned when a workspace service token to revoke does not exist.
 	ErrTokenNotFound = errors.New("token not found")
 	// ErrApiTokensNotConfigured is returned when the token store was never wired
@@ -243,6 +245,9 @@ func (s *WorkspaceService) GetMember(ctx context.Context, slug string, memberID 
 }
 
 func (s *WorkspaceService) UpdateMemberRole(ctx context.Context, slug string, memberID uuid.UUID, userID uuid.UUID, role int16) (*model.WorkspaceMember, error) {
+	if !model.IsValidRole(role) {
+		return nil, ErrInvalidRole
+	}
 	w, err := s.GetBySlug(ctx, slug, userID)
 	if err != nil {
 		return nil, err
@@ -301,6 +306,9 @@ func (s *WorkspaceService) Leave(ctx context.Context, slug string, userID uuid.U
 }
 
 func (s *WorkspaceService) CreateInvite(ctx context.Context, slug string, userID uuid.UUID, email string, role int16) (*model.WorkspaceMemberInvite, error) {
+	if !model.IsValidRole(role) {
+		return nil, ErrInvalidRole
+	}
 	w, err := s.GetBySlug(ctx, slug, userID)
 	if err != nil {
 		return nil, err

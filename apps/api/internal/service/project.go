@@ -295,6 +295,9 @@ func (s *ProjectService) GetMember(ctx context.Context, workspaceSlug string, pr
 }
 
 func (s *ProjectService) UpdateMemberRole(ctx context.Context, workspaceSlug string, projectID uuid.UUID, memberPK uuid.UUID, userID uuid.UUID, role int16) (*model.ProjectMember, error) {
+	if !model.IsValidRole(role) {
+		return nil, ErrInvalidRole
+	}
 	p, err := s.GetByID(ctx, workspaceSlug, projectID, userID)
 	if err != nil {
 		return nil, err
@@ -380,6 +383,9 @@ func genProjectInviteToken() string {
 }
 
 func (s *ProjectService) CreateInvite(ctx context.Context, workspaceSlug string, projectID uuid.UUID, userID uuid.UUID, email string, role int16) (*model.ProjectMemberInvite, error) {
+	if !model.IsValidRole(role) {
+		return nil, ErrInvalidRole
+	}
 	p, err := s.GetByID(ctx, workspaceSlug, projectID, userID)
 	if err != nil {
 		return nil, err
