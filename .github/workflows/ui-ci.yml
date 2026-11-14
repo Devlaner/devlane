@@ -7,6 +7,9 @@ on:
       - 'apps/web/**'
       - '.github/workflows/ui-ci.yml'
 
+permissions:
+  contents: read
+
 defaults:
   run:
     working-directory: apps/web
