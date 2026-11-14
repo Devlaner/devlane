@@ -45,6 +45,12 @@ func TestIsPublicIP_IPv6TransitionForms(t *testing.T) {
 		// NAT64 well-known and local-use prefixes
 		"64:ff9b::127.0.0.1", "64:ff9b::10.0.0.1", "64:ff9b::169.254.169.254", "64:ff9b::a9fe:a9fe",
 		"64:ff9b::192.168.1.1", "64:ff9b::100.64.0.1", "64:ff9b:1::10.0.0.1",
+		// local-use NAT64 is blocked whatever the embedding layout (RFC 6052 /48 form)
+		"64:ff9b:1:a00:1::808:808", "64:ff9b:1::8.8.8.8",
+		// IPv4-translated (SIIT)
+		"::ffff:0:10.0.0.1", "::ffff:0:127.0.0.1",
+		// IPv6 benchmarking
+		"2001:2::1",
 		// 6to4
 		"2002:0a00:0001::", "2002:7f00:0001::", "2002:a9fe:a9fe::1", "2002:c0a8:0101::",
 		// IPv4-compatible
@@ -84,6 +90,8 @@ func TestValidWebhookURL_IPv6TransitionForms(t *testing.T) {
 		"http://[2002:7f00:1::]/x",
 		"http://[::127.0.0.1]/x",
 		"http://[::ffff:169.254.169.254]/x",
+		"http://[fe80::1%25eth0]/x",
+		"http://[64:ff9b:1:a00:1::808:808]/x",
 	} {
 		if validWebhookURL(bad) {
 			t.Errorf("%s should be invalid", bad)

@@ -181,6 +181,8 @@ var nonPublicPrefixes = []netip.Prefix{
 	netip.MustParsePrefix("100::/64"),        // IPv6 discard-only
 	netip.MustParsePrefix("2001:db8::/32"),   // IPv6 documentation
 	netip.MustParsePrefix("2001::/32"),       // Teredo (tunnels to arbitrary IPv4)
+	netip.MustParsePrefix("2001:2::/48"),     // IPv6 benchmarking
+	netip.MustParsePrefix("64:ff9b:1::/48"),  // local-use NAT64 (RFC 8215); embedding layout is operator-defined
 	netip.MustParsePrefix("2001:10::/28"),    // ORCHID
 	netip.MustParsePrefix("2001:20::/28"),    // ORCHIDv2
 	netip.MustParsePrefix("fec0::/10"),       // deprecated site-local
@@ -188,8 +190,10 @@ var nonPublicPrefixes = []netip.Prefix{
 
 // embeddedIPv4 returns the IPv4 destination carried by an IPv6 transition
 // address, or false if ip is not one. Covered forms: IPv4-mapped
-// (::ffff:0:0/96), IPv4-compatible (::/96), NAT64 well-known and local-use
-// prefixes (64:ff9b::/96, 64:ff9b:1::/48) and 6to4 (2002::/16).
+// (::ffff:0:0/96), IPv4-translated/SIIT (::ffff:0:0:0/96), IPv4-compatible
+// (::/96), NAT64 well-known prefix (64:ff9b::/96) and 6to4 (2002::/16).
+// The local-use NAT64 prefix 64:ff9b:1::/48 is blocked outright instead,
+// since operators may embed the IPv4 at several offsets (RFC 6052 §2.2).
 func embeddedIPv4(ip netip.Addr) (netip.Addr, bool) {
 	if !ip.Is6() {
 		return netip.Addr{}, false
@@ -198,10 +202,9 @@ func embeddedIPv4(ip netip.Addr) (netip.Addr, bool) {
 	switch {
 	case ip.Is4In6():
 		return ip.Unmap(), true
-	case netip.MustParsePrefix("::/96").Contains(ip):
-		return netip.AddrFrom4([4]byte{b[12], b[13], b[14], b[15]}), true
-	case netip.MustParsePrefix("64:ff9b::/96").Contains(ip),
-		netip.MustParsePrefix("64:ff9b:1::/48").Contains(ip):
+	case netip.MustParsePrefix("::/96").Contains(ip),
+		netip.MustParsePrefix("::ffff:0:0:0/96").Contains(ip),
+		netip.MustParsePrefix("64:ff9b::/96").Contains(ip):
 		return netip.AddrFrom4([4]byte{b[12], b[13], b[14], b[15]}), true
 	case netip.MustParsePrefix("2002::/16").Contains(ip):
 		return netip.AddrFrom4([4]byte{b[2], b[3], b[4], b[5]}), true
@@ -259,7 +262,9 @@ func validWebhookURL(raw string) bool {
 	}
 	// Reject literal IP hosts that are non-public. Hostnames are left to the
 	// connect-time resolver guard, since they can resolve differently later.
-	if ip := net.ParseIP(u.Hostname()); ip != nil && !isPublicIP(ip) {
+	// netip.ParseAddr also accepts zoned literals (fe80::1%eth0), which
+	// net.ParseIP rejects and would otherwise slip through as a "hostname".
+	if ip, err := netip.ParseAddr(u.Hostname()); err == nil && !isPublicAddr(ip.WithZone("")) {
 		return false
 	}
 	return true
