@@ -262,6 +262,10 @@ func (h *WorkspaceHandler) UpdateMember(c *gin.Context) {
 	}
 	m, err := h.Workspace.UpdateMemberRole(c.Request.Context(), slug, pk, user.ID, *body.Role)
 	if err != nil {
+		if err == service.ErrInvalidRole {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid role"})
+			return
+		}
 		if err == service.ErrWorkspaceNotFound || err == service.ErrWorkspaceForbidden {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Workspace not found"})
 			return
@@ -372,6 +376,10 @@ func (h *WorkspaceHandler) CreateInvite(c *gin.Context) {
 	}
 	inv, err := h.Workspace.CreateInvite(c.Request.Context(), slug, user.ID, body.Email, body.Role)
 	if err != nil {
+		if err == service.ErrInvalidRole {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid role"})
+			return
+		}
 		if err == service.ErrWorkspaceNotFound || err == service.ErrWorkspaceForbidden {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Workspace not found"})
 			return

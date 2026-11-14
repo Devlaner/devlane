@@ -518,6 +518,10 @@ func (h *ProjectHandler) UpdateMember(c *gin.Context) {
 	}
 	m, err := h.Project.UpdateMemberRole(c.Request.Context(), slug, projectID, pk, user.ID, *body.Role)
 	if err != nil {
+		if err == service.ErrInvalidRole {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid role"})
+			return
+		}
 		if err == service.ErrProjectNotFound || err == service.ErrProjectForbidden {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
 			return
@@ -640,6 +644,10 @@ func (h *ProjectHandler) CreateInvite(c *gin.Context) {
 	}
 	inv, err := h.Project.CreateInvite(c.Request.Context(), slug, projectID, user.ID, body.Email, body.Role)
 	if err != nil {
+		if err == service.ErrInvalidRole {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid role"})
+			return
+		}
 		if err == service.ErrProjectNotFound || err == service.ErrProjectForbidden {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
 			return

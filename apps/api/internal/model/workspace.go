@@ -35,6 +35,15 @@ const (
 	RoleOwner  int16 = 20
 )
 
+// IsValidRole reports whether r is one of the defined member role levels.
+func IsValidRole(r int16) bool {
+	switch r {
+	case RoleGuest, RoleMember, RoleAdmin, RoleOwner:
+		return true
+	}
+	return false
+}
+
 func (w *Workspace) BeforeCreate(tx *gorm.DB) error {
 	if w.ID == uuid.Nil {
 		w.ID = uuid.New()
