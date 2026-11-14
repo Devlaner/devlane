@@ -5,7 +5,9 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log/slog"
+	"mime"
 	"net"
+	netmail "net/mail"
 	"net/smtp"
 	"strconv"
 	"strings"
@@ -108,10 +110,18 @@ func SendWithSMTPSettings(ctx context.Context, cfg *SMTPSettings, to, subject, b
 		LogSkip(log, "sender_email and username empty", to, fmt.Errorf("sender not set"))
 		return fmt.Errorf("sender email not configured")
 	}
+	fromAddr, err := parseAddress(from)
+	if err != nil {
+		return fmt.Errorf("invalid sender email: %w", err)
+	}
+	toAddr, err := parseAddress(to)
+	if err != nil {
+		return fmt.Errorf("invalid recipient email: %w", err)
+	}
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 	auth := newSMTPAuth(cfg.Host, cfg.Username, cfg.Password)
-	msg := buildMessage(to, from, subject, body)
-	return sendMailWithConfig(ctx, addr, cfg.Host, cfg.Port, cfg.Security, auth, from, to, msg)
+	msg := buildMessage(toAddr, fromAddr, subject, body)
+	return sendMailWithConfig(ctx, addr, cfg.Host, cfg.Port, cfg.Security, auth, fromAddr.Address, toAddr.Address, msg)
 }
 
 func newSMTPAuth(host, username, password string) smtp.Auth {
@@ -212,13 +222,28 @@ func sanitizeHeader(s string) string {
 	return strings.NewReplacer("\r", "", "\n", "").Replace(s)
 }
 
-func buildMessage(to, from, subject, body string) []byte {
+// parseAddress parses exactly one RFC 5322 mailbox. Anything else (CR/LF,
+// several recipients, header fragments) is rejected before it can reach the
+// SMTP envelope or the message headers.
+func parseAddress(s string) (*netmail.Address, error) {
+	a, err := netmail.ParseAddress(strings.TrimSpace(s))
+	if err != nil {
+		return nil, err
+	}
+	if strings.ContainsAny(a.Address, "\r\n") {
+		return nil, fmt.Errorf("address contains a line break")
+	}
+	return a, nil
+}
+
+// buildMessage renders the message. Addresses are re-serialized from their
+// parsed form and the subject is stripped of CR/LF and MIME-encoded, so no
+// caller-supplied value can inject headers.
+func buildMessage(to, from *netmail.Address, subject, body string) []byte {
 	const crlf = "\r\n"
-	to = sanitizeHeader(to)
-	from = sanitizeHeader(from)
-	subject = sanitizeHeader(subject)
-	h := "To: " + to + crlf +
-		"From: " + from + crlf +
+	subject = mime.QEncoding.Encode("utf-8", sanitizeHeader(subject))
+	h := "To: " + to.String() + crlf +
+		"From: " + from.String() + crlf +
 		"Subject: " + subject + crlf +
 		"Content-Type: text/plain; charset=UTF-8" + crlf +
 		"MIME-Version: 1.0" + crlf +

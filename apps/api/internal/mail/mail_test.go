@@ -345,3 +345,33 @@ func containsSMTPCommand(commands []string, want string) bool {
 	}
 	return false
 }
+
+func TestParseAddressRejectsInjection(t *testing.T) {
+	for _, bad := range []string{
+		"", "not-an-email", "a@example.com, b@example.com",
+		"a@example.com\r\nBcc: victim@example.com", "a@example.com\nSubject: x",
+	} {
+		if _, err := parseAddress(bad); err == nil {
+			t.Errorf("parseAddress(%q) should fail", bad)
+		}
+	}
+	a, err := parseAddress("  Devlane <noreply@example.com> ")
+	if err != nil || a.Address != "noreply@example.com" {
+		t.Fatalf("parseAddress valid: %v %+v", err, a)
+	}
+}
+
+func TestBuildMessageHeaders(t *testing.T) {
+	to, _ := parseAddress("user@example.com")
+	from, _ := parseAddress("Devlane <noreply@example.com>")
+	msg := string(buildMessage(to, from, "Hello\r\nBcc: victim@example.com", "body"))
+	head, _, _ := strings.Cut(msg, "\r\n\r\n")
+	for _, line := range strings.Split(head, "\r\n") {
+		if strings.HasPrefix(strings.ToLower(line), "bcc:") {
+			t.Fatalf("subject injected a header: %q", head)
+		}
+	}
+	if !strings.Contains(head, "To: <user@example.com>") || !strings.Contains(head, `From: "Devlane" <noreply@example.com>`) {
+		t.Fatalf("unexpected headers: %q", head)
+	}
+}
