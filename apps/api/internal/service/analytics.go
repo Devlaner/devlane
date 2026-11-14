@@ -54,7 +54,14 @@ func (s *AnalyticsService) ensureWorkspaceAccess(ctx context.Context, slug strin
 	return wrk, nil
 }
 
-func (s *AnalyticsService) ensureProjectAccess(ctx context.Context, projectID, userID uuid.UUID) (*model.Project, error) {
+// ensureProjectAccess checks that the project belongs to the workspace in the
+// URL, that the caller is a member of that workspace, and that the project is
+// visible to them (secret projects are hidden from non-members).
+func (s *AnalyticsService) ensureProjectAccess(ctx context.Context, slug string, projectID, userID uuid.UUID) (*model.Project, error) {
+	wrk, err := s.ensureWorkspaceAccess(ctx, slug, userID)
+	if err != nil {
+		return nil, err
+	}
 	project, err := s.ps.GetByID(ctx, projectID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -62,23 +69,24 @@ func (s *AnalyticsService) ensureProjectAccess(ctx context.Context, projectID, u
 		}
 		return nil, err
 	}
-	ok, err := s.ws.IsMember(ctx, project.WorkspaceID, userID)
-	if err != nil {
-		return nil, err
+	if project.WorkspaceID != wrk.ID {
+		return nil, ErrProjectNotFound
 	}
-	if !ok {
-		return nil, ErrProjectForbidden
+	if err := enforceProjectVisibility(ctx, s.ps, s.ws, wrk.ID, project.ID, userID); err != nil {
+		return nil, err
 	}
 	return project, nil
 }
 
 func (s *AnalyticsService) GetWorkspaceAnalytics(ctx context.Context, slug string, userID uuid.UUID) (*AnalyticsResponse, error) {
-	if _, err := s.ensureWorkspaceAccess(ctx, slug, userID); err != nil {
+	wrk, err := s.ensureWorkspaceAccess(ctx, slug, userID)
+	if err != nil {
 		return nil, err
 	}
+	vis := projectVisibilityFor(ctx, s.ws, wrk.ID, userID)
 
 	byState := make(map[string]int64)
-	if stateResults, err := s.as.GetWorkspaceStateAnalytics(ctx, slug); err == nil {
+	if stateResults, err := s.as.GetWorkspaceStateAnalytics(ctx, slug, vis); err == nil {
 		for _, r := range stateResults {
 			byState[r.State] = r.Count
 		}
@@ -87,7 +95,7 @@ func (s *AnalyticsService) GetWorkspaceAnalytics(ctx context.Context, slug strin
 	}
 
 	byPriority := make(map[string]int64)
-	if priorityResults, err := s.as.GetWorkspacePriorityAnalytics(ctx, slug); err == nil {
+	if priorityResults, err := s.as.GetWorkspacePriorityAnalytics(ctx, slug, vis); err == nil {
 		for _, r := range priorityResults {
 			byPriority[r.Priority] = r.Count
 		}
@@ -96,7 +104,7 @@ func (s *AnalyticsService) GetWorkspaceAnalytics(ctx context.Context, slug strin
 	}
 
 	byAssignee := make(map[string]int64)
-	if assigneeResults, err := s.as.GetWorkspaceAssigneeAnalytics(ctx, slug); err == nil {
+	if assigneeResults, err := s.as.GetWorkspaceAssigneeAnalytics(ctx, slug, vis); err == nil {
 		for _, r := range assigneeResults {
 			byAssignee[r.Email] = r.Count
 		}
@@ -105,7 +113,7 @@ func (s *AnalyticsService) GetWorkspaceAnalytics(ctx context.Context, slug strin
 	}
 
 	byLabel := make(map[string]int64)
-	if labelResults, err := s.as.GetWorkspaceLabelAnalytics(ctx, slug); err == nil {
+	if labelResults, err := s.as.GetWorkspaceLabelAnalytics(ctx, slug, vis); err == nil {
 		for _, r := range labelResults {
 			byLabel[r.Label] = r.Count
 		}
@@ -113,7 +121,7 @@ func (s *AnalyticsService) GetWorkspaceAnalytics(ctx context.Context, slug strin
 		return nil, fmt.Errorf("fetch workspace labels analytics: %w", err)
 	}
 
-	trend, err := s.as.GetWorkspaceTrendAnalytics(ctx, slug)
+	trend, err := s.as.GetWorkspaceTrendAnalytics(ctx, slug, vis)
 	if err != nil {
 		return nil, fmt.Errorf("fetch workspace trend analytics: %w", err)
 	}
@@ -127,8 +135,8 @@ func (s *AnalyticsService) GetWorkspaceAnalytics(ctx context.Context, slug strin
 	}, nil
 }
 
-func (s *AnalyticsService) GetProjectAnalytics(ctx context.Context, projectID, userID uuid.UUID) (*AnalyticsResponse, error) {
-	if _, err := s.ensureProjectAccess(ctx, projectID, userID); err != nil {
+func (s *AnalyticsService) GetProjectAnalytics(ctx context.Context, slug string, projectID, userID uuid.UUID) (*AnalyticsResponse, error) {
+	if _, err := s.ensureProjectAccess(ctx, slug, projectID, userID); err != nil {
 		return nil, err
 	}
 
@@ -188,19 +196,21 @@ func (s *AnalyticsService) ExportWorkspaceCSV(
 	userID uuid.UUID,
 	fn func(model.WorkspaceIssueExport) error,
 ) error {
-	if _, err := s.ensureWorkspaceAccess(ctx, slug, userID); err != nil {
+	wrk, err := s.ensureWorkspaceAccess(ctx, slug, userID)
+	if err != nil {
 		return err
 	}
 
-	return s.as.StreamWorkspaceIssuesForExport(ctx, slug, fn)
+	return s.as.StreamWorkspaceIssuesForExport(ctx, slug, projectVisibilityFor(ctx, s.ws, wrk.ID, userID), fn)
 }
 
 func (s *AnalyticsService) ExportProjectCSV(
 	ctx context.Context,
+	slug string,
 	projectID, userID uuid.UUID,
 	fn func(model.ProjectIssueExport) error,
 ) error {
-	if _, err := s.ensureProjectAccess(ctx, projectID, userID); err != nil {
+	if _, err := s.ensureProjectAccess(ctx, slug, projectID, userID); err != nil {
 		return err
 	}
 

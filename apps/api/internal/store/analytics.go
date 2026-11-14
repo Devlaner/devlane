@@ -16,7 +16,18 @@ func NewAnalyticsStore(db *gorm.DB) *AnalyticsStore {
 	return &AnalyticsStore{db: db}
 }
 
-func (s *AnalyticsStore) GetWorkspaceStateAnalytics(ctx context.Context, slug string) ([]model.StateCount, error) {
+// visibleProjects limits a query that joins the projects table (unaliased) to
+// the projects the caller may see.
+func visibleProjects(vis ProjectVisibility) func(*gorm.DB) *gorm.DB {
+	return func(q *gorm.DB) *gorm.DB {
+		if c, args := vis.Clause("projects"); c != "" {
+			return q.Where(c, args...)
+		}
+		return q
+	}
+}
+
+func (s *AnalyticsStore) GetWorkspaceStateAnalytics(ctx context.Context, slug string, vis ProjectVisibility) ([]model.StateCount, error) {
 	var results []model.StateCount
 	err := s.db.WithContext(ctx).
 		Table("issues").
@@ -25,13 +36,14 @@ func (s *AnalyticsStore) GetWorkspaceStateAnalytics(ctx context.Context, slug st
 		Joins("JOIN projects ON issues.project_id = projects.id").
 		Joins("JOIN states ON issues.state_id = states.id").
 		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
+		Scopes(visibleProjects(vis)).
 		Group("states.name").
 		Scan(&results).Error
 
 	return results, err
 }
 
-func (s *AnalyticsStore) GetWorkspacePriorityAnalytics(ctx context.Context, slug string) ([]model.PriorityCount, error) {
+func (s *AnalyticsStore) GetWorkspacePriorityAnalytics(ctx context.Context, slug string, vis ProjectVisibility) ([]model.PriorityCount, error) {
 	var results []model.PriorityCount
 	err := s.db.WithContext(ctx).
 		Table("issues").
@@ -39,13 +51,14 @@ func (s *AnalyticsStore) GetWorkspacePriorityAnalytics(ctx context.Context, slug
 		Joins("JOIN workspaces ON issues.workspace_id = workspaces.id").
 		Joins("JOIN projects ON issues.project_id = projects.id").
 		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
+		Scopes(visibleProjects(vis)).
 		Group("issues.priority").
 		Scan(&results).Error
 
 	return results, err
 }
 
-func (s *AnalyticsStore) GetWorkspaceAssigneeAnalytics(ctx context.Context, slug string) ([]model.AssigneeCount, error) {
+func (s *AnalyticsStore) GetWorkspaceAssigneeAnalytics(ctx context.Context, slug string, vis ProjectVisibility) ([]model.AssigneeCount, error) {
 	var results []model.AssigneeCount
 	err := s.db.WithContext(ctx).
 		Table("issues").
@@ -55,13 +68,14 @@ func (s *AnalyticsStore) GetWorkspaceAssigneeAnalytics(ctx context.Context, slug
 		Joins("LEFT JOIN issue_assignees ON issues.id = issue_assignees.issue_id").
 		Joins("LEFT JOIN users ON issue_assignees.assignee_id = users.id").
 		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
+		Scopes(visibleProjects(vis)).
 		Group("users.email").
 		Scan(&results).Error
 
 	return results, err
 }
 
-func (s *AnalyticsStore) GetWorkspaceLabelAnalytics(ctx context.Context, slug string) ([]model.LabelCount, error) {
+func (s *AnalyticsStore) GetWorkspaceLabelAnalytics(ctx context.Context, slug string, vis ProjectVisibility) ([]model.LabelCount, error) {
 	var results []model.LabelCount
 	err := s.db.WithContext(ctx).
 		Table("issue_labels").
@@ -71,6 +85,7 @@ func (s *AnalyticsStore) GetWorkspaceLabelAnalytics(ctx context.Context, slug st
 		Joins("JOIN workspaces ON issues.workspace_id = workspaces.id").
 		Joins("JOIN projects ON issues.project_id = projects.id").
 		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
+		Scopes(visibleProjects(vis)).
 		Group("labels.name").
 		Scan(&results).Error
 
@@ -129,7 +144,7 @@ func (s *AnalyticsStore) GetProjectLabelAnalytics(ctx context.Context, projectID
 	return results, err
 }
 
-func (s *AnalyticsStore) StreamWorkspaceIssuesForExport(ctx context.Context, slug string, fn func(model.WorkspaceIssueExport) error) error {
+func (s *AnalyticsStore) StreamWorkspaceIssuesForExport(ctx context.Context, slug string, vis ProjectVisibility, fn func(model.WorkspaceIssueExport) error) error {
 	rows, err := s.db.WithContext(ctx).
 		Table("issues").
 		Select("issues.id AS id, issues.name AS name, states.name AS state, issues.priority AS priority, COALESCE(STRING_AGG(DISTINCT users.email, ', '), '') AS assignee, COALESCE(STRING_AGG(DISTINCT labels.name, ', '), '') AS labels").
@@ -141,6 +156,7 @@ func (s *AnalyticsStore) StreamWorkspaceIssuesForExport(ctx context.Context, slu
 		Joins("LEFT JOIN issue_labels ON issues.id = issue_labels.issue_id").
 		Joins("LEFT JOIN labels ON issue_labels.label_id = labels.id").
 		Where("workspaces.slug = ? AND issues.deleted_at IS NULL AND workspaces.deleted_at IS NULL AND projects.deleted_at IS NULL", slug).
+		Scopes(visibleProjects(vis)).
 		Group("issues.id, states.name").
 		Rows()
 	if err != nil {
@@ -189,8 +205,9 @@ func (s *AnalyticsStore) StreamProjectIssuesForExport(ctx context.Context, proje
 	return rows.Err()
 }
 
-func (s *AnalyticsStore) GetWorkspaceTrendAnalytics(ctx context.Context, slug string) ([]model.TrendPoint, error) {
+func (s *AnalyticsStore) GetWorkspaceTrendAnalytics(ctx context.Context, slug string, vis ProjectVisibility) ([]model.TrendPoint, error) {
 	var results []model.TrendPoint
+	visSQL, visArgs := vis.andClause("projects")
 	query := `
         WITH events AS (
             SELECT DATE(issues.created_at) AS date, 1 AS created, 0 AS resolved
@@ -200,7 +217,7 @@ func (s *AnalyticsStore) GetWorkspaceTrendAnalytics(ctx context.Context, slug st
             WHERE workspaces.slug = ? 
               AND issues.deleted_at IS NULL 
               AND workspaces.deleted_at IS NULL 
-              AND projects.deleted_at IS NULL
+              AND projects.deleted_at IS NULL` + visSQL + `
 
             UNION ALL
 
@@ -215,7 +232,7 @@ func (s *AnalyticsStore) GetWorkspaceTrendAnalytics(ctx context.Context, slug st
               AND workspaces.deleted_at IS NULL 
               AND projects.deleted_at IS NULL
               AND issue_activities.field = 'state_id'
-              AND states.group IN ('completed', 'cancelled')
+              AND states.group IN ('completed', 'cancelled')` + visSQL + `
         )
         SELECT date, SUM(created) AS created, SUM(resolved) AS resolved
         FROM events
@@ -224,7 +241,10 @@ func (s *AnalyticsStore) GetWorkspaceTrendAnalytics(ctx context.Context, slug st
         ORDER BY date ASC
     `
 
-	err := s.db.WithContext(ctx).Raw(query, slug, slug).Scan(&results).Error
+	args := append([]any{slug}, visArgs...)
+	args = append(args, slug)
+	args = append(args, visArgs...)
+	err := s.db.WithContext(ctx).Raw(query, args...).Scan(&results).Error
 	return results, err
 }
 
