@@ -9,6 +9,17 @@ import (
 	"github.com/Devlaner/devlane/api/internal/store"
 )
 
+// projectVisibilityFor returns the project-visibility scope for userID in a
+// workspace: admins/owners see every project, everyone else only public
+// projects and the ones they belong to.
+func projectVisibilityFor(ctx context.Context, ws *store.WorkspaceStore, workspaceID, userID uuid.UUID) store.ProjectVisibility {
+	wm, err := ws.GetMember(ctx, workspaceID, userID)
+	return store.ProjectVisibility{
+		UserID: userID,
+		SeeAll: err == nil && wm != nil && wm.Role >= model.RoleAdmin,
+	}
+}
+
 // enforceProjectVisibility rejects access to a project whose visibility
 // (`network`) is not public, unless the caller is a workspace admin/owner or a
 // member of the project itself. Public projects are visible to any workspace

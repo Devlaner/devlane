@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"github.com/Devlaner/devlane/api/internal/model"
 	"strings"
 
 	"github.com/google/uuid"
@@ -63,9 +64,17 @@ func likePattern(q string) string {
 // non-nil the project-owned entities (issues, epics, cycles, modules, views)
 // are scoped to that project and the workspace-level groups (pages, projects)
 // are left empty. limit caps the number of hits per group.
-func (s *SearchStore) Search(ctx context.Context, workspaceID uuid.UUID, query string, projectID *uuid.UUID, limit int) (SearchResults, error) {
+func (s *SearchStore) Search(ctx context.Context, workspaceID uuid.UUID, query string, projectID *uuid.UUID, limit int, vis ProjectVisibility) (SearchResults, error) {
 	res := EmptyResults()
 	pat := likePattern(query)
+	// Restrict every group to projects the caller may see (secret projects
+	// are hidden from non-members who are not workspace admins).
+	visible := func(q *gorm.DB, alias string) *gorm.DB {
+		if c, args := vis.Clause(alias); c != "" {
+			return q.Where(c, args...)
+		}
+		return q
+	}
 
 	// Work items / epics: match by name or "IDENTIFIER-seq" (e.g. "DEV-42").
 	searchIssues := func(epic bool, dst *[]SearchHit) error {
@@ -77,6 +86,7 @@ func (s *SearchStore) Search(ctx context.Context, workspaceID uuid.UUID, query s
 		if projectID != nil {
 			q = q.Where("i.project_id = ?", *projectID)
 		}
+		q = visible(q, "p")
 		return q.Order("i.updated_at DESC").Limit(limit).Scan(dst).Error
 	}
 	if err := searchIssues(false, &res.Issues); err != nil {
@@ -99,6 +109,7 @@ func (s *SearchStore) Search(ctx context.Context, workspaceID uuid.UUID, query s
 		if projectID != nil {
 			q = q.Where("e.project_id = ?", *projectID)
 		}
+		q = visible(q, "p")
 		return q.Order("e.name ASC").Limit(limit).Scan(dst).Error
 	}
 	if err := searchNamed("cycles", true, &res.Cycles); err != nil {
@@ -118,20 +129,29 @@ func (s *SearchStore) Search(ctx context.Context, workspaceID uuid.UUID, query s
 
 	// Pages are workspace-level but navigated within a project; pick the first
 	// linked project for the result link.
+	// Only projects the caller may see count as a page's home project, and a
+	// page linked solely to hidden projects is not returned at all.
+	pvis, pargs := vis.andClause("vp")
+	linked := "SELECT pp.project_id, vp.identifier, pp.created_at FROM project_pages pp " +
+		"JOIN projects vp ON vp.id = pp.project_id AND vp.deleted_at IS NULL " +
+		"WHERE pp.page_id = pg.id AND pp.deleted_at IS NULL" + pvis
+	selArgs := append(append([]any{}, pargs...), pargs...)
 	if err := s.db.WithContext(ctx).Table("pages AS pg").
-		Select(`pg.id, pg.name,
-			(SELECT pp.project_id FROM project_pages pp WHERE pp.page_id = pg.id AND pp.deleted_at IS NULL ORDER BY pp.created_at ASC LIMIT 1) AS project_id,
-			(SELECT p2.identifier FROM project_pages pp JOIN projects p2 ON p2.id = pp.project_id WHERE pp.page_id = pg.id AND pp.deleted_at IS NULL ORDER BY pp.created_at ASC LIMIT 1) AS project_identifier`).
+		Select("pg.id, pg.name, "+
+			"(SELECT l.project_id FROM ("+linked+") l ORDER BY l.created_at ASC LIMIT 1) AS project_id, "+
+			"(SELECT l.identifier FROM ("+linked+") l ORDER BY l.created_at ASC LIMIT 1) AS project_identifier", selArgs...).
 		Where("pg.workspace_id = ? AND pg.deleted_at IS NULL AND pg.archived_at IS NULL AND pg.name ILIKE ?", workspaceID, pat).
-		Where("EXISTS (SELECT 1 FROM project_pages pp WHERE pp.page_id = pg.id AND pp.deleted_at IS NULL)").
+		// Private pages are visible only to their owner (mirrors PageService).
+		Where("(pg.access = ? OR pg.owned_by_id = ?)", model.PageAccessPublic, vis.UserID).
+		Where("EXISTS ("+linked+")", pargs...).
 		Order("pg.name ASC").Limit(limit).Scan(&res.Pages).Error; err != nil {
 		return res, err
 	}
 
 	// Projects: match by name or identifier; project_id mirrors id for linking.
-	if err := s.db.WithContext(ctx).Table("projects AS p").
+	if err := visible(s.db.WithContext(ctx).Table("projects AS p").
 		Select("p.id, p.name, p.id AS project_id, p.identifier AS project_identifier").
-		Where("p.workspace_id = ? AND p.deleted_at IS NULL AND (p.name ILIKE ? OR p.identifier ILIKE ?)", workspaceID, pat, pat).
+		Where("p.workspace_id = ? AND p.deleted_at IS NULL AND (p.name ILIKE ? OR p.identifier ILIKE ?)", workspaceID, pat, pat), "p").
 		Order("p.name ASC").Limit(limit).Scan(&res.Projects).Error; err != nil {
 		return res, err
 	}

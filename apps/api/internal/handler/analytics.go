@@ -93,7 +93,7 @@ func (h *AnalyticsHandler) GetProjectAnalytics(c *gin.Context) {
 		return
 	}
 
-	res, err := h.AnalyticsService.GetProjectAnalytics(c.Request.Context(), projectID, user.ID)
+	res, err := h.AnalyticsService.GetProjectAnalytics(c.Request.Context(), c.Param("slug"), projectID, user.ID)
 	if err != nil {
 		if errors.Is(err, service.ErrProjectForbidden) || errors.Is(err, service.ErrWorkspaceForbidden) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
@@ -181,7 +181,7 @@ func (h *AnalyticsHandler) ExportProjectCSV(c *gin.Context) {
 	writer := csv.NewWriter(c.Writer)
 	headerWritten := false
 
-	err := h.AnalyticsService.ExportProjectCSV(c.Request.Context(), projectID, user.ID, func(issue model.ProjectIssueExport) error {
+	err := h.AnalyticsService.ExportProjectCSV(c.Request.Context(), c.Param("slug"), projectID, user.ID, func(issue model.ProjectIssueExport) error {
 		if !headerWritten {
 			filename := fmt.Sprintf("project-%s-analytics-%s.csv", projectID, time.Now().Format("2006-01-02"))
 			c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
