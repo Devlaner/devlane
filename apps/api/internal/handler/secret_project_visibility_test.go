@@ -168,3 +168,36 @@ func TestProjectAnalytics_RejectsProjectFromAnotherWorkspace(t *testing.T) {
 	rr := f.ts.GET("/api/workspaces/"+ow.Slug+"/projects/"+f.publicID+"/analytics/export/", session)
 	require.Equal(t, http.StatusNotFound, rr.Code, "body=%s", rr.Body.String())
 }
+
+func TestSearch_PrivatePageHiddenFromNonOwners(t *testing.T) {
+	ts := testutil.NewTestServer(t)
+	db := ts.DB
+	owner := testutil.CreateUser(t, db)
+	w := testutil.CreateWorkspace(t, db, owner.ID)
+	p := testutil.CreateProject(t, db, w.ID, owner.ID) // public project
+
+	author := testutil.CreateUser(t, db)
+	testutil.AddWorkspaceMember(t, db, w.ID, author.ID, testutil.RoleMember)
+	testutil.AddProjectMember(t, db, p.ID, w.ID, author.ID, testutil.RoleMember)
+	page := testutil.CreatePage(t, db, w.ID, author.ID)
+	require.NoError(t, db.Model(page).Updates(map[string]any{"name": "zzprivate layoffs", "access": model.PageAccessPrivate}).Error)
+	require.NoError(t, db.Create(&model.ProjectPage{ProjectID: p.ID, PageID: page.ID, WorkspaceID: w.ID}).Error)
+
+	url := "/api/workspaces/" + w.Slug + "/search/?query=zzprivate"
+	// The workspace owner/admin does not own the page, so it stays hidden.
+	require.Empty(t, parseSearch(t, ts.GET(url, testutil.LoginAs(t, db, owner))).Results.Page)
+	require.Contains(t, names(parseSearch(t, ts.GET(url, testutil.LoginAs(t, db, author))).Results.Page), "zzprivate layoffs")
+}
+
+func TestSecretProject_RemovedMemberLosesVisibility(t *testing.T) {
+	f := newSecretFixture(t)
+	// Soft-delete the insider's membership of the secret project.
+	require.NoError(t, f.ts.DB.Where("project_id = ?", f.secretID).
+		Where("member_id IN (SELECT id FROM users WHERE email = ?)", "zzsecret-assignee@example.com").
+		Delete(&model.ProjectMember{}).Error)
+
+	out := parseSearch(t, f.ts.GET("/api/workspaces/"+f.slug+"/search/?query=zzsecret", f.insider))
+	require.Empty(t, out.Results.Issue)
+	rr := f.ts.GET("/api/workspaces/"+f.slug+"/analytics/export/", f.insider)
+	require.NotContains(t, rr.Body.String(), secretIssueName)
+}

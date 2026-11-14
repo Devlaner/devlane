@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"github.com/Devlaner/devlane/api/internal/model"
 	"strings"
 
 	"github.com/google/uuid"
@@ -140,6 +141,8 @@ func (s *SearchStore) Search(ctx context.Context, workspaceID uuid.UUID, query s
 			"(SELECT l.project_id FROM ("+linked+") l ORDER BY l.created_at ASC LIMIT 1) AS project_id, "+
 			"(SELECT l.identifier FROM ("+linked+") l ORDER BY l.created_at ASC LIMIT 1) AS project_identifier", selArgs...).
 		Where("pg.workspace_id = ? AND pg.deleted_at IS NULL AND pg.archived_at IS NULL AND pg.name ILIKE ?", workspaceID, pat).
+		// Private pages are visible only to their owner (mirrors PageService).
+		Where("(pg.access = ? OR pg.owned_by_id = ?)", model.PageAccessPublic, vis.UserID).
 		Where("EXISTS ("+linked+")", pargs...).
 		Order("pg.name ASC").Limit(limit).Scan(&res.Pages).Error; err != nil {
 		return res, err
