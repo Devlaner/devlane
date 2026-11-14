@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"strings"
 	"time"
@@ -166,15 +167,76 @@ func safeDialContext(ctx context.Context, network, addr string) (net.Conn, error
 	return d.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
 }
 
+// nonPublicPrefixes are special-purpose ranges (RFC 6890 and friends) that
+// a webhook must never reach, beyond what net.IP's helpers already cover.
+var nonPublicPrefixes = []netip.Prefix{
+	netip.MustParsePrefix("0.0.0.0/8"),       // "this network"
+	netip.MustParsePrefix("100.64.0.0/10"),   // CGNAT shared space (RFC 6598)
+	netip.MustParsePrefix("192.0.0.0/24"),    // IETF protocol assignments
+	netip.MustParsePrefix("192.0.2.0/24"),    // TEST-NET-1
+	netip.MustParsePrefix("198.18.0.0/15"),   // benchmarking
+	netip.MustParsePrefix("198.51.100.0/24"), // TEST-NET-2
+	netip.MustParsePrefix("203.0.113.0/24"),  // TEST-NET-3
+	netip.MustParsePrefix("240.0.0.0/4"),     // reserved + limited broadcast
+	netip.MustParsePrefix("100::/64"),        // IPv6 discard-only
+	netip.MustParsePrefix("2001:db8::/32"),   // IPv6 documentation
+	netip.MustParsePrefix("2001::/32"),       // Teredo (tunnels to arbitrary IPv4)
+	netip.MustParsePrefix("2001:10::/28"),    // ORCHID
+	netip.MustParsePrefix("2001:20::/28"),    // ORCHIDv2
+	netip.MustParsePrefix("fec0::/10"),       // deprecated site-local
+}
+
+// embeddedIPv4 returns the IPv4 destination carried by an IPv6 transition
+// address, or false if ip is not one. Covered forms: IPv4-mapped
+// (::ffff:0:0/96), IPv4-compatible (::/96), NAT64 well-known and local-use
+// prefixes (64:ff9b::/96, 64:ff9b:1::/48) and 6to4 (2002::/16).
+func embeddedIPv4(ip netip.Addr) (netip.Addr, bool) {
+	if !ip.Is6() {
+		return netip.Addr{}, false
+	}
+	b := ip.As16()
+	switch {
+	case ip.Is4In6():
+		return ip.Unmap(), true
+	case netip.MustParsePrefix("::/96").Contains(ip):
+		return netip.AddrFrom4([4]byte{b[12], b[13], b[14], b[15]}), true
+	case netip.MustParsePrefix("64:ff9b::/96").Contains(ip),
+		netip.MustParsePrefix("64:ff9b:1::/48").Contains(ip):
+		return netip.AddrFrom4([4]byte{b[12], b[13], b[14], b[15]}), true
+	case netip.MustParsePrefix("2002::/16").Contains(ip):
+		return netip.AddrFrom4([4]byte{b[2], b[3], b[4], b[5]}), true
+	}
+	return netip.Addr{}, false
+}
+
+// isPublicIP reports whether ip is a globally routable unicast address that a
+// webhook may be delivered to. IPv6 transition forms that embed an IPv4
+// address are judged by the embedded address, so e.g. 64:ff9b::10.0.0.1 or
+// 2002:7f00:1:: cannot be used to reach internal IPv4 hosts.
 func isPublicIP(ip net.IP) bool {
-	if ip == nil || ip.IsLoopback() || ip.IsUnspecified() || ip.IsLinkLocalUnicast() ||
-		ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsPrivate() {
+	addr, ok := netip.AddrFromSlice(ip)
+	if !ok {
 		return false
 	}
-	// Block CGNAT shared address space (RFC 6598, 100.64.0.0/10), which
-	// ip.IsPrivate() does not cover but some providers use for internal services.
-	if v4 := ip.To4(); v4 != nil && v4[0] == 100 && v4[1] >= 64 && v4[1] <= 127 {
+	return isPublicAddr(addr.WithZone(""))
+}
+
+func isPublicAddr(addr netip.Addr) bool {
+	if v4, ok := embeddedIPv4(addr); ok {
+		// "::" and "::1" fall in ::/96 but are IPv6 unspecified/loopback.
+		if addr.IsUnspecified() || addr.IsLoopback() {
+			return false
+		}
+		return isPublicAddr(v4)
+	}
+	if !addr.IsValid() || addr.IsLoopback() || addr.IsUnspecified() || addr.IsLinkLocalUnicast() ||
+		addr.IsLinkLocalMulticast() || addr.IsInterfaceLocalMulticast() || addr.IsMulticast() || addr.IsPrivate() {
 		return false
+	}
+	for _, p := range nonPublicPrefixes {
+		if p.Contains(addr) {
+			return false
+		}
 	}
 	return true
 }
