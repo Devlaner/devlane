@@ -222,6 +222,13 @@ func sanitizeHeader(s string) string {
 	return strings.NewReplacer("\r", "", "\n", "").Replace(s)
 }
 
+// ValidAddress reports whether s is a single email address that can be used
+// as an SMTP sender or recipient.
+func ValidAddress(s string) bool {
+	_, err := parseAddress(s)
+	return err == nil
+}
+
 // parseAddress parses exactly one RFC 5322 mailbox. Anything else (CR/LF,
 // several recipients, header fragments) is rejected before it can reach the
 // SMTP envelope or the message headers.
@@ -230,8 +237,14 @@ func parseAddress(s string) (*netmail.Address, error) {
 	if err != nil {
 		return nil, err
 	}
-	if strings.ContainsAny(a.Address, "\r\n") {
-		return nil, fmt.Errorf("address contains a line break")
+	// net/mail drops the quotes around a quoted local-part, so
+	// "x> NOTIFY=NEVER"@example.com comes back as x> NOTIFY=NEVER@example.com,
+	// which would break out of RCPT TO:<...> and add SMTP parameters. Allow only
+	// addresses without whitespace, control characters, quotes or delimiters.
+	for _, r := range a.Address {
+		if r <= ' ' || r == 0x7f || strings.ContainsRune(`<>"\(),;`, r) {
+			return nil, fmt.Errorf("unsupported character %q in address", r)
+		}
 	}
 	return a, nil
 }

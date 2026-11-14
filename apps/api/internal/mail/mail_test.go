@@ -350,6 +350,7 @@ func TestParseAddressRejectsInjection(t *testing.T) {
 	for _, bad := range []string{
 		"", "not-an-email", "a@example.com, b@example.com",
 		"a@example.com\r\nBcc: victim@example.com", "a@example.com\nSubject: x",
+		`"x> NOTIFY=NEVER"@example.com`, `"a b"@example.com`, `"a<b"@example.com`,
 	} {
 		if _, err := parseAddress(bad); err == nil {
 			t.Errorf("parseAddress(%q) should fail", bad)

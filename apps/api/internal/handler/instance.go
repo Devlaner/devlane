@@ -680,6 +680,14 @@ func (h *InstanceSettingsHandler) SendTestEmail(c *gin.Context) {
 		Username:    strings.TrimSpace(req.Username),
 		Password:    req.Password,
 	}
+	sender := cfg.SenderEmail
+	if sender == "" {
+		sender = cfg.Username
+	}
+	if !mail.ValidAddress(sender) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Sender email must be a valid email address"})
+		return
+	}
 
 	if err := mail.SendWithSMTPSettings(
 		c.Request.Context(),
